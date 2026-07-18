@@ -3,157 +3,214 @@ document_id: HALPHA-PLAN-001
 level: L4
 status: ACCEPTED
 language: zh-CN
-as_of: 2026-07-16
+as_of: 2026-07-18
 accepted_by: Halpha 项目所有者
-accepted_at: 2026-07-16T19:20:44+08:00
-supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-16T17:41:10+08:00
+accepted_at: 2026-07-18T11:13:03+08:00
+supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T09:59:00+08:00
+document_update_reason: 修正 accepted_design_set 与 basis 的闭包，并为 R00–R03 增加 ENG-003 工作包启动契约及机械门；不改变 B04/B05 状态、现有证据、授权或三项真实写门
+state_updated_at: 2026-07-18T09:59:00+08:00
+state_update_reason: AI 主导独立研究与 monorepo 并行集成设计已接受；项目所有者以 OWNER-DIRECTION-20260718-PARALLEL-RESEARCH 条件授权在 B04 完成后启动 R00，并允许 R00–R02 通过独立 worktree/branch 与 B05 包级并行，当前研究目录、运行、政策和证据均未创建，R00 仍受 B04 完成门阻断。B04 当前工作树的历史、Binance Demo 产品完整周期、通知/结果、空库恢复、Windows/数据库故障、关键不变量追踪、确定性浏览器工作台及复杂度证据保持资格化；完整后端回归 247 tests 通过，固定 Node 24.18.0、Playwright 1.61.1 下桌面和 390px 窄屏三项通过、一项按设计跳过，九份 axe 无违规、两项布局无失败，人工复核未发现溢出、遮挡或高风险交互缺口。BINANCE_LIVE_READ_ONLY 仍是同一 Executor/TradingNode/HalphaStrategyAdapter 的公开 data-client-only 裁剪路径，不解析 Binance 凭据或产品数据库凭据且无 execution client、HalphaCoordinator、ExecutionAction repository、私有动作能力或场所写入；每条事件绑定同一 observation/参数/配置摘要，只在 runtime build 成功后记录进程启动，并对数据覆盖、缺口、受控重启和不完整尾行作机器判定。因 App/Executor 在源码加固后以新产品进程重启，旧 72 小时观察不再代表当前运行身份；Windows soak 已于 2026-07-18 08:57:28 本地时间重新建立无偏醒钟基线，至 09:12 已有两个检查点、醒钟 0.242114634 小时，App PID 6012/36392、Executor PID 3000/8308，全部当前检查为真且未观察到运行时代理值。临时切换任务仍从 2026-07-21 03:50 每五分钟复核，但不得早于新基线约 2026-07-21 08:57:28 满 72 小时后才停止 Demo 并启动 Executor-only 观察；2026-07-24 04:00 安排受控空窗，2026-07-28 04:10 起重复复核至实际 7–14 日窗口可冻结。任务保持有界 OWNER_INTERACTIVE_TOKEN，不保存所有者密码或新增长期高权限账户；SMTP 缺失独立保持未满足。09:21:44 的 B04 汇总只列出实际 SMTP、LIVE_READ_ONLY 7–14 日观察和 Windows 72 醒钟小时三项未满足，BuildManifest v2 对这三项及 B04 summary 保持 INCOMPLETE。当前工作树未提交，真实写工程能力、B05 授权和运行时真实写门均不变
 
 accepted_design_set:
   upper_level:
-    - HALPHA-CON-001@v2.10.0
-    - HALPHA-DOC-001@v1.10.0
+    - HALPHA-CON-001@v2.11.0
+    - HALPHA-DOC-001@v1.11.0
     - HALPHA-VIS-001@v1.4.0
-    - HALPHA-FLOW-001@v1.7.0
-    - HALPHA-ARC-001@v1.8.0
+    - HALPHA-FLOW-001@v1.9.0
+    - HALPHA-ARC-001@v1.9.0
   l2_revisions:
-    - HALPHA-CAP-001@v2.9.0
+    - HALPHA-ALP-001@v1.5.0
+    - HALPHA-CAP-001@v2.10.0
     - HALPHA-POR-001@v1.6.0
-    - HALPHA-TRADEPLAN-001@v1.7.0
-    - HALPHA-EXE-001@v1.6.0
-    - HALPHA-SYS-001@v1.5.0
+    - HALPHA-TRADEPLAN-001@v1.8.0
+    - HALPHA-DAT-001@v2.4.0
+    - HALPHA-EXE-001@v1.7.0
+    - HALPHA-SYS-001@v1.6.0
     - HALPHA-OUT-001@v1.5.0
-    - HALPHA-UX-001@v1.5.0
+    - HALPHA-UX-001@v1.6.0
     - HALPHA-ENG-001@v1.6.0
   l3:
-    - HALPHA-ALP-002@v0.4.0
-    - HALPHA-TRADEPLAN-002@v0.9.0
-    - HALPHA-DAT-002@v0.7.0
-    - HALPHA-CAP-002@v1.1.0
-    - HALPHA-EXE-002@v1.1.0
-    - HALPHA-OUT-002@v0.7.0
-    - HALPHA-UX-002@v0.10.0
-    - HALPHA-SYS-002@v0.8.0
-    - HALPHA-ENG-002@v0.7.0
+    - HALPHA-ALP-002@v0.5.0
+    - HALPHA-TRADEPLAN-002@v0.10.0
+    - HALPHA-DAT-002@v0.8.0
+    - HALPHA-CAP-002@v1.2.0
+    - HALPHA-EXE-002@v1.2.0
+    - HALPHA-OUT-002@v0.8.0
+    - HALPHA-UX-002@v0.11.0
+    - HALPHA-SYS-002@v0.9.0
+    - HALPHA-ENG-002@v0.8.0
+    - HALPHA-ALP-003@v0.3.0
+    - HALPHA-ENG-003@v0.3.0
 
 planning_horizon: >-
   当前只展开 P0。P0 交付一个带基本 Web 工作台的最小真实交易闭环：用户选择代码策略、配置参数和互斥额度，
   在运行连续且入场终态与场所原生保护均已确认后可离开，Halpha 持续判断、下单、保护、止盈止损、退出、核对、复盘并释放额度。
   首个 LIVE 闭环从激活到上述条件成立必须由用户主动在线监控，并已验证最小操作入口和 Binance 官方入口可用；P0 不宣称无人在线故障自动恢复。
-  首个闭环使用 Binance USDⓈ-M 永续和 ONE_SHOT_DONCHIAN_ATR_BREAKOUT；恢复细节仍由 HALPHA-ALIGN-001 协调且当前阻断，P0 之外模块暂不设计。
+  首个闭环使用 Binance USDⓈ-M 永续和 ONE_SHOT_DONCHIAN_ATR_BREAKOUT。P0 使用 MANUAL_PLAN_RESUME：Executor、主机或 PostgreSQL 写连续性丢失后开放激活先暂停，
+  只读核对后由用户明确选择恢复激活、退出策略或用户接管；长期严格证据自动续行不在 P0 实现。除本计划显式登记、对 P0 产品闭环保持零 effects 的独立研究轨外，P0 之外产品模块暂不设计。
+  研究轨 R00–R02 在 B04 完成后可通过独立 worktree/branch 与 B05 包级并行，但不属于 P0 产品运行时；R03 仍等待 R02、B05、V01 与项目所有者证据选择。本计划不定义 P1–P3；上位设计保留交互形态可演进性不构成任何阶段的建设承诺或当前支持。
 
-design_scope_rule:
-  l3: P0 涉及模块采用长期契约；记录长期采用的组件、使用方式、权威边界和失败语义，不限定为首个策略
-  l4: 固定 P0 当前建设基线；精确版本、配置、参数、接线和包内顺序可按实现证据调整
-  deferred: 不为 P0 未涉及能力预留平台、服务、数据库、记录族、worker 或扩展点
-
-implementation_adaptation_rule:
-  strictness_by_level:
-    L0_L2: 产品边界、稳定语义、所有权和复杂度原则必须严格遵守
-    L3: 长期模块契约、权威边界、失败语义和唯一写链必须保持；组件用法可随已验证公开能力作兼容调整
-    L4: 当前版本、参数、配置、接线、探针和建设包内细节是可调整基线，不要求实现逐字复制
-  may_adjust_during_implementation: >-
-    可依据固定组件的公开行为、目标 Windows 实测、Binance Demo 证据和可维护性调整 L4 细节，
-    并把最终值和证据回写本计划或 BuildManifest；不因可预见的小差异反复修订 L0–L3。
-  revision_required_when: >-
-    调整会改变 L0–L3 稳定语义、P0 最小真实交易闭环、资金与机器授权边界、结果未知/用户接管/恢复责任、
-    单一真实写链、第三方优先原则或复杂度硬上限时，必须先修订拥有该语义的上位文档。
-  stop_review_rule: 只有当前范围适用的上位冲突已经关闭、D00=ALIGNED 且不存在会阻断受影响建设包的未决方向问题时，才停止设计修正并转入产品实现；隔离 B00 资格化不能替代设计对齐。
+stable_contract_references:
+  rule: >-
+    本计划不拥有记录族结构、领域状态机、动作防重复、外部写边界、保护/核对/恢复生命周期、命令处理或稳定失败语义。
+    下列 ACCEPTED L3 是唯一稳定契约；本计划只记录当前启用切片、精确组件配置、构建顺序、门禁和带时间的证据。
+  planning_and_proposed_action: HALPHA-TRADEPLAN-002@v0.10.0#TRADEPLAN-AUTO-SUM-001、#TRADEPLAN-AUTO-API-001、#TRADEPLAN-AUTO-TST-001
+  execution_action_and_write_boundary: HALPHA-EXE-002@v1.2.0#EXE-AUTO-ACT-001、#EXE-AUTO-SUB-001、#EXE-AUTO-UNK-001
+  order_protection_reconciliation_and_recovery: HALPHA-EXE-002@v1.2.0#EXE-AUTO-ORD-001、#EXE-AUTO-PROT-001、#EXE-AUTO-REC-001、#EXE-AUTO-HO-001
+  capital_and_stops: HALPHA-CAP-002@v1.2.0
+  live_write_authority_principle: HALPHA-CON-001@v2.11.0#CON-GOV-005、#CON-CAP-003、#CON-CAP-005、#CON-CAP-006；HALPHA-CAP-001@v2.10.0#CAP-MOD-001-REQ
+  command_and_receipt: HALPHA-UX-002@v0.11.0
+  records_processes_and_transactions: HALPHA-SYS-002@v0.9.0#SYS-AUTO-SCH-001、#SYS-AUTO-WORK-001
+  build_and_component_boundary: HALPHA-ENG-002@v0.8.0
+  research_and_parallel_integration: HALPHA-ALP-003@v0.3.0、HALPHA-ENG-003@v0.3.0
+  document_version_history: HALPHA-DOC-001@v1.11.0#DOC-LOC-001
+  l4_change_rule: 稳定契约变化先修订其 L2/L3 所有者；L4 只能选择、收缩或记录当前事实，不得复制后再局部改写。
+  live_write_gate_representation: L4 以工程能力、B05 包授权和运行时开门三个机器字段记录当前状态；它们不是新的领域权限对象，不能互相替代或覆盖上述稳定权限原则
 
 basis:
   accepted:
-    - HALPHA-CON-001@v2.10.0
-    - HALPHA-DOC-001@v1.10.0
+    - HALPHA-CON-001@v2.11.0
+    - HALPHA-DOC-001@v1.11.0
     - HALPHA-VIS-001@v1.4.0
-    - HALPHA-FLOW-001@v1.7.0
-    - HALPHA-ARC-001@v1.8.0
+    - HALPHA-FLOW-001@v1.9.0
+    - HALPHA-ARC-001@v1.9.0
     - HALPHA-ALP-001@v1.5.0
     - HALPHA-POR-001@v1.6.0
-    - HALPHA-TRADEPLAN-001@v1.7.0
-    - HALPHA-DAT-001@v2.3.0
-    - HALPHA-CAP-001@v2.9.0
-    - HALPHA-EXE-001@v1.6.0
+    - HALPHA-TRADEPLAN-001@v1.8.0
+    - HALPHA-DAT-001@v2.4.0
+    - HALPHA-CAP-001@v2.10.0
+    - HALPHA-EXE-001@v1.7.0
     - HALPHA-OUT-001@v1.5.0
-    - HALPHA-UX-001@v1.5.0
-    - HALPHA-SYS-001@v1.5.0
+    - HALPHA-UX-001@v1.6.0
+    - HALPHA-SYS-001@v1.6.0
     - HALPHA-ENG-001@v1.6.0
-  owner_confirmed_at: 2026-07-16
-  owner_confirmed_p0_requirements:
-    - 策略逻辑由代码实现并可复用，界面只配置 schema 允许的参数；P0 不建设 DSL、脚本上传或可视化编排器
-    - 每次激活只运行一个交易周期；首次成交后最终完全平仓即永久结束，不自动再次开仓
-    - 可同时激活多个策略，但每个激活独占 max_margin、max_notional、max_allowed_loss，资金仍在 Binance 账户
-    - max_margin 与 max_notional 只约束 Halpha 主动增加风险；行情造成自然越界不构成强制减仓或平仓要求
-    - 本激活净结果等于 realized_pnl 加 unrealized_pnl 加 funding 减 commission；loss 为其负值与零的较大者
-    - max_allowed_loss 只受本激活行为和持仓影响；触线停止新增风险并退出该激活全部持仓，其他策略不参与
-    - Binance USDⓈ-M 永续支持建仓、撤单、减仓和平仓以及止盈止损；Halpha 条件成立后可提交市价、限价或经资格化的场所条件单；场所支持的条件交给场所，不支持的由 Halpha 持续监测
-    - 三类控制分别为停止新增风险、退出策略和用户接管；用户接管后 Halpha 不自动撤单或平仓
-    - Windows 持续运行，邮件为 P0 唯一外部通知渠道
-    - 首个策略采用单次 Donchian/ATR 突破、市价入场、场所止损、分级止盈和时间退出
-  owner_decisions_accepted:
-    - 同一 environment/account/instrument 从激活与额度建立到 closure/release 硬互斥；激活前该 instrument 必须零持仓、零开放普通/算法订单且无外部/未知责任
-    - Binance 账户固定 one-way、isolated、single-asset，杠杆由用户预设为 1–5x；Halpha 只读校验，不自动改模式、杠杆、转账或提现
-    - 首个 LIVE 闭环只用 BTCUSDT-PERP；ETHUSDT-PERP 仅作 Demo 映射与并发验证
-    - Web 只监听本机 127.0.0.1；P0 没有远程或移动控制面
-    - 接受 NautilusTrader/BacktestEngine 实际能力妥协：止损与止盈以 LAST_PRICE/Binance CONTRACT_PRICE 触发；固定 1.230.0 虽可提交 close_position，但无 quantity 的算法单在当前无 persistent cache 恢复拓扑中不能生成 OrderStatusReport，故 P0 不增加低层写取消或私有 patch，而采用每笔正成交显式数量、reduce_only StopMarket 分片保护，TP1/TP2 也使用显式数量 reduce_only；无 closePosition、OCO、追踪、保本移动或保护替换；B00 必须先证明这些订单同时开放及部分触发不会产生 Binance -2022/-4118、反向仓位或不可取消责任，失败即退回修订而不进入 B01
-    - 接受首策略本 L4 的精确参数范围、默认值、30 秒保护/损失 UNKNOWN 退出 deadline 与事实 freshness；历史 bar-only 回测以决策 cutoff 的已闭合 1m LAST 收盘和 manifest 固定 0.0006 费率作为明确标记的 reference-price/fee 代理，不伪装成实时 MARK/盘口或账户实际费率；固定 Cython BacktestEngine 不结算资金费，历史 manifest/report 明示 funding_model=NOT_MODELED，P0 不为此自研结算器或切换 2.0 RC；历史绩效只完整报告并由用户显式接受，不设自动盈利硬门
-    - 接受 external_order_claims=None 的当前单一路径和 B00 失败即阻断规则；不预建任何第二恢复拓扑
+  owner_confirmed_at: 2026-07-18T09:59:00+08:00
+  current_p0_selections:
+    strategy_configuration: 代码策略加 JSON Schema 参数；不启用 DSL、代码上传或可视化编排
+    target_host: Windows 10
+    external_notification: EMAIL_ONLY
+    first_strategy: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
+    recovery_mode: MANUAL_PLAN_RESUME
+    web_surface: 127.0.0.1 本机 Web 工作台加同进程服务端 /operations；无远程或移动控制面
+    live_instrument: BTCUSDT-PERP
+    demo_extra_instrument: ETHUSDT-PERP
+    account_position_mode: ONE_WAY
+    account_asset_mode: SINGLE_ASSET
+    accepted_margin_modes: [ISOLATED, CROSSED]
+    internal_leverage_cap: 5
+    account_configuration_mutation: DISABLED
+    demo_evidence_priority: SYSTEM_MECHANISM_FIRST_STRATEGY_SECOND
+  stable_semantics: 使用 stable_contract_references；本节不定义激活、额度、损失、动作、控制、保护、核对、恢复或文档历史规则
 
 current_state:
   current_stage: P0
-  design_status: BLOCKED_BY_UPSTREAM_CONFLICT
-  implementation_status: 仅 B00 隔离依赖与目标平台资格化进行中；B01–B05 未获实施资格
-  first_authorized_work: B00 第三方组件、Binance Demo 与目标 Windows 隔离资格化；不得形成产品规范例外或持久集成
-  real_write_status: DISABLED
-  warning: 当前只完成 B00 的基础环境、固定 wheel、本机 Windows 原语、WinVault reference 与无 client 框架生命周期子项；四项上位冲突仍未关闭，不表示 Binance 已连接、B00 已通过、B01 可开始或真实交易能力可用
+  design_status: ALIGNED
+  research_track_status: DESIGN_ACCEPTED_NOT_CREATED_R00_BLOCKED_UNTIL_B04_COMPLETE
+  implementation_status: B00 的 14/14 required outputs 资格证据保持有效；D00 已对齐，B01–B03 已完成；B04 的本地产品与机制证据（包括 LIVE_READ_ONLY 能力裁剪路径）已资格化并由 B04 总结聚合，72 小时 Windows 正在观察，LIVE_READ_ONLY 连续外部观察与实际 SMTP 尚未满足；BuildManifest v2 明确保持 INCOMPLETE，B05 继续按包依赖推进
+  first_authorized_work: B04
+  live_write_build_capability: NOT_QUALIFIED
+  b05_package_eligibility: NOT_AUTHORIZED
+  runtime_real_write_gate: CLOSED
+  live_write_gate_evidence:
+    observed_at: null
+    build_manifest_digest: null
+    user_authorization_ref: null
+    account_capital_limit_version_ref: null
+    machine_authorization_version_ref: null
+    plan_allocation_ref: null
+  latest_implementation_observation:
+    package: B04
+    status: IN_PROGRESS_WITH_QUALIFIED_LOCAL_B04_AND_READ_ONLY_TOPOLOGY_EVIDENCE_AND_THREE_UNMET_EXTERNAL_OR_TIME_GATES
+    observed_at: 2026-07-18T01:21:44.266690Z
+    base_commit_sha: 9f32352e0bcf8ca49412dba179303069ca86a796
+    commit_sha: null
+    workflow_run_id: null
+    workflow_conclusion: NOT_RUN_UNCOMMITTED
+    evidence_ref: build/qualification/b04-summary.json
+    evidence_digest: sha256:de32469267287ba769af9c4d5a4cd865b480f17ef3cb26f6c6f1bc6bc6ef70fa
+    qualified_evidence:
+      historical_backtest: {ref: build/qualification/b04-historical-backtest.json, digest: 'sha256:6719a0ea351d9440406f2af650ea32a1d1c568f3c8786c79dc53d91879485ca0'}
+      product_demo_cycle: {ref: build/qualification/b04-product-demo-cycle.json, digest: 'sha256:e03bfe8b1b0c27a7971f76fb51c82be11e266e5531e398c227f59515a3bbcf81'}
+      notification_boundary: {ref: build/qualification/b04-notification-boundary.json, digest: 'sha256:72f03929dc59488b67f0fd5dd2cdfa8518b49a1596ef69603a2c6a9c6731fd5b'}
+      outcome_boundary: {ref: build/qualification/b04-outcome-boundary.json, digest: 'sha256:886f50813dd8deec5ed557428ee558b9729f951bf5bd43ca2d340af549fd538c'}
+      empty_database_restore: {ref: build/qualification/b04-empty-restore.json, digest: 'sha256:9f51beb7192786e230e0d9180d0d1479e59f19efcf88be6e757c894fb74b8ff5'}
+      windows_runtime: {ref: build/qualification/b01-windows-runtime.json, digest: 'sha256:4ffbcbc9ec720c9d801db7dfe32a7105b5a9dbb3f0ea649cf369f2b42b38268c'}
+      windows_and_database_faults: {ref: build/qualification/b04-windows-fault-drills.json, digest: 'sha256:694365a3ed5390c202b4e3c3bfccf6cb451636562e223abfd25b00bd2b79a007'}
+      critical_invariant_trace: {ref: build/qualification/b04-critical-invariant-trace.json, digest: 'sha256:ad7623218516376a0fc9e6992088397f80cc26078910e78c06582af467cc3c93'}
+      browser_workbench: {ref: build/qualification/b04-browser.json, digest: 'sha256:a0a0c0586b13ad9d2ab05ef6e6ec946216f99efe69353b9cdc627e01d344da1e'}
+      implemented_complexity_budget: {ref: build/qualification/b04-complexity-budget.json, digest: 'sha256:97830a62e9447e5469d4e7898f9558c7d3658fd1a08101e02c4f63bbc0f18a17'}
+    in_progress_evidence:
+      windows_72h: {ref: build/qualification/b04-windows-72h-soak.json, digest: 'sha256:973e2ed143ae1fa5ff3e3e47a70dab76c288f3fd435d54378014484db5af4654', schema_version: 2, clock: WINDOWS_QUERY_UNBIASED_INTERRUPT_TIME, started_at: 2026-07-18T00:57:28.994247Z, qualification_not_before: 2026-07-21T08:57:28+08:00, latest_observed_at: 2026-07-18T01:12:00.607390Z, awake_elapsed_hours: 0.24211463419444446, checkpoint_count: 2, sleep_or_hibernate_seconds: 0.00045990000000983855, dynamic_until_transition: true, status: IN_PROGRESS}
+      actual_smtp_delivery: {ref: build/qualification/b04-smtp-delivery.json, digest: 'sha256:bf5fb0c340567f0b6f9815482d5ea9ef71c1566685941dec29feb1bf468f52c5', status: IN_PROGRESS}
+      live_read_only_observation: {ref: build/qualification/b04-live-read-only.json, digest: 'sha256:1798029c5657b09bc6ffbf37d37bd02c253c57e0c1815280a2eab7676b27690a', status: IN_PROGRESS}
+      live_read_only_temporary_tasks: {ref: build/qualification/b04-live-read-only-transition-task.json, digest: 'sha256:29e9914b11040fabd146c49b83d80683dbb60005a865e3ff4dfa76a5ca688d79', logon_type: OWNER_INTERACTIVE_TOKEN, credential_transport: NONE, owner_session_requirement: LOGGED_ON, windows_soak_checkpoint_started_at: 2026-07-18T06:12:00+08:00, transition_scheduled_at: 2026-07-21T03:50:00+08:00, controlled_restart_scheduled_at: 2026-07-24T04:00:00+08:00, finalization_scheduled_at: 2026-07-28T04:10:00+08:00, status: PROVISIONED}
+      b04_summary: {ref: build/qualification/b04-summary.json, digest: 'sha256:de32469267287ba769af9c4d5a4cd865b480f17ef3cb26f6c6f1bc6bc6ef70fa', status: IN_PROGRESS}
+    unmet_exit_evidence: [ACTUAL_SMTP_DELIVERY, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
+    evidence_scope: 证明当前冻结 manifest 的历史机制、同一 EXE 产品 Demo 动作/保护/核对/复盘、通知与结果边界、产品记录空库恢复、目标 Windows 身份隔离/双启动拒绝/异常恢复/PostgreSQL 断开拒写与恢复核对，确定性浏览器 fixture 下桌面/窄屏关键状态、陈旧命令拒绝、操作预览、axe 和布局检查；同时证明 LIVE_READ_ONLY 复用同一 Executor/TradingNode/HalphaStrategyAdapter/参数/指标/纯逻辑，固定 NO_TRADING_AUTHORITY 且 composition 中不存在 Binance 凭据、账户佣金查询、execution client、数据库连接、HalphaCoordinator、ExecutionAction repository、私有动作能力或场所写入，实现仍为 16 记录族、5 业务模块、2 持久 worker、2 产品进程、1 PostgreSQL 产品、1 CAP 授权路径和 1 场所写管线。BuildManifest v2 对 B02–B04 资格 JSON 同时校验路径、摘要与 QUALIFIED 状态，当前四个不满足绑定为 72 小时、SMTP、LIVE_READ_ONLY 连续外部观察与尚未资格化的 B04 总结。静态复杂度与浏览器证据不访问场所网络，全部现有证据不证明策略有效、B04 完成、发布资格或任何真实资金写能力
+    superseded_by: null
+    build_manifest_ref: build/release/build-manifest.json
+    build_manifest_schema_version: 2
+    build_manifest_completeness: SCHEMA_V2_B04_EVIDENCE_INCOMPLETE
+    build_manifest_eligible: false
+    build_manifest_limit: 当前工作树尚未形成 Git commit；schema v2 manifest 精确列出 windows_72h、SMTP、LIVE_READ_ONLY 和 B04 summary 四项未满足要求，build_eligible=false。必须保持不可发布，且不得以文件存在或本地拓扑通过替代连续外部观察的 QUALIFIED；L4 不复制会随本计划变化的 manifest 自引用摘要
+  warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。D00/B00/B01 资格不等于真实资金权限，runtime_real_write_gate 仍为 CLOSED
 
 formalization_record:
-  status: BLOCKED_BY_UPSTREAM_CONFLICT
-  assessed_at: 2026-07-16T19:20:44+08:00
-  alignment: NOT_FULLY_ALIGNED_UPSTREAM
-  remediation_proposal: HALPHA-ALIGN-001@v0.2.0；PROPOSED，无当前规范效力
-  owner_direction: >-
-    项目所有者已要求根据设计体系评估修复有关问题，并把恢复设计分为长期方向与 P0 目标：长期允许原机器授权仍有效且严格恢复证据门全部通过后在原范围自动继续；
-    P0 不实现自动继续，唯一 Executor/主机恢复后把未完成计划的 run_state 置为 PAUSED，只读核对自动运行；RESUME_ACTIVATION 恢复同一计划，
-    EXIT_STRATEGY 直接进入退出路径而不先恢复增险判断，USER_TAKEOVER 直接移交责任，全部新的 Halpha 场所写均须由相应用户显式命令触发，且不创建新机器授权版本。
-    该方向须先由 HALPHA-ALIGN-001 协调修改其 L0–L3 语义所有者；在候选正式接受前仍不具实施效力，L4 不把它作为上位冲突例外。
-  conflicts:
-    - id: RECOVERY-AUTHORITY
-      upper_source: HALPHA-CON-001#CON-OPS-003、HALPHA-ARC-001#ARC-OPS-001-REQ
-      conflict: 上位要求重启/故障后由用户显式恢复权限或重新建立机器授权；P0 设计允许仍有效的持久机器授权在 CAP/DAT/EXE 复核通过后继续
-      p0_disposition: >-
-        BLOCKED；项目所有者已选择“长期有界自动继续、P0 重启暂停并人工继续同一激活”的两层方向。
-        等待 HALPHA-ALIGN-001 协调接受 L0/L1 长期边界和 L2/L3 P0 契约；在此之前不得实现旧方案、自动继续方案或新授权版本链。
-    - id: DEMO-EXECUTION-IDENTITY
-      upper_source: HALPHA-TRADEPLAN-001#TRADEPLAN-ENV-001、HALPHA-EXE-001#EXE-SIM-001
-      conflict: 上位要求模拟不形成真实待执行动作责任；P0 为真实路径同构验证，在隔离 DEMO 数据库/profile 中复用 PendingAction/CAP/EXE schema 与状态机
-      p0_disposition: BLOCKED；B00 只可进行不形成产品动作记录的隔离探针，B03 的 Demo 产品动作身份等待协调 proposal 与正式下位契约
-    - id: CAP-P0-SCOPE
-      upper_source: HALPHA-CAP-001#CAP-ENV-002、HALPHA-CAP-001#CAP-CTL-001
-      conflict: CAP L2 要求独立单笔资金上限及新增风险、保护、风险减少/订单管理、全部写四类停用，但其概念表和 L3 下放还遗漏风险减少/订单管理；当前 L3/P0 只实现账户边界、每激活三轴额度及停止新增风险、退出、用户接管
-      p0_disposition: BLOCKED；等待 CAP L3 候选补齐单次动作上限与完整停用类别并获接受
-    - id: UX-LIMITED-OPERATION-ENTRY
-      upper_source: HALPHA-UX-001#UX-ENT-001
-      conflict: 上位要求限时操作入口不以主要工作入口为唯一前提；P0 只有本机 Web、邮件深链和 Binance 官方接管入口，不建设远程或移动控制面
-      p0_disposition: BLOCKED；等待 UX/SYS/ENG L3 候选定义不依赖完整 SPA 的最小限时入口并获接受
-  scope_limit: 以上冲突阻断 D00 对齐和 B01–B05；B00 只能作为无产品语义、无真实写能力的隔离资格化实验。proposal 在正式接受前没有规范效力
+  status: ALIGNED
+  assessed_at: 2026-07-18T07:01:20+08:00
+  alignment: ALIGNED_UPSTREAM
+  alignment_scope: P0_IMPLEMENTABLE_BASELINE
+  accepted_coordinated_set:
+    - HALPHA-DOC-001@v1.11.0
+    - HALPHA-FLOW-001@v1.8.0
+    - HALPHA-ARC-001@v1.9.0
+    - HALPHA-TRADEPLAN-001@v1.8.0
+    - HALPHA-CAP-001@v2.10.0
+    - HALPHA-EXE-001@v1.7.0
+    - HALPHA-DAT-001@v2.4.0
+    - HALPHA-UX-001@v1.6.0
+    - HALPHA-SYS-001@v1.6.0
+    - HALPHA-ALP-002@v0.5.0
+    - HALPHA-TRADEPLAN-002@v0.10.0
+    - HALPHA-DAT-002@v0.8.0
+    - HALPHA-CAP-002@v1.2.0
+    - HALPHA-EXE-002@v1.2.0
+    - HALPHA-OUT-002@v0.8.0
+    - HALPHA-UX-002@v0.11.0
+    - HALPHA-SYS-002@v0.9.0
+    - HALPHA-ENG-002@v0.8.0
+  current_selections:
+    recovery_mode: MANUAL_PLAN_RESUME
+    execution_model: UNIFIED_EXE_EXECUTION_ACTION
+    demo_evidence_priority: SYSTEM_MECHANISM_FIRST_STRATEGY_SECOND
+    interaction_form_boundary: PLATFORM_INDEPENDENT_FLOW_P0_WEB_ONLY
+  scope_limit: 长期 AUTO_CONTINUE 恢复引擎和 P1–P3 交互形态设计继续延期；V01 已登记为 B05 后人工决定门，最小关键不变量追踪纳入 B02，均不得扩展为统计、治理或授权平台
 
 governance_gate_evidence:
-  observed_at: 2026-07-16T19:31:52+08:00
-  worktree_status: IMPLEMENTED_AND_LOCALLY_VERIFIED；尚未提交
+  evidence_kind: LATEST_EFFECTIVE_OBSERVATION
+  observed_at: 2026-07-17T08:41:10+08:00
+  commit_sha: 3c7932c090b955f8d530047d2fa9511e790de361
+  workflow_run_id: 29503024519
+  workflow_conclusion: SUCCESS
+  evidence_digest: sha256:0ec028cc0465cfa534b78e9d44078b38617700b1aa76c0c9a540410fcfe0eea1
+  evidence_digest_basis: commit_sha|workflow_run_id|workflow_conclusion|event|pull_request|merged_at 的 UTF-8 规范串
+  superseded_by: null
+  source:
+    pull_request: https://github.com/hhxcv/Halpha/pull/2
+    merged_at: 2026-07-16T13:38:01Z
+    merged_to: main
+    workflow_event: push
+    workflow_run: https://github.com/hhxcv/Halpha/actions/runs/29503024519
+  repository_status: PR #2 已合并；上述 main merge commit 的 Documentation governance workflow 成功
   validator: governance/validate_construction_plan.py
-  workflow: .github/workflows/docs-governance.yml；仅存在于当前工作树，尚无 GitHub 运行结果
-  verified_checks:
+  workflow: .github/workflows/docs-governance.yml
+  local_checks_before_merge:
     - 当前 PLAN 治理校验 0 violations
-    - 治理正反例 11 tests、4 subtests 通过
-    - 文档结构、proposal、accepted bundle 完整性和差异格式检查通过
-  external_enforcement: UNKNOWN；本任务未修改 GitHub ruleset 或 branch protection，workflow 文件存在不等于 required check
+    - 全量本地 pytest 33 tests、4 subtests 通过；仅有 NautilusTrader/NumPy 上游 2 条 DeprecationWarning
+    - 文档 changed 检查 25 files、0 errors、0 warnings；accepted bundle 完整性 5 files、0 errors、0 warnings
+    - YAML 解析、责任登记、索引和 ACCEPTED 中英文 bundle 哈希一致
+  external_enforcement: UNKNOWN；已证明 workflow 在 PR/head push/main merge push 上成功，不等于 GitHub ruleset 或 branch protection 已把它设为 required check
   limitation: 门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
-
-third_party_first_policy:
-  selection_rule: >-
-    先验证成熟组件的固定版本、官方适配器、许可证、平台支持和真实 API；可妥协的技术差异直接接受组件语义，
-    只有一次性激活、资本归属、真实写唯一性、结果未知、安全或恢复正确性无法由组件表达时才保留最薄 Halpha 语义。
-  no_parallel_fallback: 同一能力不得同时运行组件实现与自研实现；组件资格失败只能阻断并修订本 L4
-  l3_l4_split: L3 记录长期组件使用契约；本文件固定精确版本、配置、平台资格和证据
 
 complexity_budget:
   comparison_baseline: 本轮正式化前设计
@@ -169,6 +226,7 @@ complexity_budget:
     independently_released_artifact_groups: 1
   after_hard_limits:
     authoritative_persisted_record_families_max: 16
+    authoritative_persisted_record_families_meaning: 物理记录族；DEMO/LIVE 的环境限定 ExecutionAction 由 EXE 单一语义所有者管理并共用同一物理 schema，环境实例与事实仍隔离
     durable_worker_classes_max: 2
     business_modules_max: 5
     runtime_processes_max: 2
@@ -185,47 +243,32 @@ complexity_budget:
       1 个文件型 ParquetDataCatalog 及其 Binance 原始 bars、checksum、manifest 和报告目录；不是产品数据库或记录族，
       可从带摘要原始输入重建，B01 固定目录/保留/删除/导出/退出契约，B04 记录实际构建与恢复证据
     direct_dependency_rule: 每项直接依赖必须替代列明的自研责任或提供已确认价值，并由 B01 的完整许可证/升级/退出台账证明总维护面不高于修订前
-  persisted_record_inventory:
-    tradeplan_4: [TradePlanDraft, TradePlanVersion, PlanActivation, PlanEvent]
-    dat_1: [VenueFact]
-    cap_4: [AccountCapitalLimitVersion, MachineAuthorizationVersion, PlanAllocation, StopStateVersion]
-    exe_1: [PendingAction]
-    out_2: [Review, ImprovementHandoff]
-    ux_4: [Task, Command, Receipt, Notification]
-  embedded_non_families:
-    - StrategyProposal 是 ALP 瞬态输出；TRADEPLAN 的 ProposedAction、条件判断输入摘要和 CAP 决定嵌入 PlanEvent
-    - 规则游标、deadline、当前 ConditionJudgement、保护状态和 EXE closure digest 引用嵌入 PlanActivation；最大损失锁存、loss_fact_cutoff 与 last_funding_query_cutoff 只嵌入 PlanAllocation
-    - FactUnknownValue 完整嵌入产生限制的 PlanActivation/PlanEvent/PendingAction；修正关系只作 VenueFact 可选元数据，不建立 FactUnknown/FactCorrection 记录族或 worker
-    - UUID32、调用证据、结果未知、保护与单动作闭合证据嵌入 PendingAction
-    - CodeStrategyDefinition 是随代码发布的常量；证据摘要、eligibility 与适用范围是 BuildManifest 不可分字段，不存在 StrategyEvidenceAssessment 记录或版本
-    - 框架 cache、portfolio、risk、reconciliation 和 BacktestEngine 报告均不是 Halpha 记录族
+  p0_schema_target:
+    physical_record_family_count: 16
+    stable_owner: HALPHA-SYS-002@v0.9.0#SYS-AUTO-SCH-001
+    current_selection: B01 迁移实现该 ACCEPTED 记录族集合；本计划不复制记录清单、字段归属或嵌入规则
   durable_workers:
-    - name: HalphaCoordinator
-      process: halpha-executor
-      responsibilities: HalphaStrategyAdapter 恢复、StrategyProposal/领域来源交接、PendingAction 提交、事实映射、保护、损失、框架核对、闭环，以及已完成激活缺失/落后 Review 的可派生恢复
-    - name: NotificationDispatcher
-      process: halpha-app
-      responsibilities: 领取已有 Notification、SMTP 投递、失败状态和可见 Task
+    stable_owner: HALPHA-SYS-002@v0.9.0#SYS-AUTO-WORK-001
+    current_selection:
+      - name: HalphaCoordinator
+        process: halpha-executor
+      - name: NotificationDispatcher
+        process: halpha-app
   no_hidden_worker_rule: >-
     框架订阅、K 线、timer、指标、Controller、reconciliation、HTTP 请求处理、查询投影、OUT 归集和 pg_dump 不得取得独立 Halpha
     checkpoint、claim、due、退避或恢复生命周期；出现即重新计数并使复杂度门失败。
   result: >-
-    结构复杂度由 26→16 个记录族、5→2 类持久 worker，且进程、数据库产品、授权路径、场所写路径和发布组均不增加。
+    结构复杂度由 26→16 个物理记录族、5→2 类持久 worker，且进程、数据库产品、授权路径、场所写路径和发布组均不增加。
     这只能证明结构维度下降；B00/B01 还必须用依赖、薄适配、配置所有者、许可证、升级、退出、测试和运维台账证明全生命周期复杂度不高于修订前，否则组件选择或本计划不得通过。
 
 runtime_architecture:
-  business_modules:
-    - planning
-    - venue_integration
-    - capital
-    - outcomes
-    - user_workbench
+  business_module_contract: HALPHA-SYS-002@v0.9.0#SYS-AUTO-BND-001
   authoritative_database: PostgreSQL 17.10
   logical_database_rule: DEMO 与 LIVE 使用独立数据库、角色、配置和凭据；可以位于同一 PostgreSQL 实例
   processes:
     halpha_app:
       owns:
-        - FastAPI 本地 UI/API 与静态前端
+        - FastAPI 本地 UI/API、静态前端与同进程服务端 /operations 有限入口
         - owner 身份、Session、CSRF、Command/Receipt 与查询投影
         - 计划固定和激活事务
         - NotificationDispatcher 与 SMTP
@@ -235,37 +278,46 @@ runtime_architecture:
     halpha_executor:
       owns:
         - 唯一 NautilusTrader TradingNode
-        - 同一节点内的 Binance DataClient 与 ExecutionClient
+        - 同一节点内按 profile 装载 Binance DataClient；仅 DEMO/LIVE_WRITE 装载 ExecutionClient
         - Controller 及每个未闭合且非 USER_TAKEOVER 的 PlanActivation 一个 HalphaStrategyAdapter 与一个纯策略逻辑对象
         - 唯一 HalphaCoordinator
-        - 唯一 Binance 凭据、VenueFact 与 PendingAction 写路径
+        - 当前 profile 所需的唯一 Binance 凭据、VenueFact 与 EXE 所有的环境限定 ExecutionAction 路径
       forbidden:
         - UI、SMTP、owner 密码或第二 TradingNode
         - 第二 Binance SDK 写适配器、raw HTTP/WebSocket 写路径、框架 event store 或 Redis cache
   environment_profile:
     defined_profiles: [BINANCE_DEMO, BINANCE_LIVE_READ_ONLY, BINANCE_LIVE_WRITE]
-    release_group: App 与 Executor 必须作为同一发布组装载同一 profile、环境数据库与 BuildManifest/config digest；不允许页面/命令和执行器指向不同环境
-    concurrency: 一个 App+Executor 发布组一次只装载一个 profile，不同时连接 DEMO 与 LIVE
+    release_group: DEMO/LIVE_WRITE 产品实例的 App 与 Executor 必须作为同一发布组装载同一 profile、环境数据库与 BuildManifest/config digest；不允许页面/命令和执行器指向不同环境。BINANCE_LIVE_READ_ONLY 是无 App、通知或产品数据库的 Executor-only 资格化 composition
+    concurrency: 一次只装载一个 profile；LIVE_READ_ONLY 开始前必须停止 DEMO/LIVE_WRITE 的 App+Executor 组，绝不并发连接两个环境
     write_capability:
       BINANCE_DEMO: B00 只允许隔离 qualification fixture 按 required_outputs 执行最窄 Demo 提交/查询/撤销与组合探针，不装载产品运行时、不形成产品记录或开放业务责任；产品 Demo 写仍仅在 B03 及以后按已通过 B00 的建设包启用
-      BINANCE_LIVE_READ_ONLY: profile 硬禁用私有已持久动作门且凭据没有交易权限；只产生 preview/事实，不建立真实 PendingAction
-      BINANCE_LIVE_WRITE: 仅 B05 前置条件全部成立且 BuildManifest 无漂移时启用
-    switch_rule: >-
-      仅当当前 profile 的全部 PlanActivation 已 closure/release，且不存在开放或 UNKNOWN 的 PendingAction、订单、保护、退出或核对责任时，
-      才可受控停止 App、各 HalphaStrategyAdapter、TradingNode 与 Executor，切换数据库/凭据/配置，并在两进程的 BuildManifest/profile/database digest 一致后重新启动、先核对；否则禁止切换。
-      用户接管不等于 closure/release，不能绕过该门禁。禁止 profile 热切换或自动 fallback。
+      BINANCE_LIVE_READ_ONLY: authority_class 固定 NO_TRADING_AUTHORITY，profile 禁止配置、解析或注入 Binance 凭据并关闭账户佣金查询，composition 不含 CAP/EXE 或私有已持久动作门；只从公开行情产生 preview/资格证据，不建立任何环境执行动作
+      BINANCE_LIVE_WRITE: 仅 runtime_real_write_gate=OPEN 时启用；该门由治理 validator 强制绑定 D00/B00/B01–B04、工程能力、B05 AUTHORIZED+IN_PROGRESS 和完整用户/资本/manifest 引用
+    switch_selection:
+      hot_switch: false
+      automatic_fallback: false
+      stable_contracts: [HALPHA-SYS-002@v0.9.0, HALPHA-EXE-002@v1.2.0, HALPHA-CAP-002@v1.2.0]
   production_ports:
     web: 127.0.0.1 only
     database: local or owner-approved private host only
     inbound_external: none
-  real_write_path: >-
-    StrategyProposal、持久 deadline、场所事实或用户 Command → TRADEPLAN 的 PlanEvent+ProposedAction 与 CAP 决定
-    → PostgreSQL 已提交 PendingAction → HalphaCoordinator 提交前复核
-    → OrderFactory → 对应 HalphaStrategyAdapter 的私有已持久动作门 → NautilusTrader Binance adapter → VenueFact/PendingAction/PlanActivation 核对。
-  direct_write_guard: >-
-    纯策略逻辑不得导入 Strategy、TradingNode、OrderFactory 或 ExecutionClient，也不得取得任何订单写对象；除适配器私有动作门中白名单的
-    super().submit_order/super().cancel_order 外，静态检查禁止 submit_order_list、cancel_orders、cancel_all_orders、modify_order、close_position、
-    close_all_positions、market_exit 及等价写入口。私有门调用前必须核对已提交 PendingAction。
+  action_path_contracts:
+    status: ALIGNED
+    planning: HALPHA-TRADEPLAN-002@v0.10.0#TRADEPLAN-AUTO-SUM-001
+    capital: HALPHA-CAP-002@v1.2.0
+    execution: HALPHA-EXE-002@v1.2.0#EXE-AUTO-SUM-001、#EXE-AUTO-SUB-001
+    current_topology: 单一 halpha-executor、单一 TradingNode、同一 active profile；DEMO/LIVE 共用同一 EXE 实现并分别实例化，精确组件接线与 profile 写能力由本节其他配置固定
+  direct_write_guard_contract: HALPHA-ENG-002@v0.8.0#ENG-AUTO-NTL-001-REQ
+
+p0_recovery_selection:
+  policy: MANUAL_PLAN_RESUME
+  stable_contracts:
+    - HALPHA-TRADEPLAN-002@v0.10.0#TRADEPLAN-AUTO-LIF-001
+    - HALPHA-EXE-002@v1.2.0#EXE-AUTO-HO-001
+    - HALPHA-SYS-002@v0.9.0#SYS-AUTO-REC-001-REQ
+    - HALPHA-ENG-002@v0.8.0#ENG-AUTO-BLD-001-REQ
+  current_limit: 长期 AUTO_CONTINUE 不在 P0；B05 的当前在线要求由 construction_packages.B05.preconditions 记录
+  evidence_horizon: B02 验证暂停/命令边界，B03 验证动作恢复，B04 验证 Windows 故障链；本计划不复制状态、命令或失败规则
 
 component_selection:
   selected_at: 2026-07-16
@@ -275,7 +327,7 @@ component_selection:
       source_tag: v1.230.0
       source_commit: 8160730c7c550480b0a439fb11086a4c4de15f0b
       license: LGPL-3.0-or-later
-      status: CONDITIONALLY_SELECTED_UNTIL_B00
+      status: QUALIFIED_FOR_P0_SCOPE_BY_B00
       use:
         - 唯一实时 TradingNode、Binance 数据/执行适配器、instrument、订单模型、事件、K 线、timer 和指标
         - Controller 管理每个未闭合且非 USER_TAKEOVER 激活一个 HalphaStrategyAdapter；适配器组合不继承 Strategy 的纯策略逻辑
@@ -284,15 +336,15 @@ component_selection:
       accepted_differences:
         - ATR、Donchian、K 线和 timer 采用该固定版本的真实语义，不保留 Halpha 平行公式或状态机
         - Portfolio 与 RiskEngine 使用框架数值，但只作技术防错；Halpha Decimal 仍拥有额度、损失和身份摘要
-        - Strategy 内存生命周期不作恢复权威；PlanActivation/PlanEvent/PendingAction 保留产品状态
+        - Strategy 内存生命周期不作恢复权威；产品状态按 accepted TRADEPLAN/EXE/SYS 契约持久化，L4 不复制记录或恢复规则
       prohibited:
         - event store、Redis、persistent cache、OrderEmulator、bracket/OCO 和内部自动派生真实动作
         - 自动写重试、把技术 external claim 当业务归属、直接纯策略逻辑写入和第二量化栈
       artifact: nautilus_trader-1.230.0-cp313-cp313-win_amd64.whl
-      artifact_sha256_candidate: 8817c46dc34e0aafc606948aacf1dd0fbbe1a31273c8a2f20983cf4ab2ddeef1
-      artifact_rule: B00 从官方索引重新取得并核对 filename、ABI、SHA-256 与全部传递依赖；不匹配即阻断
+      artifact_sha256: 8817c46dc34e0aafc606948aacf1dd0fbbe1a31273c8a2f20983cf4ab2ddeef1
+      artifact_qualification: B00 已从官方索引核对 filename、ABI、SHA-256、tag/commit、许可证与完整传递依赖锁
       windows_precision_mode: standard precision（64-bit raw fixed-point，最多 9 位小数）；P0 不引入高精度第二构建
-      platform_caveat: NautilusTrader 1.230.0 官方 Windows 支持边界为 Windows Server 2022+ x86_64 与 Python 3.12–3.14；实际目标主机为 Windows 10 Pro 22H2、10.0.19045、x64，处于官方文档边界之外，不能从 wheel 存在或离线生命周期探针通过推断生产适用。B00 必须在本机继续证明 Binance client、BTCUSDT/ETHUSDT 价格、数量、费用与资金费精度及完整生命周期，否则 REJECTED
+      platform_caveat: NautilusTrader 1.230.0 官方 Windows 支持边界为 Windows Server 2022+ x86_64 与 Python 3.12–3.14；目标 Windows 10 Pro 22H2 位于声明边界外。B00 已在本机资格化当前切片，但不把该证据扩大为官方支持或长期生产保证；B01/B04 仍须完成产品任务身份和 72 小时证据
   backend:
     python: 3.13.14
     python_environment:
@@ -324,7 +376,7 @@ component_selection:
     limits: 5.8.0
     structlog: 26.1.0
     uses:
-      - FastAPI/Starlette 提供本地 API、SessionMiddleware 与 TrustedHostMiddleware
+      - FastAPI/Starlette 提供本地 API、SessionMiddleware、TrustedHostMiddleware 与同进程服务端 `/operations` HTML；有限入口不依赖 Node/Vite/React 静态制品
       - Pydantic/pydantic-settings 提供请求、领域边界和 TOML 配置校验
       - SQLAlchemy/Alembic/psycopg 提供唯一 PostgreSQL 模型、迁移、事务与锁
       - pwdlib[argon2] 的 PasswordHash.recommended() 使用 Argon2；asgi-csrf 提供签名双提交；limits 的 FixedWindowRateLimiter+MemoryStorage 提供内存登录限速
@@ -353,16 +405,18 @@ component_selection:
     rjsf_mui: 6.6.2
     rjsf_validator_ajv8: 6.6.2
     rjsf_utils: 6.6.2
+    ajv: 8.20.0；只在构建/测试时把服务端 JSON Schema 2020-12 预编译为 CSP-safe 校验器，不进入浏览器运行时编译路径
     react_router: 8.2.0
     tanstack_react_query: 5.101.2
     openapi_typescript: 7.13.0
     openapi_fetch: 0.17.0
     uses:
       - MUI 提供布局、表格、表单控件、对话框和状态组件；P0 不自建通用组件库
-      - RJSF MUI/AJV8 从策略 JSON Schema 生成参数表单；只自定义 Decimal 字符串 widget 和领域跨字段错误
+      - RJSF MUI 使用构建期 AJV 2020-12 预编译校验器从策略 JSON Schema 生成参数表单；浏览器严格 CSP 下不执行动态代码生成，运行时服务端 schema 与构建 schema 不一致即失败停止；只自定义 Decimal 字符串 widget 和领域跨字段错误
       - React Router 提供稳定路由；TanStack Query 只做内存查询、轮询和 stale 展示，不持久化、不离线执行命令
       - openapi-typescript/openapi-fetch 从 FastAPI OpenAPI 生成类型与客户端；不手写平行 DTO/HTTP client
       - 生产只部署 Vite 静态 dist，由单 worker halpha-app 提供；不运行 Node/Vite server
+      - "`/operations` 随同一 halpha-app 后端制品发布并服务端渲染，复用同一认证、CSRF、Command/Receipt 和领域处理器；不是第二前端应用"
   testing_and_locking:
     pip: 26.1.2
     pyyaml: 6.0.3；只供仓库 YAML/文档机械校验，不进入 Halpha 运行依赖
@@ -412,7 +466,7 @@ runtime_configuration:
       adapter_instances: >-
         one HalphaStrategyAdapter per 未闭合且未进入 USER_TAKEOVER 的 PlanActivation（至少覆盖 RUNNING、EXITING 与 UNKNOWN）；
         USER_TAKEOVER 持久化后停止并移除对应 adapter
-      strategy_id: 由 activation_id 稳定派生；产品归属仍只认 PendingAction UUID32+activation_id，框架 StrategyId 不能单独证明归属
+      strategy_id: 由 activation_id 稳定派生；产品归属规则按 HALPHA-DAT-002/HALPHA-EXE-002，框架 StrategyId 不能单独证明归属
     TradingNodeConfig:
       environment: LIVE（Nautilus kernel 环境；Binance Demo/Live 由 client environment 区分）
       cache: null（只使用进程内 cache，不配置 backing database）
@@ -451,14 +505,9 @@ runtime_configuration:
       position_check_lookback_mins: 60
       position_check_retries: 3
       generate_missing_orders: true
-      generated_reconciliation_projection: >-
-        只允许 NautilusTrader 为重建进程内技术 cache 生成 reconciliation order/position projection；这些对象仍按 EXTERNAL/RECONCILIATION 技术投影过滤，
-        不成为 PlanEvent、VenueFact 产品终态、激活归属、PnL 或 closure 证据，也不触发 Halpha 新动作
-      order_timer_compromise: >-
-        固定版本 inflight 定时器在连续查询无响应后会生成不可逆的本地 REJECTED/CANCELED 技术终态，因此关闭；
-        open-order 定时器只以 open_check_open_only=true 运行，复用场所批量开放订单响应推进其中明确返回的正向状态，响应中缺失的本地订单直接保持原技术状态，
-        不进入单订单缺失解析或合成终态。HalphaCoordinator 只在现有 PendingAction/保护/闭环循环中按已持久 UUID32 调用组件公开单订单 query，
-        不建立第二订单状态机、claim、cursor 或 worker
+      generated_reconciliation_projection: enabled for in-memory technical cache rebuild
+      order_timer_selection_reason: B00 已证明 inflight timer 的合成终态风险，故关闭；open timer 仅保留 open-only 正向更新
+      product_projection_and_unknown_contract: HALPHA-DAT-002@v0.8.0、HALPHA-EXE-002@v1.2.0
       filter_unclaimed_external_orders: false
       filter_position_reports: false
     StrategyConfig:
@@ -466,27 +515,27 @@ runtime_configuration:
       manage_contingent_orders: false
       manage_gtd_expiry: false
       external_order_claims: null
-      recovery_contract: >-
-        persistent cache 关闭后，HalphaCoordinator 只按已持久 UUID32 使用 Strategy.query_order/query_account 与同一适配器私有 cancel 门，
-        即使 cache object 的技术 StrategyId 为 EXTERNAL，也必须能恢复、查询、取消并继续接收普通/算法订单终态；未知 UUID 不得误撤或归属。
-      qualification_status: B00_BLOCKING_UNKNOWN
-      prohibited_compromise: 不允许每 activation 注册 instrument claim，因为固定版本没有公开 deregister；若无 claim 路径失败，当前方案 REJECTED，任何替代拓扑都另起修订提案评审，不在当前运行时保留双拓扑
+      recovery_entrypoints: [Strategy.query_order, Strategy.query_account, private persisted-action cancel gate]
+      recovery_contract: HALPHA-EXE-002@v1.2.0#EXE-AUTO-REC-001、#EXE-AUTO-HO-001；L4 只固定上述组件入口和 external_order_claims=null
+      qualification_status: B00_QUALIFIED
+      prohibited_compromise: 不允许每 activation 注册 instrument claim，因为固定版本没有公开 deregister；若无 claim 路径失败，当前方案 REJECTED，任何替代拓扑都必须直接修订对应目标层级文档并重新评审接受，不在当前运行时保留双拓扑
     BinanceInstrumentProviderConfig:
       load_all: false
       load_ids:
         BINANCE_DEMO: [BTCUSDT-PERP.BINANCE, ETHUSDT-PERP.BINANCE]
         BINANCE_LIVE_READ_ONLY: [BTCUSDT-PERP.BINANCE]
         BINANCE_LIVE_WRITE: [BTCUSDT-PERP.BINANCE]
-      query_commission_rates: true
-      binding: DataClient 与 ExecutionClient 必须绑定同一 active profile 的上述精确配置和值摘要；reconciliation_instrument_ids 只限制核对范围，不能代替 instrument provider 加载
-      failure: 任一 load_id 未进入 InstrumentProvider/DataEngine/Execution cache 时该 profile 阻断；query_commission_rates 的结果只用于框架技术估算，因为固定版本查询失败会回退 fee-tier table 且不公开回退标志，不能据此证明实际费率
+      query_commission_rates: {BINANCE_DEMO: true, BINANCE_LIVE_READ_ONLY: false, BINANCE_LIVE_WRITE: true}
+      binding: DEMO/LIVE_WRITE 的 DataClient 与 ExecutionClient 必须绑定同一 active profile 的上述精确配置和值摘要；LIVE_READ_ONLY 只有同一 DataClient/provider。reconciliation_instrument_ids 只限制写 profile 核对范围，不能代替 instrument provider 加载
+      failure: 任一 load_id 未进入该 profile 实际装载的 InstrumentProvider/DataEngine/Execution cache 时阻断；写 profile 的 query_commission_rates 结果只用于框架技术估算，因为固定版本查询失败会回退 fee-tier table 且不公开回退标志，不能据此证明实际费率；LIVE_READ_ONLY 不发起该账户查询
       actual_fee_boundary: 增险 sizing 所需实际 taker fee 只从已资格化的同包 GET /fapi/v1/commissionRate supplement 取得并映射为带 instrument/cutoff 的 ACCOUNT_STATE；缺失、过期或查询失败即不新增风险，不引入第二 client
     BinanceDataClientConfig:
       account_type: USDT_FUTURES
       environment: active profile explicit DEMO or LIVE
+      credential_binding: DEMO/LIVE_WRITE 使用各自 WinVault 凭据；BINANCE_LIVE_READ_ONLY 固定 api_key/api_secret=null，配置或运行时出现 Binance 凭据即拒绝
       instrument_provider: active profile BinanceInstrumentProviderConfig
-      subscriptions: 按 p0_data_and_adapter_contract.live_subscriptions，由适配器生命周期建立和恢复
-      persistence: 按 p0_data_and_adapter_contract.persistence_rule；不保存全量流或建立行情库
+      subscriptions: 按 p0_data_and_adapter_selection.live_subscriptions，由适配器生命周期建立和恢复
+      persistence_contract: HALPHA-DAT-002@v0.8.0；当前不保存全量流或建立行情库
       credentials: 从 Executor 身份 WinVault reference 读取并显式注入 api_key/api_secret；缺失即阻断，绝不让 factory 回退环境变量
     BinanceExecClientConfig:
       account_type: USDT_FUTURES
@@ -502,29 +551,18 @@ runtime_configuration:
       futures_leverages: null
       futures_margin_types: null
       transport_compromise: 固定版本 Python config 不公开 use_ws_trading 字段；接受组件实际传输，仅资格化动作身份、零写重试和失败语义，不自研第二传输
-    reconciliation_projection_rule: >-
-      框架原生启动/持仓核对与场所事件只维护 NautilusTrader 技术状态；组件生成或合成的终态、EXTERNAL/VENUE/RECONCILIATION 事件和缺少已持久 UUID32 的对象
-      不证明 Halpha 受理、拒绝、成交、盈亏或闭合。单订单 query 未返回、position retries 耗尽、连续 status-query 错误或组件 synthetic terminal
-      都使受影响 PendingAction/激活保持 UNKNOWN 并停止新增风险，不能转成产品终态。
-    product_result_resolution: >-
-      对已持久 UUID32，先消费明确场所 stream/公开 query 的正向响应；必要时只复用同包 get_cached_binance_http_client 的签名 GET 白名单补齐普通/算法订单、成交、income 和 position。
-      单次 not-found、空列表、超时、读取错误或框架 synthetic terminal 不证明未提交或已终态。B00 必须覆盖普通/算法端点、分页、限频、暂态错误与连续错误故障注入。
     automatic_write_retry: disabled；max_retries=null 在固定源码写 RetryManager 路径等价 0 次，但 status query 内部仍有 3 次读取尝试，二者不得混淆
-    unknown_order_rule: 只按已持久 UUID32 查询；没有确定未调用证据时禁止再次 submit，cancel 也只能针对已证明开放的原身份
-    exact_config_digest: B00 输出唯一选定配置并固定；B00 前为 UNKNOWN
-  numeric_rules:
-    product_authority: Python Decimal
-    applies_to: [price, trigger_price, quantity, balance, fee_rate, funding_rate, instrument_rule_value, exchange_rate, allocation, notional, margin, realized_pnl, unrealized_pnl, commission, funding, loss]
-    digest_rule: 所有进入 identity/content digest 的数值先规范化为带单位和精度的十进制字符串；digest 是规范化字节哈希，不是 Decimal 数值
-    framework_numeric_rule: >-
-      场所公开原始十进制文本直接解析 Decimal；NautilusTrader Price/Quantity/Money 从其 canonical string 与 precision 转为 Decimal 并以 B00 黄金向量验证；
-      指标 double 只用于策略信号，不进入额度、损失或身份摘要。不得把所有组件值误写成 f64，也不自建平行数值对象体系。
-    rounding: 价格与触发价按风险方向对 tickSize 量化，数量向下按 stepSize 量化；不得为满足最小量向上增加风险
+    product_result_contract: HALPHA-EXE-002@v1.2.0；核对投影、UNKNOWN、产品终态、原身份查询与禁止重复 submit 的稳定语义不在 L4 复制
+    exact_config_digest: 由 build/qualification/b00-qualification-latest.json 固定 B00 配置证据；B01 BuildManifest 再绑定产品构建摘要
+  numeric_contract:
+    normative_source: HALPHA-ENG-002@v0.8.0#ENG-AUTO-NTL-003-REQ
+    current_implementation: Python Decimal、PostgreSQL NUMERIC 与 NautilusTrader 原生数值边界
+    qualification_status: B00_QUALIFIED；B02/B03 按建设包 exit_evidence 继续验证当前实现，不在 L4 复制数值、摘要、量化或失败规则
   database:
     transaction_isolation: READ COMMITTED
     claim_pattern: SQLAlchemy with_for_update(skip_locked=True) 只由 HalphaCoordinator 或 NotificationDispatcher 使用
     concurrency: stable lock order + unique constraint + expected state_version CAS
-    unavailable_behavior: 不以内存队列形成 PlanEvent、PendingAction、Command、Receipt 或真实写入
+    unavailable_contract: HALPHA-SYS-002@v0.9.0、HALPHA-ENG-002@v0.8.0；数据库不可用失败语义不在 L4 复制
   logging:
     halpha_events:
       format: structlog JSON Lines
@@ -602,10 +640,15 @@ security_and_operations:
   binance_account_prerequisites:
     product: USDⓈ-M perpetual
     position_mode: one-way
-    margin_mode: isolated
     asset_mode: single-asset
-    leverage: user configured, integer 1 through 5
-    halpha_behavior: 只读验证；不自动修改持仓模式、保证金模式、杠杆、转账或提现
+    margin_mode:
+      accepted_actual: [isolated, crossed]
+      handling: ISOLATED 按实际逐仓事实核算；CROSSED 使用逐仓等价 Halpha 内部额度核算，不反向把 ISOLATED 当作 CROSSED，也不声称场所资金已隔离
+    leverage:
+      accepted_actual: 场所报告的正杠杆值；P0 不把实际杠杆不高于 5 倍作为账户前置条件
+      effective_risk_leverage: min(actual_leverage, 5)
+      compatibility_direction: 实际高杠杆可向下兼容 P0 最高 5 倍内部风险上限；实际低杠杆不得向上放大
+    halpha_behavior: 只读取得实际持仓模式、资产模式、逐工具保证金模式和杠杆；按上述兼容规则计算，不自动修改模式、杠杆、转账或提现
     api_permissions: profile 所需最小读/写权限；无提现权限；LIVE_WRITE 建议固定出口 IP allowlist
   windows:
     target_edition_and_build: Windows 10 Pro 22H2、10.0.19045、x64
@@ -616,8 +659,10 @@ security_and_operations:
     task_defaults:
       multiple_instances_policy: IgnoreNew
       execution_time_limit: PT0S
-      trigger: system startup
-      restart_on_failure: 3 次，每次间隔 PT1M
+      triggers:
+        - system startup
+        - 每日固定起点、PT1M 间隔、P1D 周期的重复触发；运行中由 IgnoreNew 拒绝重叠，异常退出后由下一次触发恢复
+      restart_on_failure: disabled；目标 Windows 10 黑盒证明普通非零退出和动作进程崩溃均不会触发该设置，不将无效 XML 声明作为恢复证据
       run_hidden: true
     executor_mutex: Global\Halpha.Executor.WriteOwner；加载 Binance 凭据或 TradingNode 前取得，进程终止由 OS 释放
     stop_control:
@@ -653,23 +698,12 @@ security_and_operations:
       B01 验证 ACL、子进程退出/崩溃后的清理和日志扫描；不得建设第二备份格式或守护进程。
     excluded: [PITR, pgBackRest, Barman, hot standby, automatic failover]
 
-p0_data_and_adapter_contract:
+p0_data_and_adapter_selection:
+  stable_contracts: [HALPHA-DAT-002@v0.8.0, HALPHA-EXE-002@v1.2.0, HALPHA-TRADEPLAN-002@v0.10.0]
   venue: Binance USDⓈ-M perpetual
   instruments:
     real_acceptance: BTCUSDT-PERP
     demo_mapping_validation: [BTCUSDT-PERP, ETHUSDT-PERP]
-  venue_fact_kinds:
-    - CLOSED_BAR
-    - MARK_PRICE
-    - TOP_OF_BOOK
-    - INSTRUMENT_RULES
-    - ACCOUNT_STATE
-    - ORDER_STATE
-    - FILL
-    - COMMISSION
-    - FUNDING
-    - POSITION_STATE
-  persistence_rule: 只持久化已被计划决定、CAP、PendingAction、损失、保护、闭环或复盘引用的事实；不建设全量行情库
   live_subscriptions:
     bar_types:
       source_1m: "{instrument_id}-1-MINUTE-LAST-EXTERNAL"
@@ -695,114 +729,54 @@ p0_data_and_adapter_contract:
         time_bars_skip_first_non_full_bar=true 可能丢弃历史请求生成的首个 target bar，因此只以 callback 后实际完整连续数量验收，不假定 72h 必得 288 根。
         完全相同的边界重放只处理一次，异值重复、缺口、乱序或 callback 前实时 bar 均阻止新增风险；不自研回填、重采样、时钟对齐器或第二 15m 源
     risk_increase_freshness:
-      cutoff: 每次拟提交增险 PendingAction 前固定同一个 pre_submit_cutoff，以下事实均须属于同 environment/account/instrument 且 observed_at 不晚于该 cutoff
+      cutoff: 每次拟提交增险执行动作前固定同一个 pre_submit_cutoff，以下事实均须属于同 environment/account/instrument 且 observed_at 不晚于该 cutoff
       mark_price_max_age_seconds: 3
       top_of_book_max_age_seconds: 3
       source_1m_rule: 必须是 pre_submit_cutoff 前最近一个应闭合的 1m 区间，且从其 interval_end 到 cutoff 不超过 65 秒
       target_15m_rule: 必须是该判断 cutoff 前最近一个应完整闭合的 15m 区间，并已由恰好 15 根连续 source_1m 证明；不得以普通 age 窗口跳过缺失桶
       queried_rules_and_account_max_age_seconds: 5
       queried_rules_and_account_scope: INSTRUMENT_RULES 与含账户/持仓模式、逐工具 margin mode/leverage、实际 maker/taker fee 的 ACCOUNT_STATE 必须在本次 StrategyProposal 后完成查询，并在 pre_submit_cutoff 时不超过 5 秒
-      capital_and_authorization: 在 PlanEvent、CAP 决定和 PendingAction 同一事务中按当前 state_version 加锁读取，不使用时间缓存
+      capital_and_authorization_contract: HALPHA-TRADEPLAN-002@v0.10.0、HALPHA-CAP-002@v1.2.0、HALPHA-EXE-002@v1.2.0；不使用时间缓存
     lifecycle: 每个适配器只请求并订阅自己的 instrument；停止/移除时按组件公开生命周期解除，重启重复同一预热—回调—实时接续流程后才可形成新入场判断
-    failure: 历史请求/回调失败、预热不足、断连、重订阅未知或任一 risk_increase_freshness 不满足时不新增风险；已有持仓仍进入查询、保护、退出或用户接管路径，不能以等待预热推迟持久 deadline
+    failure_contract: HALPHA-DAT-002@v0.8.0、HALPHA-TRADEPLAN-002@v0.10.0、HALPHA-EXE-002@v1.2.0；本计划只固定上述 freshness 数值与组件接线
   bar_source:
     venue_input: K 线输入只使用完整闭合 1m LAST contract bars；mark/quote 只服务实时估值、sizing 与 freshness，不形成第二 K 线源
     higher_timeframe: 用 NautilusTrader DataEngine/BacktestEngine 的精确 target_15m 把 source_1m 聚合为完整闭合 15m；实时必须订阅 target_15m，不把仅订阅 source_1m 误认为会向策略发布目标 bar；不维护第二场所 15m 订阅、历史文件或自研对齐器
-    qualification: B00 用精确 BarType、预热、边界、缺口、重复、回调接续和重启黄金向量，并与 Binance 官方 15m 抽样核对；若组件语义不合格则阻断并形成 L4 修订提案，不静默增加双源
-  source_authority:
-    venue_query_or_identified_stream: 可证明场所报告状态
-    framework_derived_bar: 可作为已资格化策略输入
-
-    framework_synthetic_order_or_fill: 不得证明场所受理、成交、费用、损失或闭环
-    external_unclaimed: 不归属到激活，但可阻止新增风险或闭环
-  attribution:
-    halpha_action: 普通/条件 client order id 必须精确匹配已持久 PendingAction UUID32；账户、工具、方向和时间同时一致
-    user_takeover: 接管后只把精确匹配冻结 environment/account/instrument/cutoff、且可证明仅减少或关闭原有风险的场所事实标为 USER_TAKEOVER 并引用 handover_command_ref；来源保持场所查询/推送，不形成 PendingAction 或确定策略损益
-    conflict: 新增、增险、反向、范围外、方向不明或身份冲突活动保持 EXTERNAL_UNCLAIMED 并阻止关闭
-  activation_scope:
-    key: [environment, account, instrument]
-    exclusivity: 从 PlanActivation/PlanAllocation 原子建立起到 EXE closure_digest 被 CAP 引用并释放额度，只允许一个未释放激活
-    preconditions: 场所该 instrument 持仓为零，普通/算法开放订单均为空，且不存在外部、未知或身份冲突责任
-    purpose: Binance one-way position 作用于整个账户 instrument，保护、止盈和退出责任也必须按场所净持仓核对；P0 不自研虚拟分仓或订单归属修补
-    owner_confirmation_status: CONFIRMED_IN_ACCEPTED_L4
+    qualification: B00 已用精确 BarType、预热、边界、缺口、重复、回调接续和重启黄金向量，并与 Binance 官方 15m 抽样核对通过；B01/B04 仍需产品与持续运行证据
+  attribution_and_scope_contract: HALPHA-DAT-002@v0.8.0、HALPHA-EXE-002@v1.2.0、HALPHA-CAP-002@v1.2.0；事实权威、外部归属、激活排他和闭合语义不在 L4 复制
   read_only_supplement:
-    candidate: 复用 NautilusTrader 1.230.0 公开 get_cached_binance_http_client(...) 返回的同包 BinanceHttpClient；不直接访问 execution client 私有 _http_client，也不另建 client
-    allowed_only_if_b00_proves_gap: [已持久 UUID32 的普通/算法订单结果, 实际 funding/income, commission detail, position or leverage fields missing from public high-level event]
+    selection: 复用 NautilusTrader 1.230.0 公开 get_cached_binance_http_client(...) 返回的同包 BinanceHttpClient；不直接访问 execution client 私有 _http_client，也不另建 client
+    b00_qualified_gaps: [已持久 UUID32 的普通/算法订单结果, 实际 funding/income, commission detail, position or leverage fields missing from public high-level event]
     interface: 只导出列明 GET 查询并输出同一 VenueFact；不得暴露 POST/PUT/DELETE、下单、撤单、改模式或改杠杆
     storage: none；无 cache、checkpoint、worker、第二数据库或第二事实权威
-    failure: 同包低层 client 仍不能满足时 B00 失败；P0 不自动加入 Binance SDK 或 raw client fallback
+    fallback: none；不自动加入 Binance SDK 或 raw client
   framework_reconciliation:
     enabled: startup and continuous
     covers: ordinary orders、conditional/algo orders、fills and positions
-    external_order_claims: null；B00 必须证明已知 UUID 的 EXTERNAL 技术对象仍可安全 query/cancel/接收终态；每 activation claim 明确禁止
+    external_order_claims: null
+    qualification: B00 已证明已知 UUID 的 EXTERNAL 技术对象可经选定入口安全 query/cancel/接收终态；不启用 per-activation claim
     unclaimed_visibility: visible but not attributed
-    synthetic_filter: EXTERNAL、VENUE、RECONCILIATION 或无 UUID32 的合成事件不得进入激活 PnL、损失或 closure digest
+    product_projection_contract: HALPHA-DAT-002@v0.8.0、HALPHA-EXE-002@v1.2.0；组件合成事件与产品事实边界不在 L4 复制
 
-p0_order_profiles:
-  selected_profiles:
-    - id: ENTRY_MARKET
-      use_in_first_strategy: true
-      terms: NautilusTrader OrderFactory.market；固定数量；MarketOrder 不发送或自选 time-in-force；提交一次且无写重试
-    - id: ENTRY_LIMIT
-      use_in_first_strategy: false
-      terms: NautilusTrader OrderFactory.limit；固定价格/数量与 GTC；移动挂单只允许“原 UUID32 撤单并确认终态后，新 PlanEvent/CAP/PendingAction 建新 UUID32”，不使用 modify-in-place 或通用追价引擎
-    - id: ENTRY_STOP_MARKET
-      use_in_first_strategy: false
-      terms: >-
-        NautilusTrader OrderFactory.stop_market；LAST_PRICE 映射 Binance CONTRACT_PRICE；显式 quantity、reduce_only=false 且不发送 closePosition；
-        只支持 LONG 向上突破或 SHORT 向下突破的场所监控入场，数量按 trigger price 加既定费用/滑点缓冲仍不超过本激活三轴额度
-    - id: CANCEL_ORDER
-      use_in_first_strategy: true
-      terms: 复用目标普通或条件订单原 UUID32/场所身份；未知时只查询
-    - id: PROTECTIVE_STOP_REDUCE_ONLY
-      use_in_first_strategy: true
-      terms: NautilusTrader StopMarket；LAST_PRICE 映射 Binance CONTRACT_PRICE；每个已核对正成交增量使用显式 quantity 与 reduce_only=true；不发送 closePosition，不使用 bracket/OCO
-    - id: TAKE_PROFIT_1
-      use_in_first_strategy: true
-      terms: NautilusTrader MarketIfTouched；LAST_PRICE/CONTRACT_PRICE；明确数量；reduce_only=true
-    - id: TAKE_PROFIT_2
-      use_in_first_strategy: true
-      terms: NautilusTrader MarketIfTouched；LAST_PRICE/CONTRACT_PRICE；显式数量；reduce_only=true；不发送 closePosition
-    - id: REDUCE_OR_CLOSE_MARKET
-      use_in_first_strategy: true
-      terms: NautilusTrader MarketOrder；只使用当前同 cutoff 已核对的明确剩余数量并 reduce_only=true；MarketOrder 不使用 closePosition，数量未知时不提交
-  forbidden_profiles:
-    - modify-in-place
-    - bracket or OCO
-    - trailing stop
-    - framework market_exit
-    - automatic split routing
-    - unqualified order type fallback
-  venue_conditional_entry_rule: >-
-    PlanVersion 从一开始选择 VENUE_MONITORED 后，本地策略不并行判断同一价格触发；Halpha 只持续查询、处理成交并在 risk_increase_until 到期时按原 UUID32 撤单/核对。
-    到期与触发竞态只消费场所原身份；若已成交则进入本激活保护/退出链，不重提条件单。
-  risk_increase_expiry_rule: >-
-    risk_increase_until 到期时，TRADEPLAN 形成一次幂等 PlanEvent，并对 ENTRY_LIMIT、ENTRY_STOP_MARKET 及任何仍可能增加风险的开放入场 PendingAction
-    按原 UUID32 请求取消并核对；SUBMITTED_UNKNOWN 只查询原身份，证明开放后才取消。全部入场责任终态前保持“仍可能成交”，禁止新入场、闭环或额度释放；
-    截止后发生的正成交按同一场所成交身份直接进入保护与退出/尾部清理，不恢复入场授权、不提交第二入场。
-  identity:
-    format: UUID32，无连字符小写十六进制
-    generation: 建立 PendingAction 时生成一次并随本地事务提交
-    reuse: submit、query、cancel、restart 和 unknown recovery 始终复用原值
-  pending_action_states:
-    - READY
-    - NOT_SUBMITTED
-    - SUBMITTING
-    - SUBMITTED_UNKNOWN
-    - ACKNOWLEDGED
-    - WORKING
-    - PARTIALLY_FILLED
-    - FILLED
-    - CANCELLED
-    - REJECTED
-    - EXPIRED
-    - RECONCILED
-    - HANDED_OVER
-  write_boundary:
-    before_call: 提交 `SUBMITTING`、request_digest 和 call_started_at
-    after_timeout_or_crash: "`SUBMITTED_UNKNOWN`，只查询原 UUID32，禁止第二次调用"
-    proven_not_called: "`NOT_SUBMITTED`"
-    terminal_evidence: 订单、成交、费用、持仓及保护影响完整后才 `RECONCILED`
+p0_order_profile_selection:
+  stable_contracts:
+    - HALPHA-EXE-002@v1.2.0#EXE-AUTO-ACT-001
+    - HALPHA-EXE-002@v1.2.0#EXE-AUTO-SUB-001
+    - HALPHA-EXE-002@v1.2.0#EXE-AUTO-ORD-001
+    - HALPHA-EXE-002@v1.2.0#EXE-AUTO-PROT-001
+  selected_profiles: [ENTRY_MARKET, ENTRY_LIMIT, ENTRY_STOP_MARKET, CANCEL_ORDER, PROTECTIVE_STOP_REDUCE_ONLY, TAKE_PROFIT_1, TAKE_PROFIT_2, REDUCE_OR_CLOSE_MARKET]
+  first_strategy_profiles: [ENTRY_MARKET, CANCEL_ORDER, PROTECTIVE_STOP_REDUCE_ONLY, TAKE_PROFIT_1, TAKE_PROFIT_2, REDUCE_OR_CLOSE_MARKET]
+  current_component_mapping:
+    ENTRY_MARKET: NautilusTrader OrderFactory.market
+    ENTRY_LIMIT: NautilusTrader OrderFactory.limit
+    ENTRY_STOP_MARKET: NautilusTrader OrderFactory.stop_market
+    PROTECTIVE_STOP_REDUCE_ONLY: NautilusTrader StopMarket
+    TAKE_PROFIT_1: NautilusTrader MarketIfTouched
+    TAKE_PROFIT_2: NautilusTrader MarketIfTouched
+    REDUCE_OR_CLOSE_MARKET: NautilusTrader MarketOrder
+  current_trigger_mapping: LAST_PRICE → Binance CONTRACT_PRICE
+  current_exclusions: [modify-in-place, bracket/OCO, trailing stop, framework market_exit, automatic split routing, unqualified order type fallback, closePosition]
+  qualification: B00 固定组件映射与 Demo capability；B03 按上述启用切片验证完整产品责任，本计划不复制动作状态、外部写边界、防重、保护、核对或恢复规则
 
 first_strategy:
   strategy_id: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
@@ -812,11 +786,10 @@ first_strategy:
   supported_directions: [LONG, SHORT]
   real_qualified_instrument: BTCUSDT-PERP
   purpose: 验证本地持续条件、市价入场、场所基础保护、分级止盈、时间/损失退出、核对和复盘闭环；不表达盈利保证
-  activation_authorization_mapping:
-    effective_at: PlanActivation、MachineAuthorizationVersion 与 PlanAllocation 原子建立时生效
-    risk_increase_until: effective_at + entry_valid_minutes；该时刻也是本激活新增入场/增险授权截止
-    after_risk_increase_until: 禁止新入场或其他增险；继续授权查询、撤单、既有场所保护、减仓、平仓和闭环核对
-    ends_at: closure/release 或 USER_TAKEOVER；用户接管后 Halpha 只读核对，不再具有机器写授权
+  lifecycle_contracts:
+    plan_and_deadline: HALPHA-TRADEPLAN-002@v0.10.0#TRADEPLAN-AUTO-LIF-001
+    capital_and_authorization: HALPHA-CAP-002@v1.2.0
+    action_protection_and_closure: HALPHA-EXE-002@v1.2.0#EXE-AUTO-SUB-001、#EXE-AUTO-PROT-001、#EXE-AUTO-CLOSE-001-REQ
   user_parameters:
     direction: {type: enum, allowed: [LONG, SHORT], default: null}
     channel_lookback_15m: {type: integer, min: 20, max: 96, default: 20}
@@ -860,11 +833,6 @@ first_strategy:
     pre_submit:
       live: 按 live_subscriptions.risk_increase_freshness 建立同一 pre_submit_cutoff，刷新并核对 mark、top-of-book、instrument rules、账户/持仓模式、逐工具 margin mode/leverage/实际费率、额度和授权；事实未知、过期、scope 不符或不再满足扩展上界时本次不提交
       backtest: 只消费 decision cutoff 已闭合且连续的 1m LAST bar close 代理、catalog instrument、内存 CAP 与授权；代理缺失或不连续时本次不提交，不伪造 MARK_PRICE/TOP_OF_BOOK VenueFact
-    latch: PlanEvent、CAP 接受和 PendingAction 同一事务提交后锁存本激活入场决定；相同来源幂等
-    rejection: >-
-      只有 PlanEvent+CAP+PendingAction 三方事务尚未成功前的条件/事实失败可等待新的闭合 bar；事务一旦提交就只推进原 PendingAction，最终 NOT_SUBMITTED、REJECTED 或 UNKNOWN 均不为本激活建立第二入场。
-      NOT_SUBMITTED/REJECTED 只有在 EXE closure digest 证明无场所责任后，才以 COMPLETED、result_reason=FAILED_NO_ENTRY/<reason> 结束；UNKNOWN 保持非终态。
-    expiry: entry_valid_minutes 到期且无成交/开放/未知入场责任时进入 COMPLETED，result_reason=NO_ENTRY_EXPIRED；否则按 risk_increase_expiry_rule 撤销并核对全部仍可能增险的入场责任
   sizing:
     reference_price:
       live: LONG 使用 max(mark_price,best_ask)，SHORT 使用 max(mark_price,best_bid) 作为保守名义参考
@@ -872,88 +840,54 @@ first_strategy:
     stop_distance: initial_stop_atr_multiple * trigger_atr
     risk_budget: max_allowed_loss * 0.80
     leverage:
-      live: 从同 cutoff 已核对 ACCOUNT_STATE 取得用户预设且在 1–5x 内的实际 isolated leverage；未知或与 manifest 不符时不新增风险
-      backtest: 使用 owner 在 B04 证据 manifest 中固定的 1–5x 值，source=BACKTEST_MANIFEST_LEVERAGE_PROXY；不伪造成账户事实，B05 实际 leverage 必须与证据 manifest 一致
+      live: >-
+        从同 cutoff 已核对 ACCOUNT_STATE 取得逐工具实际 margin mode 与正 actual_leverage；ISOLATED 按实际逐仓事实核算，CROSSED 使用逐仓等价内部额度核算，
+        effective_leverage=min(actual_leverage,5)。不得只因实际为 CROSSED 或 actual_leverage>5 拒绝，也不得在 actual_leverage<5 时向上放大；事实未知、模式不在
+        [ISOLATED,CROSSED]、杠杆非正或 effective_leverage 与证据 manifest 不符时不新增风险。
+      backtest: >-
+        使用 owner 在 B04 证据 manifest 中固定的 1–5x effective_leverage，source=BACKTEST_MANIFEST_LEVERAGE_PROXY；它只表示逐仓等价内部风险上限，不伪造成账户事实。
+        B05 记录实际 margin mode 与 actual_leverage，并按相同公式所得 effective_leverage 与证据 manifest 一致；actual_leverage 原值不要求等于 manifest 代理值。
     fee_rate:
       live: 本次 StrategyProposal 后、pre_submit_cutoff 前从已资格化同包 GET /fapi/v1/commissionRate 取得实际 taker fee，并满足 ACCOUNT_STATE 5 秒最大年龄；Instrument fee-tier/查询回退值只作诊断，实际费率未知或过期时不新增风险
       backtest: 使用 manifest 固定 0.0006，source=BACKTEST_MANIFEST_FEE_PROXY，并与 MakerTakerFeeModel/Instrument taker_fee 完全一致；只表达保守模型成本，不伪造成 ACCOUNT_STATE 或实时实际费率
     quantity_candidates:
       - risk_budget / (stop_distance + reference_price*两边手续费与两边滑点缓冲)
       - max_notional / (reference_price*(1+entry_notional_buffer_rate))
-      - max_margin * normalized_leverage / (reference_price*(1+entry_notional_buffer_rate))
+      - max_margin * effective_leverage / (reference_price*(1+entry_notional_buffer_rate))
       - instrument MARKET_LOT_SIZE maxQty
     final_quantity: 取最小候选并按 stepSize 向下；低于 minQty/minNotional 则不入场，不向上取整
     authority: Halpha Decimal 纯函数；NautilusTrader instrument/RiskEngine 可以更保守拒绝，不能扩大数量
-  first_fill:
-    identity: 第一个由场所权威正成交 VenueFact 在事务中成功 compare-and-set 锁存的成交身份；不按后来补到的更早 trade time 重排
-    latch_rule: first_fill 为空时随该成交的去重身份原子写入；重放相同成交幂等，后来收到的任何其他正成交即使场所时间更早也只按后续成交处理，绝不改写锁存值
-    frozen_values: first_fill_price、first_fill_time、trigger_atr、R=stop_distance 和 time_exit_due_at
-    partial_fill_rule: 第一次任何正成交即启动首个显式数量保护分片；后续正成交各自增加一个分片，不重新冻结价格、ATR 或时间退出值
-    late_fill_race: >-
-      若止损、时间退出、最大损失或用户退出在入场 PendingAction 终态前触发，先请求取消原入场并只按原 UUID32核对；
-      此后每个晚到正成交都形成一个明确 reduce-only MarketOrder 尾部清理动作，直到原入场终态且持仓为零，不为退出竞态新增保护分片。
-  protection:
-    order: PROTECTIVE_STOP_REDUCE_ONLY
-    long_trigger: first_fill_price - stop_distance，向不提高风险的 tick 方向量化
-    short_trigger: first_fill_price + stop_distance，向不提高风险的 tick 方向量化
-    adapter_mapping: 每个正成交增量只形成一个带新 UUID32、显式增量 quantity 和 reduce_only=true 的 StopMarket PendingAction；不发送 closePosition，不改单或替换已有保护
-    later_fills: 未进入退出竞态时，每个后来正成交增量按原 trigger 增加一个保护分片；不重新冻结价格、ATR 或时间；退出竞态按 late_fill_race 直接减仓清理
-    coverage: 所有已知 WORKING 保护分片的剩余显式数量之和必须覆盖当前已核对正持仓；每个成交身份最多建立一个分片，reduce_only 必须阻止多个保护或止盈竞态反向开仓
-    priority: 先确认已知全部成交均有 WORKING 保护分片，再提交止盈
-    unknown: 只查询对应原 UUID32，停止新增风险，不为同一成交增量提交第二保护
-    gap: 明确不存在/拒绝、保护数量不足或正持仓无有效止损时进入 GAP，并在固定 30 秒 deadline 内形成显式市场全平；不得替换保护或使用 framework market_exit
-  take_profit:
-    submission_gate: 入场 PendingAction 已终态，全部入场成交已核对，并冻结 tp_base_quantity；对应全部已知正成交的保护分片已经 WORKING
-    tp1:
-      order: TAKE_PROFIT_1
-      trigger: LONG=first_fill_price+take_profit_1_r*R；SHORT=first_fill_price-take_profit_1_r*R
-      quantity: tp_base_quantity * take_profit_1_fraction，按 stepSize 向下；不足最小量则省略 TP1
-    tp2:
-      order: TAKE_PROFIT_2
-      trigger: LONG=first_fill_price+take_profit_2_r*R；SHORT=first_fill_price-take_profit_2_r*R
-      quantity: tp_base_quantity 减去 TP1 计划数量；若 TP1 因最小量省略则为全部 tp_base_quantity；按 stepSize 向下并显式 reduce_only=true
-    no_stop_move: TP1 成交后既有保护分片保持原触发价；P0 不做保本移动、追踪、替换或 OCO
-    sibling_cleanup: 任一 stop、TP2 或显式全平证明持仓为零后，按各自原 UUID32 撤销仍开放的入场、stop、TP1、TP2；UNKNOWN 只查询并阻止闭合
-  exits:
-    time: first_fill 后第 max_hold_bars_15m 个完整闭合 15m bar 到期，撤销剩余入场/止盈责任并显式市场全平
-    max_loss: 本激活 activation_loss >= max_allowed_loss 时锁存、停止新增风险并显式全平
-    user_exit: 进入 EXITING，撤销入场责任并显式全平
-    stop_new_risk: 不产生新入场，HalphaStrategyAdapter 与纯逻辑仍处理保护、止盈、撤单、减仓和平仓
-    user_takeover: 先在既有 Command/Receipt、PlanEvent 与 PlanActivation 冻结 command ref、切换 cutoff、environment/account/instrument、已知持仓与开放普通/算法订单责任，再以“不由框架自动管理或退出场所责任”的行为停止适配器；不自动撤单或平仓，只读核对
-  closure: 只引用 EXE 完整 closure_digest；正常关闭要求本激活损益输入完整。用户接管关闭要求 Halpha PendingAction 无在途/未知、已知 Halpha 订单终态、场所净仓位为零、同范围无开放普通/算法订单且无新增/增险/反向/冲突活动；匹配冻结范围的用户风险减少/关闭事实可帮助闭合但不冒充 Halpha 动作，精确损益可保持 UNKNOWN。TRADEPLAN 进入 COMPLETED 并请求 CAP 释放后，HalphaCoordinator 再按 activation_id 幂等调用 OUT，Review 失败不回滚闭合或额度释放
-  review_recovery: >-
-    PlanActivation=COMPLETED 且 Review 缺失，或最新 Review 输入摘要落后于已有权威引用，本身就是可派生的未完成协调责任；
-    HalphaCoordinator 启动与既有循环按 activation_id/输入摘要幂等调用 OUT，不建立新记录族、claim、cursor 或 worker。持续失败形成已有 Task，交易闭合与额度释放不回滚。
+  execution_selection:
+    first_fill_frozen_values: [first_fill_price, first_fill_time, trigger_atr, R, time_exit_due_at]
+    protection_profile: PROTECTIVE_STOP_REDUCE_ONLY
+    protection_gap_exit_deadline_seconds: 30
+    take_profit_profiles: [TAKE_PROFIT_1, TAKE_PROFIT_2]
+    exit_profile: REDUCE_OR_CLOSE_MARKET
+    unsupported: [protection replacement, OCO, trailing stop, break-even stop move, framework market_exit]
+    stable_contracts:
+      - HALPHA-EXE-002@v1.2.0#EXE-AUTO-PROT-001
+      - HALPHA-EXE-002@v1.2.0#EXE-AUTO-TP-001-REQ
+      - HALPHA-EXE-002@v1.2.0#EXE-AUTO-CLOSE-001-REQ
+      - HALPHA-OUT-002@v0.8.0#OUT-RT-RCV-001-REQ
+    note: 本节只选择当前参数与 order profile，不复制首次成交、晚到成交、保护、止盈、退出、接管、闭环或复盘恢复状态机
 
-p0_activation_loss_monitoring:
-  authority: PlanAllocation 的本激活最大损失锁存；计算使用 Halpha Decimal，其他激活和外部活动全部排除
-  formula: activation_net_pnl = realized_pnl + unrealized_pnl + funding_income - commission；activation_loss=max(0,-activation_net_pnl)
-  live_component_mapping:
-    realized_pnl: Binance 本激活成交/收入事实的 REALIZED_PNL 或逐成交 realizedProfit，按场所唯一 identity 去重；不使用已含费用的框架 realized_pnl 再重复扣费
-    unrealized_pnl: 本激活独占 instrument 的已核对数量、方向、开仓成本与最新 MARK_PRICE 形成的场所/Decimal 估值
-    funding_income: Binance FUNDING_FEE 保留正负号并按本激活独占持仓时间归属
-    commission: >-
-      只接受 Binance 实际 COMMISSION/income 或成交实际 commission，规范化为正成本并按唯一 identity 去重；组件默认费率估算、合成 fill 或 portfolio 推导只作技术诊断，
-      不形成 VenueFact。实际 commission 缺失时使用已资格化只读查询补齐，仍缺失则为 UNKNOWN
-    settlement_asset: P0 四项必须均为 USDT；出现 BNB 或其他资产、缺失汇率、重复/冲突归属时为 UNKNOWN，不自研多资产换算
-    framework_use: NautilusTrader Position/Portfolio 只交叉校验；其 realized_pnl 已可能含 commission/funding，不能再按组件净值重复扣除
-  trigger:
-    event_driven: 每个权威 MARK_PRICE、POSITION_STATE、FILL、COMMISSION 或 FUNDING VenueFact 到达后，以同一 cutoff 重算
-    periodic: 有正持仓时 HalphaCoordinator 至少每 5 秒重算；同一现有循环按公开查询节流补齐，不增加 worker
-    freshness: MARK_PRICE 不得超过 3 秒，POSITION_STATE 不得超过 10 秒；每笔 fill 必须在 10 秒内有可归属 commission 或明确零费用证据；funding 按结算事件与每 60 秒 income 查询核对
-    recovery_cursor: loss_fact_cutoff 与 last_funding_query_cutoff 作为 PlanAllocation 版本化嵌入字段；从 cutoff+VenueFact 去重继续，不建立 IngestionCheckpoint、独立 claim 或 worker
-  result:
-    threshold_reached: 同一事务锁存、建立不可解除的 StopStateVersion、停止新增风险、进入 EXITING 并形成唯一显式全平责任
-    unknown: 立即停止新增风险并查询缺失事实；正持仓连续 30 秒仍未知时进入 EXITING，无法建立确定平仓动作则要求用户接管
-    late_cost: 迟到费用/资金费可提高最终损失但不解除锁存；max_allowed_loss 不是最终损失保证
-  backtest_mapping: >-
-    BacktestEngine 中直接使用框架账户净值变化加未实现投影作为历史 activation_net，并以 fills 与 MakerTakerFeeModel 的诊断分量做黄金向量核对；
-    固定 1.230.0 Cython 引擎不结算 FundingRateUpdate，因此历史 activation_net 明确不含 funding，不能冒充实时四项损失口径，也不自研补算。
-  owner_confirmation_status: CONFIRMED_IN_ACCEPTED_L4；实际开发可按 implementation_adaptation_rule 依据 B00/B03 证据调整
+p0_activation_loss_configuration:
+  stable_contracts:
+    - HALPHA-CAP-002@v1.2.0
+    - HALPHA-EXE-002@v1.2.0#EXE-AUTO-LOSS-001-REQ
+    - HALPHA-DAT-002@v0.8.0#DAT-RT-FACT-001-REQ
+  settlement_asset: USDT
+  event_inputs: [MARK_PRICE, POSITION_STATE, FILL, COMMISSION, FUNDING]
+  periodic_recalculation_seconds_with_open_position: 5
+  freshness_seconds: {mark_price: 3, position_state: 10, fill_commission: 10, funding_query: 60}
+  positive_position_unknown_exit_deadline_seconds: 30
+  historical_funding_model: NOT_MODELED
+  qualification: B03 验证实时事实映射、时效和故障注入；B04 固定历史 manifest/report。本计划不拥有损失公式、锁存、UNKNOWN、退出或恢复语义
 
 p0_web_surface:
   routes:
     - /login
+    - /operations
     - /overview
     - /plans
     - /plans/new
@@ -988,6 +922,7 @@ p0_web_surface:
       - POST /api/v1/activations/{activation_id}/control-preview
       - POST /api/v1/activations/{activation_id}/stop-new-risk
       - POST /api/v1/activations/{activation_id}/resume-new-risk
+      - POST /api/v1/activations/{activation_id}/resume
       - POST /api/v1/activations/{activation_id}/exit
       - POST /api/v1/activations/{activation_id}/takeover
     capital:
@@ -1008,71 +943,48 @@ p0_web_surface:
       - POST /api/v1/settings/test-email
     receipts:
       - GET /api/v1/receipts/{receipt_id}
-  command_contract:
-    preview: 服务器返回瞬态 preview_id、content_digest、expires_at 和 expected resource version；前端不得自行推导后果；命令引用未过期 preview，紧急控制可在同一请求重新计算并回显最终后果
-    version_route_rule: 激活页与预览只按不可变 plan_version_id 读取；POST /activations body 必须引用同一 plan_version_id、preview_id 与 content_digest，不从 plan_id 选择“最新”版本
-    required_headers: unsafe command 使用 Idempotency-Key、X-CSRFToken，以及值为目标 GET/preview 所返回强 ETag 的 If-Match；高后果命令 body 还引用 preview_id/content_digest
-    app_local_commands: 计划创建/修改/固定/激活、资本边界和 Review 编辑由 App 在 Command/Receipt 同一领域事务处理到 EFFECTIVE 或 REJECTED，返回 200/201 与最终 receipt_id
-    conservative_controls: 停止新增风险、退出和接管由 App 同步提交保守领域状态与 PROCESSING Receipt，HTTP 202；现有 HalphaCoordinator 完成责任后经 UX record_command_result 公共边界推进
-    resume_control: App 只提交 RESUME_NEW_RISK Command 和待处理引用，不解除 StopState；HalphaCoordinator 刷新场所事实并调用 CAP 复核，只有新 StopStateVersion 明确解除后才推进 EFFECTIVE
-    review_completion: complete payload 同时携带适用 ImprovementHandoff 输入并在 OUT 同一事务幂等形成；没有独立 handoff 命令或写路径
-    result_meaning: Receipt 只说明用户命令处理，不把 PROCESSING/EFFECTIVE 描述为订单已成交或持仓已平；场所效果仍看 PendingAction/VenueFact
-    duplicate: 相同 idempotency key 和内容返回原 Command/Receipt；内容不同返回冲突
-    unsafe_get_rule: GET/HEAD 严格只读，不生成 Task、Review、Notification、命令或领域状态
+  command_transport_selection:
+    stable_contracts: [HALPHA-UX-002@v0.11.0, HALPHA-CAP-002@v1.2.0, HALPHA-TRADEPLAN-002@v0.10.0, HALPHA-EXE-002@v1.2.0]
+    current_surface: 上述 endpoint inventory；请求头、HTTP 结果、命令防重复、Receipt、恢复和稳定失败语义只由 stable_contracts 定义
   activation_review_screen:
-    must_show:
-      - REAL/DEMO 环境、账户、instrument、方向、策略代码与参数摘要
-      - max_margin、max_notional、max_allowed_loss 及“内部额度，不是 Binance 冻结或损失保证”
-      - 允许动作、入场/保护/止盈/时间退出、有效期和失败行为
-      - 停止新增风险、退出策略、用户接管三个不同后果
-    activation_action: 用户重新输入本机密码并明确确认；不使用通用二人审批或逐动作确认
+    stable_contract: HALPHA-UX-002@v0.11.0
+    current_status: B03_EXECUTION_COMPLETE；B04 正在接入完整 Demo 执行事实、控制结果和复盘证据，本计划只登记当前路由和组件，展示、确认、失败与控制语义不在 L4 复制
   parameter_form:
-    generator: RJSF MUI/AJV8 from server strategy JSON Schema
+    generator: RJSF MUI with build-time AJV 2020-12 precompiled validator；fetched server schema 必须与 build schema 完全一致
     authoritative_validation: FastAPI/Pydantic server
     custom_only: Decimal 字符串 widget、方向/参数跨字段错误和风险说明
   activation_timeline:
-    sources: [PlanActivation, PlanEvent, PendingAction, VenueFact]
-    distinctions: 条件成立、动作已持久、调用中、场所已接收、部分成交、完全成交、保护 WORKING、结果 UNKNOWN、已核对闭合必须分开显示
-    adjacent_views: Command/Receipt 进入控制回执区，Notification 进入通知区；三者不混入交易事实时间线
+    stable_owner: HALPHA-UX-002@v0.11.0
+    current_sources: [PlanActivation, PlanEvent, ExecutionAction, VenueFact]
+    action_source_status: ALIGNED；ExecutionAction 显示固定 environment、account 与 authority class
   polling:
     implementation: TanStack Query in-memory refetch
     active_activation_interval_seconds: 2
     inactive_interval_seconds: 30
     browser_hidden_interval_seconds: 30
     stale_display_seconds: 5
-    authority: 页面 cache 永不成为命令、事实或截止点权威；写命令不做离线队列或乐观生效
+    authority_contract: HALPHA-UX-002@v0.11.0
   responsive_scope: 桌面优先；窄屏仍能执行三类控制，但 P0 不承诺移动端专业交易布局
   accessibility: 键盘可达、焦点可见、状态不只依赖颜色、危险动作有明确名称；Playwright+axe 无 serious/critical violations
+  operations_entry:
+    implementation: 同一 halpha-app FastAPI/Starlette 服务端 HTML；只监听 127.0.0.1，不依赖 SPA 静态制品
+    stable_contract: HALPHA-UX-002@v0.11.0
+    current_status: B01_BASELINE_AVAILABLE；完整有限控制与静态制品故障验收在 B04，安全、展示、命令、拒绝和幂等语义不在 L4 复制
 
 notification_selection:
   channel: EMAIL
-  events:
-    - 激活成功或拒绝
-    - 条件成立、过期或进入 UNKNOWN
-    - 动作已提交、场所拒绝、动作 UNKNOWN 或撤单竞争
-    - 首次和后续部分/完全成交
-    - 基础保护 WORKING、UNKNOWN 或 GAP
-    - 正常止损、TP1、TP2 或时间退出触发与结果
-    - 停止新增风险及恢复新增风险结果
-    - 最大允许损失触线
-    - 用户请求退出、退出完成或退出未知
-    - 用户接管生效
-    - 激活闭合、额度释放或闭合阻断
-    - 外部未归属活动阻止新增风险或闭环
-  message_rules:
-    - 包含环境、activation_id、instrument、当前后果、时间和本地 UI 路径，不包含秘密或完整账户值
-    - 通知不得把“已提交”描述为“已成交”，不得把发送成功作为交易状态证据
-    - 同一业务来源与 notification kind 只建一个 Notification；投递重试复用原 identity
-  retry: 1、5、15 分钟各一次；之后 ABANDONED 并保持 UI Task；不用通用 retry 库
+  stable_contract: HALPHA-UX-002@v0.11.0；通知事件、消息语义、防重和失败状态不在 L4 复制
+  retry_delays_minutes: [1, 5, 15]
+  retry_component: Halpha NotificationDispatcher；不用通用 retry 库，终态与 UI 责任按 stable_contract
 
 historical_and_runtime_evidence:
   strategy_manifest:
-    identity: strategy_version + build_digest + normalized_parameter_digest + direction + instrument/rules/fee/capital/engine/data-proxy digests
+    identity: strategy_version + build_digest + normalized_parameter_digest + direction + instrument/rules/fee/capital/engine/data-proxy/margin-mode-compatibility/effective-leverage digests
     first_real_scope: B04 从 schema 合法范围内冻结一组由用户实际选择的参数与 LONG/SHORT 方向并完成全部证据；默认值只作初始建议。B05 只允许该精确 manifest，其他参数组合在分别资格化前仅支持 DEMO
-    change_rule: 代码、参数、方向、instrument 规则、费用/规模上限、组件版本或 BacktestEngine 配置变化均形成新 manifest 和新证据
+    change_rule: 代码、参数、方向、instrument 规则、费用/规模上限、保证金模式兼容规则、effective_leverage、组件版本或 BacktestEngine 配置变化均形成新 manifest 和新证据；实际杠杆变化但 effective_leverage 与兼容规则不变时不单独形成新 manifest
   historical:
     engine: NautilusTrader BacktestEngine
-    strategy: 与实时完全相同的 HalphaStrategyAdapter、纯逻辑类和 StrategyProposal→ProposedAction 规范化；历史 gateway 只把已闭合 1m LAST close 标记为 BACKTEST_LAST_BAR_PROXY 后传给同一纯 sizing 函数，只有已持久动作门由内存 CAP/PendingAction bridge 代替
+    strategy: 与实时完全相同的 HalphaStrategyAdapter、纯逻辑类和 StrategyProposal→ProposedAction 规范化；历史 gateway 只把已闭合 1m LAST close 标记为 BACKTEST_LAST_BAR_PROXY 后传给同一纯 sizing 函数，后续使用 accepted TRADEPLAN/CAP/EXE 环境动作契约
     data:
       source: Binance 官方 USDⓈ-M 公开 BTCUSDT 1m contract bars；15m 由同一 INTERNAL BarType 聚合，不读取第二 15m、mark-price bar、quote 或资金费流
       development_period: 2022-01-01T00:00:00Z/2024-12-31T23:59:59Z
@@ -1095,10 +1007,9 @@ historical_and_runtime_evidence:
       liquidity_consumption: false，因为输入没有订单簿深度
       same_bar_rule: 接受 BacktestEngine adaptive high/low ordering；不增加 Halpha 自研最有利/最不利撮合分支
     product_specific_bridge:
-      retained_only:
-        - 把同一 StrategyProposal 送入与生产相同 TRADEPLAN 规范化、CAP 纯函数和 action mapping
-        - 按一次性激活断言无全平后再入场、额度不越界、最大损失锁存和保护责任
-        - 把 engine fills 与 MakerTakerFeeModel 仅作为诊断分量，和唯一历史 activation_net 的 episode 起点至 cutoff 框架账户已结算净变化加未实现投影核对；不得从分量再计算第二个 activation_net，且二者均明确不含 funding
+      action_owner_status: ALIGNED；TRADEPLAN 只拥有 ProposedAction，EXE 唯一拥有环境限定 ExecutionAction
+      retained_components: [StrategyProposal normalization, CAP pure check, environment action mapping, activation_net reconciliation]
+      stable_contracts: [HALPHA-TRADEPLAN-002@v0.10.0, HALPHA-CAP-002@v1.2.0, HALPHA-EXE-002@v1.2.0, HALPHA-OUT-002@v0.8.0]
       forbidden: 自研 bar fill、订单状态机、滑点模型、funding settlement、PnL engine、绩效库或报告器
     reporting:
       component: ReportProvider 与内置 ProfitFactor、MaxDrawdown、WinRate 等统计
@@ -1119,55 +1030,113 @@ historical_and_runtime_evidence:
       target_sample: 目标至少 30 个完整闭合 episode；不足时明确样本不足，不伪造或放宽
       report_only: 平均净 R、ProfitFactor、MaxDrawdown、WinRate、交易数、方向和 development/holdout 差异全部报告，但不把盈利阈值误作系统可实现性硬门
       owner_decision: B05 前项目所有者必须查看并明确接受实际报告、样本不足和亏损可能；文档不声称盈利保证
-    no_optimization: P0 不做参数搜索、网格稳健性平台或从 holdout 选择最佳点；失败只能形成修订提案并使用未触及区间重新资格化
+    qualification_evidence:
+      status: QUALIFIED
+      observed_at: 2026-07-17T16:41:00.348602Z
+      source_data:
+        evidence_ref: build/qualification/b04-historical-data.json
+        evidence_digest: sha256:5df3cf8fc7b5877e7614fee39f1a88e3afc602e7dcffcbd358d641c9a060a79e
+        preregistration_digest: sha256:f7396971638673efaa1f2f12f954dc9ef64a3476aabefc3be7ad9f6fdd19e498
+        archive_count: 54
+        source_1m_bar_count: 2364480
+        gaps: 0
+        duplicates: 0
+      catalog:
+        evidence_ref: build/qualification/b04-historical-catalog.json
+        evidence_digest: sha256:686198b045c13f386c3dab707096298ebff7f203da00f7549e6b1c63b5e8a347
+      backtest:
+        evidence_ref: build/qualification/b04-historical-backtest.json
+        evidence_digest: sha256:6719a0ea351d9440406f2af650ea32a1d1c568f3c8786c79dc53d91879485ca0
+        errors: []
+        development_episodes: 1276
+        holdout_episodes: 666
+        traded_and_closed_episodes: 552
+        expired_without_entry_episodes: 1390
+        incomplete_open_positions: 0
+        rejected_episodes: 2
+        unhandled_order_rejections: 0
+        protection_gap_count: 1
+        protection_gap_exit_within_30_seconds: true
+        product_records_created: false
+        parallel_strategy_or_execution_runtime_created: false
+      performance_observation:
+        development: {total_realized_pnl_usdt: '-122.45174686', average_net_r: '-0.007354459270870870870870870871', profit_factor: 0.732662920090256, win_rate: 0.4594594594594595}
+        holdout: {total_realized_pnl_usdt: '-160.78263386', average_net_r: '-0.01468334555799086757990867580', profit_factor: 0.4433603246959269, win_rate: 0.3835616438356164}
+        conclusion: 当前冻结参数在 development 与 holdout 均未显示正收益；该结果不阻断系统机制建设，但不得用作策略有效、真实资金权限或盈利保证
+        limitation: funding_model=NOT_MODELED；bar、固定费率、单 tick 滑点、延迟和无订单簿流动性模型与 Demo/LIVE 存在差异
+    no_optimization: P0 不做参数搜索、网格稳健性平台或从 holdout 选择最佳点；失败只能直接修订对应目标层级文档并重新接受，再使用未触及区间重新资格化
   demo:
     environment: Binance USDⓈ-M Demo
+    evidence_purpose: SYSTEM_MECHANISM_EVIDENCE；优先证明与 LIVE 相同的执行流程、状态、保护、核对和恢复机制，其次观察策略行为；策略结论必须披露 Demo 与 LIVE 的市场、费用、资金费、延迟、权限和可用性差异
+    product_action_status: QUALIFIED_PRODUCT_CYCLE_CURRENT_WORKTREE；同一 EXE 产品路径已完成 Demo 入场、退出、保护、止盈、撤单、事实核对、复盘保留和独立只读收尾核验
     required:
-      - BTCUSDT 与 ETHUSDT instrument 映射、精度、MARK_PRICE、LAST_PRICE/CONTRACT_PRICE、账户模式和 1x–5x 只读验证
+      - BTCUSDT 与 ETHUSDT instrument 映射、精度、MARK_PRICE、LAST_PRICE/CONTRACT_PRICE、one-way/single-asset，以及逐工具实际 margin mode/leverage 只读验证；覆盖 CROSSED/高杠杆向逐仓等价 5 倍上限兼容和 ISOLATED/低杠杆不反向、不放大的黄金向量
       - ENTRY_MARKET、ENTRY_LIMIT、ENTRY_STOP_MARKET、普通/条件 CANCEL、显式数量 reduce-only StopMarket、两类显式数量 reduce-only MarketIfTouched、reduce-only MarketOrder 的 submit/query/cancel/trigger/terminal 往返
-      - UUID32 在普通和条件端点原样往返；写自动重试为零；超时/断连只查询原 identity
-      - 每笔正成交后 30 秒内对应显式数量 StopMarket 保护分片 WORKING；入场终态后才冻结 TP 数量；晚到成交尾部清理与兄弟单撤销不反向开仓
-      - 启动 reconciliation、场所事件、持续持仓核对、按已持久 UUID 单订单查询、漏事件、部分成交、重启、外部人工单和合成事件过滤
-      - 停止新增风险、退出、用户接管、最大损失、保护 GAP、闭合和额度释放反例
-      - 不同 instrument 两激活的三轴额度互斥并发；同 instrument 归属歧义时拒绝
-    pass_rule: 全部确定动作有场所原始证据或明确拒绝；任何 UNKNOWN 不盲重放；无平行 adapter 或新增记录族/worker
+      - B00 已资格化的 UUID32、零写重试、普通/算法查询、组合 reduce-only 拓扑、reconciliation 和故障矩阵在产品路径中保持一致
+      - accepted TRADEPLAN/CAP/EXE/DAT/OUT 契约要求的环境动作、防重、保护、UNKNOWN、核对、闭合与复盘黄金向量；本计划不复制其状态推进规则
+    pass_rule: 技术能力证据与 accepted 稳定契约全部通过；必须证明无平行 adapter、Demo 专用执行 repository/service/state machine 或新增记录族/worker，且唯一 EXE ExecutionActionRepository 不可从其他模块写入
+    qualification_evidence: {status: QUALIFIED, observed_at: 2026-07-17T18:38:53.175213Z, ref: build/qualification/b04-product-demo-cycle.json, digest: 'sha256:e03bfe8b1b0c27a7971f76fb51c82be11e266e5531e398c227f59515a3bbcf81'}
   forward_observation:
-    profile: BINANCE_LIVE_READ_ONLY；Executor 不装载写权限
+    profile: BINANCE_LIVE_READ_ONLY；Executor 只装载无需认证的公开行情，不解析 Binance 凭据且不装载写权限
+    observation_spec: schema_version=2；在真实只读进程启动时冻结 settings_digest、历史预注册证据摘要、策略参数摘要、资本观察包和 7–14 日时间窗；切换恢复、Executor 启动与最终验证均须对配置摘要 fail-closed
+    public_rest_connectivity_evidence: {status: QUALIFIED, observed_at: 2026-07-17T22:46:48.382655Z, ref: build/qualification/b04-live-read-only-public-connectivity.json, digest: 'sha256:62901d682a4b8b5df69f43ae1366467bddc840914ef5d31ba0ca6a4a1720af8d', scope: TWO_PUBLIC_GET_REQUESTS_NO_AUTHENTICATION_NO_VENUE_WRITE}
+    local_product_topology_status: QUALIFIED_CURRENT_WORKTREE；Executor-only 资格化 composition 复用同一 halpha-executor/TradingNode/Binance data client/Controller/HalphaStrategyAdapter/参数/原生指标/纯逻辑，不启动 App/通知/产品数据库，且 Binance 凭据、账户佣金查询、execution client、HalphaCoordinator、ExecutionAction repository、私有动作能力和执行 reconciliation 均不存在；观察只追加到可删除的资格日志，不建立产品记录或第二 worker
+    local_product_topology_evidence: {ref: build/qualification/b04-complexity-budget.json, digest: 'sha256:97830a62e9447e5469d4e7898f9558c7d3658fd1a08101e02c4f63bbc0f18a17'}
+    continuous_observation_evidence: {status: IN_PROGRESS, ref: build/qualification/b04-live-read-only.json, digest: 'sha256:1798029c5657b09bc6ffbf37d37bd02c253c57e0c1815280a2eab7676b27690a', unmet_inputs: [START_AFTER_CURRENT_WINDOWS_SOAK_WITH_EXACT_START_TIME, SEVEN_DAY_MINIMUM_MARKET_OBSERVATION, ACTUAL_SMTP_DELIVERY]}
+    continuity_qualification:
+      source_1m: {minimum_coverage: 0.999, maximum_gap_seconds: 300, exact_epoch_alignment: true}
+      internal_15m: {minimum_coverage: 0.995, maximum_gap_seconds: 1800, exact_epoch_alignment: true}
+      mark_price_per_minute: {minimum_coverage: 0.999, maximum_gap_seconds: 300}
+      taker_top_of_book_per_second: {minimum_coverage: 0.999, missing_second_value_for_p05: '0', duplicate_second: REJECT}
+      controlled_restart: {required_count: 1, process_start_count: 2, process_gap_seconds: {exclusive_minimum: 90, inclusive_maximum: 300}}
+      event_integrity: {identity_binding: [observation_id, parameter_digest, configuration_digest], process_start_after_runtime_build: true, recoverable_incomplete_tail_max_bytes: 1048576, complete_event_rewrite: FORBIDDEN, symlink_target: REJECT}
     duration: 连续 7 个自然日；若没有至少一个完整触发/过期判断，延长到 14 日
     required:
       - 1m venue bars、INTERNAL 15m bars、mark price、top-of-book 和时钟连续性
-      - 同一 HalphaStrategyAdapter+纯逻辑产生不可提交 StrategyProposal preview，绝不建立真实 PendingAction
+      - 同一 HalphaStrategyAdapter+纯逻辑只产生不可提交 StrategyProposal preview；runtime_real_write_gate=CLOSED 且不建立任何 LIVE 执行动作
       - 至少一个触发或明确不触发/过期路径、一次缺口恢复和一封实际测试邮件
       - 实际吃单侧 top-of-book 每秒名义值第 5 百分位；首次真实 entry/exit notional 各不超过对应值 10%
   operations_evidence:
-    - 目标 Windows 72 小时 App/Executor/TradingNode 连续运行、受控停止、异常重启和 mutex 双启动拒绝
+    - 目标 Windows 以排除睡眠/休眠的无偏醒钟证明 72 小时 App/Executor/TradingNode 同进程连续运行、受控停止、异常重启和 mutex 双启动拒绝
+    - Executor/主机/PostgreSQL 写连续性丢失后 callback/READY/新写前持久 PAUSED；App/浏览器/SPA/NotificationDispatcher 单独重启不误暂停；三个显式恢复选择与不可清除停止反例通过
     - PostgreSQL 中断/恢复、DEMO/LIVE 分库、keyring 身份隔离、日志脱敏和 BuildManifest 漂移阻断
     - SMTP 失败/恢复、Notification 幂等、每日备份和一次空库 pg_restore
-    - Playwright 关键流程、CSRF/Session/限速反例和 axe 可访问性检查
+    - Playwright 关键流程、CSRF/Session/限速反例和 axe 可访问性检查；Vite dist 不可用时同进程 /operations 仍能以相同安全与幂等边界完成有限操作
 
 design_formalization_gate:
   id: D00
   kind: PRE_CONSTRUCTION_DESIGN_GATE
   name: 关闭上位冲突并形成可实施设计基线
-  status: BLOCKED
-  assessed_at: 2026-07-16T17:07:07+08:00
-  blocking_findings:
-    - RECOVERY-AUTHORITY 已进入 ACCEPTED L2，必须先与 L0/L1 的显式恢复和重新建立机器授权规则对齐
-    - DEMO-EXECUTION-IDENTITY 与 UX-LIMITED-OPERATION-ENTRY 尚未由相应 L3 完整落实；CAP-P0-SCOPE 还包含 CAP L2 内部交接遗漏和 L3 缺口
-    - 协调修订只能先作为 proposal；获项目所有者正式接受、同步直接下游与索引并通过验证后，才可重新评定 D00
+  status: ALIGNED
+  assessed_at: 2026-07-18T07:01:20+08:00
+  accepted_corrections:
+    - id: RECOVERY-AUTHORITY
+      normative_sources: [HALPHA-CON-001@v2.11.0, HALPHA-FLOW-001@v1.8.0, HALPHA-ARC-001@v1.9.0, HALPHA-TRADEPLAN-002@v0.10.0, HALPHA-EXE-002@v1.2.0, HALPHA-SYS-002@v0.9.0]
+    - id: CAP-P0-SCOPE
+      normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-CAP-002@v1.2.0]
+    - id: UX-LIMITED-OPERATION-ENTRY
+      normative_sources: [HALPHA-UX-001@v1.6.0, HALPHA-UX-002@v0.11.0, HALPHA-SYS-002@v0.9.0, HALPHA-ENG-002@v0.8.0]
+    - id: DEMO-EXECUTION-OWNER
+      normative_sources: [HALPHA-ARC-001@v1.9.0, HALPHA-EXE-001@v1.7.0, HALPHA-EXE-002@v1.2.0, HALPHA-ENG-002@v0.8.0]
+    - id: DEMO-EVIDENCE-PURPOSE
+      normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-OUT-002@v0.8.0, HALPHA-UX-002@v0.11.0, HALPHA-ENG-002@v0.8.0]
+    - id: DOCUMENT-VERSION-HISTORY
+      normative_sources: [HALPHA-DOC-001@v1.11.0]
   preserved_evidence:
     - 全部拟自研责任已按“当前消费者→成熟组件→一手能力证据→差异性质→总复杂度影响→采用/按组件妥协/最小补充/暂不支持”复核；固定 1.230.0 close_position 因无 cache 恢复缺口不进入 P0 写链
-    - 已完成的 B00 本机和离线资格化证据继续有效，但不能证明设计对齐或产品实现资格
-  result: D00=BLOCKED；仅 B00 隔离资格化可继续，B01–B05 和全部真实写保持阻断
+    - B00 的 14/14 required outputs 资格化证据保持为实现证据；它不替代 ACCEPTED 设计或真实资金授权
+  deferred_not_blocking_p0: [长期 AUTO_CONTINUE 恢复引擎]
+  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04=IN_PROGRESS。真实写工程能力仍未资格化，B05 未获授权，runtime_real_write_gate=CLOSED
 
 dependency_qualification_gate:
   id: B00
   kind: PRE_CONSTRUCTION_GATE
   name: 固定 NautilusTrader、Binance 与目标 Windows 资格
-  status: IN_PROGRESS
+  status: QUALIFIED
   started_at: 2026-07-16T15:56:32+08:00
+  qualified_at: 2026-07-17T01:15:19+08:00
   prerequisites:
-    - 本计划仅授权 B00 作为不进入主实现的隔离资格化；D00=ALIGNED 前不得把探针或 fixture 固化为产品记录、状态机、API、迁移或真实写路径
+    - B00 仅作为不进入主实现的隔离资格化；D00 已对齐，探针或 fixture 仍不得直接固化为产品记录、状态机、API、迁移或真实写路径，产品实现以 accepted_design_set 为准
     - 项目所有者提供目标 Windows edition/build 非秘密信息；若不在 NautilusTrader 1.230.0 官方 Windows Server 2022+ x86_64 支持边界内，B00 必须明确记录为非官方平台并先证明可运行或停止修订。项目所有者在目标 Windows 以 Executor 运行身份本地注入 Binance Demo WinVault secret；只向计划提供 credential reference 的存在性与权限证据
   required_outputs:
     - >-
@@ -1175,7 +1144,7 @@ dependency_qualification_gate:
       pip/资格化/测试/构建命令实际使用 `.venv\Scripts\python.exe`，全局解释器调用、版本或路径漂移会失败停止，且 `.venv` 未被跟踪或装入发布制品
     - 1.230.0 wheel filename、ABI、SHA-256、tag、commit、LGPL-3.0-or-later 文本和完整传递依赖 hash lock
     - 目标 Windows 干净安装/import、唯一 TradingNode 最小 start/stop/dispose、Controller add/start/stop/remove qualification fixture、pywin32 mutex、manual-reset/initial-false stop Event、保护 DACL/SID/权限断言和异常重启 smoke；真实跨 Task 身份停止留 B01，72 小时留 B04
-    - DataClient+ExecutionClient 同节点、显式 WinVault 凭据注入、BINANCE_DEMO/LIVE profile 隔离、两 client 同 profile BinanceInstrumentProviderConfig（DEMO BTC+ETH、LIVE BTC、load_all=false、query_commission_rates=true），且 provider/DataEngine/Execution cache 都含精确 load_ids；无 event store/Redis/OrderEmulator/第二节点的 exact config digest
+    - DEMO/LIVE_WRITE 的 DataClient+ExecutionClient 同节点、显式 WinVault 凭据注入、profile 隔离、两 client 同 profile BinanceInstrumentProviderConfig（DEMO BTC+ETH、LIVE_WRITE BTC、load_all=false、query_commission_rates=true），且 provider/DataEngine/Execution cache 都含精确 load_ids；B04 另证明 LIVE_READ_ONLY 仅装载 BTC 公开 DataClient、api_key/api_secret=null、query_commission_rates=false；无 event store/Redis/OrderEmulator/第二节点的 exact config digest
     - >-
       精确解析 source_1m=`{instrument_id}-1-MINUTE-LAST-EXTERNAL` 与 target_15m=`{instrument_id}-15-MINUTE-LAST-INTERNAL@1-MINUTE-EXTERNAL`；
       LiveDataEngineConfig 显式固定 left-open、timestamp-on-close、skip-first-non-full、no-empty-bars 与 validate-data-sequence；指标/handler 先注册，公开
@@ -1188,125 +1157,351 @@ dependency_qualification_gate:
     - inflight_check_interval_ms=0、open_check_interval_secs=10.0 与 open_check_open_only=true 的 exact config 生效；bulk-open 响应缺失只保持原技术状态、不进入 targeted missing resolution 或合成终态；提交结果未知持续超过组件原默认重试窗后，后来场所正向状态仍能按原 UUID 进入 cache、取消并取得终态
     - 上述矩阵证明 external_order_claims=None、启动/持仓技术核对、唯一 UUID 单订单 query、零写重试和可选同包 GET supplement 的唯一组合；任何组件 synthetic terminal 不能误作产品事实或封死原订单取消
     - generate_missing_orders=true 下，重启时已有净持仓且本地订单/成交历史缺失仍能按场所报告重建技术 cache，并由 RiskEngine 接受不超过同 cutoff 已核对数量的 reduce-only 退出；生成的 reconciliation projection 不得成为产品事实或触发动作
-    - Cython DonchianChannel、AverageTrueRange(WILDER,use_previous=true) 按 channel_lookback_15m 的 min/default/max 精确 bars 输入、完成预热后无需等待实时积累即可判断、1m→精确 target_15m 聚合及缺口/边界/重启黄金向量；bar-only historical gateway 能以 BACKTEST_LAST_BAR_PROXY、BACKTEST_MANIFEST_FEE_PROXY 与 1–5x BACKTEST_MANIFEST_LEVERAGE_PROXY 实际形成 proposal、fill 与不含 funding 的 PnL，不因缺少 MARK/quote/实时 commission/leverage query 永久拒绝；不使用 Pyo3 同名 ATR 或自研指标
+    - Cython DonchianChannel、AverageTrueRange(WILDER,use_previous=true) 按 channel_lookback_15m 的 min/default/max 精确 bars 输入、完成预热后无需等待实时积累即可判断、1m→精确 target_15m 聚合及缺口/边界/重启黄金向量；bar-only historical gateway 能以 BACKTEST_LAST_BAR_PROXY、BACKTEST_MANIFEST_FEE_PROXY 与 1–5x 逐仓等价 BACKTEST_MANIFEST_LEVERAGE_PROXY 实际形成 proposal、fill 与不含 funding 的 PnL，不因缺少 MARK/quote/实时 commission/leverage query 永久拒绝；不使用 Pyo3 同名 ATR 或自研指标
     - >-
       公开 BarDataWrangler、ParquetDataCatalog、Cython BacktestEngine、MakerTakerFeeModel、OneTickSlippageFillModel、LatencyModel、ReportProvider/statistics 的 exact import/config smoke；
       固定 wheel 源码与黑盒共同证明 Cython engine 不会结算 FundingRateUpdate，而 Rust/PyO3 engine 不接受同一 Cython HalphaStrategyAdapter；manifest/report 精确写入
       funding_model=NOT_MODELED 且历史净值不含 funding。不构造无效 MarkPriceUpdate/FundingRateUpdate，不增加资金费下载/映射脚本、第二策略 adapter、自研 funding/PnL 或 2.0 RC 依赖
     - 最小 qualification adapter+纯逻辑 fixture 在 live harness/backtest 产生同结构 StrategyProposal，且纯逻辑写 API 静态边界成立；该 fixture 只保存为资格证据输入，D00=ALIGNED 后再由已接受的 B02 契约决定是否吸收，不在 B00 固化产品语义或建立平行 runtime
-    - UUID32 普通/算法订单身份与八个 P0 order profile 所需公开 API 的最小 Demo capability probe；完整产品 PendingAction/保护/控制链留 B03
+    - UUID32 普通/算法订单身份与八个 P0 order profile 所需公开 API 的最小 Demo capability probe；完整产品环境动作/保护/控制链留 B03，并采用 D00 对齐后的 accepted 契约
     - 真实 Demo 组合 probe：部分成交形成一个或多个显式数量 reduce-only StopMarket 保护分片后，同时提交 TP1/TP2，覆盖不同提交顺序、TP 部分成交、stop/TP 竞态、兄弟撤单和显式市场退出；不得出现 -2022/-4118、反向仓位、保护不足或不可取消订单
     - get_cached_binance_http_client 公开路径、GET 白名单、普通/算法分页/限频/字段、/fapi/v1/commissionRate 实际 taker fee，以及 /fapi/v1/income 的 incomeType=FUNDING_FEE、symbol/startTime/endTime/page/limit、(incomeType,tranId) 去重、60 秒 cursor/restart、429/暂态失败 UNKNOWN 与保留窗口证明；provider fee-tier fallback 过滤、秘密日志扫描和无写方法暴露证明；只有高层 query 缺口实际存在时才启用
   pass_rule: >-
     全部输出可复现，且无需第二 Binance 写 adapter、自研指标/回放/撮合/核对、额外进程、数据库、记录族或持久 worker，才标记 QUALIFIED。
     任一必需身份、订单、组合 reduce-only 拓扑、字段、恢复、Windows 生命周期或 write-retry 无法关闭，或只能靠 closePosition、私有 patch、第二写 client/第二 adapter 拓扑才通过，则标记 REJECTED 并阻断 B01。
-  failure_rule: 只形成新的 L4 组件选择修订提案；不得静默升级、启用 raw client/Binance SDK 写路径或恢复本轮删除的自研实现
+  failure_rule: 只形成新的 L4 组件选择候选版本；不得静默升级、启用 raw client/Binance SDK 写路径或恢复本轮删除的自研实现
   qualification_progress:
-    observed_at: 2026-07-16T16:18:46+08:00
-    result: PARTIAL_QUALIFIED；仅以下离线与本机基础子项已通过，B00 整体仍未通过
+    observed_at: 2026-07-17T01:15:19+08:00
+    result: QUALIFIED_ALL_REQUIRED_OUTPUTS；汇总 artifact 标记 14/14 required outputs 全部 QUALIFIED，errors 为空
     qualified:
       - Python 3.13.14 x64 仓库 .venv、官方 PyPI 全哈希闭包、无全局 pip 依赖和运行路径 fail-closed 探针
       - nautilus_trader-1.230.0-cp313-cp313-win_amd64.whl 的 SHA-256、ABI tag、LGPL-3.0-or-later 文本、v1.230.0 tag object 与 commit 固定
       - Windows 10 build 19045 上 import、无 client 的唯一 TradingNode build/start/stop/dispose，以及 Controller add/start/stop/remove 公共生命周期
       - pywin32 Global mutex、manual-reset/initial-false Event、当前资格化用户精确 SID 单 ACE 与 protected DACL
       - 当前资格化用户的 BINANCE_DEMO WinVault reference 存在且回读一致；秘密未进入仓库、命令行、环境变量、日志或证据
-    pending:
-      - 同节点 Binance Demo DataClient+ExecutionClient、精确 instrument provider/cache/config digest、权限和账户模式只读核对
-      - 行情、bars、指标、历史—实时边界、断连重订阅、精度与 live/backtest 公开 API 资格化
-      - 订单身份、unknown/reconciliation、八类订单、组合 reduce-only 拓扑和真实 Demo capability probe
-      - 只读 GET supplement 缺口判定、funding/commission 分页和错误矩阵
-    real_write_status: DISABLED；不得因本节任一子项通过而建立产品真实写路径或开始 B01
+      - 同节点 Binance Demo clients、精确 profile/config、行情/15m/指标/断连与策略 proposal parity
+      - 普通/算法订单 identity、unknown/restart/missing-position reconciliation、八类订单 profile 与真实 Demo roundtrip
+      - 显式数量 reduce-only 组合拓扑、funding/commission/read-only GET supplement 与错误矩阵
+      - 账户实际 BTCUSDT/ETHUSDT 为 CROSSED 20x；按已接受公式得到 effective_leverage=5，未修改账户且 blocks_b00=false
+    pending: []
+    evidence:
+      summary: build/qualification/b00-qualification-latest.json
+      required_output_count: 14
+      artifact_status: QUALIFIED
+      plan_binding_rule: 汇总制品为非规范实现证据并记录生成时计划摘要；L4 自身不回填该摘要，避免循环自引用
+      runtime_proxy_persistence: false；证据只记录 RUNTIME_LOOPBACK_ARGUMENT 类别，不保存地址或端口
+    runtime_real_write_gate: CLOSED；B00 资格化不替代 D00、B01–B04、B05 包授权或运行时用户授权
+
+research_track:
+  status: ACCEPTED_NOT_CREATED
+  current_package: R00
+  owner_authorization:
+    status: AUTHORIZED_CONDITIONAL_ON_B04_COMPLETE
+    decision_ref: OWNER-DIRECTION-20260718-PARALLEL-RESEARCH
+    decided_at: 2026-07-18T09:59:00+08:00
+    scope: R00–R02 独立研究建设与试点；不授权 R03、产品变更、真实资金动作或任何真实写门变化
+  research_policy:
+    status: NOT_FROZEN
+    policy_ref: null
+    freeze_requirement: R02 开始前由项目所有者一次性固定允许方向、DAT-qualified 数据快照、UTC 半开区间、统计门、资源预算、holdout 和停止条件
+  owner_selected_evidence_ref: null
+  package_contract_rule: >-
+    R00–R03 只有在各自 id、semantic_scopes、干净 base_revision、owned_paths、带版本/commit/digest 的输入、输出契约、
+    migration/runtime/release/authority/credential effects、integration_gate 与 exit_evidence 全部冻结后，才可变为 ELIGIBLE/AUTHORIZED 或开始；
+    完成时还必须绑定干净 output_revision。当前空值明确表示尚未冻结，不得从本工作树或叙事推断。
+  workspace_and_integration:
+    current_state: NOT_CREATED
+    development_rule: R00–R02 使用独立 Git worktree/branch；共享路径和正式产品基线只由串行集成处理
+    build_manifest_rule: >-
+      当前 BuildManifest 绑定完整仓库 commit/source revision；B05 冻结 BuildManifest 后，R00–R02 的研究变更不得合入该产品基线，
+      至少等待 B05 完成与 V01 决定后再串行集成，不通过排除 research 路径削弱现有来源判断。
+  runtime_overlap:
+    qualification: NOT_QUALIFIED
+    execution_state: STOPPED
+    rule: >-
+      R00–R02 可以与 B05 保持包级并行；资源隔离未资格化且 runtime_real_write_gate=OPEN 时，研究计算必须为 PAUSED 或 STOPPED。
+      资格化只能来自 R00 在目标宿主上的 CPU、内存、墙钟、进程树与零残留证据，不建立资源调度服务。
+  preexisting_data_boundary:
+    identity_rule: R00/R01 只接受 DAT-qualified 不可变 data_snapshot_ref 与 UTC `[start_inclusive,end_exclusive)` 半开区间；不建立 lineage 自动归一化、数据目录服务或第二事实权威
+    historical_holdout:
+      data_snapshot_ref: build/qualification/b04-historical-data.json#holdout
+      data_snapshot_digest: sha256:5df3cf8fc7b587e7614fee39f1a88e3afc602e7dcffcbd358d641c9a060a79e
+      interval: {start_inclusive: 2025-01-01T00:00:00Z, end_exclusive: 2026-07-01T00:00:00Z}
+      disposition: DISCOVERY_VALIDATION_ONLY
+    forward_observation:
+      evidence_ref: build/qualification/b04-live-read-only.json
+      status: IN_PROGRESS
+      disposition: DISCOVERY_VALIDATION_ONLY
+    confirmation_eligible_not_before: null
+    finalization_rule: >-
+      上述历史 holdout 和尚在进行的 forward observation 都不能在研究根建立后补登记成新 holdout。B04 最终证据与研究政策冻结前已经读取或可获得的数据永久只能用于 discovery/validation；
+      R00 在 B04 完成证据中取得全部适用 DAT-qualified 快照的最大 event time，R01 将其后第一个 UTC 半开边界固定为 confirmation_eligible_not_before，确认性读取仍须先写不可逆 exposure claim。
+  r00_r02_effects:
+    p0_build_order: NONE
+    b01_b05_scope_dependency_status_evidence: NONE
+    live_write_build_capability: NONE
+    b05_package_eligibility: NONE
+    runtime_real_write_gate: NONE
+    product_database_or_migration: NONE
+    product_process_or_write_path: NONE
+    product_release_group: NONE
 
 construction_packages:
   B01:
     name: 固定构建、两进程基线、数据库与本地工作台
-    eligibility: BLOCKED_UNTIL_D00_ALIGNED
+    eligibility: ELIGIBLE
+    status: COMPLETED
+    completed_at: 2026-07-17T16:36:01+08:00
+    completion_evidence_ref: build/qualification/b01-summary.json
+    completion_evidence_digest: sha256:6c8d3177e379e312feaa259448beeb8280e2431222fd9155e41c2a02a2378a84
+    completion_limit: 完成只证明 B01 当前工作树实现与目标主机证据；尚无 commit/workflow，BuildManifest 不具备发布资格，也不产生真实写工程资格或资金权限
     depends_on: [D00=ALIGNED, B00=QUALIFIED]
     scope:
       - Python/npm hash locks、venv 重建与运行入口校验、单一 BuildManifest、仓库结构与静态边界测试
-      - PostgreSQL 16 个记录族的首个迁移、DEMO/LIVE 分库与 App/Executor/migration/backup 角色
+      - PostgreSQL 16 个物理记录族的首个迁移、DEMO/LIVE 分库与 App/Executor/migration/backup 角色；ExecutionAction 的环境鉴别、CAP authority class、唯一 writer 和单一 EXE repository 边界采用当前 accepted_design_set，不得建立环境并行 repository 或兼容双写
       - pydantic-settings TOML、WinVault keyring、structlog 脱敏、Task Scheduler IgnoreNew、Executor Global mutex
-      - FastAPI/Uvicorn 单 worker、React/MUI 路由、owner 登录、Session、CSRF、login limit 和 OpenAPI 生成客户端
+      - FastAPI/Uvicorn 单 worker、React/MUI 路由、owner 登录、Session、CSRF、login limit、OpenAPI 生成客户端，以及同进程服务端 `/operations`
       - Notification outbox/dispatcher、stdlib SMTP、pg_dump/restore 脚本；ParquetDataCatalog/原始证据目录、checksum、保留、删除、导出与重建契约
     exit_evidence:
       - 干净主机从锁安装并启动两进程；App 不含 Binance 能力，Executor 不含 UI/SMTP/owner secret
       - migration upgrade/downgrade、16 记录族计数、数据库断开 fail-closed、角色越权拒绝
       - 登录/登出/绝对过期/CSRF/Host/Origin/限速、日志脱敏、keyring 交叉拒绝与静态页面 smoke
+      - 删除/破坏 Vite dist 后 `/operations` 仍复用同一认证、CSRF、Command/Receipt 与领域处理器；无第二口令/API/状态/进程
       - Task XML、BuildManifest、静态 dist 与配置摘要漂移会阻断真实写
       - App Task、Executor Task 与登记维护身份跨 session 以精确 SID/DACL 创建、等待或 SetEvent；未授权本机身份 OpenEvent/SetEvent 被拒绝，无法解析 SID 或权限漂移会阻断启动/真实写
       - Python/npm 完整锁闭包许可证、归属、直接依赖替代责任、升级/退出与复杂度台账通过，并登记可重建文件型证据存储；不兼容或未知即阻断
   B02:
     name: 计划、策略、互斥额度与同一 live/backtest 适配器/纯逻辑
-    eligibility: BLOCKED_UNTIL_D00_ALIGNED
+    eligibility: ELIGIBLE
+    status: COMPLETED
+    completed_at: 2026-07-17T19:22:04+08:00
+    completion_evidence_ref: build/qualification/b02-summary.json
+    completion_evidence_digest: sha256:950be6e1dde1767313fd3cb7dad0f3cac0056b4329a9d2941bd2cec58491fe7a
+    completion_limit: 完成只证明 B02 当前工作树实现与目标主机证据；尚无 commit/workflow，BuildManifest 不具备发布资格，也不证明 B03 Demo 场所写闭环、真实写工程资格或资金权限
     depends_on: [B01]
     scope:
       - CodeStrategyDefinition 构建登记、JSON Schema、RJSF 参数表单和 ONE_SHOT_DONCHIAN_ATR_BREAKOUT
-      - TradePlanDraft/Version、PlanActivation/Event、四种控制 Command/Receipt 和 Controller per-activation adapter 生命周期
-      - AccountCapitalLimitVersion、MachineAuthorizationVersion、PlanAllocation、StopStateVersion 和 CAP Decimal 纯检查
+      - 实施 stable_contract_references 中 TRADEPLAN、CAP、Command/Receipt 和 MANUAL_PLAN_RESUME 的当前 P0 切片；B02 不建立 ExecutionAction、VenueFact 或场所写
       - 同一 HalphaStrategyAdapter+纯逻辑的 live gateway 与 BacktestEngine gateway；原生 Donchian/ATR 和 INTERNAL bar 聚合，无自研公式
+      - 建立最小关键不变量追踪登记，只保存 requirement_id、规范来源、delivery_horizon、实现路径、禁止调用、测试、构建门、证据摘要、实现状态与偏离状态；区分 P0_REQUIRED 和 LONG_TERM_REQUIRED_P0_DEFERRED，不复制规范正文或建设第二治理平台
     exit_evidence:
       - 草稿→固定→激活事务原子；多个 instrument 激活额度互斥；同 instrument 歧义拒绝
       - margin/notional 自然越界只禁增险；本激活损失口径与其他策略隔离；阈值锁存并请求全退出
+      - CROSSED/高实际杠杆按逐仓等价额度与 5x 上限向下收敛；ISOLATED/低实际杠杆不反向兼容且不向上放大
+      - 场所量化后单动作与聚合额度同时检查；拆单、并发、重试和部分成交不能绕过 max_action_notional；四类停止并集和 ALL_WRITES 覆盖规则通过
+      - Executor/主机/PostgreSQL 写连续性丢失会在 callback/READY/新写前暂停；App/SPA/NotificationDispatcher 单独重启不误暂停；RESUME_ACTIVATION 不清除其他安全停止
       - 同一 bar/deadline 身份幂等、不同摘要冲突、错过窗口不补开仓、全平后不再入场
       - live/backtest StrategyProposal golden vectors 一致；纯逻辑直接写入口静态失败
+      - 最小追踪登记覆盖 P0 恢复边界、DEMO/LIVE 执行所有权、CAP 单动作/停止、唯一场所写门和有限操作入口；代码、schema、依赖或配置摘要漂移会使对应证据失效
   B03:
     name: 唯一场所写、保护、核对与用户控制
-    eligibility: BLOCKED_UNTIL_D00_ALIGNED
+    eligibility: ELIGIBLE
+    status: COMPLETED
+    started_at: 2026-07-17T19:22:04+08:00
+    completed_at: 2026-07-17T20:36:56+08:00
+    completion_evidence_ref: build/qualification/b03-summary.json
+    completion_evidence_digest: sha256:dc612cd258b452f97a44b2585d6edc8a96f1f8cb5db5067e02ed1ecb6123f986
+    completion_limit: 完成只证明当前工作树的 Binance Demo 产品执行、保护责任、核对、恢复、接管与闭合机制及 DEMO/LIVE 同源码边界；尚无 commit/workflow，BuildManifest 不具备发布资格，也不产生真实写工程资格或资金权限
     depends_on: [B02]
     environment: Binance USDⓈ-M Demo only
-    scope_status: 当前 scope 含未关闭的 Demo 动作身份、CAP、恢复授权与限时入口冲突，不是可实施契约；D00=ALIGNED 后按新的 ACCEPTED 设计回写
+    scope_status: COMPLETED_WITH_QUALIFIED_CURRENT_WORKTREE_EVIDENCE；环境限定 ExecutionAction、CAP authority class、唯一 writer、单一 repository 与同源码清单已通过 Binance Demo 产品写与机制证据，真实写门保持关闭
     scope:
-      - VenueFact、PendingAction 全状态、UUID32、两阶段 CAP、OrderFactory 与封闭 submit/cancel gateway
-      - 八个 order profiles、逐成交显式数量保护分片、TP1/TP2、晚到成交、时间/损失/用户退出
-      - HalphaCoordinator、启动/持仓 reconciliation、按已持久 UUID 单订单核对、unknown recovery、外部订单隔离和 closure digest
-      - 停止新增风险、恢复新增风险、退出策略，以及用户接管冻结范围、官方风险减少/关闭事实核对和接管关闭
+      - VenueFact、D00 对齐后的 `ExecutionAction(environment=DEMO)`、UUID32、OrderFactory 与同一持久动作门/client 实现；DEMO 只可达 DEMO_VALIDATION 授权/额度、Demo 凭据和 Demo endpoint，不可达 LIVE_REAL_CAPITAL、LIVE 凭据或真实资金门
+      - 当前八个 order profiles、显式数量保护/止盈/退出组件映射，以及 HalphaCoordinator 与框架 reconciliation 接线
+      - accepted TRADEPLAN/CAP/EXE/DAT/OUT/UX 契约规定的控制、保护、UNKNOWN、核对、闭合和复盘产品责任
     exit_evidence:
       - historical_and_runtime_evidence.demo.required 全部通过
-      - 四个崩溃窗口均不重复调用；SUBMITTED_UNKNOWN 只查询；保护 UNKNOWN 不为同一成交增量建立第二保护
-      - first_fill 只由首次原子锁存的权威正成交决定；乱序 stream/query、后来到达但 venue time 更早的成交与重启重放均不改写冻结值，每个成交身份只形成一次保护或尾部清理
-
-      - 授权 deadline 到期会撤销/核对全部开放普通和条件增险订单；到期—成交竞态及重启不会恢复授权、遗漏晚到成交或释放仍有入场责任的额度
-      - 无持仓反转、无保护替换/OCO/market_exit、无 WriteControl/SubmissionAttempt/ProtectionTask/ReconciliationItem
-      - 用户接管先冻结责任范围并持久化再停止 HalphaStrategyAdapter，节点继续只读核对；仅匹配范围的风险减少/关闭事实可帮助闭合，范围外活动或关闭证据不足不释放额度
+      - DEMO/LIVE 使用同一 ExecutionAction schema/repository/service/state/client 实现；数据库环境/authority/profile 联合约束、EXE 唯一 writer、分离实例/端口/凭据和 parity manifest 通过，不允许跨环境转换或真实授权引用污染
+      - accepted 稳定契约的防重、保护、UNKNOWN、核对、deadline、接管和闭合黄金向量通过；本 L4 只记录测试结果与当前组件摘要
+      - 无持仓反转、无保护替换/OCO/market_exit、无新增记录族或隐藏持久 worker
   B04:
     name: 证据、完整工作台与运维闭环
-    eligibility: BLOCKED_UNTIL_D00_ALIGNED
+    eligibility: ELIGIBLE
+    status: IN_PROGRESS
+    started_at: 2026-07-17T20:36:56+08:00
     depends_on: [B03]
     scope:
       - 从 schema 合法范围冻结一组用户选择参数、方向和精确 manifest，执行 BacktestEngine development/holdout 与 ReportProvider 判定；默认值仅作初始建议
       - Binance Demo 完整策略周期和 BINANCE_LIVE_READ_ONLY 前向观察
-      - 激活复核、运行时间线、三类控制及独立恢复命令、资本、通知、Review/ImprovementHandoff 页面；闭合后由 coordinator 幂等生成 Review
-      - Windows 72 小时、邮件、备份恢复、浏览器、安全、可访问性和故障演练
+      - 激活复核、运行时间线、三类控制及独立恢复新增风险/恢复激活命令、资本、通知、Review/ImprovementHandoff 页面和同进程 `/operations`；闭合后由 coordinator 幂等生成 Review
+      - Windows 无偏醒钟 72 小时、邮件、备份恢复、浏览器、安全、可访问性和故障演练
     exit_evidence:
       - historical technical_safety_gate 与 Demo/前向/运维证据满足；精确 manifest 记录技术资格、完整绩效报告和 owner 是否接受，不以盈利阈值自动授权
       - SMTP 实际投递、ABANDONED 可见 Task、空库 pg_restore 与重启恢复通过
       - Playwright 覆盖激活、未知、保护 GAP、最大损失、退出、接管、闭合、复盘和 stale UI
+      - SPA 静态制品不可用时 `/operations` 仍显示 pause/reconciliation/授权期限/四类停止与开放责任，可提交 RESUME_ACTIVATION、EXIT_STRATEGY、USER_TAKEOVER 并查询同一 Receipt
       - 复杂度复点仍为 16 记录族、2 持久 worker、2 进程、1 DB product、1 write path
   B05:
     name: 首个有界真实交易闭环
-    eligibility: BLOCKED_UNTIL_D00_ALIGNED
+    eligibility: BLOCKED_UNTIL_B04_COMPLETE
     depends_on: [B04]
     environment: Binance USDⓈ-M LIVE_WRITE
     scope:
       - 用户在已资格 manifest、Demo profile 和证据规模内固定 BTCUSDT 一次激活的方向、参数与三轴额度
       - 从真实激活、市价入场、基础保护、分级止盈或时间/用户/损失退出，到核对、Review 和额度释放
     preconditions:
-      - accepted_design_set 中全部候选已转为 ACCEPTED，B00–B04 全部通过且 BuildManifest/场所规则/费率/组件摘要无漂移
-      - 用户验证真实 API 权限、账户模式、1x–5x 杠杆、SMTP、账户边界和本次三轴额度
+      - accepted_design_set 中全部列明版本保持 ACCEPTED，B00–B04 全部通过且 BuildManifest/场所规则/费率/组件摘要无漂移
+      - 用户验证真实 API 权限、one-way/single-asset、逐工具实际 margin mode/leverage、同一逐仓等价兼容公式所得 1–5x effective_leverage、SMTP、账户边界和本次三轴额度；CROSSED 或实际杠杆高于 5 倍本身不阻断
       - 用户已阅读并明确接受该 manifest 的实际历史交易数、平均净 R、ProfitFactor、MaxDrawdown、样本不足与模型限制；该接受不构成盈利保证
       - entry/exit notional 不超过前向 top-of-book 第 5 百分位的 10%，也不超过证据 manifest 上限
       - UI 明示 REAL、止损与最大损失不是保证、三个控制后果和 Binance 官方界面接管路径
+      - 用户承诺从激活开始主动在线，直到入场动作终态且与全部已确认正成交相称的场所原生显式数量保护均为 WORKING；P0 不把自动故障恢复作为离线前置保障
     acceptance:
       - 恰好一个真实入场周期；完全平仓后不再开仓
       - 每笔正成交均有唯一显式数量 reduce-only StopMarket 保护分片 WORKING，且不存在保护替换、同一成交重复保护或 closePosition 订单
-      - 所有真实写有 PlanEvent、CAP、PendingAction 和 UUID32；无重复调用或无法解释外部责任
+      - 入场终态与全部对应场所原生保护 WORKING 前用户保持主动在线；若期间发生写连续性丢失，激活 PAUSED 且只由明确恢复/退出/接管命令推进
+      - 所有真实写有 PlanEvent、LIVE_REAL_CAPITAL CAP、`ExecutionAction(environment=LIVE)` 和 UUID32；无重复调用或无法解释外部责任
       - realized/unrealized/funding/commission 归属可复算；最大损失和三轴规则无违规
       - 场所查询形成 EXE closure_digest 后先完成 PlanActivation/CAP 释放；用户接管关闭可保留精确损益 UNKNOWN，但必须证明 Halpha 在途/未知动作已清零、场所净仓位和开放订单均为零且无范围外冲突；随后 Review 被幂等创建或留下明确可重试责任，Review 失败不回滚释放
     failure: 任一事实、保护、费用、资金费、写结果或闭合未知时不声称 P0 通过；保持退出/接管责任并停止后续真实激活
+  R00:
+    id: R00
+    name: 研究栈、CLI 与 AI 边界资格化
+    eligibility: BLOCKED_UNTIL_B04_COMPLETE
+    status: NOT_STARTED
+    contract_state: TO_BE_FROZEN_AT_PACKAGE_START
+    depends_on: [B04]
+    semantic_scopes:
+      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-DEP-004-REQ}
+      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-AICLI-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-ISO-002-REQ}
+    base_revision: null
+    owned_paths: [research/**]
+    contracts:
+      inputs:
+        - {ref: accepted_design_set_and_basis, identity: null}
+        - {ref: qualified_research_dependency_lock_and_sandbox, identity: null}
+      outputs:
+        - {ref: research_workspace_cli_harness_and_sandbox_qualification}
+    effects: {migration: NONE, runtime: NONE, release: NONE, authority: NONE, credential: NONE}
+    integration_gate: R00_SELECTIVE_VALIDATION_AND_PATH_OWNERSHIP_GATE
+    authorization_ref: OWNER-DIRECTION-20260718-PARALLEL-RESEARCH
+    scope:
+      - 建立独立 `research/**` 工作区、研究 Python 锁、可信父进程与隔离 worker 两个可删除物理 venv
+      - 建立固定 ResearchStrategyHarness、Pydantic 研究政策/observation/intent schema 与 schema/validate/run/gate/freeze/verify 六个无状态 CLI 子命令
+      - 在目标 Windows 上资格化模型外沙箱、stdio framing、文件/网络/秘密/进程树/资源限制和零残留；失败时完整数据、confirmation 和最终候选能力保持禁用
+    exit_evidence:
+      requirements:
+        - 固定版本、锁摘要、许可证、父/worker 安装闭包、sys.path/DLL 根、sandbox/launcher/IPC 与恶意 fixture 证据可重演
+        - 研究侧对产品数据库、迁移、产品进程、产品发布组、交易凭据、真实写路径和三项真实写门 effects 全为 NONE
+        - preexisting_data_boundary 已由 B04 完成证据固定，历史 holdout 与 forward observation 未被补登记为新 confirmation holdout
+      output_revision: null
+  R01:
+    id: R01
+    name: 研究协议、统计门与证据闭环资格化
+    eligibility: BLOCKED_UNTIL_R00_COMPLETE
+    status: NOT_STARTED
+    contract_state: TO_BE_FROZEN_AT_PACKAGE_START
+    depends_on: [R00]
+    semantic_scopes:
+      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-REG-001-REQ}
+      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-VAL-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-WRK-001-REQ}
+    base_revision: null
+    owned_paths: [research/**]
+    contracts:
+      inputs:
+        - {ref: accepted_design_set_and_basis, identity: null}
+        - {ref: R00.exit_evidence.output_revision, identity: null}
+        - {ref: DAT_qualified_immutable_data_snapshot, identity: null}
+      outputs:
+        - {ref: frozen_research_policy_exposure_control_and_evidence_contract}
+    effects: {migration: NONE, runtime: NONE, release: NONE, authority: NONE, credential: NONE}
+    integration_gate: R01_SELECTIVE_VALIDATION_AND_EVIDENCE_INTEGRITY_GATE
+    scope:
+      - 只用 DAT-qualified 不可变 data_snapshot_ref 与 UTC 半开区间验证预登记、时间走步、统计门、可信 holdout 暴露和证据冻结
+      - 建立无数据库的单宿主 exposure root、不可逆 claim、AI 审查视图和可重复研究证据包
+    exit_evidence:
+      requirements:
+        - R00 完成且 research_policy 已冻结；已知 null、确定正/负样例、泄漏、重复 holdout、并发/崩溃和无候选反例通过
+        - confirmation_eligible_not_before 已由 B04 最终最大 event time 后的 UTC 半开边界固定；任何更早或重叠数据只能用于 discovery/validation
+      output_revision: null
+  R02:
+    id: R02
+    name: AI 主导真实研究试点
+    eligibility: BLOCKED_UNTIL_R01_COMPLETE_AND_POLICY_FROZEN
+    status: NOT_STARTED
+    contract_state: TO_BE_FROZEN_AT_PACKAGE_START
+    depends_on: [R01]
+    semantic_scopes:
+      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-FNL-001-REQ}
+      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-AIR-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-WRK-002-REQ}
+    base_revision: null
+    owned_paths: [research/**]
+    contracts:
+      inputs:
+        - {ref: accepted_design_set_and_basis, identity: null}
+        - {ref: R01.exit_evidence.output_revision, identity: null}
+        - {ref: research_track.research_policy.policy_ref, identity: null}
+      outputs:
+        - {ref: complete_search_index_and_research_evidence_or_zero_candidate_result}
+    effects: {migration: NONE, runtime: NONE, release: NONE, authority: NONE, credential: NONE}
+    integration_gate: R02_SELECTIVE_VALIDATION_AND_FROZEN_POLICY_GATE
+    scope:
+      - AI 在冻结研究政策内自主形成任务、用例和 worker 源码，完成探索、反证、confirmation/复现与最终筛选
+      - 项目所有者不逐项批准中间任务或淘汰，只在存在达到门槛的最终候选时进行必要结果审查；零候选是有效结果
+    exit_evidence:
+      requirements:
+        - 全部任务、预算、数据快照、UTC 半开区间、统计门和 holdout 均是冻结政策子集，模型只读取允许的 AI 审查视图
+        - 只交付研究证据或个体确认资格的最终候选材料，不修改正式策略 registry、产品锁、BuildManifest、交易计划、授权、资本或真实动作
+      output_revision: null
+  R03:
+    id: R03
+    name: 已选择证据的正式策略晋升
+    eligibility: NOT_AUTHORIZED
+    status: NOT_STARTED
+    contract_state: TO_BE_FROZEN_AFTER_OWNER_AUTHORIZATION
+    depends_on: [R02, B05, V01]
+    semantic_scopes:
+      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-PRM-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-INT-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-WRK-003-REQ}
+    base_revision: null
+    owned_paths: []
+    contracts:
+      inputs:
+        - {ref: accepted_design_set_and_basis, identity: null}
+        - {ref: research_track.owner_selected_evidence_ref, identity: null}
+        - {ref: B05_and_V01_output_revisions, identity: null}
+      outputs:
+        - {ref: single_formal_strategy_source_and_product_qualification}
+    effects: {migration: NONE, runtime: FORMAL_STRATEGY_CHANGE, release: SERIAL_PRODUCT_BASELINE_CHANGE, authority: NONE, credential: NONE}
+    integration_gate: R03_SERIAL_PRODUCT_INTEGRATION_AND_FULL_VALIDATION_GATE
+    scope:
+      - 只对项目所有者明确选择且已有 ALP 经济证据判断的研究证据，串行迁移到唯一正式策略源码并执行 HALPHA-ALP-002/HALPHA-ENG-002 产品重验
+    preconditions:
+      - R02、B05 与 V01 全部完成，research_track.owner_selected_evidence_ref 非空，项目所有者另行把本包 eligibility 设为 AUTHORIZED
+      - 正式策略 registry、产品锁、BuildManifest、composition root 和必要共享路径由唯一集成所有者串行修改，不复用研究运行资格代替产品资格
+    exit_evidence:
+      requirements:
+        - 正式产品重验通过，研究原型不作为第二正式实现、fallback、交易计划、授权、资本范围或真实写依据
+      output_revision: null
+
+value_decision_gate:
+  id: V01
+  kind: POST_P0_OWNER_VALUE_DECISION
+  status: NOT_STARTED
+  depends_on: [B05]
+  normative_sources: [HALPHA-CON-001@v2.11.0#CON-ECO-002, HALPHA-CON-001@v2.11.0#CON-ECO-003, HALPHA-OUT-001@v1.5.0#OUT-VAL-001]
+  purpose: B05 结束后由项目所有者决定继续、继续收集证据、收缩、替换策略或停止项目；不自动提高资金、范围或真实写权限
+  required_inputs:
+    - B05 技术正确性、开放责任和完整 Review
+    - 相对现金、明确基准和用户原工作方式的有限证据
+    - 费用、资金费、滑点、数据、建设、运行和维护成本
+    - 用户注意力、接管负担、故障恢复体验、样本数量与观察周期
+  insufficient_evidence_result: EVIDENCE_INSUFFICIENT；单次盈利、一次闭环、代码完成或功能正确不得自动决定继续或扩资
+  implementation_limit: 复用现有证据、Review 与用户决定；P0 不建立跨激活统计平台、自动评价流程或新记录族
 
 build_order: [D00, B00, B01, B02, B03, B04, B05]
-currently_authorized_work: [B00]
-parallelization_rule: B00 只能作为隔离资格化与 D00 修订并行；B01–B05 不得越过 D00=ALIGNED 和各自依赖包的 exit evidence，B05 绝不与证据建设并行
+research_build_order: [R00, R01, R02, R03]
+post_p0_decision_order: [B05, V01]
+currently_authorized_work: [B04]
+parallelization_rule: >-
+  B01–B03 已完成；B04 当前实施历史/Demo/LIVE_READ_ONLY 证据、完整工作台和运维闭环，B05 继续按前序包完成及 exit evidence 推进。
+  独立研究设计已经接受，但研究工作区、运行、政策和证据尚未创建，R00 在 B04 完成前保持阻断；B04 完成后，R00–R02 可通过独立 worktree/branch 与 B05 包级并行，
+  不改变 B01–B05、P0 build_order 或三项真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；资源隔离未资格化且
+  runtime_real_write_gate=OPEN 时研究计算必须 PAUSED/STOPPED。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 授权和运行时真实写门继续分别 fail closed。
 
 owner_inputs_before_specific_gates:
   before_B00:
@@ -1316,37 +1511,36 @@ owner_inputs_before_specific_gates:
     - 本机 PostgreSQL 安装位置、备份目录、App/Executor 计划任务账户和唯一登记的本机维护身份；提供三者非秘密 Windows SID 供保护 DACL 与跨 session 停止验收
     - owner 本机登录口令由离线命令现场设置，不写入文档
   before_B04:
-    - Binance LIVE_READ_ONLY secret 由项目所有者以 Executor 运行身份本地注入 WinVault；只记录非秘密 credential reference 与固定出口 IP（若启用 allowlist）
+    - Binance LIVE_READ_ONLY 不使用 API secret 或账户身份；只允许可选本机网络代理引用，代理值仍仅存在于 WinVault/运行参数且不进入仓库或证据
     - SMTP host、port、TLS mode、sender、recipient 和非秘密 credential reference；SMTP secret 由项目所有者以 App 运行身份本地注入 WinVault
-    - 历史证据初始权益、max_margin/max_notional/max_allowed_loss、1–5x BACKTEST_MANIFEST_LEVERAGE_PROXY 与最大真实 entry/exit notional 上限；B05 实际 isolated leverage 必须与获接受 manifest 一致
+    - 历史证据初始权益、max_margin/max_notional/max_allowed_loss、1–5x 逐仓等价 BACKTEST_MANIFEST_LEVERAGE_PROXY 与最大真实 entry/exit notional 上限；B05 按实际 margin mode/leverage 计算的 effective_leverage 必须与获接受 manifest 一致，actual_leverage 原值无需相等
   before_B05:
     - Binance LIVE_WRITE secret 由项目所有者以 Executor 运行身份本地注入 WinVault；只记录非秘密 credential reference 与固定出口 IP（若启用 allowlist）
-    - 当前账户模式、杠杆、taker fee、账户资本边界、本次三轴额度、方向和精确证据 manifest
+    - 当前 one-way/single-asset、逐工具实际 margin mode、actual_leverage、effective_leverage、taker fee、账户资本边界、本次三轴额度、方向和精确证据 manifest
 
 p0_non_goals:
   - 多次自动循环开仓、组合优化、策略间资金竞争或自动额度调度
-  - 同 instrument 多策略虚拟分仓、多账户、多场所、现货、COIN-M、期权、交叉保证金或 hedge mode
+  - 同 instrument 多策略虚拟分仓、多账户、多场所、现货、COIN-M、期权或 hedge mode
+  - 场所资金隔离保证、把 ISOLATED 反向当作 CROSSED，或把实际低杠杆向上放大
   - 策略 DSL、脚本上传、动态插件、参数优化平台、通用回测平台或 AI 实时交易决定
   - 高频、做市、订单簿/延迟套利、自动修改杠杆/模式、转账或提现
   - 专业行情终端、图表平台、多渠道通知、邮件命令、移动 App 或外网控制面
   - 机构审批、合规平台、微服务、消息总线、容器编排、热备、自动故障转移或 7x24 运维保证
+  - 长期严格证据 AUTO_CONTINUE 恢复引擎；P0 只实现 MANUAL_PLAN_RESUME
 
 definition_of_ready_to_start_p0:
-  design_status: BLOCKED_BY_UPSTREAM_CONFLICT
+  design_status: READY
   satisfied:
     - B00 的失败停止、无平行 fallback、第三方优先和复杂度硬上限已经记录
-    - B00 已完成的本机与离线子项具有可复核证据，真实写仍为 DISABLED
-  blocking:
-    - RECOVERY-AUTHORITY、DEMO-EXECUTION-IDENTITY、CAP-P0-SCOPE、UX-LIMITED-OPERATION-ENTRY 尚未在其语义所有者和直接下游形成一致的 ACCEPTED 修订
-    - D00 仍为 BLOCKED；协调 proposal 没有当前规范效力，不能作为 B01–B05 的实现输入
+    - B00 汇总证据证明 14/14 required outputs 全部 QUALIFIED；目标账户实际 CROSSED/20x 按 accepted compatibility 得到 effective_leverage=5，不阻断
+    - runtime_real_write_gate=CLOSED；工程资格、B05 包授权与运行时真实写门已拆分记录
+    - D00 已接受 DEMO/LIVE 统一 EXE ExecutionAction、环境限定 CAP 和系统机制验证优先的协调版本集
+  blocking: []
   remaining_runtime_inputs_before_B00: []
-  first_step: >-
-    B00 已在实际 Windows 10 目标主机作为隔离资格化开始；可以继续完成 dependency_qualification_gate.pending，
-    但 D00=ALIGNED 且 B00=QUALIFIED 前不得建立产品持久集成、生产真实写代码路径或开始 B01。
+  first_step: 继续 B04，基于 B03 已资格化的统一执行链建立历史、Demo、LIVE_READ_ONLY、完整工作台与运维证据；不得建立 LIVE 写动作、装载 LIVE 写凭据或打开真实写门
   current_assessment: >-
-    P0 尚不具备产品实施资格；开始隔离 B00 所需的目标环境与 Demo WinVault reference 已就绪，离线依赖、固定 wheel、
-    当前用户 Windows 原语和最小无 client 框架生命周期子项已通过。Windows 10 仍处于组件官方支持边界之外，Binance/行情/订单/恢复等联网输出尚未资格化；
-    B00 整体保持 IN_PROGRESS，B01–B05 保持阻断，真实写保持 DISABLED。
+    P0 当前已完成 B01–B03，B04 正在实施证据、完整工作台与运维闭环，仍不具备真实交易资格。Windows 10 和 B00 的目标主机、固定 wheel、Demo 行情/订单/恢复与生命周期证据仍有效；
+    账户实际 CROSSED/20x 不阻断建设，按 accepted CAP 兼容边界只读处理。live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED。
 
 source_evidence:
   - claim: NautilusTrader v1.230.0 tag、源码、许可证与 Controller
@@ -1405,6 +1599,7 @@ source_evidence:
     urls:
       - https://www.npmjs.com/package/@mui/material/v/9.2.0
       - https://www.npmjs.com/package/@rjsf/core/v/6.6.2
+      - https://www.npmjs.com/package/ajv/v/8.20.0
       - https://www.npmjs.com/package/@tanstack/react-query/v/5.101.2
   - claim: MUI、RJSF、TanStack Query 与 OpenAPI TypeScript
     urls:
@@ -1419,5 +1614,7 @@ source_evidence:
       - https://github.com/mhammond/pywin32
 
 final_acceptance_statement: >-
-  本计划已由项目所有者正式接受为当前阻断记录。它保留已完成的 B00 资格化证据，但不再允许 L4 豁免上位稳定语义；
-  四项冲突关闭并形成一致的 ACCEPTED L2/L3 修订前，只有无产品语义、无真实写能力的隔离 B00 可以继续，D00、B01–B05 与真实写均保持阻断。
+  本计划是项目所有者已接受的当前建设状态入口。DEMO 系统机制验证优先、DEMO/LIVE 共用 EXE 执行实现、环境限定 CAP、AI 主导独立研究、monorepo 并行集成及文档 Git-only 历史规则已进入 accepted_design_set；
+  D00=ALIGNED、B00=QUALIFIED、B01–B03=COMPLETED、B04=IN_PROGRESS，当前只授权 B04，B05 按依赖推进，B05 后执行人工 V01。研究设计已接受但当前尚未创建，R00 在 B04 完成前保持阻断；
+  之后 R00–R02 只以零 P0 effects、独立 worktree/branch 和资源 fail-closed 边界与 B05 包级并行，R03 继续等待 R02、B05、V01 与项目所有者证据选择。当前工作树未提交，BuildManifest 不具备发布资格；
+  工程资格不等于真实资金权限，B05 未获授权且 runtime_real_write_gate 保持 CLOSED。

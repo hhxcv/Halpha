@@ -1,4 +1,4 @@
 interface:
   display_name: "Halpha Development"
-  short_description: "Implement Halpha with scoped design and review gates"
-  default_prompt: "Use $develop-halpha to implement this Halpha task against the current ACCEPTED design and L4 construction scope."
+  short_description: "Handle one Halpha scope with staged validation"
+  default_prompt: "Use $develop-halpha to handle one authorized Halpha construction-package slice or explicit isolated non-package scope, choose the builder, observer, or finalizer work mode, and escalate validation only as required."

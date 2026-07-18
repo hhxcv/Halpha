@@ -22,13 +22,13 @@ L0 hard boundaries and highest tradeoffs
 -> implementation and tests
 ```
 
-Treat only the current `ACCEPTED` L0-L4 set as formal design. Use `docs/proposals/` only for explicitly authorized drafting, review, revision, or isolated prototyping.
+Treat only the current `ACCEPTED` L0-L4 set as formal design. A candidate may exist only as a `PROPOSED` version in its affected target L0-L4 path; do not use `docs/proposals/`, an `archive/` directory, or an uncommitted process copy as a design source. Git records history only when an actual commit exists.
 
 ## L4 Reading Scope
 
 Start at `docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml`, but load only the complete semantic blocks needed for the task:
 
-1. Always read document identity and `accepted_design_set`, `current_state`, `implementation_adaptation_rule`, the target construction package, and the L4 keys it directly references.
+1. Always read document identity and `accepted_design_set`, `current_state`, `stable_contract_references`, the target construction package, and the L4 keys it directly references.
 2. Read `p0_non_goals`, `complexity_budget`, and `formalization_record` when scope, lifecycle complexity, or a recorded conflict may be affected.
 3. Read the full plan only when modifying it, crossing packages or domains, failing to identify the target package, or affecting build order, real-write gates, or recorded upstream conflicts.
 

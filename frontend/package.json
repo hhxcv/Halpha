@@ -1,0 +1,50 @@
+{
+  "name": "halpha-workbench",
+  "version": "0.1.0-dev",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": "24.18.0",
+    "npm": "11.16.0"
+  },
+  "scripts": {
+    "generate:api": "..\\.venv\\Scripts\\python.exe ..\\tools\\build\\export_openapi.py --output ..\\build\\openapi.json && openapi-typescript ..\\build\\openapi.json -o src\\api\\schema.d.ts",
+    "generate:strategy-validator": "node scripts/generate-strategy-validator.mjs",
+    "generate": "npm run generate:api && npm run generate:strategy-validator",
+    "build": "npm run generate && tsc -b && vite build",
+    "check": "npm run generate && tsc -b",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:b02": "playwright test e2e/b02-workbench.spec.ts",
+    "test:e2e:b04": "playwright test e2e/b04-workbench.spec.ts"
+  },
+  "dependencies": {
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@mui/icons-material": "9.2.0",
+    "@mui/material": "9.2.0",
+    "@rjsf/core": "6.6.2",
+    "@rjsf/mui": "6.6.2",
+    "@rjsf/utils": "6.6.2",
+    "@rjsf/validator-ajv8": "6.6.2",
+    "@tanstack/react-query": "5.101.2",
+    "openapi-fetch": "0.17.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-router": "8.2.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.61.1",
+    "@types/node": "24.10.13",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "ajv": "8.20.0",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  }
+}

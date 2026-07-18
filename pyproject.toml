@@ -1,0 +1,34 @@
+[build-system]
+requires = [
+  "setuptools==83.0.0",
+  "wheel==0.47.0",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "halpha"
+version = "0.1.0.dev0"
+description = "Halpha single-owner trading workbench"
+readme = "README.md"
+requires-python = "==3.13.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Halpha Project Owner" }]
+
+[project.scripts]
+halpha-app = "halpha.app.__main__:main"
+halpha-auth = "halpha.app.auth_cli:main"
+halpha-backup = "halpha.backup:main"
+halpha-control = "halpha.control:main"
+halpha-executor = "halpha.executor.__main__:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+pythonpath = ["src"]
+testpaths = ["tests"]
