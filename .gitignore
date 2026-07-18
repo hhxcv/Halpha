@@ -17,7 +17,7 @@ dmypy.json
 .venv/
 venv/
 ENV/
-build/
+/build/
 dist/
 *.egg-info/
 .eggs/
@@ -44,8 +44,12 @@ htmlcov/
 playwright-report/
 blob-report/
 test-results/
+/.playwright-cli/
+/output/
 
 # Local configuration and credentials
+/config/halpha.toml
+/config/halpha.live-read-only.toml
 .env
 .env.*
 !.env.example

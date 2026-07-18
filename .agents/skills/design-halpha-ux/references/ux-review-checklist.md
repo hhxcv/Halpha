@@ -21,11 +21,11 @@ Fail the review when a critical item is missing. Do not average safety or semant
 
 ## Benchmark and Visual Direction
 
-- [ ] A current first-party benchmark matrix exists for the specific task.
+- [ ] When visual-direction benchmarking is in scope, a current first-party benchmark matrix exists for the specific task; otherwise the review records why it is not applicable.
 - [ ] Borrowed patterns solve documented Halpha problems and do not import out-of-scope capabilities.
 - [ ] Component styling is modern, precise, restrained, and consistent across interactive states.
 - [ ] Whitespace separates decisions rather than lowering information value.
-- [ ] High-fidelity images were inspected at actual target resolution.
+- [ ] High-fidelity images, when produced, were inspected at actual target resolution.
 
 ## Progressive Disclosure
 
@@ -61,21 +61,22 @@ Fail the review when a critical item is missing. Do not average safety or semant
 
 ## Real-Browser Visual Debugging
 
-- [ ] An executable prototype or product frontend was inspected through the required Playwright loop at the accepted desktop and narrow-screen viewports.
+- [ ] An executable prototype or product frontend, when the full real-browser gate applies, was inspected through the required Playwright loop at the accepted desktop and narrow-screen viewports.
 - [ ] Screenshots or snapshots were inspected before and after critical state transitions for clipping, overflow, overlap, alignment, density, focus, and state legibility.
 - [ ] Primary flows exercised loading, success, rejection/failure, stale/unknown, disclosure, confirmation, duplicate prevention, refresh, and navigation behavior as applicable.
 - [ ] Page errors, console errors, failed requests, and broken assets were reviewed; no layout or interaction failure was silently ignored.
 - [ ] The evidence records exact routes, viewports, states, commands, screenshots/traces, findings, fixes, and unresolved limits.
 - [ ] A static image-only artifact is marked `NOT_APPLICABLE_STATIC_ARTIFACT`, has full-resolution visual inspection, and is not described as interaction-validated.
 
-## Confirmation Handoff
+## Owner Decision Handoff
 
-Ask the owner to confirm separately:
+Do not ask the owner to reconfirm decisions already fixed by the accepted design, current L4 scope, or explicit task authorization. Within those boundaries, the designer may choose and justify information density, scan order, visual character, component polish, progressive disclosure, and feedback presentation, then expose the choices in the handoff for review.
 
-1. page and route scope;
-2. professional information density and scan order;
-3. visual character and component polish;
-4. progressive disclosure choices;
-5. action feedback and long-running status behavior;
-6. risk gates and emergency-action reachability;
-7. unresolved design conflicts or assumptions.
+Request one grouped owner decision only when at least one unresolved choice:
+
+1. adds or removes a page, route, user job, command, authoritative object, or support boundary not derivable from the accepted set;
+2. changes a risk gate, emergency-action reachability, authority, failure/unknown behavior, or other product semantics;
+3. is a materially different long-lived visual direction with no evidence-backed default and would substantially change the delivered result; or
+4. depends on a design conflict, scope expansion, or assumption that requires owner authority.
+
+The handoff still records page scope, density and scan order, visual direction, disclosure, async feedback, risk controls, evidence, and unresolved limits. Batch genuine decision items once; do not turn this inventory into seven mandatory approval exchanges.

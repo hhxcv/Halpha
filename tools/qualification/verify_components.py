@@ -11,6 +11,7 @@ EXPECTED_DISTRIBUTIONS = {
     "hypothesis": "6.156.6",
     "keyring": "25.7.0",
     "nautilus-trader": "1.230.0",
+    "pandas": "2.3.3",
     "pip": "26.1.2",
     "pip-tools": "7.5.3",
     "pytest": "9.1.1",

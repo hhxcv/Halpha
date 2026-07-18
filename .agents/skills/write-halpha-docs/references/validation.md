@@ -56,9 +56,9 @@
 
 - 实际改动只包含任务授权的目标和必要直接引用。
 - 无关工作区改动保持原样；没有顺带格式化、改名、换行或整理。
-- proposal-only 任务没有改 en-US、bundle、正式登记、archive 或 `docs/L0`–`docs/L4` 当前正文。
+- 候选任务只修改受影响的目标 L0–L4 文档及必要直接登记、bundle 和索引；没有建立跨层 proposal 文件、`docs/proposals/`、任何 `archive/` 目录或未提交过程副本。
 - 没有把候选、设计完成、代码存在或单次测试写成当前可用事实。
-- 已接受文档的小幅直接修改没有改变身份、层级、所有者、责任、规范强度、授权、行为、失败处理、验收、外部影响、稳定概念、依赖、支持范围或迁移；若改变任一项，任务已改用 proposal。
+- 已接受文档的小幅直接修改没有改变身份、层级、所有者、责任、规范强度、授权、行为、失败处理、验收、外部影响、稳定概念、依赖、支持范围或迁移；若改变任一项且项目所有者未直接接受完整文本，任务已改为各目标文档自身的 `PROPOSED` 版本。
 
 ## 层级与责任
 
@@ -103,12 +103,12 @@
 
 ## 语言、状态与哈希
 
-### Proposal
+### PROPOSED 目标文档
 
 - 状态为 `PROPOSED`，当前效力明确为无。
 - 候选基线和协调候选版本集清楚，不把 candidate 写成 ACCEPTED 上位。
 - 正式接受条件明确；未提前写入批准时间、共同规范集或已对齐状态。
-- 用于大幅修改或新建场景；若只是小幅修改，确认建立 proposal 是任务明确要求而非默认流程。
+- 用于大幅修改或新建场景；直接位于目标 L0–L4 路径，不建立跨层 proposal 文件或专用目录。
 
 ### ACCEPTED
 
@@ -118,7 +118,7 @@
 - bundle 中每个正文 `body_sha256` 与按 schema 3 固定规则归一化后的正文一致。
 - 联合摘要输入由文档编号、版本、规范语言顺序和各正文哈希重建；bundle 只保存 `joint_set.sha256`，该摘要必须可重算。
 - 版本、正文和 bundle 作为一个变更包处理；不要只更新其中一项。
-- 小幅直接修改具有新版本、替代关系、批准信息、直接引用与索引同步记录；无法证明语义未变时不得绕过 proposal。
+- 小幅直接修改具有新版本、替代关系、批准信息、直接引用与索引同步记录；无法证明语义未变且项目所有者未直接接受完整文本时，不得绕过目标文档 `PROPOSED` 状态。
 
 ## 机械检查脚本
 
@@ -127,9 +127,6 @@
 ```powershell
 # 检查本次明确修改的文件
 python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py <path...>
-
-# 只允许中文候选及中文导航/登记文件
-python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py --proposal-only <path...>
 
 # 检查工作区全部已跟踪和未跟踪改动
 python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py --changed
@@ -141,7 +138,7 @@ python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py --accept
 python governance/validate_construction_plan.py
 ```
 
-文档脚本检查 UTF-8、YAML、规范文件名与核心元数据、语义锚点重复、相对链接、proposal 修改边界和 bundle 哈希。治理脚本只检查当前 PLAN 的冲突阻断、建设依赖和真实写 fail-closed。两者都不判断内容是否放在正确层级、概念是否值得建立、业务路径是否完整或冲突语义是否真的关闭；这些必须人工复核。
+文档脚本检查 UTF-8、YAML、规范文件名与核心元数据、语义锚点重复、相对链接、目标文档候选位置、禁止的 proposal/archive 目录和 bundle 哈希。治理脚本只检查当前 PLAN 的冲突阻断、建设依赖和真实写 fail-closed。两者都不判断内容是否放在正确层级、概念是否值得建立、业务路径是否完整或冲突语义是否真的关闭；这些必须人工复核。
 
 脚本对错误返回非零状态；警告需要结合任务范围判断。传入明确路径优于在脏工作区直接使用 `--changed`，以免把所有者已有改动误算为本次范围。
 

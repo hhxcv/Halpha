@@ -1,0 +1,2 @@
+# Markdown specification metadata uses two trailing spaces for intentional hard breaks.
+docs/**/*.md whitespace=-blank-at-eol

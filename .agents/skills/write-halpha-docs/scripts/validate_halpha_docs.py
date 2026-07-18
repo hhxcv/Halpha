@@ -2,7 +2,8 @@
 """Run mechanical checks for Halpha design documentation.
 
 This script intentionally does not encode product semantics. It checks file structure,
-metadata, YAML, links, proposal-only scope, and accepted bundle digests so that human
+metadata, YAML, links, target-document candidate placement, forbidden version-carrier
+directories, and accepted bundle digests so that human
 or agent review can focus on ownership, level, consumers, and failure behavior.
 """
 
@@ -10,9 +11,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import re
 import subprocess
 import sys
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +32,17 @@ METADATA_RE = re.compile(r"^\*\*([^*]+?)[：:]\*\*\s*(.*?)\s*$")
 SEMANTIC_ANCHOR_RE = re.compile(r"【([A-Z][A-Z0-9-]+)】")
 NUMBERED_SECTION_RE = re.compile(r"^#\s+\d+(?:[.\s])")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+MARKDOWN_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}(?:[ \t]+|$)(.*)$")
+MARKDOWN_FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+HTML_FRAGMENT_RE = re.compile(
+    r'''(?<![-\w])(?:id|name)\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s"'=<>`]+))''',
+    re.IGNORECASE,
+)
+GITHUB_LINE_FRAGMENT_RE = re.compile(r"^L([1-9]\d*)(?:-L([1-9]\d*))?$")
+DOCUMENT_REFERENCE_RE = re.compile(r"\bHALPHA-[A-Z]+-\d{3}\b")
+DOCUMENT_VERSION_AFTER_REFERENCE_RE = re.compile(
+    r"\s+v\d+\.\d+\.\d+(?:#[A-Z][A-Z0-9-]+)?\b"
+)
 
 
 @dataclass(frozen=True)
@@ -98,6 +112,161 @@ def relative_path(repo: Path, path: Path) -> Path:
         return path.resolve()
 
 
+def github_heading_slug(value: str) -> str:
+    """Return the GitHub-style slug used by headings in Halpha Markdown."""
+
+    value = html.unescape(value)
+    value = re.sub(r"!\[([^\]]*)\]\([^)]*\)", r"\1", value)
+    value = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", value)
+    value = re.sub(r"<[^>]+>", "", value)
+    value = value.replace("`", "").strip().lower()
+    value = "".join(
+        character
+        for character in value
+        if character in {"-", "_"}
+        or unicodedata.category(character)[0] not in {"C", "P", "S"}
+    )
+    return re.sub(r"\s", "-", value)
+
+
+def markdown_fragment_ids(text: str) -> set[str]:
+    """Collect GitHub heading slugs and explicit HTML fragment identifiers."""
+
+    fragments: set[str] = set()
+    heading_fragments: set[str] = set()
+    fence_character: str | None = None
+    fence_length = 0
+
+    for line in text.splitlines():
+        fence = MARKDOWN_FENCE_RE.match(line)
+        if fence:
+            marker = fence.group(1)
+            if fence_character is None:
+                fence_character = marker[0]
+                fence_length = len(marker)
+            elif marker[0] == fence_character and len(marker) >= fence_length:
+                fence_character = None
+                fence_length = 0
+            continue
+        if fence_character is not None:
+            continue
+
+        heading = MARKDOWN_HEADING_RE.match(line)
+        if heading:
+            heading_text = re.sub(r"[ \t]+#+[ \t]*$", "", heading.group(1))
+            base = github_heading_slug(heading_text)
+            if base:
+                candidate = base
+                suffix = 0
+                while candidate in heading_fragments:
+                    suffix += 1
+                    candidate = f"{base}-{suffix}"
+                heading_fragments.add(candidate)
+                fragments.add(candidate)
+
+        for match in HTML_FRAGMENT_RE.finditer(line):
+            fragment = next(group for group in match.groups() if group is not None)
+            fragments.add(html.unescape(fragment))
+
+    return fragments
+
+
+def markdown_link_destination(raw_target: str) -> str:
+    """Remove Markdown angle brackets or an optional destination title."""
+
+    target = raw_target.strip()
+    if target.startswith("<"):
+        closing = target.find(">")
+        return target[1:closing] if closing >= 0 else target
+    return target.split(maxsplit=1)[0] if target else ""
+
+
+def local_link_target(
+    repo: Path, source: Path, raw_target: str
+) -> tuple[Path, str | None, str] | None:
+    """Resolve a repository-local Markdown destination, or skip an external URL."""
+
+    target = markdown_link_destination(raw_target)
+    if (
+        not target
+        or target.startswith("//")
+        or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target)
+    ):
+        return None
+
+    path_part, separator, raw_fragment = target.partition("#")
+    decoded_path = unquote(path_part.split("?", 1)[0])
+    fragment = unquote(raw_fragment) if separator else None
+
+    if not decoded_path:
+        linked = source.resolve()
+    elif decoded_path.startswith(("/", "\\")):
+        linked = (repo / decoded_path.lstrip("/\\")).resolve()
+    else:
+        linked = (source.parent / decoded_path).resolve()
+
+    repo_root = repo.resolve()
+    if not linked.is_relative_to(repo_root):
+        return None
+    return linked, fragment, decoded_path
+
+
+def validate_l3_header(path: Path, metadata: dict[str, str]) -> list[Issue]:
+    """Check only the mechanical shape of an L3 header and its references."""
+
+    # Deliberately do not resolve references against accepted_design_set or decide
+    # whether a dependency is semantically direct; those checks have separate owners.
+    issues: list[Issue] = []
+    l3_type = first_value(metadata, "L3 类型", "L3 Type")
+    direct_dependencies = first_value(metadata, "直接依赖", "Direct Dependencies")
+    vertical_constraints = first_value(
+        metadata, "适用纵向约束", "Applicable Vertical Constraints"
+    )
+
+    if not l3_type:
+        issues.append(Issue("ERROR", path, "L3 文档头缺少 L3 类型"))
+    elif l3_type not in {"DOMAIN", "ORCHESTRATION"}:
+        issues.append(Issue("ERROR", path, f"L3 类型无效：{l3_type}"))
+
+    owner_key = "主要语义所有者" if l3_type == "DOMAIN" else "协调所有者"
+    owner_label = (
+        "Primary Semantic Owner" if l3_type == "DOMAIN" else "Coordination Owner"
+    )
+    if l3_type in {"DOMAIN", "ORCHESTRATION"} and not first_value(
+        metadata, owner_key, owner_label
+    ):
+        issues.append(Issue("ERROR", path, f"L3 文档头缺少{owner_key}"))
+
+    if not direct_dependencies:
+        issues.append(Issue("ERROR", path, "L3 文档头缺少直接依赖"))
+    else:
+        references = list(DOCUMENT_REFERENCE_RE.finditer(direct_dependencies))
+        declares_none = re.match(r"^\s*(?:无|None)\b", direct_dependencies) is not None
+        if not references and not declares_none:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    path,
+                    "L3 直接依赖必须列出带版本的 HALPHA 文档引用或明确为无",
+                )
+            )
+        for reference in references:
+            suffix = direct_dependencies[reference.end() :]
+            if not DOCUMENT_VERSION_AFTER_REFERENCE_RE.match(suffix):
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        path,
+                        f"L3 直接依赖引用缺少 ` vX.Y.Z` 版本：{reference.group(0)}",
+                    )
+                )
+
+    if not vertical_constraints:
+        issues.append(Issue("ERROR", path, "L3 文档头缺少适用纵向约束"))
+
+    return issues
+
+
 def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
     issues: list[Issue] = []
     rel = relative_path(repo, path)
@@ -145,20 +314,15 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
         if status and status not in VALID_STATUSES:
             issues.append(Issue("ERROR", path, f"未知文档状态：{status}"))
 
-        in_proposals = len(rel.parts) > 1 and rel.parts[:2] == ("docs", "proposals")
-        in_archive = "archive" in rel.parts
-        in_current_normative = (
+        in_target_document_path = (
             len(rel.parts) > 1
             and rel.parts[0] == "docs"
             and re.fullmatch(r"L[0-3]", rel.parts[1]) is not None
-            and not in_archive
         )
-        if in_proposals and status and status != "PROPOSED":
-            issues.append(Issue("ERROR", path, "proposals/ 中的规范候选必须标为 PROPOSED"))
-        if in_current_normative and status and status != "ACCEPTED":
-            issues.append(Issue("ERROR", path, "L0–L3 当前定稿路径中的文档必须标为 ACCEPTED"))
+        if in_target_document_path and status not in {"ACCEPTED", "PROPOSED"}:
+            issues.append(Issue("ERROR", path, "L0–L3 目标路径中的文档必须标为 ACCEPTED 或 PROPOSED"))
 
-        if in_current_normative:
+        if in_target_document_path:
             deprecated = {
                 "当前效力",
                 "Current Effect",
@@ -170,6 +334,21 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
             for key in sorted(deprecated.intersection(metadata)):
                 issues.append(Issue("ERROR", path, f"当前规范头包含已移除元数据：{key}"))
 
+            if status == "PROPOSED":
+                supersedes = first_value(metadata, "替代版本", "Supersedes")
+                if not supersedes:
+                    issues.append(Issue("ERROR", path, "PROPOSED 目标文档头缺少候选基线或替代版本"))
+                premature_acceptance = {
+                    "批准人",
+                    "Approver",
+                    "接受时间",
+                    "Accepted At",
+                    "生效时间",
+                    "Effective Time",
+                }
+                for key in sorted(premature_acceptance.intersection(metadata)):
+                    issues.append(Issue("ERROR", path, f"PROPOSED 目标文档不得提前登记接受信息：{key}"))
+
             if level and (level.startswith("L0") or level.startswith("L1")):
                 co_normative_required = {
                     "共同规范集标识/Joint Normative Set ID": first_value(
@@ -179,15 +358,20 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
                     "共同规范集登记/Joint Set Registry": first_value(
                         metadata, "共同规范集登记", "Joint Set Registry"
                     ),
-                    "生效时间/Effective Time": first_value(
-                        metadata, "生效时间", "Effective Time"
-                    ),
                 }
+                if status == "ACCEPTED":
+                    co_normative_required["生效时间/Effective Time"] = first_value(
+                        metadata, "生效时间", "Effective Time"
+                    )
                 for label, value in co_normative_required.items():
                     if not value:
                         issues.append(Issue("ERROR", path, f"共同规范文本头缺少：{label}"))
 
-            if level and (level.startswith("L2") or level.startswith("L3")):
+            if (
+                status == "ACCEPTED"
+                and level
+                and (level.startswith("L2") or level.startswith("L3"))
+            ):
                 acceptance_required = {
                     "批准人/Approver": first_value(metadata, "批准人", "Approver"),
                     "接受时间/Accepted At": first_value(metadata, "接受时间", "Accepted At"),
@@ -231,6 +415,9 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
             if not not_governs:
                 issues.append(Issue("ERROR", path, "缺少本文档不负责范围元数据"))
 
+        if level and level.startswith("L3"):
+            issues.extend(validate_l3_header(path, metadata))
+
     anchors = [
         anchor
         for line in text.splitlines()
@@ -241,20 +428,81 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
         if count > 1:
             issues.append(Issue("ERROR", path, f"显式语义锚点重复 {count} 次：{anchor}"))
 
+    target_cache: dict[Path, tuple[str, int, set[str]]] = {}
     for raw_target in MARKDOWN_LINK_RE.findall(text):
-        target = raw_target.strip()
-        if target.startswith("<") and target.endswith(">"):
-            target = target[1:-1]
-        if not target or target.startswith("#"):
+        local_target = local_link_target(repo, path, raw_target)
+        if local_target is None:
             continue
-        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
-            continue
-        target = unquote(target.split("#", 1)[0].split("?", 1)[0])
-        if not target or Path(target).is_absolute():
-            continue
-        linked = (path.parent / target).resolve()
+        linked, fragment, display_path = local_target
         if not linked.exists():
-            issues.append(Issue("WARNING", path, f"相对链接目标不存在：{target}"))
+            issues.append(Issue("ERROR", path, f"相对链接目标不存在：{display_path}"))
+            continue
+        if linked.is_dir() or fragment is None or not fragment:
+            continue
+
+        if linked not in target_cache:
+            if linked == path.resolve():
+                linked_text = text
+            else:
+                try:
+                    linked_text = linked.read_bytes().decode("utf-8-sig")
+                except UnicodeDecodeError as exc:
+                    issues.append(
+                        Issue(
+                            "WARNING",
+                            path,
+                            f"无法检查链接 fragment，目标不是有效 UTF-8：{display_path}（{exc}）",
+                        )
+                    )
+                    continue
+            target_cache[linked] = (
+                linked_text,
+                len(linked_text.splitlines()),
+                markdown_fragment_ids(linked_text)
+                if linked.suffix.lower() == ".md"
+                else set(),
+            )
+
+        _, line_count, fragments = target_cache[linked]
+        line_fragment = GITHUB_LINE_FRAGMENT_RE.fullmatch(fragment)
+        if line_fragment:
+            start_line = int(line_fragment.group(1))
+            end_line = int(line_fragment.group(2) or line_fragment.group(1))
+            if end_line < start_line:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        path,
+                        f"GitHub 行号 fragment 范围倒置：{display_path}#{fragment}",
+                    )
+                )
+            elif end_line > line_count:
+                issues.append(
+                    Issue(
+                        "ERROR",
+                        path,
+                        f"GitHub 行号 fragment 超出目标范围（共 {line_count} 行）："
+                        f"{display_path}#{fragment}",
+                    )
+                )
+            continue
+        if re.match(r"^L\d", fragment):
+            issues.append(
+                Issue(
+                    "ERROR",
+                    path,
+                    f"GitHub 行号 fragment 格式无效：{display_path}#{fragment}",
+                )
+            )
+            continue
+        if linked.suffix.lower() == ".md" and fragment not in fragments:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    path,
+                    f"Markdown fragment 不存在：{display_path}#{fragment}",
+                )
+            )
 
     return issues
 
@@ -270,31 +518,33 @@ def validate_yaml(path: Path, text: str) -> tuple[object | None, list[Issue]]:
         issues.append(Issue("WARNING", path, "YAML 顶层不是映射"))
         return data, issues
 
-    in_proposals = "proposals" in path.parts
-
-    if data.get("document_id") == "HALPHA-PLAN-001" and not in_proposals:
-        for key in (
+    if data.get("document_id") == "HALPHA-PLAN-001":
+        plan_status = data.get("status")
+        required_plan_keys = {
             "schema_version",
             "level",
             "status",
             "as_of",
             "language",
-            "accepted_by",
-            "accepted_at",
             "basis",
-        ):
+        }
+        if plan_status == "ACCEPTED":
+            required_plan_keys.update({"accepted_by", "accepted_at"})
+        for key in required_plan_keys:
             if key not in data:
                 issues.append(Issue("ERROR", path, f"当前建设计划缺少键：{key}"))
         if data.get("schema_version") != 3:
             issues.append(Issue("ERROR", path, "当前建设计划 schema_version 必须为 3"))
         if data.get("level") != "L4":
             issues.append(Issue("ERROR", path, "HALPHA-PLAN-001 的 level 必须为 L4"))
-        if data.get("status") != "ACCEPTED":
-            issues.append(Issue("ERROR", path, "HALPHA-PLAN-001 的 status 必须为 ACCEPTED"))
+        if plan_status not in {"ACCEPTED", "PROPOSED"}:
+            issues.append(Issue("ERROR", path, "HALPHA-PLAN-001 的 status 必须为 ACCEPTED 或 PROPOSED"))
+        if plan_status == "PROPOSED" and not data.get("supersedes"):
+            issues.append(Issue("ERROR", path, "PROPOSED HALPHA-PLAN-001 必须声明替代版本"))
         for key in ("current_path", "approved_by", "approved_at"):
             if key in data:
                 issues.append(Issue("ERROR", path, f"当前建设计划包含已移除键：{key}"))
-        if data.get("effective_at") == data.get("accepted_at"):
+        if plan_status == "ACCEPTED" and data.get("effective_at") == data.get("accepted_at"):
             issues.append(Issue("ERROR", path, "当前建设计划立即生效时不得重复 effective_at"))
 
     if data.get("registry_kind") == "non_normative_machine_index":
@@ -306,60 +556,59 @@ def validate_yaml(path: Path, text: str) -> tuple[object | None, list[Issue]]:
             duplicates = [item for item, count in Counter(ids).items() if item and count > 1]
             for item in duplicates:
                 issues.append(Issue("ERROR", path, f"L2 责任编号重复：{item}"))
-        if not in_proposals:
-            if data.get("schema_version") != 3:
-                issues.append(Issue("ERROR", path, "当前 L2 责任登记 schema_version 必须为 3"))
-            for key in ("language", "current_depth_authority", "upstream_versions"):
-                if key not in data:
-                    issues.append(Issue("ERROR", path, f"当前 L2 责任登记缺少键：{key}"))
-            removed_registry_keys = {
-                "status",
-                "current_path",
-                "approved_by",
-                "approved_at",
-                "effective_at",
-                "normative_text_copied",
-                "current_depth_recorded_here",
-                "note",
-                "direct_upstream_version_sets",
-            }
-            for key in sorted(removed_registry_keys.intersection(data)):
-                issues.append(Issue("ERROR", path, f"当前 L2 责任登记包含已移除键：{key}"))
-            for key in data:
-                if key.startswith("current_depth") and key != "current_depth_authority":
-                    issues.append(Issue("ERROR", path, f"L2 责任登记不得记录当前深度：{key}"))
+        if data.get("schema_version") != 3:
+            issues.append(Issue("ERROR", path, "当前 L2 责任登记 schema_version 必须为 3"))
+        for key in ("language", "current_depth_authority", "upstream_versions"):
+            if key not in data:
+                issues.append(Issue("ERROR", path, f"当前 L2 责任登记缺少键：{key}"))
+        removed_registry_keys = {
+            "status",
+            "current_path",
+            "approved_by",
+            "approved_at",
+            "effective_at",
+            "normative_text_copied",
+            "current_depth_recorded_here",
+            "note",
+            "direct_upstream_version_sets",
+        }
+        for key in sorted(removed_registry_keys.intersection(data)):
+            issues.append(Issue("ERROR", path, f"当前 L2 责任登记包含已移除键：{key}"))
+        for key in data:
+            if key.startswith("current_depth") and key != "current_depth_authority":
+                issues.append(Issue("ERROR", path, f"L2 责任登记不得记录当前深度：{key}"))
 
-            if isinstance(responsibilities, list):
-                required_item_keys = {
-                    "id",
-                    "shape",
-                    "responsibility_source",
-                    "l2_document",
-                    "scope_source",
-                    "owned_stable_semantics",
-                }
-                for index, item in enumerate(responsibilities):
-                    if not isinstance(item, dict):
-                        issues.append(Issue("ERROR", path, f"L2 责任第 {index + 1} 项不是映射"))
-                        continue
-                    for key in sorted(required_item_keys.difference(item)):
+        if isinstance(responsibilities, list):
+            required_item_keys = {
+                "id",
+                "shape",
+                "responsibility_source",
+                "l2_document",
+                "scope_source",
+                "owned_stable_semantics",
+            }
+            for index, item in enumerate(responsibilities):
+                if not isinstance(item, dict):
+                    issues.append(Issue("ERROR", path, f"L2 责任第 {index + 1} 项不是映射"))
+                    continue
+                for key in sorted(required_item_keys.difference(item)):
+                    issues.append(
+                        Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 缺少键：{key}")
+                    )
+                if item.get("shape") not in {"horizontal", "vertical"}:
+                    issues.append(
+                        Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 的 shape 无效")
+                    )
+                for key in ("direct_upstream_version_set", "l2_status"):
+                    if key in item:
                         issues.append(
-                            Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 缺少键：{key}")
+                            Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 包含已移除键：{key}")
                         )
-                    if item.get("shape") not in {"horizontal", "vertical"}:
+                for key in item:
+                    if key.startswith("current_depth"):
                         issues.append(
-                            Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 的 shape 无效")
+                            Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 不得记录当前深度")
                         )
-                    for key in ("direct_upstream_version_set", "l2_status"):
-                        if key in item:
-                            issues.append(
-                                Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 包含已移除键：{key}")
-                            )
-                    for key in item:
-                        if key.startswith("current_depth"):
-                            issues.append(
-                                Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 不得记录当前深度")
-                            )
 
     return data, issues
 
@@ -397,15 +646,15 @@ def validate_bundle(repo: Path, path: Path, data: object | None = None) -> list[
     if not isinstance(data, dict):
         return issues
 
-    rel = relative_path(repo, path)
-    in_archive = "archive" in rel.parts
     schema_version = data.get("schema_version", 2)
+    bundle_status = data.get("status")
 
-    if in_archive:
-        if data.get("status") not in {"ACCEPTED", "SUPERSEDED", "WITHDRAWN"}:
-            issues.append(Issue("ERROR", path, "归档 bundle 的状态无效"))
-    elif data.get("status") != "ACCEPTED" or data.get("alignment") != "ALIGNED":
-        issues.append(Issue("ERROR", path, "当前共同规范 bundle 必须为 ACCEPTED 且 ALIGNED"))
+    if bundle_status == "ACCEPTED" and data.get("alignment") != "ALIGNED":
+        issues.append(Issue("ERROR", path, "ACCEPTED 共同规范 bundle 必须为 ALIGNED"))
+    elif bundle_status == "PROPOSED" and data.get("alignment") not in {"PENDING", "NOT_ALIGNED"}:
+        issues.append(Issue("ERROR", path, "PROPOSED 共同规范 bundle 必须为 PENDING 或 NOT_ALIGNED"))
+    elif bundle_status not in {"ACCEPTED", "PROPOSED"}:
+        issues.append(Issue("ERROR", path, "当前共同规范 bundle 必须为 ACCEPTED 或 PROPOSED"))
 
     if schema_version == 3:
         required = {
@@ -420,11 +669,15 @@ def validate_bundle(repo: Path, path: Path, data: object | None = None) -> list[
             "language_authority",
             "files",
             "joint_set",
-            "accepted_by",
-            "accepted_at",
         }
+        if bundle_status == "ACCEPTED":
+            required.update({"accepted_by", "accepted_at"})
         for key in sorted(required.difference(data)):
             issues.append(Issue("ERROR", path, f"schema 3 bundle 缺少键：{key}"))
+        if bundle_status == "PROPOSED":
+            for key in ("accepted_by", "accepted_at", "effective_at"):
+                if key in data:
+                    issues.append(Issue("ERROR", path, f"PROPOSED bundle 不得提前登记：{key}"))
         if data.get("language_authority") != "co_normative_equal":
             issues.append(Issue("ERROR", path, "schema 3 bundle 的语言权威必须为 co_normative_equal"))
         removed = {
@@ -440,7 +693,7 @@ def validate_bundle(repo: Path, path: Path, data: object | None = None) -> list[
         }
         for key in sorted(removed.intersection(data)):
             issues.append(Issue("ERROR", path, f"schema 3 bundle 包含已移除键：{key}"))
-    elif not in_archive:
+    else:
         issues.append(Issue("ERROR", path, "当前共同规范 bundle 必须使用 schema_version 3"))
 
     files = data.get("files")
@@ -586,17 +839,6 @@ def validate_bundle(repo: Path, path: Path, data: object | None = None) -> list[
     return issues
 
 
-def allowed_proposal_path(repo: Path, path: Path) -> bool:
-    rel = relative_path(repo, path)
-    if len(rel.parts) >= 2 and rel.parts[:2] == ("docs", "proposals"):
-        return path.name.endswith(".zh-CN.md") or path.suffix.lower() in {".yaml", ".yml"}
-    return rel in {
-        Path("docs/concept-definition-index.zh-CN.md"),
-        Path("docs/requirement-constraint-index.zh-CN.md"),
-        Path("docs/decision-rationale-index.zh-CN.md"),
-    }
-
-
 def collect_targets(repo: Path, raw_paths: list[str], use_changed: bool) -> set[Path]:
     targets = changed_files(repo) if use_changed else set()
     for raw in raw_paths:
@@ -616,11 +858,6 @@ def main() -> int:
     parser.add_argument("paths", nargs="*", help="要检查的仓库相对路径；目录会递归展开")
     parser.add_argument("--changed", action="store_true", help="检查 Git 工作区全部改动")
     parser.add_argument(
-        "--proposal-only",
-        action="store_true",
-        help="要求传入范围只包含中文 proposal、中文登记和中文导航索引",
-    )
-    parser.add_argument(
         "--accepted-integrity",
         action="store_true",
         help="检查 docs/L0–L3 当前 bundle 的正文与联合包哈希",
@@ -635,10 +872,6 @@ def main() -> int:
 
     if not args.paths and not args.changed and not args.accepted_integrity:
         args.changed = True
-    if args.proposal_only and args.accepted_integrity:
-        print("[ERROR] --proposal-only 与 --accepted-integrity 不能同时使用", file=sys.stderr)
-        return 2
-
     try:
         targets = collect_targets(repo, args.paths, args.changed)
     except subprocess.CalledProcessError as exc:
@@ -660,8 +893,17 @@ def main() -> int:
             continue
         if path.is_dir():
             continue
-        if args.proposal_only and not allowed_proposal_path(repo, path):
-            issues.append(Issue("ERROR", path, "超出中文 proposal-only 允许范围"))
+        rel = relative_path(repo, path)
+        if len(rel.parts) > 1 and rel.parts[0] == "docs" and (
+            rel.parts[1] == "proposals" or "archive" in rel.parts
+        ):
+            issues.append(
+                Issue(
+                    "ERROR",
+                    path,
+                    "文档版本不得使用 docs/proposals 或任何 archive 目录承载",
+                )
+            )
         if path.suffix.lower() not in {".md", ".yaml", ".yml"}:
             continue
 

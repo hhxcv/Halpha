@@ -1,6 +1,6 @@
 ---
 name: develop-halpha
-description: Guide Halpha implementation, testing, refactoring, dependency qualification, build work, and design-to-code traceability. Use when developing or modifying Halpha code, migrations, builds, runtime configuration, qualification probes, or implementation tests, or when implementation evidence exposes a suspected L4, L3, L2, L1, or L0 design omission, error, or conflict.
+description: Guide Halpha implementation, testing, refactoring, dependency qualification, build work, construction-package observation and finalization, and design-to-code traceability. Use when developing or modifying Halpha code, migrations, builds, runtime configuration, qualification probes, or implementation tests; observing or finalizing external or time-bound package evidence; or handling implementation evidence that exposes a suspected L4, L3, L2, L1, or L0 design omission, error, or conflict.
 ---
 
 # Halpha Development
@@ -19,9 +19,10 @@ Use the least process that satisfies the current impact level. Escalate reading,
 
 1. Read the repository `AGENTS.md`, inspect the actual worktree, and preserve unrelated owner changes.
 2. Provisionally classify the highest impact under `HALPHA-ENG-001#ENG-IMP-001` before expanding design reads. Use the higher level when uncertain, then confirm the classification after loading the applicable clauses.
-3. Read the complete relevant YAML blocks from the current L4 plan: document identity and `accepted_design_set`, `current_state`, `implementation_adaptation_rule`, the target construction package, and every L4 key that package directly references for versions, configuration, gates, or evidence.
+3. Read the complete relevant YAML blocks from the current L4 plan: document identity and `accepted_design_set`, `current_state`, `stable_contract_references`, the target construction package, and every L4 key that package directly references for versions, configuration, gates, or evidence.
 4. Read `p0_non_goals`, `complexity_budget`, or `formalization_record` when the task can affect scope, complexity, or a recorded conflict. Read the entire L4 plan only when changing the plan, crossing packages or domains, failing to identify the target package, or affecting build order, real-write gates, or a recorded upstream conflict.
-5. Perform only work authorized by the user and allowed by package dependencies. Keep qualification probes, product implementation, DEMO writes, and LIVE writes separated by the L4 environment and gates. Missing state remains unknown; never infer it from code, design completion, or passing tests.
+5. A write-capable task may target at most one construction package. If the authorized work is not owned by a construction package, keep that explicit non-package scope isolated. Stop rather than crossing into a dependency, successor package, or separately authorized research track.
+6. Perform only work authorized by the user and allowed by package dependencies. Keep qualification probes, product implementation, DEMO writes, and LIVE writes separated by the L4 environment and gates. Missing state remains unknown; never infer it from code, design completion, or passing tests.
 
 A recorded upstream conflict is resolved only within the exact `formalization_record.conflicts[*].p0_disposition` scope. It is not a general L4 exemption from higher-level design.
 
@@ -37,7 +38,7 @@ Use [Design Navigation](references/design-navigation.md) to locate the semantic 
 
 Always read target code, tests, migrations, configuration, or probes in full before editing, and inspect their direct consumers and existing boundaries. Search locates owners; search snippets do not replace authoritative files.
 
-Use only current `ACCEPTED` documents for formal implementation. Use `docs/proposals/` only for explicitly authorized proposal work, candidate review, or isolated prototypes; never describe candidate content as current design.
+Use only current `ACCEPTED` documents for formal implementation. A candidate may exist only as a `PROPOSED` version in its affected target L0–L4 path; never create or consume `docs/proposals/`, an `archive/` directory, or an uncommitted process copy, and never describe candidate content as current design.
 
 If stable rules are absent from L2/L3, accepted clauses directly conflict, or no unique semantic owner can be found, do not invent a code rule. Continue at Step 7.
 
@@ -63,13 +64,27 @@ Run this step when adding or replacing a capability or dependency, changing a pi
 
 ### 5. Implement a Small Slice
 
-1. Implement the smallest independently testable vertical slice that can be rolled back and does not cross package dependencies.
+1. Implement the smallest independently testable vertical slice that can be rolled back and stays within the selected package and environment.
 2. Change the semantic owner's implementation and only necessary direct consumers. Shared code must not acquire business-semantic ownership.
-3. Add impact-proportionate tests, migrations, configuration identity, stop behavior, and diagnostic evidence with the slice.
-4. Keep real secrets out of development tools, AI, browsers, ordinary logs, documents, and test artifacts. Do not cause real account or capital changes without explicit user authorization.
-5. Never bypass the single write path, environment isolation, durable action identity, permissions, stop, reconciliation, recovery, or complexity limits for debugging.
+3. Expand the current slice only for a defect that directly blocks its completion or validation, or for a safety defect whose continued isolation would expose credentials, permissions, action uniqueness, stop, reconciliation, recovery, or real-capital boundaries. Keep the expansion minimal, within the same package and user authorization; otherwise stop and hand it off. Record every other discovered defect as separately scoped follow-up work without editing it now.
+4. Add impact-proportionate tests, migrations, configuration identity, stop behavior, and diagnostic evidence with the slice.
+5. Keep real secrets out of development tools, AI, browsers, ordinary logs, documents, and test artifacts. Do not cause real account or capital changes without explicit user authorization.
+6. Never bypass the single write path, environment isolation, durable action identity, permissions, stop, reconciliation, recovery, or complexity limits for debugging.
 
-### 6. Validate by Impact
+### 6. Escalate Validation by Evidence and Impact
+
+Run validation in this order and complete each applicable earlier stage before advancing:
+
+| Stage | When it applies | Required work |
+|---|---|---|
+| Targeted | Every writable slice | Run the smallest tests, static checks, migration probes, runtime checks, or rendering checks that directly exercise the changed behavior and its likely failure. |
+| Module | The change affects a module handoff, transaction, state transition, migration, direct consumer, or shared boundary; or targeted evidence is insufficient | Run the owning module or integration suite and the directly affected consumer checks. |
+| Governance | The task changes or validates the construction plan, package eligibility, gates, manifest/evidence binding, or a governance-owned invariant | Run the applicable governance validators after targeted and module checks; for `HALPHA-PLAN-001`, include `python governance/validate_construction_plan.py`. |
+| Package exit | A separately scoped finalization task intends to claim package completion or exit evidence | Run the complete check set named or implied by the package `exit_evidence`, including applicable targeted, module, governance, runtime, browser, rollback, and authorized external checks. Verify source, build, configuration, evidence identity, freshness, and scope together. |
+
+Do not substitute a broad suite for unmet elapsed-time or external evidence. A status query or read-only observation reports the declared state, actual evidence, freshness, and unknowns; it does not run full, governance, or package-exit validation merely to answer status.
+
+Within the applicable stage, preserve the impact minimum:
 
 - **Core:** Validate the normal path, critical counterexamples, duplicate/retry, and stop/rollback behavior; run relevant automated tests; independently re-derive from requirements or failure scenarios; exercise the critical chain in the closest authorized environment; preserve an executable rollback.
 - **General:** Run relevant tests and an actual runtime or rendering check; verify failure behavior and preserve the necessary rollback.
@@ -77,7 +92,7 @@ Run this step when adding or replacing a capability or dependency, changing a pi
 
 Also verify that authoritative clauses are implemented, third-party behavior matches evidence, unknown database or external outcomes fail closed, required package `exit_evidence` exists, and the complexity budget and single implementation remain intact. Passing tests never advances L4 state, enables real writes, or raises capital scope by itself.
 
-If the task changes `HALPHA-PLAN-001`, a construction gate, package eligibility, or real-write status, run `python governance/validate_construction_plan.py` in addition to the impact-appropriate implementation tests. A passing governance check proves only internal state consistency; it never proves that an upstream semantic conflict is closed.
+A passing governance check proves only internal state consistency; it never proves that an upstream semantic conflict is closed.
 
 ### 7. Handle Design Inconsistencies
 
@@ -96,11 +111,20 @@ When real code, a pinned component, the target platform, an external system, or 
 
 Do not repeat a human decision already accepted and recorded in the current design unless new evidence exceeds its exact scope.
 
-### 8. Re-read, Integrate, and Deliver
+### 8. Separate Building, Waiting, and Finalizing
+
+Treat builder, observer, and finalizer as scoped work modes, not permanent project roles or extra project states:
+
+1. A builder completes one writable slice in one package, runs its immediate targeted and applicable module checks, then produces a handoff. It must not stay mutation-capable solely to wait for a clock, venue, provider, CI, soak, or other external gate.
+2. An observer performs only the read-only checks needed to collect or report elapsed-time and external evidence. It does not edit source or plan state, run package-exit validation, reinterpret missing evidence as success, or finalize the builder's work.
+3. After the required evidence is actually ready, start a separately scoped finalization task. The finalizer re-reads the current accepted plan and exact package, checks evidence identity, freshness, and scope, runs the applicable package-exit validation, and updates plan or documentation only when explicitly authorized and through `write-halpha-docs`.
+4. If evidence drift, a new defect, an authorization gap, or a package boundary appears, stop and hand it off. Do not let waiting or finalization silently reopen the completed builder slice.
+
+### 9. Re-read, Integrate, and Deliver
 
 1. Re-read every modified file and the actual diff. Remove task-external changes, mechanical replacement residue, hidden second implementations, and undesigned semantics.
 2. Run the relevant checks and report exact commands and results. State which relevant checks were not run.
-3. Integrate only when evidence meets the slice completion criteria. Use `write-halpha-docs` when the current plan, configuration facts, or qualification evidence must change; a delivery note cannot replace the L4 record.
+3. Leave one coherent, reviewable worktree change only when evidence meets the slice completion criteria. Use `write-halpha-docs` when the current plan, configuration facts, or qualification evidence must change; a delivery note cannot replace the L4 record.
 4. Lead delivery with the outcome, then report implementation scope, direct design basis, component reuse versus retained custom code, validation, rollback/stop path, inconsistency resolution, and remaining unknowns or human decisions.
 
-Never describe code completion, passing tests, accepted documents, component installation, or one external success as "currently available" or "real writes enabled." Current capability claims must come from L4 evidence with source, time, and scope.
+Never describe code completion, passing tests, accepted documents, component installation, or one external success as "currently available" or "real writes enabled." Current capability claims must come from L4 evidence with source, time, and scope. A slice handoff never expands the existing authorization: continue to another slice only when the original task explicitly covers that bounded outcome inside the same package or isolated non-package scope, and require explicit user authorization for commit, push, another package, or L4 advancement.

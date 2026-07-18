@@ -1,0 +1,124 @@
+{
+  "registry_digest": "cb7ce0c9b0683eb20978882563890ad008549f0868da6c662430d983c6fe6f4a",
+  "registry_kind": "STATIC_BUILD_ARTIFACT",
+  "schema_version": 1,
+  "strategies": [
+    {
+      "adapter_contract_version": "HALPHA-ALP-002@v0.5.0",
+      "allowed_action_profiles": [
+        "ENTRY_MARKET",
+        "PROTECTIVE_STOP_REDUCE_ONLY",
+        "TAKE_PROFIT_1",
+        "TAKE_PROFIT_2",
+        "REDUCE_OR_CLOSE_MARKET"
+      ],
+      "build_digest": null,
+      "display_name": "单次 Donchian 突破与 ATR 风险退出",
+      "economic_scope": {
+        "funding_model": "NOT_MODELED_IN_BACKTEST",
+        "one_entry_cycle": true,
+        "qualified_live_instrument": "BTCUSDT-PERP",
+        "venue": "BINANCE_USDM"
+      },
+      "implementation_digest": "022ca2fd3a432224ebf2fd92615ab761969bf71f4a2d1d8ec1d1a4762c149c96",
+      "implementation_path": "halpha.planning.strategies.one_shot:OneShotDonchianAtrLogic",
+      "native_indicators": [
+        "nautilus_trader.indicators.DonchianChannel",
+        "nautilus_trader.indicators.AverageTrueRange"
+      ],
+      "parameter_schema": {
+        "$id": "urn:halpha:strategy:ONE_SHOT_DONCHIAN_ATR_BREAKOUT:parameters:1.0.0",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "x-halpha-cross-constraint": {
+              "code": "TAKE_PROFIT_ORDER_INVALID",
+              "expression": "take_profit_2_r > take_profit_1_r"
+            }
+          }
+        ],
+        "properties": {
+          "channel_lookback_15m": {
+            "default": 20,
+            "maximum": 96,
+            "minimum": 20,
+            "type": "integer"
+          },
+          "confirmation_bars_1m": {
+            "default": 2,
+            "maximum": 3,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "LONG",
+              "SHORT"
+            ],
+            "type": "string"
+          },
+          "entry_valid_minutes": {
+            "default": 1440,
+            "maximum": 10080,
+            "minimum": 15,
+            "type": "integer"
+          },
+          "initial_stop_atr_multiple": {
+            "default": "1.5",
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "type": "string",
+            "x-halpha-maximum": "3.0",
+            "x-halpha-minimum": "1.0"
+          },
+          "max_entry_extension_atr": {
+            "default": "0.5",
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "type": "string",
+            "x-halpha-maximum": "1.0",
+            "x-halpha-minimum": "0.1"
+          },
+          "max_hold_bars_15m": {
+            "default": 96,
+            "maximum": 672,
+            "minimum": 4,
+            "type": "integer"
+          },
+          "take_profit_1_fraction": {
+            "default": "0.50",
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "type": "string",
+            "x-halpha-maximum": "0.75",
+            "x-halpha-minimum": "0.25"
+          },
+          "take_profit_1_r": {
+            "default": "1.5",
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "type": "string",
+            "x-halpha-maximum": "3.0",
+            "x-halpha-minimum": "1.0"
+          },
+          "take_profit_2_r": {
+            "default": "3.0",
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "type": "string",
+            "x-halpha-maximum": "6.0",
+            "x-halpha-minimum": "2.0"
+          }
+        },
+        "required": [
+          "direction"
+        ],
+        "title": "单次 Donchian 突破与 ATR 风险退出",
+        "type": "object"
+      },
+      "parameter_schema_version": "1.0.0",
+      "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+      "strategy_version": "1.0.0",
+      "supported_directions": [
+        "LONG",
+        "SHORT"
+      ]
+    }
+  ]
+}

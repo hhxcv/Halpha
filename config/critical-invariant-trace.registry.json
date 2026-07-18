@@ -1,0 +1,199 @@
+{
+  "records": [
+    {
+      "requirement_id": "SYS-AUTO-REC-001-REQ/P0_MANUAL_PLAN_RESUME",
+      "spec_source": [
+        "docs/L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md",
+        "docs/L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md"
+      ],
+      "delivery_horizon": "P0_REQUIRED",
+      "implementation_paths": [
+        "migrations/versions/20260717_0002_b02_plan_runtime_fields.py",
+        "src/halpha/planning/models.py",
+        "src/halpha/planning/transitions.py",
+        "src/halpha/planning/repository.py",
+        "src/halpha/planning/control_service.py",
+        "src/halpha/app/planning_api.py",
+        "src/halpha/app/web.py",
+        "src/halpha/executor/continuity.py",
+        "src/halpha/executor/coordinator.py",
+        "src/halpha/executor/__main__.py"
+      ],
+      "forbidden_calls": [
+        "automatic RESUME_ACTIVATION after process, host, database, App, SPA, or notification restart",
+        "new venue write while PlanActivation.run_state is PAUSED"
+      ],
+      "tests": [
+        "tests/planning/test_transitions.py",
+        "tests/app/test_web_security.py",
+        "tests/runtime/test_executor_continuity.py",
+        "tests/venue_integration/test_startup_recovery.py",
+        "tools/qualification/verify_b02_database_boundary.py"
+      ],
+      "build_gate": [
+        ".venv/Scripts/python.exe -m pytest tests/planning tests/app/test_web_security.py -q",
+        ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
+      ],
+      "evidence_digest": "sha256:d9e7de88ebeb245d215775e2ecfbd9cc1ef8c6065e0074e8c5ec23f15f254f8f",
+      "implementation_status": "IMPLEMENTED",
+      "deviation_status": "NONE"
+    },
+    {
+      "requirement_id": "EXE-AUTO-ACT-001/UNIFIED_ENVIRONMENT_QUALIFIED_ACTION",
+      "spec_source": [
+        "docs/L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md",
+        "docs/L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md",
+        "docs/L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md"
+      ],
+      "delivery_horizon": "P0_REQUIRED",
+      "implementation_paths": [
+        "migrations/versions/20260717_0001_p0_record_families.py",
+        "migrations/versions/20260717_0004_b03_execution_boundaries.py",
+        "migrations/versions/20260717_0005_b03_client_order_identity.py",
+        "src/halpha/database/record_families.py",
+        "src/halpha/venue_integration/*.py",
+        "src/halpha/executor/coordinator.py",
+        "src/halpha/executor/runtime.py"
+      ],
+      "forbidden_calls": [
+        "TRADEPLAN insert or state transition of execution_action",
+        "separate Demo and LIVE ExecutionAction schema, repository, service, or state machine"
+      ],
+      "tests": [
+        "tests/database/test_record_family_contract.py",
+        "tests/architecture/test_process_boundaries.py",
+        "tests/venue_integration/*.py",
+        "tests/runtime/test_executor_coordinator.py",
+        "tests/runtime/test_executor_product_runtime.py",
+        "tools/qualification/verify_b03_execution_boundary.py"
+      ],
+      "build_gate": [
+        ".venv/Scripts/python.exe -m pytest tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
+      ],
+      "evidence_digest": "sha256:dbbedc07f70c622cee742dc69a522d1d1ed21d7ed85d381443c8e822c3fe11b8",
+      "implementation_status": "IMPLEMENTED",
+      "deviation_status": "NONE"
+    },
+    {
+      "requirement_id": "CAP-AUTO-CHK-001/TWO_PHASE_LIMIT_AND_STOP_CHECK",
+      "spec_source": [
+        "docs/L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md",
+        "docs/L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md"
+      ],
+      "delivery_horizon": "P0_REQUIRED",
+      "implementation_paths": [
+        "migrations/versions/20260717_0001_p0_record_families.py",
+        "migrations/versions/20260717_0003_b02_stop_scope_versions.py",
+        "src/halpha/capital/models.py",
+        "src/halpha/capital/checks.py",
+        "src/halpha/capital/repository.py",
+        "src/halpha/planning/service.py",
+        "src/halpha/executor/coordinator.py"
+      ],
+      "forbidden_calls": [
+        "activation or risk-increasing submission without current authorization, three-axis limits, max_action_notional, facts, and stop-state checks",
+        "split, retry, concurrency, or partial-fill path that bypasses action or aggregate limits"
+      ],
+      "tests": [
+        "tests/capital/test_cap_checks.py",
+        "tools/qualification/verify_b02_database_boundary.py",
+        "tools/qualification/verify_b03_execution_boundary.py"
+      ],
+      "build_gate": [
+        ".venv/Scripts/python.exe -m pytest tests/capital -q",
+        ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
+      ],
+      "evidence_digest": "sha256:3018121291fec4c18fbb9b16549483abbedf0a434bf9e2be8633d19b883e5a9a",
+      "implementation_status": "IMPLEMENTED",
+      "deviation_status": "NONE"
+    },
+    {
+      "requirement_id": "SYS-AUTO-COORD-001/UNIQUE_ENVIRONMENT_VENUE_WRITE_GATE",
+      "spec_source": [
+        "docs/L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md",
+        "docs/L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md"
+      ],
+      "delivery_horizon": "P0_REQUIRED",
+      "implementation_paths": [
+        "config/halpha.example.toml",
+        "migrations/versions/20260717_0001_p0_record_families.py",
+        "src/halpha/configuration.py",
+        "src/halpha/windows_runtime.py",
+        "src/halpha/executor/__main__.py",
+        "src/halpha/executor/coordinator.py",
+        "src/halpha/executor/runtime.py",
+        "src/halpha/venue_integration/gateway.py",
+        "src/halpha/database/record_families.py"
+      ],
+      "forbidden_calls": [
+        "venue write from halpha-app, notification dispatcher, TRADEPLAN pure logic, or browser",
+        "venue submit without persisted ExecutionAction through the environment writer gate"
+      ],
+      "tests": [
+        "tests/runtime/test_windows_runtime.py",
+        "tests/runtime/test_executor_coordinator.py",
+        "tests/runtime/test_executor_product_runtime.py",
+        "tests/database/test_record_family_contract.py",
+        "tests/architecture/test_process_boundaries.py",
+        "tests/venue_integration/test_persisted_action_gate.py"
+      ],
+      "build_gate": [
+        ".venv/Scripts/python.exe -m pytest tests/runtime/test_windows_runtime.py tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
+      ],
+      "evidence_digest": "sha256:61db79539f19e914589b296dc3a647550d94885c2f57bddaf5f930fad053b6ee",
+      "implementation_status": "IMPLEMENTED",
+      "deviation_status": "NONE"
+    },
+    {
+      "requirement_id": "UX-AUTO-IA-001/SAME_PROCESS_LIMITED_OPERATIONS_ENTRY",
+      "spec_source": [
+        "docs/L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md",
+        "docs/L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md"
+      ],
+      "delivery_horizon": "P0_REQUIRED",
+      "implementation_paths": [
+        "src/halpha/app/security.py",
+        "src/halpha/app/web.py",
+        "src/halpha/app/planning_api.py",
+        "src/halpha/user_workbench/commands.py",
+        "src/halpha/user_workbench/repository.py"
+      ],
+      "forbidden_calls": [
+        "second API, authentication secret, process, control state, or remote emergency channel for /operations",
+        "limited operations command outside the shared Command, Receipt, CSRF, session, and domain-handler path"
+      ],
+      "tests": [
+        "tests/app/test_web_security.py",
+        "tools/qualification/verify_b02_database_boundary.py"
+      ],
+      "build_gate": [
+        ".venv/Scripts/python.exe -m pytest tests/app/test_web_security.py -q",
+        "Playwright /operations static-dist-loss and shared-command qualification"
+      ],
+      "evidence_digest": "sha256:56e766265b89b99eee8f7d96581c531d3ee4713bb5c617763ba4972524670581",
+      "implementation_status": "IMPLEMENTED",
+      "deviation_status": "NONE"
+    },
+    {
+      "requirement_id": "SYS-AUTO-REC-001-REQ/STRICT_EVIDENCE_AUTOMATIC_CONTINUATION",
+      "spec_source": [
+        "docs/L0/HALPHA-CON-001-project-constitution.zh-CN.md",
+        "docs/L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md"
+      ],
+      "delivery_horizon": "LONG_TERM_REQUIRED_P0_DEFERRED",
+      "implementation_paths": [],
+      "forbidden_calls": [
+        "strict-evidence automatic continuation implemented or advertised as a P0 capability"
+      ],
+      "tests": [
+        "tests/planning/test_transitions.py"
+      ],
+      "build_gate": [
+        "P0 construction validation keeps automatic continuation deferred"
+      ],
+      "evidence_digest": "sha256:643e528a90d01616beaa15ad23b85b5a2f5b0baa4d01300ccb20147709a3315d",
+      "implementation_status": "DEFERRED",
+      "deviation_status": "NONE"
+    }
+  ]
+}

@@ -1,14 +1,14 @@
 # Halpha Project Constitution: Mission, Personal Risk Control, and Development Principles
 
 **Document ID:** HALPHA-CON-001  
-**Version:** v2.10.0  
+**Version:** v2.11.0  
 **Decision Status:** ACCEPTED  
 **Level:** L0  
 **Language Edition:** en-US  
-**Joint Normative Set ID:** HALPHA-CON-001@v2.10.0+20260716T124500+0800  
+**Joint Normative Set ID:** HALPHA-CON-001@v2.11.0+20260718T070120+0800  
 **Paired Text:** HALPHA-CON-001-project-constitution.zh-CN.md (zh-CN)  
 **Joint Set Registry:** HALPHA-CON-001-project-constitution.bundle.yaml  
-**Effective Time:** 2026-07-16T12:45:00+08:00  
+**Effective Time:** 2026-07-18T07:01:20+08:00  
 **Scope:** Halpha's long-term mission, role and capital sovereignty, non-breakable boundaries, highest-order trade-offs, AI and technology trust boundaries, complexity boundaries, and change conditions  
 **Authority Scope:** This Constitution is the current highest normative source for every CON-* principle listed in Section 10.
 
@@ -270,7 +270,9 @@ Stopping new real actions, lowering authority, lowering funds-use caps, narrowin
 
 When an anomaly, unknown material fact, business error, credential risk, or reconciliation difference occurs, the funds-use caps and scope MAY be narrowed, Halpha real-capital operating authority MAY be lowered, or new real actions MAY be stopped immediately.
 
-Restoration or expansion MUST be decided explicitly by the User and MUST occur only after the immediate issue has been handled, critical external facts have been reconciled, and the scope remains controlled. Halpha MUST support decreases as well as increases and MUST NOT restore authority automatically.
+Restoring authority that has expired, been revoked, or been contracted, or expanding authority or scope, MUST be decided explicitly by the User and MUST occur only after the immediate issue has been handled, critical external facts have been reconciled, and the scope remains controlled. Halpha MUST support decreases as well as increases and MUST NOT automatically restore authority that has expired, been revoked, or been contracted.
+
+When Machine authorization remains valid within its original plan, account, action, duration, and cap scope and has not been stopped, revoked, or handed over, re-establishing runtime eligibility after an interruption is not restoration of invalid authority. Continuation within the original scope is permitted only when accepted lower-level design explicitly allows automatic continuation for that phase and verifiable evidence proves a unique writer, continuity of persistent state and external facts, unchanged build/configuration/credentials/account identity, reconciliation of unknown and protection responsibilities, and no replay of missed actions. Otherwise the scope MUST remain stopped for an explicit User decision. This process MUST NOT create, expand, or extend authorization.
 
 ---
 
@@ -368,7 +370,7 @@ When critical external facts, trading identity, execution, or persistence capabi
 
 Halpha MUST NOT be the sole irreplaceable path by which the User observes accounts, revokes Halpha authority, protects capital, or regains account control. The User MUST retain final control outside Halpha's runtime, credential, and deployment failure domains.
 
-After a restart, failure, human intervention, or identity anomaly, the affected scope MUST remain stopped until critical external facts have been reconciled, old actions cannot repeat external effects, and the User explicitly restores the applicable authority. Credentials suspected of disclosure or loss of control MUST be revoked or invalidated. If facts or control remain unclear, the only permitted outcomes are to remain stopped or perform a constraining action demonstrably not increasing or converting risk.
+After a restart, failure, human intervention, or identity anomaly, the affected scope MUST first remain stopped until critical external facts have been reconciled, old actions cannot repeat external effects, and runtime eligibility has been proved again. If the original Machine authorization remains valid and accepted lower-level design defines a strict evidence gate for the current phase, Halpha MAY restore runtime eligibility only within the original scope. In every other case, the User MUST explicitly restore applicable authority, continue the same task, or establish new authorization. Halpha MUST NOT continue automatically after a User stop, revocation, handover, or authorization expiry, or when the build, configuration, credentials, account identity, persistent-write continuity, or critical facts changed or cannot be proved. Credentials suspected of disclosure or loss of control MUST be revoked or invalidated. If facts or control remain unclear, the only permitted outcomes are to remain stopped or perform a constraining action demonstrably not increasing or converting risk.
 
 ## 7.4 Deactivation, Exit, and Record Retention【CON-LIF-001】
 

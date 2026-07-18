@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "decision": "P0_DIRECT_DEPENDENCIES_ACCEPTED_WITH_LOCKED_FULL_CLOSURES",
+  "groups": [
+    {
+      "name": "python-local-web-and-validation",
+      "members": [
+        "python:fastapi",
+        "python:uvicorn",
+        "python:starlette",
+        "python:itsdangerous",
+        "python:pydantic",
+        "python:pydantic-settings",
+        "python:asgi-csrf",
+        "python:limits"
+      ],
+      "replaces_responsibility": "Local typed HTTP/API, session, CSRF, host boundary, TOML validation and bounded login throttling.",
+      "upgrade_rule": "Regenerate hashed locks, rerun web security and browser acceptance, and review upstream security notes.",
+      "exit_rule": "Replace the single local App composition root and generated OpenAPI contract; no product facts live in these libraries.",
+      "persistent_runtime_impact": "No additional process, worker, database or durable lifecycle."
+    },
+    {
+      "name": "python-postgresql",
+      "members": ["python:sqlalchemy", "python:alembic", "python:psycopg"],
+      "replaces_responsibility": "PostgreSQL driver, transactions, schema migration and thin query composition.",
+      "upgrade_rule": "Upgrade as one tested database slice with upgrade/downgrade and role-boundary evidence.",
+      "exit_rule": "SQL schema and PostgreSQL archives remain standard; replace adapters without a second database model.",
+      "persistent_runtime_impact": "Uses the one selected PostgreSQL service; adds no service."
+    },
+    {
+      "name": "python-windows-and-local-secrets",
+      "members": ["python:keyring", "python:pywin32", "python:pwdlib", "python:argon2-cffi"],
+      "replaces_responsibility": "WinVault, exact Windows SID/DACL/task primitives and maintained password hashing.",
+      "upgrade_rule": "Requalify the exact WinVault backend, cross-SID access, task start/stop and password verification.",
+      "exit_rule": "Credentials stay in Windows Credential Manager and hashes use standard Argon2 encoding; rotate references when replacing a component.",
+      "persistent_runtime_impact": "No daemon; uses Windows facilities already selected by the runtime design."
+    },
+    {
+      "name": "python-observability",
+      "members": ["python:structlog"],
+      "replaces_responsibility": "Structured Halpha JSON event rendering while stdlib owns file rotation.",
+      "upgrade_rule": "Rerun redaction and JSONL rotation tests.",
+      "exit_rule": "JSON Lines remain readable without structlog; replace the renderer only.",
+      "persistent_runtime_impact": "No worker or storage service."
+    },
+    {
+      "name": "python-quant-stack",
+      "members": ["python:nautilus-trader", "python:pandas"],
+      "replaces_responsibility": "Single live/backtest engine, Binance adapters, indicators, reports, Parquet catalog and supported tabular wrangling boundary.",
+      "upgrade_rule": "New fixed version requires artifact, adapter, lifecycle, strategy parity, Demo and historical-evidence requalification.",
+      "exit_rule": "Raw/checksummed market inputs and Halpha product records remain authoritative; replace as one stack without a parallel adapter or engine.",
+      "persistent_runtime_impact": "Runs inside the one Executor and one-shot evidence tools; no added service."
+    },
+    {
+      "name": "python-build-and-test",
+      "members": [
+        "python:build",
+        "python:pip",
+        "python:pip-tools",
+        "python:pytest",
+        "python:hypothesis",
+        "python:httpx2",
+        "python:pyyaml",
+        "python:setuptools",
+        "python:wheel"
+      ],
+      "replaces_responsibility": "Deterministic packaging, hash locking, tests, generated fixtures and governance validation.",
+      "upgrade_rule": "Regenerate locks in the repository venv and rerun the complete qualification suite.",
+      "exit_rule": "Source, lock files and standard wheels remain usable by replacement build/test tooling.",
+      "persistent_runtime_impact": "Development and build only."
+    },
+    {
+      "name": "frontend-runtime",
+      "members": [
+        "npm:@emotion/react",
+        "npm:@emotion/styled",
+        "npm:@mui/icons-material",
+        "npm:@mui/material",
+        "npm:@rjsf/core",
+        "npm:@rjsf/mui",
+        "npm:@rjsf/utils",
+        "npm:@rjsf/validator-ajv8",
+        "npm:@tanstack/react-query",
+        "npm:openapi-fetch",
+        "npm:react",
+        "npm:react-dom",
+        "npm:react-router"
+      ],
+      "replaces_responsibility": "Single workbench UI, schema forms, in-memory queries, routing and generated OpenAPI client.",
+      "upgrade_rule": "Use npm ci from the lock, rebuild static dist, and rerun visual, interaction and axe acceptance.",
+      "exit_rule": "The server API and /operations fallback remain authoritative; replace the static frontend without a second product backend.",
+      "persistent_runtime_impact": "Static files only in production; no Node process."
+    },
+    {
+      "name": "frontend-build-and-test",
+      "members": [
+        "npm:@axe-core/playwright",
+        "npm:@playwright/test",
+        "npm:@types/node",
+        "npm:@types/react",
+        "npm:@types/react-dom",
+        "npm:@vitejs/plugin-react",
+        "npm:ajv",
+        "npm:openapi-typescript",
+        "npm:typescript",
+        "npm:vite",
+        "npm:vitest"
+      ],
+      "replaces_responsibility": "Type generation, CSP-safe build-time JSON Schema validator compilation, static bundling, unit tests, browser automation and accessibility evidence.",
+      "upgrade_rule": "Use the exact npm lock and rerun typecheck, build, unit, Playwright and axe gates.",
+      "exit_rule": "Generated static dist and source remain standard artifacts; tools never own product state.",
+      "persistent_runtime_impact": "Development and build only."
+    }
+  ],
+  "complexity_result": {
+    "persistent_halpha_processes": 2,
+    "scheduled_jobs": 3,
+    "external_service_instances": 1,
+    "product_databases": 2,
+    "product_record_families": 16,
+    "additional_dependency_owned_workers": 0,
+    "parallel_execution_or_backtest_stack": false,
+    "status": "NO_LIFECYCLE_COMPLEXITY_INCREASE_OVER_ACCEPTED_L4"
+  }
+}

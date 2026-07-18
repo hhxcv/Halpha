@@ -1,16 +1,16 @@
 # Halpha Overall Technical Requirements and Architecture
 
 **Document ID:** HALPHA-ARC-001  
-**Version:** v1.8.0  
+**Version:** v1.9.0  
 **Document Status:** ACCEPTED  
 **Level:** L1-D  
 **Language Edition:** en-US  
-**Joint Normative Set ID:** HALPHA-ARC-001@v1.8.0+20260716T124502+0800  
+**Joint Normative Set ID:** HALPHA-ARC-001@v1.9.0+20260718T070120+0800  
 **Paired Text:** HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md  
 **Joint Set Registry:** HALPHA-ARC-001-technical-requirements-and-architecture.bundle.yaml  
-**Effective Time:** 2026-07-16T12:45:02+08:00  
-**Parent Documents:** HALPHA-CON-001 v2.10.0; HALPHA-DOC-001 v1.10.0; HALPHA-VIS-001 v1.4.0; HALPHA-FLOW-001 v1.7.0  
-**This Document Governs:** enduring technical realization of VIS and FLOW; quality tradeoffs; overall logical form; dependency direction; authoritative state; real-action paths; environment isolation; recovery; and architectural concerns for the eleven responsibilities  
+**Effective Time:** 2026-07-18T07:01:20+08:00  
+**Parent Documents:** HALPHA-CON-001 v2.11.0; HALPHA-DOC-001 v1.11.0; HALPHA-VIS-001 v1.4.0; HALPHA-FLOW-001 v1.8.0  
+**This Document Governs:** enduring technical realization of VIS and FLOW; quality tradeoffs; overall logical form; dependency direction; authoritative state; simulated and real trading-action paths; environment isolation; recovery; and architectural concerns for the eleven responsibilities  
 **This Document Does Not Govern:** specific business algorithms, pages, interface fields, database structures, vendors, product and instance choices, deployment commands, numerical limits, current construction scope, or implementation state
 
 ---
@@ -20,7 +20,7 @@
 1. Halpha uses a personally maintainable modular monolith. It does not prebuild microservices, a message bus, clusters, or institutional high availability.
 2. Architectural complexity first serves trading judgment, planning, data and execution correctness, and UX. Stability comes primarily from mature technology and simple structure.
 3. Each transaction-record environment uses one authoritative relational database. Simulation and real-funds environments use authoritative stores or databases that are separate from each other. L3 selects the enduring database product and usage contract; L4 records the exact version, instances, and deployment choices.
-4. A real action initiated by Halpha may originate from the current branch of an enabled Trading Plan, or from an explicit user protection/risk-reduction decision fixed in advance or an explicit user instruction permitted by FLOW. Every source enters the same funds-use caps-and-scope, Halpha real-capital operating authority, single-processing, external-submission, and reconciliation chain.
+4. Exchange-simulation and real-funds actions initiated by Halpha are both owned by EXE and use the same environment-qualified ExecutionAction, state progression, CAP checks, external submission, and reconciliation chain. Real-funds actions remain additionally subject to every Halpha real-capital operating-authority boundary and real-write gate.
 5. Halpha does not decide the user's total personal investment. It enforces only the configured funds-use caps and scope, applicable decision basis, pre-action checks, authorization, stopping, and recovery. It neither reserves funds for future actions nor builds two-stage funds approval or a separate production-admission product.
 6. Projections and caches are rebuildable and cannot become authoritative facts. When facts are unknown or conflicting, or a result is unresolved, new real actions in the affected scope remain stopped; only a contraction action explicitly directed by the user and shown not to increase or transform risk may continue.
 7. Research, AI, reporting, management, and configuration capabilities must not become required synchronous dependencies for real-action submission, stopping, reconciliation, or recovery.
@@ -69,13 +69,13 @@ One capability may have only one runtime implementation and one fact authority. 
 ## 2.1 Definition of the Overall Logical Form 【ARC-TOP-001-DEF】
 
 ~~~text
-Browser / desktop entry / notification
+Interaction entry / notification
             │
             ▼
    Application commands and queries
             │
   ┌─────────┴────────────────────────────────────────────┐
-  │ Research and judgment │ Plans │ Facts │ Real actions and reconciliation │ Outcomes and interaction │
+  │ Research and judgment │ Plans │ Facts │ Execution actions and reconciliation │ Outcomes and interaction │
   └─────────┬────────────────────────────────────────────┘
             │
  One authoritative relational database per transaction-record environment
@@ -89,15 +89,27 @@ Browser / desktop entry / notification
         Venues and data sources
 ~~~
 
-The boxes represent logical responsibilities, not independent deployments, and do not map one-to-one to the responsibility map. The overall form consists of a modular monolith, authoritative relational databases divided by transaction-record environment, necessary external adapters, and a single isolated boundary for real external writes.
+The boxes represent logical responsibilities, not independent deployments, and do not map one-to-one to the responsibility map. The overall form consists of a modular monolith, authoritative relational databases divided by transaction-record environment, necessary external adapters, and one isolated external-write boundary per trading environment. Only the real-funds boundary may hold real write capability.
 
 ## 2.2 Constraints on the Overall Form 【ARC-TOP-001-REQ】
 
-The overall architecture must preserve these responsibility and isolation relationships. The applicable L3 selects the enduring database product; L4 determines process count, background workers, database instances and versions, and physical deployment isolation. The external-write boundary may share a deployment with other capabilities, but real write authority must remain singular, minimal, and isolated from general application capabilities.
+The overall architecture must preserve these responsibility and isolation relationships. The applicable L3 selects the enduring database product; L4 determines process count, background workers, database instances and versions, and physical deployment isolation. Simulation and real-funds external-write boundaries use the same controlled implementation path but form separate instances. Real write authority must remain singular, minimal, and isolated from simulation credentials and general application capabilities.
 
 Module boundaries follow semantic ownership, write responsibility, failure impact, and rate of change. A service split is considered only when measured isolation, contention, deployment, or scale problems cannot be solved inside the monolith.
 
 When a third-party component fully provides an internal module capability, Halpha design still determines the semantic owner and public boundary, but no corresponding Halpha code module, component state machine, or general wrapper layer is required. The specific component adopted for the long term and its usage contract enter the applicable L3; the exact version, current configuration, and qualification evidence enter L4.
+
+## 2.3 Platform-Independent Flow and Interaction-Entry Adaptation 【ARC-TOP-002】
+
+### Rationale for Interaction-Entry Adaptation 【ARC-TOP-002-RAT】
+
+If each interaction form owns business state and flow separately, adding an entry becomes a state migration and business rewrite and creates forks, conflicts, and mistaken authorization. Halpha therefore places platform-independent business flow, object identity, and authoritative state behind common application and domain boundaries and limits form-specific differences to entry adaptation.
+
+### Platform-Independent Flow and Entry-Adaptation Requirements 【ARC-TOP-002-REQ】
+
+Every supported interaction form is only an entry adapter to common application commands and queries. It MUST NOT create a parallel business flow, business write chain, authorization semantics, authoritative state, or client-specific migration path. A new interaction form MUST reuse the same object identities, commands, receipts, domain handlers, and authoritative state. Entry-local state may only be a deletable, rebuildable projection or draft that does not affect business progression.
+
+The upper-level architecture preserves only the compatibility boundary for adding an entry; it does not prebuild an authentication protocol, network exposure, notification, offline, synchronization, deployment platform, or client framework. Applicable L3 defines security and technical contracts for a form only after a concrete construction scope and real consumer exist; L4 then records current enablement and evidence.
 
 ---
 
@@ -136,7 +148,7 @@ A derived result or cache cannot become an account fact. A correction must retai
 
 Each transaction-record environment uses one relational database for that environment's authoritative business state, unique constraints, transactions, unresolved processing responsibility, reconciliation state, and necessary history. Modules within one environment may have separate write boundaries, but do not receive separate databases by default.
 
-Simulation and real-funds environments must use authoritative stores or databases, credential boundaries, and write adapters that are separate from each other. They share core business logic with no environment identity; they do not share account, action, authorization, or result identity. The enduring database product and usage contract enter L3; exact versions, instance count, hosts, and deployment locations are current choices owned by L4.
+Simulation and real-funds environments must use authoritative stores or databases, credential references, account identities, and write-adapter instances that are separate from each other. They share the same core business logic, ExecutionAction contract, state machine, repository interface, and adapter implementation path; they do not share account, action, authorization, or result identity. The enduring database product and usage contract enter L3; exact versions, instance count, hosts, and deployment locations are current choices owned by L4.
 
 Task projections serve read and interaction needs; caches improve performance only. Missing projections or caches must be rebuildable and must not prevent stopping real actions, reading authoritative state, external reconciliation, or recovery.
 
@@ -148,7 +160,7 @@ Actual correctness, freshness, and behavior during missing, incomplete, or recov
 
 ---
 
-# 5. Plans, Funds-use Caps and Scope, and Real Actions 【ARC-ACT-001】
+# 5. Plans, Environment-qualified Authority, and Execution Actions 【ARC-ACT-001】
 
 ## 5.1 Identifiable Decisions, Explicit Enablement, and Stopping
 
@@ -156,38 +168,40 @@ An enabled Trading Plan, a permitted exception decision or instruction, funds-us
 
 An interface, program, or AI must not convert Manual authorization into Machine authorization implicitly. Machine authorization must have explicit scope, duration, and failure outcome before the trigger. Stopping and narrowing scope take effect immediately. Only an explicit user operation may raise a funds-use cap, expand scope, or expand automatic-action capability.
 
-## 5.2 Main Real-Action Chain
+## 5.2 Unified Execution-Action Chain
 
 ~~~text
 Current branch of an enabled Trading Plan,
 or a permitted explicit user decision, fixed in advance, to protect or reduce risk,
 or an explicit user instruction to cancel, protect, transfer, or reduce risk that can be shown not to increase or transform risk
-→ read current key facts, funds-use caps and scope, Halpha real-capital operating authority, and the stopping decision
-→ confirm that the Manual-authorization path's current action is supported by the user's current decision or a still-valid decision for an explicitly controlled scope, or that the Machine-authorization path has valid pre-trigger authorization
-→ Halpha completes checks of funds-use caps and scope and Halpha real-capital operating authority under CAP rules
-→ before external writing, durably record the proposed action and establish one processing responsibility
-→ the single isolated external-write boundary refreshes key facts, repeats the checks of funds-use caps and scope and Halpha real-capital operating authority, and processes that responsibility
+→ read the current environment, key facts, funds-use caps and scope, environment-qualified authority, and the stopping decision
+→ confirm that the current environment's Manual- or Machine-authorization path is valid; a real-funds environment also requires applicable Halpha real-capital operating authority
+→ Halpha completes environment-qualified checks of caps, scope, authority effect, and stopping under CAP rules
+→ before external writing, EXE durably forms an environment-qualified ExecutionAction and establishes one processing responsibility
+→ the current environment's single isolated external-write boundary refreshes key facts, repeats the CAP checks, and processes that responsibility
 → submit the venue action, query external results, and keep partial results, timeouts, and unresolved results visible
 → reconcile and update citable facts, then return the outcome to the applicable plan, protection responsibility, or learning path
 ~~~
 
-Every permitted source must enter the same main chain. The chain contains no independent funds permission, reservation for future funds, or final funds approval. Manual authorization or Machine authorization chooses the action path; the CAP check determines whether the current action crosses the funds-use caps and scope. Neither substitutes for the other. An old manual confirmation cannot supply a missing current confirmation or Machine authorization, and a machine rule cannot replace risk judgment that the user must bear.
+Every permitted source in exchange simulation and real-funds environments MUST enter the same main chain. The chain contains no independent funds permission, reservation for future funds, or final funds approval. Manual authorization or Machine authorization chooses the action path; the CAP check determines whether the current action crosses the current environment's caps, scope, and authority effect. Neither substitutes for the other. Simulation-validation authority has no real-capital effect and cannot satisfy a real-funds check. An old manual confirmation cannot supply a missing current confirmation or Machine authorization, and a machine rule cannot replace risk judgment that the user must bear.
 
 ## 5.3 Local Transactions and Venue or Account Changes
 
-A relational transaction makes only internal state atomic; it cannot form one transaction with an external venue or account change. Before external writing, Halpha must leave a recoverable proposed action and one processing responsibility. When an external result is unclear, Halpha first queries by a stable external identity and does not resend blindly.
+A relational transaction makes only internal state atomic; it cannot form one transaction with an external venue or account change. Before external writing in any trading environment, Halpha MUST leave a recoverable ExecutionAction and one processing responsibility. When an external result is unclear, Halpha first queries by a stable external identity and does not resend blindly.
 
 Within any scope where external-action identity or duplicate prevention may interact, only one external-write authority may be effective. A runtime entity that loses that authority must stop submitting. EXE and SYS define detailed claiming, idempotency, concurrency, and fencing mechanisms.
 
 ## 5.4 Isolation of Exchange Simulation, Historical Market Replay, and Real-Funds Environments
 
-Historical research, historical market replay, exchange simulation, and real-funds paths may reuse pure condition evaluation, plan semantics, action models, and outcome analysis, but environment, account, action, authorization, and result identities must remain unambiguous.
+Historical research and historical market replay reuse only pure condition evaluation, plan semantics, and outcome analysis. Exchange simulation and real-funds paths MUST reuse the same TRADEPLAN→CAP→EXE→DAT→OUT application chain, ExecutionAction contract and state progression, repository interface, and venue-execution-client construction path, while environment, account, action, authorization, and result identities remain unambiguous.
 
 - Historical market replay supports research and timing validation only and never enters the real external-write path.
-- Exchange simulation uses accounts and results provided by the venue; Halpha does not build another real-time exchange with its own matching and profit-and-loss accounting.
-- Simulation and real-funds environments use separate authoritative stores or databases, credentials, and adapter boundaries. Explicit configuration and ports express environment differences; business logic does not contain scattered environment branches.
-- A simulation record cannot become a real-account fact or obtain real write capability.
-- Moving from simulation to real funds requires a new real-environment identity and requires the user to obtain an applicable plan, funds-use caps and scope, Halpha real-capital operating authority, and any required authorization again. A simulation record cannot be edited into a real one.
+- Exchange simulation uses accounts and results provided by the venue; Halpha does not build another real-time exchange with its own matching and profit-and-loss accounting. Its primary evidence objective is the system flow and mechanisms; strategy-behavior evidence is secondary.
+- Simulation and real-funds environments use separate runtime instances, authoritative stores or databases, configuration profiles, endpoints, credential references, account identities, and adapter instances. Environment differences are limited to an explicit L3 allowlist and do not appear as scattered business-logic branches.
+- Builds for both environments MUST produce a reviewable environment-parity manifest proving identical source digests, application services, ExecutionAction schema, repository, state machine, and venue-execution-client construction path, and listing the only permitted configuration differences. Exact digests and current validation results are recorded in L4.
+- A simulation record cannot become a real-account fact. A simulation identity or credential cannot obtain real write capability, and simulation-validation authority has no real-capital effect.
+- Moving from simulation to real funds requires completely new real-environment, account, action, and authorization identities and requires the user to obtain an applicable plan, funds-use caps and scope, Halpha real-capital operating authority, and any required authorization again. Simulation records MUST NOT be edited, promoted, copied, or migrated to perform that transition.
+- Simulation results MUST NOT be interpreted as proving real liquidity, queue position, impact, slippage, fees, funding, latency, permissions, availability, or real Alpha performance.
 
 If Halpha cannot prove that a simulation path cannot reach the real-write boundary, simulation must not be enabled at the same time as real credentials.
 
@@ -225,7 +239,7 @@ When a component fails, its capability is unknown, or its qualification evidence
 
 Startup and recovery must first read authoritative state, the current stopping decision, funds-use caps and scope, and Halpha real-capital operating authority; they then connect read-only external sources, reconcile orders and positions, and handle unresolved real-action responsibilities. If a key fact, external result, or write authority is unclear, the affected scope remains stopped; only a contraction action explicitly directed by the user and shown not to increase or transform risk may continue. Restart does not replay a real action by default.
 
-Restoring applicable Halpha real-capital operating authority means only that later actions may again enter the applicable authorization path. Every action on the manual path still requires new current Manual authorization; an old confirmation cannot be reused. Unattended operation requires Machine authorization to be established again. Restoring Halpha real-capital operating authority does not substitute for Machine authorization. EXE, DAT, and SYS define detailed recovery conditions and unresolved-result semantics.
+Restoring Halpha real-capital operating authority that expired, was revoked, or was contracted means only that later actions may again enter the applicable authorization path. Every action on the manual path still requires new current Manual authorization; an old confirmation cannot be reused. Still-valid Machine authorization and runtime eligibility MUST be evaluated separately. The system may continue within the original authorization scope only when accepted design for the current phase explicitly permits it and every evidence gate passes for a unique writer; authoritative-state and database continuity; unchanged build/configuration/credentials/account identity; reconciliation of external orders, fills, positions, protection, and unknowns; and no replay of missed actions. In every other phase, or when any evidence is unclear, the system MUST remain stopped for an explicit User command to resume, exit, hand over, or establish new authorization. EXE, DAT, and SYS define detailed recovery conditions and unresolved-result semantics, and current L4 MUST select and validate one phased recovery mode.
 
 Backups preserve only authoritative state and necessary configuration that cannot be rebuilt cheaply. By default, Halpha does not build a health page, integrated monitoring, an alert center, self-healing, hot standby, multi-region deployment, automatic failover, a dedicated backup product, or an operations-incident platform. It adds only the smallest capability that reduces long-term cost after real problems recur and off-the-shelf methods prove insufficient.
 
@@ -269,7 +283,7 @@ Introducing a third-party dependency must account both for the self-built code, 
 |---|---|
 | ALP | Core judgment, economic evidence, and strategy quality; deepen only for real research consumers |
 | TRADEPLAN | Complete plan semantics that can execute and end |
-| EXE | Real-action uniqueness, external results, protection, unknowns, and reconciliation |
+| EXE | Uniqueness, external results, protection, unknowns, and reconciliation for environment-qualified ExecutionAction; simulation and real-funds environments use the same execution semantics |
 | DAT | Sourced facts, timeliness, correction, unknowns, and recovery |
 | UX | Convenience, clarity, control, and recoverability for frequent tasks |
 | SYS | Module and runtime boundaries, dependency direction, authoritative state, and simple recovery |
@@ -285,6 +299,6 @@ The responsibility map describes semantic ownership, not a balanced investment p
 
 # 13. Handoff to Lower-Level Design 【ARC-HOF-001】
 
-HALPHA-DOC-001 governs the general responsibilities, admission rules, and current-state recording boundaries of L2, L3, and L4. ARC hands off only its overall logical form, dependency direction, mature-capability-first gate, one authoritative relational database per transaction-record environment, single isolated real external-write boundary, simulation/real-funds isolation, and recovery order to applicable lower-level design. The relevant L2/L3 specifications refine domain, module, component-usage contract, interface, data, state, error, idempotency, concurrency, fencing, and test semantics for real consumers.
+HALPHA-DOC-001 governs the general responsibilities, admission rules, and current-state recording boundaries of L2, L3, and L4. ARC hands off only its overall logical form, dependency direction, mature-capability-first gate, one authoritative relational database per transaction-record environment, one isolated external-write boundary per environment, unified simulation/real-funds execution implementation with identity isolation, environment-parity proof, and recovery order to applicable lower-level design. The relevant L2/L3 specifications refine domain, module, component-usage contract, interface, data, state, error, idempotency, concurrency, fencing, and test semantics for real consumers.
 
-Under DOC, the enduring database product and third-party component usage contracts enter the applicable L3. Exact database versions and instances, third-party component versions and build identifiers, current configuration and qualification evidence, processes and background workers, hosts and deployment locations, venues, and adapter support scope are recorded in L4. A proposal, completed design, existing code, or one test cannot substitute for L4's current-capability and validation evidence.
+Under DOC, the enduring database product and third-party component usage contracts enter the applicable L3. Exact database versions and instances, third-party component versions and build identifiers, current configuration and qualification evidence, processes and background workers, hosts and deployment locations, venues, and adapter support scope are recorded in L4. Candidate design, completed design, existing code, or one test cannot substitute for L4's current-capability and validation evidence.

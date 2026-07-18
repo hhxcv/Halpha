@@ -1,20 +1,20 @@
 schema_version: 3
 document_id: HALPHA-CON-001
-version: v2.10.0
-bundle_id: HALPHA-CON-001@v2.10.0+20260716T124500+0800
+version: v2.11.0
+bundle_id: HALPHA-CON-001@v2.11.0+20260718T070120+0800
 status: ACCEPTED
 alignment: ALIGNED
-supersedes: HALPHA-CON-001@v2.9.0+20260715T190412+0800
+supersedes: HALPHA-CON-001@v2.10.0+20260716T124500+0800
 normative_languages: [zh-CN, en-US]
 language_authority: co_normative_equal
 files:
   zh-CN:
     path: docs/L0/HALPHA-CON-001-project-constitution.zh-CN.md
-    body_sha256: 4c6d6c9d70cb124e9b04a9224e90a6e3fd5979677e3b8da52edde784e0b09f15
+    body_sha256: c78516aefb2d5b9816febb0efe1af8f181d1538b0a4b71e3b8792c875734ad44
   en-US:
     path: docs/L0/HALPHA-CON-001-project-constitution.en-US.md
-    body_sha256: 88309a375da2afb08a916911583a3334e1597f6149a18c06e27cad48b972b636
+    body_sha256: d0bb4121f38b398884dcb9592c69d7ff39b5bac4a7cd2d00a44047e129bba0f2
 joint_set:
-  sha256: 3075836157a35da22f2b23183a8af8349b7807a94cba074b992bddbf91eecc89
+  sha256: 05f2fb21044c814fc7ed38c07c26757c716f74733de73450cd1bd0a162c4c436
 accepted_by: Halpha Project Owner
-accepted_at: "2026-07-16T12:45:00+08:00"
+accepted_at: "2026-07-18T07:01:20+08:00"

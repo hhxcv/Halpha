@@ -1,15 +1,15 @@
 # Halpha Documentation Architecture
 
 **Document ID:** HALPHA-DOC-001  
-**Version:** v1.10.0  
+**Version:** v1.11.0  
 **Document Status:** ACCEPTED  
 **Level:** L1-A  
 **Language Edition:** en-US  
-**Joint Normative Set ID:** HALPHA-DOC-001@v1.10.0+20260716T124501+0800  
+**Joint Normative Set ID:** HALPHA-DOC-001@v1.11.0+20260718T070120+0800  
 **Paired Text:** HALPHA-DOC-001-documentation-architecture.zh-CN.md  
 **Joint Set Registry:** HALPHA-DOC-001-documentation-architecture.bundle.yaml  
-**Effective Time:** 2026-07-16T12:45:01+08:00  
-**Parent Documents:** HALPHA-CON-001 v2.10.0  
+**Effective Time:** 2026-07-18T07:01:20+08:00  
+**Parent Documents:** HALPHA-CON-001 v2.11.0  
 **This Document Governs:** document levels, responsibilities, relationships, formats, and usage rules  
 **This Document Does Not Govern:** the product, workflows, technology, or current implementation
 
@@ -149,7 +149,7 @@ HALPHA-<TYPE>-<NUMBER>-<ENGLISH-SHORT-TITLE>.<LANGUAGE>.md
 - All language editions use the same English short title.
 - A minor title wording change does not require renaming. A material responsibility change SHOULD trigger evaluation of a new document ID.
 - `LANGUAGE` uses a BCP 47 tag such as `zh-CN` or `en-US`.
-- Version belongs in metadata, not the current root filename; archives identify historical versions by path or filename.
+- Version belongs in metadata, not the current filename. Committed historical versions are identified and restored only through Git history; they are not copied into documentation archive directories.
 
 A language-neutral machine registry keeps the same ID and title and MAY add a purpose marker before the extension, such as `.bundle.yaml`. It MUST NOT carry natural-language normative content available in only one language.
 
@@ -177,7 +177,7 @@ Type codes MUST use the unique spellings below. They are case-sensitive parts of
 | `ENG` | Engineering | Engineering quality and build boundaries |
 | `PLAN` | Current construction plan | L4 current construction plan; its fixed ID is `HALPHA-PLAN-001` |
 
-The type code is not the English short title: the short title aids reading and navigation, while the type code determines the sole owner and document identity. A new type MUST first amend this table and the responsibility registry. A code absent from this table MUST NOT be used for a new current normative filename or stable semantic anchor. Historical `PLN` and `OPS` identities and their historical anchors MAY remain in archives and historical references, but candidates and new versions MUST NOT re-establish those retired identities. Migration MUST record identity changes explicitly and MUST NOT create both old and new identities.
+The type code is not the English short title: the short title aids reading and navigation, while the type code determines the sole owner and document identity. A new type MUST first amend this table and the responsibility registry. A code absent from this table MUST NOT be used for a new current normative filename or stable semantic anchor. Existing `PLN` and `OPS` identities and anchors MAY remain in Git history, but candidates and new versions MUST NOT re-establish those retired identities. Migration MUST record identity changes explicitly and MUST NOT create both old and new identities.
 
 ### Chinese Terminology
 
@@ -241,12 +241,12 @@ docs/
   L2/
   L3/
   L4/
-  proposals/
 ~~~
 
-- `L0`–`L4` store current finalized documents and machine companions.
-- Retained historical versions go in that level's `archive/` directory.
-- `proposals/` is a flat directory for unfinalized candidates and reference inputs. Its content has no normative effect. An approved candidate moves to its target level; unused content MAY be deleted.
+- `L0`–`L4` store the current documents and their machine companions. A candidate version directly edits its target-level document; a separate cross-level proposal file is not created.
+- The documentation tree MUST NOT create `proposals/` or an `archive/` directory at any level. Candidates, history, and process versions MUST NOT be carried by such directories or duplicate copies.
+- Only an actual Git commit forms a historical version node that must remain recoverable. Uncommitted intermediate drafts, process versions, and candidates overwritten by later edits are not archived or copied elsewhere.
+- Whether a candidate state is retained in a commit follows the actual review and commit cadence. Committed `PROPOSED`, `ACCEPTED`, `SUPERSEDED`, or `WITHDRAWN` states remain in Git history; the current file expresses only the state in the current worktree or commit.
 
 ---
 
@@ -254,7 +254,7 @@ docs/
 
 1. A current-state task MUST start from the L4 current construction plan. Missing records mean UNKNOWN; code or long-term design MUST NOT be used to infer state.
 2. An implementation task starts from current scope, then reads the domain L3 corresponding to the primary semantic owner, including its long-term third-party capabilities and usage boundaries. It then reads that L3's direct dependencies, applicable vertical L2s, necessary L1s, and the exact versions, current configuration, and qualification evidence in L4. It reads documents corresponding to the coordination owner and participants only when a real orchestration L3 exists. Unused documents are not read.
-3. A formal task uses only current ACCEPTED documents. `proposals/` is limited to explicit drafting, review, revision, or isolated-prototype work.
+3. A formal task uses only current `ACCEPTED` documents. When a target-level document is marked `PROPOSED`, its candidate content has no normative effect; formal work uses that document's most recent accepted Git version or an explicitly named accepted baseline. An uncommitted intermediate draft is not a version that must be read or retained.
 4. L1–L3 MUST NOT claim current state, and L4 MUST NOT invent product or system rules. Missing semantics or conflict between current finalized documents stops implementation and MUST be reported.
 5. An ordinary task reads directly cited L0 provisions. Normative approval, an overall complexity-direction change, or a change in real-capital limit or scope requires the full L0 in the working language.
 
@@ -285,11 +285,11 @@ Amend the highest level that owns the meaning: L0 for mission and highest bounda
 
 An L2 document owns one independently named horizontal core-business composition or vertical domain. An L3 owns one explicit implementation scope and declares a primary semantic owner or coordination owner. A current or near-term need only decides whether to draft or deepen L2/L3 and its design scope; it is not an L3 stage plan and does not require symmetric document size, object counts, or implementation investment across the responsibility map. L4 owns P stages, current scope, and sequence.
 
-Do not create a long-lived document for every task, ordinary class, third-party-library internal object, or content expressible by public contracts, data structures, types, and tests. Merge or assign one semantic owner when multiple documents own the same stable meaning; split a document that owns independently evolving responsibilities; merge or delete a document that loses independent responsibility; and reduce a domain to a shallower depth when deepening cost persistently exceeds real consumption value. When an accepted document loses independent responsibility, a coordinated proposal MUST mark that version `SUPERSEDED`, archive it, and migrate every direct consumer; `WITHDRAWN` MUST NOT erase a version that once had effect. After a boundary or depth change, review the semantic owner, direct horizontal dependencies, and vertical constraints of every affected L3.
+Do not create a long-lived document for every task, ordinary class, third-party-library internal object, or content expressible by public contracts, data structures, types, and tests. Merge or assign one semantic owner when multiple documents own the same stable meaning; split a document that owns independently evolving responsibilities; merge or delete a document that loses independent responsibility; and reduce a domain to a shallower depth when deepening cost persistently exceeds real consumption value. When an accepted document loses independent responsibility, the affected target documents MUST themselves form new versions in one coordinated change, record supersession, and migrate every direct consumer. A version that once had effect remains only in Git history and MUST NOT be erased through `WITHDRAWN`. After a boundary or depth change, review the semantic owner, direct horizontal dependencies, and vertical constraints of every affected L3.
 
 ## 6.1 Minor Changes to Accepted Documents【DOC-CHG-001】
 
-A minor change to an accepted document MAY directly create a new `ACCEPTED` version without first creating a proposal. Classification depends on semantic impact, not changed-line count. A minor change MUST:
+A minor change to an accepted document MAY directly create a new `ACCEPTED` version without retaining an intermediate `PROPOSED` version. Classification depends on semantic impact, not changed-line count. A minor change MUST:
 
 - preserve document identity, level, sole semantic owner, governed scope, and excluded scope;
 - preserve normative strength, authorization, allowed and prohibited actions, normal/failure/unknown/stop/recovery/end behavior, acceptance criteria, and external effects;
@@ -298,13 +298,15 @@ A minor change to an accepted document MAY directly create a new `ACCEPTED` vers
 
 Direct does not mean silent. The new version MUST record its version and supersession, receive Project Owner approval, synchronize affected downstream references and indexes, and pass applicable validation. A co-normative document MUST update every language body, bundle, and digest as one effective package.
 
-## 6.2 Changes That Require a Proposal【DOC-CHG-002】
+## 6.2 Changes That Require Candidate Versions in the Target Documents【DOC-CHG-002】
 
-A major change or new scenario MUST first use a proposal and MAY enter a formal path only after review and Project Owner approval. This includes any change that:
+A major change or new scenario MUST first be expressed by each affected L0–L4 target document as its own `PROPOSED` candidate version and becomes `ACCEPTED` only after review and Project Owner approval. A cross-level proposal document MUST NOT substitute for candidate text in each semantic owner. This includes any change that:
 
 - changes document identity, level, sole semantic owner, responsibility boundary, dependency direction, or normative strength;
 - changes authorization, allowed or prohibited actions, normal/failure/unknown/stop/recovery/end behavior, acceptance criteria, external effects, or migration requirements;
 - adds, replaces, or removes a stable concept, object, state, workflow, role, authority, support scope, or normative scenario; or
 - creates, splits, merges, renames, or withdraws a normative document, or establishes a new L3 scope, L4 phased scenario, or ADR decision scenario.
 
-The proposal MUST state its target level, candidate baseline, coordinated candidate set, lack of current effect, and formal acceptance conditions. When classification as minor or major is uncertain, treat the change as major and create a proposal.
+Each candidate document MUST identify its own target level, candidate baseline or superseded version, `PROPOSED` status, and direct dependencies. A cross-level change MUST use a joint normative set ID, coordinated change ID, or explicit cross-references to identify one candidate set, and synchronize the responsibility registry, indexes, and affected downstream material. A candidate has no normative effect until accepted.
+
+When the Project Owner explicitly accepts content that has already completed review, the coordinated working change MAY directly produce the final `ACCEPTED` versions of all target documents; it need not create, commit, or retain an intermediate `PROPOSED` version merely for form. A separate candidate commit exists only when the actual Git commit cadence creates one; an uncommitted process version requires no archive. When classification as minor or major is uncertain, treat the change as major and mark the target documents `PROPOSED`.
