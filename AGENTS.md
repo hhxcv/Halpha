@@ -16,6 +16,12 @@ Applies to design, implementation, review, documentation, and validation work wi
 - When designing or reviewing Halpha page scope, information architecture, wireframes, high-fidelity prototypes, interaction states, command feedback, risk confirmation, responsive behavior, accessibility, or UI acceptance evidence, use [`design-halpha-ux`](.agents/skills/design-halpha-ux/SKILL.md). Apply its professional-trader, P0-complexity, progressive-disclosure, async-feedback, and risk-control gates before implementation.
 - Register future specialized guidance in this section; do not copy complete workflows, templates, or reference material back into this file.
 
+## AI Delegation and Parallel Worktrees
+
+- Within one user-authorized task and its current worktree, Codex may decide whether, when, and how many subagents to use. Do not require fixed counts, mandatory delegation, or user confirmation merely to delegate an in-scope subtask.
+- Subagents inherit the parent task's authorization, construction package or explicit non-package scope, semantic and path boundaries, effects, and exclusions. They do not authorize another package, top-level task, worktree, commit, push, or L4 advancement; the parent task remains the sole integrator and reviews the consolidated diff and validation. Concurrent writes are allowed only when the parent can keep their semantic and file scopes non-overlapping; otherwise keep them serial within the task.
+- Separately writable top-level tasks may run concurrently only after their package contracts prove that they are independent, and each must use an independent branch/worktree. Make this decision before dispatch; afterward, do not routinely poll or read sibling tasks. Stop only when local evidence exposes contract drift, scope overlap, a shared-path need, or unexplained external changes, and keep final Git integration serial.
+
 ## Repository Work Baseline
 
 - Before making changes, confirm task authorization and the applicable specifications; change only the files that own the target meaning and the necessary direct references.
