@@ -28,6 +28,10 @@ from tools.qualification.verify_b02_database_boundary import (
     _create_and_activate,
     _insert_limit,
 )
+from tools.qualification.source_binding import (
+    SourceBindingError,
+    capture_source_sha256,
+)
 from tools.qualification.verify_b03_execution_boundary import (
     _NoWriteClient,
     _executor_connect,
@@ -35,6 +39,22 @@ from tools.qualification.verify_b03_execution_boundary import (
 
 
 DEFAULT_OUTPUT = ROOT / "build/qualification/b04-outcome-boundary.json"
+SOURCE_PATTERNS = (
+    "migrations/versions/*.py",
+    "requirements/runtime.txt",
+    "src/halpha/capital/**/*.py",
+    "src/halpha/database/**/*.py",
+    "src/halpha/domain_values.py",
+    "src/halpha/executor/**/*.py",
+    "src/halpha/outcomes/**/*.py",
+    "src/halpha/planning/**/*.py",
+    "src/halpha/venue_integration/**/*.py",
+    "tools/qualification/source_binding.py",
+    "src/halpha/source_identity.py",
+    "tools/qualification/verify_b02_database_boundary.py",
+    "tools/qualification/verify_b03_execution_boundary.py",
+    "tools/qualification/verify_b04_outcome_boundary.py",
+)
 
 
 def _canonical(value: object) -> bytes:
@@ -50,6 +70,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+    source_sha256_at_start = capture_source_sha256(ROOT, SOURCE_PATTERNS)
     now = datetime.now(UTC)
     environment_id = f"qualification-b04-outcome-{uuid4()}"
     account_ref = f"qualification-account-{uuid4()}"
@@ -237,6 +258,13 @@ def main() -> int:
         app_connection.close()
 
     checks["qualification_records_cleaned"] = not errors
+    try:
+        checks["source_stable_during_qualification"] = (
+            capture_source_sha256(ROOT, SOURCE_PATTERNS) == source_sha256_at_start
+        )
+    except SourceBindingError as exc:
+        checks["source_stable_during_qualification"] = False
+        errors.append(f"B04_OUTCOME_SOURCE_BINDING_FAILED:{exc}")
     evidence: dict[str, Any] = {
         "stage": "B04_OUTCOME_BOUNDARY",
         "observed_at": datetime.now(UTC).isoformat(),
@@ -246,6 +274,7 @@ def main() -> int:
         "observations": observations,
         "errors": errors,
         "venue_write_performed": False,
+        "source_sha256": source_sha256_at_start,
     }
     evidence["status"] = (
         "QUALIFIED" if checks and all(checks.values()) and not errors else "REJECTED"

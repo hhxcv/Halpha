@@ -54,6 +54,10 @@ DEFAULT_ARTIFACT_SPECS = (
         required=False,
     ),
     ArtifactSpec("nonsecret_runtime_config", "config/halpha.toml"),
+    ArtifactSpec(
+        "nonsecret_live_write_config",
+        "config/halpha.live-write.toml",
+    ),
     ArtifactSpec("evidence_storage_policy", "config/evidence-storage-policy.json"),
     ArtifactSpec(
         "dependency_lifecycle_ledger",

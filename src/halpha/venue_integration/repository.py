@@ -33,12 +33,13 @@ class PostgreSQLExecutionActionRepository:
                 capital_decision_digest, client_order_id, cancel_target, state,
                 state_version, state_digest, request_digest, call_started_at,
                 call_completed_at, venue_order_refs, venue_fact_refs,
-                unknown_reason, next_query_at, protection_digest,
+                unknown_reason, next_query_at, not_submitted_reason, protection_digest,
                 closure_evidence_digest, created_at, updated_at
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s
             )
             """,
             _action_values(action),
@@ -160,6 +161,7 @@ class PostgreSQLExecutionActionRepository:
                 state_digest = %s, request_digest = %s, call_started_at = %s,
                 call_completed_at = %s, venue_order_refs = %s,
                 venue_fact_refs = %s, unknown_reason = %s, next_query_at = %s,
+                not_submitted_reason = %s,
                 protection_digest = %s, closure_evidence_digest = %s,
                 updated_at = %s
             WHERE environment_id = %s AND execution_action_id = %s
@@ -177,6 +179,7 @@ class PostgreSQLExecutionActionRepository:
                 Jsonb(list(action.venue_fact_refs)),
                 action.unknown_reason,
                 action.next_query_at,
+                action.not_submitted_reason,
                 action.protection_digest,
                 action.closure_evidence_digest,
                 action.updated_at,
@@ -301,7 +304,7 @@ SELECT execution_action_id, environment_id, environment_kind, authority_class,
        action_terms_digest, capital_decision_digest, client_order_id,
        cancel_target, state, state_version, state_digest, request_digest,
        call_started_at, call_completed_at, venue_order_refs, venue_fact_refs,
-       unknown_reason, next_query_at, protection_digest,
+       unknown_reason, next_query_at, not_submitted_reason, protection_digest,
        closure_evidence_digest, created_at, updated_at
 FROM halpha.execution_action
 """
@@ -335,6 +338,7 @@ def _action_values(action: ExecutionAction) -> tuple[Any, ...]:
         Jsonb(list(action.venue_fact_refs)),
         action.unknown_reason,
         action.next_query_at,
+        action.not_submitted_reason,
         action.protection_digest,
         action.closure_evidence_digest,
         action.created_at,
@@ -370,10 +374,11 @@ def _action_from_row(row: tuple[Any, ...]) -> ExecutionAction:
         venue_fact_refs=tuple(str(item) for item in row[23]),
         unknown_reason=str(row[24]) if row[24] is not None else None,
         next_query_at=row[25],
-        protection_digest=str(row[26]) if row[26] is not None else None,
-        closure_evidence_digest=str(row[27]) if row[27] is not None else None,
-        created_at=row[28],
-        updated_at=row[29],
+        not_submitted_reason=str(row[26]) if row[26] is not None else None,
+        protection_digest=str(row[27]) if row[27] is not None else None,
+        closure_evidence_digest=str(row[28]) if row[28] is not None else None,
+        created_at=row[29],
+        updated_at=row[30],
     )
 
 

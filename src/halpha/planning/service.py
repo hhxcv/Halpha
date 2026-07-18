@@ -17,6 +17,7 @@ from halpha.capital.checks import allocate_plan, check_action, latch_max_loss
 from halpha.capital.models import (
     ActionCheckInput,
     AllocationRequest,
+    AuthorityClass,
     MachineAuthorizationVersion,
     PlanAllocation,
     RiskClass,
@@ -153,11 +154,28 @@ class PlanningApplicationService:
         capital_limit_version_id: str,
         quote_asset: str,
         observed_at: datetime,
+        activation_terms: dict[str, bool] | None = None,
     ) -> tuple[PlanActivation, MachineAuthorizationVersion, PlanAllocation]:
+        supplied_terms = activation_terms or {}
+        allowed_activation_terms = {
+            "real_capital_acknowledged",
+            "evidence_limitations_acknowledged",
+            "online_monitoring_acknowledged",
+        }
+        if (
+            set(supplied_terms) - allowed_activation_terms
+            or any(value is not True for value in supplied_terms.values())
+        ):
+            raise ValueError("ACTIVATION_TERMS_INVALID")
         version = self._planning.get_version(plan_version_id, for_update=True)
         if not (version.valid_from <= observed_at < version.valid_until):
             raise ValueError("AUTHORIZATION_EXPIRED")
         account = self._capital.get_account_limit(capital_limit_version_id)
+        if account.authority_class is AuthorityClass.LIVE_REAL_CAPITAL:
+            if set(supplied_terms) != allowed_activation_terms:
+                raise ValueError("LIVE_OWNER_ACKNOWLEDGEMENTS_REQUIRED")
+        elif supplied_terms:
+            raise ValueError("ACTIVATION_TERMS_ENVIRONMENT_MISMATCH")
         if account.account_ref != version.account_ref:
             raise ValueError("AUTHORIZATION_MISMATCH")
         if account.quote_asset != quote_asset:
@@ -215,6 +233,7 @@ class PlanningApplicationService:
                 ),
                 "parameter_digest": version.strategy_basis.parameter_digest,
                 "allocation_terms_digest": content_digest(version.requested_limits),
+                **supplied_terms,
             },
         }
         authorization = MachineAuthorizationVersion(

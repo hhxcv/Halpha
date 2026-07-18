@@ -398,6 +398,7 @@ def build_evidence(root: Path = ROOT) -> dict[str, Any]:
                 "src/halpha/executor/coordinator.py",
                 "src/halpha/executor/runtime.py",
                 "src/halpha/executor/forward_observation.py",
+                "src/halpha/source_identity.py",
                 "src/halpha/venue_integration/nautilus_client.py",
                 "src/halpha/venue_integration/repository.py",
                 "tools/qualification/verify_b04_complexity_budget.py",

@@ -2,18 +2,21 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from hashlib import sha256
 import json
 from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
 
+import halpha.executor.forward_observation as forward_observation_module
 from halpha.domain_values import content_digest
 from halpha.executor.forward_observation import (
     ForwardObservationEvidence,
     ForwardObservationError,
     ForwardObservationSpec,
     percentile_five,
+    require_forward_observation_source_identity,
 )
 from halpha.planning.registry import OneShotParameters
 
@@ -21,11 +24,14 @@ from halpha.planning.registry import OneShotParameters
 def _spec() -> ForwardObservationSpec:
     starts_at = datetime(2026, 7, 18, tzinfo=UTC)
     parameters = OneShotParameters(direction="LONG")
+    source_sha256 = {"src/halpha/example.py": "3" * 64}
     return ForwardObservationSpec(
         observation_id="b04-live-read-only-20260718",
         activation_id="b04-live-read-only-btcusdt",
         strategy_evidence_digest="1" * 64,
         configuration_digest="2" * 64,
+        source_sha256=source_sha256,
+        source_sha256_digest=content_digest(source_sha256),
         parameters=parameters,
         parameter_digest=content_digest(parameters.model_dump(mode="json")),
         starts_at=starts_at,
@@ -47,6 +53,13 @@ def test_forward_observation_spec_binds_exact_window_and_parameters() -> None:
             {
                 **spec.model_dump(mode="json"),
                 "parameter_digest": "0" * 64,
+            }
+        )
+    with pytest.raises(ValidationError, match="SOURCE_DIGEST_MISMATCH"):
+        ForwardObservationSpec.model_validate(
+            {
+                **spec.model_dump(mode="json"),
+                "source_sha256_digest": "0" * 64,
             }
         )
 
@@ -96,6 +109,7 @@ def test_forward_observation_evidence_is_append_only_and_sanitized(tmp_path) -> 
         item["observation_id"] == evidence.spec.observation_id
         and item["parameter_digest"] == evidence.spec.parameter_digest
         and item["configuration_digest"] == evidence.spec.configuration_digest
+        and item["source_sha256_digest"] == evidence.spec.source_sha256_digest
         for item in events
     )
     assert "qualification-key" not in path.read_text(encoding="utf-8")
@@ -173,6 +187,42 @@ def test_forward_observation_rejects_callbacks_before_process_start(tmp_path) ->
         match="FORWARD_OBSERVATION_PROCESS_START_REQUIRED",
     ):
         evidence.record_mark_price(SimpleNamespace(ts_event=1, value="1"))
+
+
+def test_forward_observation_runtime_rejects_frozen_source_drift(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    file = source / "runtime.py"
+    file.write_text("VALUE = 1\n", encoding="utf-8")
+    monkeypatch.setattr(
+        forward_observation_module,
+        "FORWARD_OBSERVATION_SOURCE_PATTERNS",
+        ("src/*.py",),
+    )
+    source_sha256 = {
+        "src/runtime.py": sha256(file.read_bytes()).hexdigest()
+    }
+    spec = ForwardObservationSpec.model_validate(
+        {
+            **_spec().model_dump(mode="json"),
+            "source_sha256": source_sha256,
+            "source_sha256_digest": content_digest(source_sha256),
+        }
+    )
+
+    assert (
+        require_forward_observation_source_identity(tmp_path, spec)
+        == source_sha256
+    )
+    file.write_text("VALUE = 2\n", encoding="utf-8")
+    with pytest.raises(
+        ForwardObservationError,
+        match="FORWARD_OBSERVATION_SOURCE_IDENTITY_DRIFT",
+    ):
+        require_forward_observation_source_identity(tmp_path, spec)
 
 
 def test_percentile_five_uses_conservative_nearest_rank() -> None:

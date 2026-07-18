@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime
 from hashlib import sha256
 import json
 from pathlib import Path, PurePosixPath
+import sys
 from typing import Any, Iterable
 
-
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.qualification.source_binding import (  # noqa: E402
+    SourceBindingError,
+    capture_source_sha256,
+)
+
+
 DEFAULT_REGISTRY = ROOT / "config/critical-invariant-trace.registry.json"
 DEFAULT_OUTPUT = ROOT / "build/qualification/b02-critical-invariant-trace.json"
 REQUIRED_FIELDS = frozenset(
@@ -169,20 +179,63 @@ def validate_registry(
     return errors, actual_digests
 
 
+def registry_source_patterns(
+    registry: dict[str, Any],
+    *,
+    registry_path: Path,
+) -> tuple[str, ...]:
+    patterns = {
+        *BASELINE_PATTERNS,
+        registry_path.resolve().relative_to(ROOT).as_posix(),
+        "tools/qualification/source_binding.py",
+        "src/halpha/source_identity.py",
+    }
+    for record in registry.get("records", []):
+        if not isinstance(record, dict):
+            continue
+        for field in ("spec_source", "implementation_paths", "tests"):
+            values = record.get(field, [])
+            if isinstance(values, list):
+                patterns.update(
+                    value.split("#", 1)[0]
+                    for value in values
+                    if isinstance(value, str) and value
+                )
+    return tuple(sorted(patterns))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
     registry = json.loads(args.registry.read_text(encoding="utf-8"))
+    source_patterns = registry_source_patterns(
+        registry,
+        registry_path=args.registry,
+    )
+    source_sha256_at_start = capture_source_sha256(ROOT, source_patterns)
     errors, actual_digests = validate_registry(registry)
+    try:
+        source_stable = (
+            capture_source_sha256(ROOT, source_patterns) == source_sha256_at_start
+        )
+    except SourceBindingError as exc:
+        source_stable = False
+        errors.append(f"SOURCE_BINDING_FAILED:{exc}")
     report: dict[str, Any] = {
         "stage": "B02_CRITICAL_INVARIANT_TRACE",
+        "observed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "registry": args.registry.resolve().relative_to(ROOT).as_posix(),
         "record_count": len(registry.get("records", [])),
         "actual_digests": actual_digests,
+        "checks": {
+            "registry_valid": not errors,
+            "source_stable_during_qualification": source_stable,
+        },
+        "source_sha256": source_sha256_at_start,
         "errors": errors,
-        "status": "QUALIFIED" if not errors else "REJECTED",
+        "status": "QUALIFIED" if not errors and source_stable else "REJECTED",
     }
     report["evidence_digest"] = sha256(_canonical(report)).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)

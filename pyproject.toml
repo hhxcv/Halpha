@@ -21,6 +21,7 @@ halpha-auth = "halpha.app.auth_cli:main"
 halpha-backup = "halpha.backup:main"
 halpha-control = "halpha.control:main"
 halpha-executor = "halpha.executor.__main__:main"
+halpha-live-gate = "halpha.live_write_gate_cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

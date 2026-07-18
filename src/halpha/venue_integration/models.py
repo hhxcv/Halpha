@@ -103,6 +103,7 @@ class ExecutionAction(VenueModel):
     venue_fact_refs: tuple[str, ...] = ()
     unknown_reason: str | None = None
     next_query_at: datetime | None = None
+    not_submitted_reason: str | None = None
     protection_digest: str | None = None
     closure_evidence_digest: str | None = None
     created_at: datetime
@@ -187,6 +188,11 @@ class ExecutionAction(VenueModel):
                 raise ValueError("SUBMISSION_UNKNOWN_EVIDENCE_REQUIRED")
         elif self.unknown_reason is not None or self.next_query_at is not None:
             raise ValueError("SUBMISSION_UNKNOWN_EVIDENCE_FORBIDDEN")
+        if self.state is ExecutionActionState.NOT_SUBMITTED:
+            if not self.not_submitted_reason:
+                raise ValueError("NOT_SUBMITTED_REASON_REQUIRED")
+        elif self.not_submitted_reason is not None:
+            raise ValueError("NOT_SUBMITTED_REASON_FORBIDDEN")
         if self.state is ExecutionActionState.RECONCILED and self.closure_evidence_digest is None:
             raise ValueError("CLOSURE_UNPROVEN")
         if execution_action_state_digest(self) != self.state_digest:
@@ -200,6 +206,8 @@ def execution_action_state_digest(action: ExecutionAction | dict[str, Any]) -> s
         if isinstance(action, ExecutionAction)
         else {key: value for key, value in action.items() if key != "state_digest"}
     )
+    if values.get("not_submitted_reason") is None:
+        values.pop("not_submitted_reason", None)
     return content_digest(values)
 
 

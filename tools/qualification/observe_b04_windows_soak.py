@@ -15,6 +15,12 @@ import win32com.client
 
 from halpha.configuration import load_settings, settings_digest
 from halpha.runtime_identity import require_repository_runtime
+from halpha.source_identity import (
+    SourceIdentityError,
+    capture_product_runtime_source_identity,
+    source_sha256_digest,
+    validate_source_sha256,
+)
 from halpha.windows_runtime import current_process_sid
 
 
@@ -169,7 +175,7 @@ def _task_state() -> dict[str, dict[str, object]]:
     return result
 
 
-def _latest_runtime_ready(path: Path) -> dict[str, object] | None:
+def _latest_runtime_event(path: Path, event: str) -> dict[str, object] | None:
     if not path.is_file():
         return None
     latest: dict[str, object] | None = None
@@ -181,9 +187,55 @@ def _latest_runtime_ready(path: Path) -> dict[str, object] | None:
                 value = json.loads(raw_line.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
                 continue
-            if isinstance(value, dict) and value.get("event") == "runtime_ready":
+            if isinstance(value, dict) and value.get("event") == event:
                 latest = value
     return latest
+
+
+def _latest_runtime_ready(path: Path) -> dict[str, object] | None:
+    return _latest_runtime_event(path, "runtime_ready")
+
+
+def _frozen_soak_identity(
+    prior: dict[str, Any] | None,
+    *,
+    current_source_sha256: dict[str, str],
+    current_configuration_digest: str,
+) -> tuple[dict[str, str], str, str, bool, bool]:
+    current_source_digest = source_sha256_digest(current_source_sha256)
+    if prior is None:
+        return (
+            current_source_sha256,
+            current_source_digest,
+            current_configuration_digest,
+            True,
+            True,
+        )
+    if prior.get("schema_version") != 3:
+        raise WindowsSoakObservationError(
+            "SOAK_SOURCE_IDENTITY_BASELINE_MISSING_RESET_REQUIRED"
+        )
+    source = prior.get("source_sha256")
+    digest = prior.get("source_sha256_digest")
+    configuration_digest = prior.get("configuration_digest")
+    if not isinstance(source, dict) or not isinstance(digest, str):
+        raise WindowsSoakObservationError("SOAK_SOURCE_IDENTITY_BASELINE_INVALID")
+    try:
+        baseline_source = validate_source_sha256(source)
+        baseline_digest = source_sha256_digest(baseline_source)
+    except SourceIdentityError as exc:
+        raise WindowsSoakObservationError(str(exc)) from None
+    if digest != baseline_digest:
+        raise WindowsSoakObservationError("SOAK_SOURCE_IDENTITY_DIGEST_MISMATCH")
+    if not isinstance(configuration_digest, str):
+        raise WindowsSoakObservationError("SOAK_CONFIGURATION_BASELINE_INVALID")
+    return (
+        baseline_source,
+        baseline_digest,
+        configuration_digest,
+        baseline_source == current_source_sha256,
+        configuration_digest == current_configuration_digest,
+    )
 
 
 def _http_status(port: int) -> int:
@@ -205,9 +257,19 @@ def observe(
         raise WindowsSoakObservationError("MAINTENANCE_SID_MISMATCH")
     now = datetime.now(UTC)
     current_unbiased_100ns = unbiased_interrupt_time_100ns()
+    try:
+        current_source_sha256 = capture_product_runtime_source_identity(
+            root,
+            config_path=config_path,
+        )
+        current_source_digest = source_sha256_digest(current_source_sha256)
+    except SourceIdentityError as exc:
+        raise WindowsSoakObservationError(str(exc)) from None
     processes = _processes_by_module()
     tasks = _task_state()
-    runtime_ready = _latest_runtime_ready(root / settings.maintenance.log_root / "executor.jsonl")
+    log_root = root / settings.maintenance.log_root
+    app_runtime_starting = _latest_runtime_event(log_root / "app.jsonl", "runtime_starting")
+    runtime_ready = _latest_runtime_ready(log_root / "executor.jsonl")
     try:
         http_status = _http_status(settings.app.port)
     except OSError:
@@ -240,6 +302,10 @@ def observe(
         and runtime_ready.get("proxy_supplied") is True,
         "runtime_real_write_gate_closed": runtime_ready is not None
         and runtime_ready.get("runtime_real_write_gate") == "CLOSED",
+        "app_runtime_source_identity_matches_current": app_runtime_starting is not None
+        and app_runtime_starting.get("source_sha256_digest") == current_source_digest,
+        "executor_runtime_source_identity_matches_current": runtime_ready is not None
+        and runtime_ready.get("source_sha256_digest") == current_source_digest,
     }
 
     prior: dict[str, Any] | None = None
@@ -261,6 +327,18 @@ def observe(
         checkpoints = list(prior.get("checkpoints", []))
         _normalize_checkpoint_task_times(checkpoints)
 
+    (
+        baseline_source_sha256,
+        baseline_source_digest,
+        baseline_configuration_digest,
+        source_identity_unchanged,
+        configuration_identity_unchanged,
+    ) = _frozen_soak_identity(
+        prior,
+        current_source_sha256=current_source_sha256,
+        current_configuration_digest=settings_digest(settings),
+    )
+
     identity_unchanged = processes == baseline_processes
     clock = continuity_clock(
         started_at=started_at,
@@ -277,11 +355,16 @@ def observe(
         "processes": processes,
         "current_checks": current_checks,
         "continuous_identity_unchanged": identity_unchanged,
+        "source_sha256_digest": current_source_digest,
+        "source_identity_unchanged": source_identity_unchanged,
+        "configuration_identity_unchanged": configuration_identity_unchanged,
     }
     checkpoints.append(checkpoint)
     checks = {
         **current_checks,
         "continuous_process_identity_unchanged": identity_unchanged,
+        "source_identity_unchanged": source_identity_unchanged,
+        "configuration_identity_unchanged": configuration_identity_unchanged,
         "no_sleep_or_hibernate_over_60_seconds": clock[
             "no_sleep_or_hibernate_over_60_seconds"
         ],
@@ -289,6 +372,8 @@ def observe(
     }
     continuity_failed = (
         not identity_unchanged
+        or not source_identity_unchanged
+        or not configuration_identity_unchanged
         or not all(current_checks.values())
         or not checks["no_sleep_or_hibernate_over_60_seconds"]
     )
@@ -298,7 +383,7 @@ def observe(
         else ("QUALIFIED" if checks["minimum_72_hours_observed"] else "IN_PROGRESS")
     )
     report: dict[str, Any] = {
-        "schema_version": 2,
+        "schema_version": 3,
         "stage": "B04_WINDOWS_72H_SOAK",
         "started_at": started_at.isoformat().replace("+00:00", "Z"),
         "started_unbiased_100ns": started_unbiased_100ns,
@@ -307,21 +392,17 @@ def observe(
         "elapsed_hours": clock["awake_elapsed_hours"],
         "wall_elapsed_hours": clock["wall_elapsed_hours"],
         "sleep_or_hibernate_seconds": clock["sleep_or_hibernate_seconds"],
-        "configuration_digest": settings_digest(settings),
-        "source_sha256": {
-            "tools/qualification/observe_b04_windows_soak.py": sha256(
-                Path(__file__).read_bytes()
-            ).hexdigest(),
-            "src/halpha/windows_runtime.py": sha256(
-                (root / "src/halpha/windows_runtime.py").read_bytes()
-            ).hexdigest(),
-        },
+        "configuration_digest": baseline_configuration_digest,
+        "source_sha256": baseline_source_sha256,
+        "source_sha256_digest": baseline_source_digest,
+        "current_source_sha256_digest": current_source_digest,
         "baseline_processes": baseline_processes,
         "checks": checks,
         "checkpoints": checkpoints[-1000:],
         "status": status,
         "limitations": [
             "This report proves the same Demo App/Executor process identities across at least 72 Windows awake hours and rejects sleep or hibernation over 60 seconds.",
+            "The baseline freezes the exact product source, built UI, runtime lock and config reported by both product processes; any repository, process-reported source or config drift rejects the run.",
             "Checkpoint endpoint checks do not prove per-second application or venue availability between observations.",
             "SMTP, LIVE_READ_ONLY, database interruption, abnormal restart, and controlled-stop drills have separate evidence.",
         ],

@@ -21,7 +21,11 @@ if str(ROOT / "src") not in sys.path:
 
 from halpha.configuration import load_settings
 from halpha.domain_values import content_digest
-from halpha.executor.forward_observation import load_forward_observation_spec
+from halpha.executor.forward_observation import (
+    ForwardObservationError,
+    load_forward_observation_spec,
+    require_forward_observation_source_identity,
+)
 from halpha.runtime_identity import require_repository_runtime
 from halpha.windows_runtime import current_process_sid, signal_stop_event
 from tools.provisioning.provision_windows_tasks import (
@@ -76,17 +80,16 @@ def _report(output: Path, **values: Any) -> dict[str, Any]:
 def process_start_count(
     path: Path,
     *,
+    observation_id: str,
+    configuration_digest: str,
+    source_sha256_digest: str,
     start_offset: int = 0,
-    observation_id: str | None = None,
-    configuration_digest: str | None = None,
 ) -> int:
     return sum(
         item.get("event") == "OBSERVATION_PROCESS_STARTED"
-        and (observation_id is None or item.get("observation_id") == observation_id)
-        and (
-            configuration_digest is None
-            or item.get("configuration_digest") == configuration_digest
-        )
+        and item.get("observation_id") == observation_id
+        and item.get("configuration_digest") == configuration_digest
+        and item.get("source_sha256_digest") == source_sha256_digest
         for item in valid_events(path, start_offset=start_offset)
     )
 
@@ -105,30 +108,28 @@ def restart_completed(
     *,
     prior_start_count: int,
     gap_started_at: datetime,
+    observation_id: str,
+    configuration_digest: str,
+    source_sha256_digest: str,
     prior_event_offset: int = 0,
-    observation_id: str | None = None,
-    configuration_digest: str | None = None,
 ) -> bool:
     new_start_count = 0
     ready = False
     for item in valid_events(events_path, start_offset=prior_event_offset):
         if (
             item.get("event") == "OBSERVATION_PROCESS_STARTED"
-            and (observation_id is None or item.get("observation_id") == observation_id)
-            and (
-                configuration_digest is None
-                or item.get("configuration_digest") == configuration_digest
-            )
+            and item.get("observation_id") == observation_id
+            and item.get("configuration_digest") == configuration_digest
+            and item.get("source_sha256_digest") == source_sha256_digest
         ):
             new_start_count += 1
         observed_at = _observed_at(item)
         if (
-            observation_id is not None
-            and configuration_digest is not None
-            and is_trimmed_read_only_ready_event(
+            is_trimmed_read_only_ready_event(
                 item,
                 observation_id=observation_id,
                 configuration_digest=configuration_digest,
+                source_sha256_digest=source_sha256_digest,
             )
             and observed_at is not None
             and observed_at >= gap_started_at
@@ -199,7 +200,11 @@ def restart(
         raise LiveReadOnlyRestartError("CONTROLLED_GAP_DURATION_INVALID")
     if not spec_path.is_file():
         return _report(output, status="WAITING_FOR_OBSERVATION", applied=False)
-    spec = load_forward_observation_spec(spec_path)
+    try:
+        spec = load_forward_observation_spec(spec_path)
+        require_forward_observation_source_identity(ROOT, spec)
+    except ForwardObservationError as exc:
+        raise LiveReadOnlyRestartError(str(exc)) from None
     now = datetime.now(UTC)
     if now < spec.starts_at.astimezone(UTC) + timedelta(days=1):
         return _report(
@@ -246,6 +251,7 @@ def restart(
             prior_event_offset=prior_event_offset,
             observation_id=spec.observation_id,
             configuration_digest=spec.configuration_digest,
+            source_sha256_digest=spec.source_sha256_digest,
         ):
             _disable_self(folder)
             return _report(
@@ -262,6 +268,7 @@ def restart(
                         start_offset=prior_event_offset,
                         observation_id=spec.observation_id,
                         configuration_digest=spec.configuration_digest,
+                        source_sha256_digest=spec.source_sha256_digest,
                     )
                 ),
                 gap_started_at=gap_started_at.isoformat().replace("+00:00", "Z"),
@@ -275,6 +282,7 @@ def restart(
                 not_before=spec.starts_at,
                 observation_id=spec.observation_id,
                 configuration_digest=spec.configuration_digest,
+                source_sha256_digest=spec.source_sha256_digest,
             )
             is None
         ):
@@ -288,6 +296,7 @@ def restart(
             events_path,
             observation_id=spec.observation_id,
             configuration_digest=spec.configuration_digest,
+            source_sha256_digest=spec.source_sha256_digest,
         )
         prior_event_offset = events_path.stat().st_size
         if prior_start_count < 1:
@@ -350,6 +359,7 @@ def restart(
             prior_event_offset=prior_event_offset,
             observation_id=spec.observation_id,
             configuration_digest=spec.configuration_digest,
+            source_sha256_digest=spec.source_sha256_digest,
         ):
             _disable_self(folder)
             return _report(
@@ -366,6 +376,7 @@ def restart(
                         start_offset=prior_event_offset,
                         observation_id=spec.observation_id,
                         configuration_digest=spec.configuration_digest,
+                        source_sha256_digest=spec.source_sha256_digest,
                     )
                 ),
                 gap_started_at=gap_started_at.isoformat().replace("+00:00", "Z"),
@@ -387,6 +398,7 @@ def restart(
                 start_offset=prior_event_offset,
                 observation_id=spec.observation_id,
                 configuration_digest=spec.configuration_digest,
+                source_sha256_digest=spec.source_sha256_digest,
             )
         ),
         gap_started_at=gap_started_at.isoformat().replace("+00:00", "Z"),

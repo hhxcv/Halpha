@@ -34,7 +34,7 @@
         ".venv/Scripts/python.exe -m pytest tests/planning tests/app/test_web_security.py -q",
         ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
       ],
-      "evidence_digest": "sha256:d9e7de88ebeb245d215775e2ecfbd9cc1ef8c6065e0074e8c5ec23f15f254f8f",
+      "evidence_digest": "sha256:02e18813dc206606e53978cd8b32f8766f042e98c97c9c116b824df52f471ead",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -50,9 +50,11 @@
         "migrations/versions/20260717_0001_p0_record_families.py",
         "migrations/versions/20260717_0004_b03_execution_boundaries.py",
         "migrations/versions/20260717_0005_b03_client_order_identity.py",
+        "migrations/versions/20260718_0006_b04_not_submitted_reason.py",
         "src/halpha/database/record_families.py",
         "src/halpha/venue_integration/*.py",
         "src/halpha/executor/coordinator.py",
+        "src/halpha/executor/product_entry.py",
         "src/halpha/executor/runtime.py"
       ],
       "forbidden_calls": [
@@ -65,12 +67,13 @@
         "tests/venue_integration/*.py",
         "tests/runtime/test_executor_coordinator.py",
         "tests/runtime/test_executor_product_runtime.py",
+        "tests/runtime/test_product_entry.py",
         "tools/qualification/verify_b03_execution_boundary.py"
       ],
       "build_gate": [
         ".venv/Scripts/python.exe -m pytest tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
       ],
-      "evidence_digest": "sha256:dbbedc07f70c622cee742dc69a522d1d1ed21d7ed85d381443c8e822c3fe11b8",
+      "evidence_digest": "sha256:e48591fe8c9056e9bf69db7a953fa2d50566d33d7067645106f4f7f2a404da7f",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -87,8 +90,10 @@
         "src/halpha/capital/models.py",
         "src/halpha/capital/checks.py",
         "src/halpha/capital/repository.py",
+        "src/halpha/capital/service.py",
         "src/halpha/planning/service.py",
-        "src/halpha/executor/coordinator.py"
+        "src/halpha/executor/coordinator.py",
+        "src/halpha/executor/product_entry.py"
       ],
       "forbidden_calls": [
         "activation or risk-increasing submission without current authorization, three-axis limits, max_action_notional, facts, and stop-state checks",
@@ -96,6 +101,8 @@
       ],
       "tests": [
         "tests/capital/test_cap_checks.py",
+        "tests/runtime/test_executor_product_runtime.py",
+        "tests/runtime/test_product_entry.py",
         "tools/qualification/verify_b02_database_boundary.py",
         "tools/qualification/verify_b03_execution_boundary.py"
       ],
@@ -103,7 +110,7 @@
         ".venv/Scripts/python.exe -m pytest tests/capital -q",
         ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
       ],
-      "evidence_digest": "sha256:3018121291fec4c18fbb9b16549483abbedf0a434bf9e2be8633d19b883e5a9a",
+      "evidence_digest": "sha256:e9372fe26babf2edfb48eb1a10aaf8dbb0dfe71c5d7e3fa3947954633df30c75",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -121,6 +128,7 @@
         "src/halpha/windows_runtime.py",
         "src/halpha/executor/__main__.py",
         "src/halpha/executor/coordinator.py",
+        "src/halpha/executor/product_entry.py",
         "src/halpha/executor/runtime.py",
         "src/halpha/venue_integration/gateway.py",
         "src/halpha/database/record_families.py"
@@ -133,6 +141,7 @@
         "tests/runtime/test_windows_runtime.py",
         "tests/runtime/test_executor_coordinator.py",
         "tests/runtime/test_executor_product_runtime.py",
+        "tests/runtime/test_product_entry.py",
         "tests/database/test_record_family_contract.py",
         "tests/architecture/test_process_boundaries.py",
         "tests/venue_integration/test_persisted_action_gate.py"
@@ -140,7 +149,7 @@
       "build_gate": [
         ".venv/Scripts/python.exe -m pytest tests/runtime/test_windows_runtime.py tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
       ],
-      "evidence_digest": "sha256:61db79539f19e914589b296dc3a647550d94885c2f57bddaf5f930fad053b6ee",
+      "evidence_digest": "sha256:68caed30e8504cfc9590e6e197b4a2ed95d7ee8ccadd767457d3194a61c7caa7",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -170,7 +179,7 @@
         ".venv/Scripts/python.exe -m pytest tests/app/test_web_security.py -q",
         "Playwright /operations static-dist-loss and shared-command qualification"
       ],
-      "evidence_digest": "sha256:56e766265b89b99eee8f7d96581c531d3ee4713bb5c617763ba4972524670581",
+      "evidence_digest": "sha256:a1d0e356d03d2b9623b59865a03a57fb2327f16db10a550155a1da3b45480e67",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -191,7 +200,7 @@
       "build_gate": [
         "P0 construction validation keeps automatic continuation deferred"
       ],
-      "evidence_digest": "sha256:643e528a90d01616beaa15ad23b85b5a2f5b0baa4d01300ccb20147709a3315d",
+      "evidence_digest": "sha256:70febc9ee1a47677eae0612ce98e13218c025d7eb0f1769ba824723bc31cda66",
       "implementation_status": "DEFERRED",
       "deviation_status": "NONE"
     }

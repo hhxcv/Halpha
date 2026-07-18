@@ -178,10 +178,15 @@ class ExecutionApplicationService:
         self,
         execution_action_id: str,
         *,
+        reason_code: str,
         observed_at: datetime,
     ) -> ExecutionAction:
         action = self._actions.get(execution_action_id, for_update=True)
-        updated = mark_not_submitted(action, observed_at=observed_at)
+        updated = mark_not_submitted(
+            action,
+            reason_code=reason_code,
+            observed_at=observed_at,
+        )
         self._actions.update(updated, expected_version=action.state_version)
         return updated
 

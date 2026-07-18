@@ -19,6 +19,28 @@ from halpha.planning.registry import (
     OneShotParameters,
 )
 from halpha.planning.strategies.one_shot import StrategyProposal
+from halpha.source_identity import (
+    SourceIdentityError,
+    capture_stable_source_sha256,
+    source_sha256_digest,
+)
+
+
+FORWARD_OBSERVATION_SOURCE_PATTERNS = (
+    "pyproject.toml",
+    "requirements/runtime.txt",
+    "config/halpha.live-read-only.toml",
+    "src/halpha/**/*.py",
+    "tools/provisioning/*.py",
+    "tools/qualification/source_binding.py",
+    "tools/qualification/observe_b04_windows_soak.py",
+    "tools/qualification/prepare_b04_live_read_only_observation.py",
+    "tools/qualification/transition_b04_live_read_only.py",
+    "tools/qualification/restart_b04_live_read_only_observation.py",
+    "tools/qualification/finalize_b04_live_read_only_observation.py",
+    "tools/qualification/verify_b04_live_read_only.py",
+    "tools/qualification/summarize_b04_evidence.py",
+)
 
 
 class ForwardObservationError(RuntimeError):
@@ -30,7 +52,7 @@ class ForwardObservationSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[2] = 2
+    schema_version: Literal[3] = 3
     observation_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,95}$")
     profile: Literal["BINANCE_LIVE_READ_ONLY"] = "BINANCE_LIVE_READ_ONLY"
     activation_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,95}$")
@@ -42,6 +64,8 @@ class ForwardObservationSpec(BaseModel):
     ] = "build/evidence/reports/b04-historical-preregistration.json"
     strategy_evidence_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     configuration_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_sha256: dict[str, str] = Field(min_length=1)
+    source_sha256_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     parameters: OneShotParameters
     parameter_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     starts_at: datetime
@@ -82,6 +106,12 @@ class ForwardObservationSpec(BaseModel):
         actual_digest = content_digest(self.parameters.model_dump(mode="json"))
         if actual_digest != self.parameter_digest:
             raise ValueError("FORWARD_OBSERVATION_PARAMETER_DIGEST_MISMATCH")
+        try:
+            actual_source_digest = source_sha256_digest(self.source_sha256)
+        except SourceIdentityError as exc:
+            raise ValueError(str(exc)) from None
+        if actual_source_digest != self.source_sha256_digest:
+            raise ValueError("FORWARD_OBSERVATION_SOURCE_DIGEST_MISMATCH")
         return self
 
     @property
@@ -108,6 +138,32 @@ def load_forward_observation_spec(path: Path) -> ForwardObservationSpec:
         raise ForwardObservationError(
             f"FORWARD_OBSERVATION_SPEC_INVALID type={type(exc).__name__}"
         ) from None
+
+
+def capture_forward_observation_source_identity(root: Path) -> dict[str, str]:
+    """Capture the exact code and qualification-tool set for one observation."""
+
+    try:
+        return capture_stable_source_sha256(
+            root,
+            FORWARD_OBSERVATION_SOURCE_PATTERNS,
+        )
+    except SourceIdentityError as exc:
+        raise ForwardObservationError(str(exc)) from None
+
+
+def require_forward_observation_source_identity(
+    root: Path,
+    spec: ForwardObservationSpec,
+) -> dict[str, str]:
+    """Reject an observation process whose repository sources drifted."""
+
+    current = capture_forward_observation_source_identity(root)
+    if current != spec.source_sha256:
+        raise ForwardObservationError(
+            "FORWARD_OBSERVATION_SOURCE_IDENTITY_DRIFT"
+        )
+    return current
 
 
 class ForwardObservationEvidence:
@@ -155,6 +211,7 @@ class ForwardObservationEvidence:
                 "strategy_evidence_ref": self.spec.strategy_evidence_ref,
                 "strategy_evidence_digest": self.spec.strategy_evidence_digest,
                 "configuration_digest": self.spec.configuration_digest,
+                "source_sha256_digest": self.spec.source_sha256_digest,
                 "entry_valid_until": self.spec.entry_valid_until,
                 "minimum_end_at": self.spec.minimum_end_at,
                 "maximum_end_at": self.spec.maximum_end_at,
@@ -215,6 +272,7 @@ class ForwardObservationEvidence:
         serialized["observation_id"] = self.spec.observation_id
         serialized["parameter_digest"] = self.spec.parameter_digest
         serialized["configuration_digest"] = self.spec.configuration_digest
+        serialized["source_sha256_digest"] = self.spec.source_sha256_digest
         serialized["event_digest"] = content_digest(serialized)
         with self.path.open("a", encoding="utf-8", newline="\n") as stream:
             stream.write(

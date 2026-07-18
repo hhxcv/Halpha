@@ -1,0 +1,432 @@
+from __future__ import annotations
+
+import asyncio
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
+import json
+from types import SimpleNamespace
+
+import pytest
+
+from halpha.capital.models import AuthorityClass, EnvironmentKind
+from halpha.domain_values import content_digest
+from halpha.executor.product_entry import (
+    LiveEntryFactTracker,
+    ProductAccountFacts,
+    ProductPreSubmitRejected,
+    ProductProposalBoundary,
+    _query_current_mark_price,
+    _require_flat_entry_scope,
+    instrument_rules_payload,
+)
+from halpha.planning.registry import Direction
+from halpha.planning.strategies.one_shot import (
+    EntryRiskContext,
+    RiskDirection,
+    StrategyProposal,
+)
+from halpha.venue_integration.models import ExecutionActionState
+
+
+NOW = datetime(2026, 7, 18, 6, 0, tzinfo=UTC)
+
+
+def _proposal() -> StrategyProposal:
+    rules = {
+        "step_size": "0.001",
+        "price_tick_size": "0.1",
+        "min_quantity": "0.001",
+        "max_market_quantity": "100",
+        "min_notional": "5",
+    }
+    fields = {
+        "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+        "activation_id": "activation-product-entry",
+        "rule_id": "ENTRY_BREAKOUT",
+        "source_identity": "activation-product-entry:BAR:1:2",
+        "source_cutoff": NOW,
+        "input_digest": "1" * 64,
+        "instrument_id": "BTCUSDT-PERP.BINANCE",
+        "direction": Direction.LONG,
+        "action_profile": "ENTRY_MARKET",
+        "risk_direction": RiskDirection.INCREASE,
+        "quantity": "0.002",
+        "reference_price": "50000",
+        "reference_source": "BINANCE_MARK_AND_TOP_OF_BOOK_ASK",
+        "reason_code": "ENTRY_BREAKOUT_CONFIRMED",
+        "valid_until": NOW + timedelta(minutes=1),
+        "entry_risk_context": EntryRiskContext(
+            trigger_atr="500",
+            initial_stop_atr_multiple="1.5",
+            take_profit_1_r="1.5",
+            take_profit_1_fraction="0.5",
+            take_profit_2_r="3",
+            max_hold_bars_15m=96,
+            indicator_source_digest="2" * 64,
+            indicator_source_cutoff_ns=int(NOW.timestamp() * 1_000_000_000),
+            quantity_step="0.001",
+            price_tick_size="0.1",
+            entry_extension_boundary="50500",
+            sizing_taker_fee_rate="0.0006",
+            sizing_effective_leverage="5",
+            instrument_rules_digest=content_digest(rules),
+        ),
+    }
+    return StrategyProposal(
+        **fields,
+        proposal_digest=content_digest(fields),
+    )
+
+
+def _proposal_with_input_digest(input_digest: str) -> StrategyProposal:
+    fields = _proposal().model_dump(mode="python")
+    fields.pop("proposal_digest")
+    fields["input_digest"] = input_digest
+    return StrategyProposal(
+        **fields,
+        proposal_digest=content_digest(fields),
+    )
+
+
+def _facts() -> ProductAccountFacts:
+    return ProductAccountFacts(
+        checked_at=datetime.now(UTC),
+        conservative_price="50010",
+        available_margin="1000",
+        actual_margin_mode="CROSSED",
+        actual_leverage="20",
+        activation_current_notional="0",
+        account_current_notional="0",
+        activation_current_margin="0",
+        current_abs_position="0",
+        post_action_abs_position="0.002",
+    )
+
+
+def test_product_market_rules_use_the_execution_profile_filters() -> None:
+    instrument = SimpleNamespace(
+        size_increment="0.0001",
+        max_quantity="1000",
+        info={
+            "filters": [
+                {
+                    "filterType": "PRICE_FILTER",
+                    "tickSize": "0.10",
+                },
+                {
+                    "filterType": "LOT_SIZE",
+                    "stepSize": "0.0001",
+                    "minQty": "0.0001",
+                    "maxQty": "1000",
+                },
+                {
+                    "filterType": "MARKET_LOT_SIZE",
+                    "stepSize": "0.001",
+                    "minQty": "0.001",
+                    "maxQty": "100",
+                },
+                {
+                    "filterType": "MIN_NOTIONAL",
+                    "notional": "5.0",
+                },
+            ]
+        },
+    )
+
+    assert instrument_rules_payload(instrument) == {
+        "step_size": "0.001",
+        "price_tick_size": "0.1",
+        "min_quantity": "0.001",
+        "max_market_quantity": "100",
+        "min_notional": "5",
+    }
+
+
+def test_current_mark_query_requires_the_requested_symbol_and_positive_value() -> None:
+    class Client:
+        async def send_request(self, **kwargs):
+            assert kwargs["url_path"] == "/fapi/v1/premiumIndex"
+            assert kwargs["payload"] == {"symbol": "BTCUSDT"}
+            return json.dumps(
+                {
+                    "symbol": "BTCUSDT",
+                    "markPrice": "50000.10",
+                    "time": 1_784_357_200_000,
+                }
+            ).encode()
+
+    mark, observed_at = asyncio.run(
+        _query_current_mark_price(Client(), "BTCUSDT")
+    )
+
+    assert mark == Decimal("50000.10")
+    assert int(observed_at.timestamp() * 1000) == 1_784_357_200_000
+
+
+@pytest.mark.parametrize(
+    ("positions", "open_orders", "open_algo_orders", "reason_code"),
+    (
+        (
+            [SimpleNamespace(symbol="BTCUSDT", positionAmt="0.001")],
+            [],
+            [],
+            "ENTRY_POSITION_NOT_FLAT",
+        ),
+        ([], [SimpleNamespace(symbol="BTCUSDT")], [], "ENTRY_OPEN_ORDER_CONFLICT"),
+        (
+            [],
+            [],
+            [SimpleNamespace(symbol="BTCUSDT")],
+            "ENTRY_OPEN_ALGO_ORDER_CONFLICT",
+        ),
+    ),
+)
+def test_first_entry_rejects_existing_instrument_responsibility(
+    positions,
+    open_orders,
+    open_algo_orders,
+    reason_code,
+) -> None:
+    with pytest.raises(ProductPreSubmitRejected, match=reason_code):
+        _require_flat_entry_scope(
+            symbol="BTCUSDT",
+            positions=positions,
+            open_orders=open_orders,
+            open_algo_orders=open_algo_orders,
+        )
+
+
+def test_first_entry_accepts_zero_positions_without_open_orders() -> None:
+    assert _require_flat_entry_scope(
+        symbol="BTCUSDT",
+        positions=[
+            SimpleNamespace(symbol="BTCUSDT", positionAmt="0"),
+            SimpleNamespace(symbol="ETHUSDT", positionAmt="1"),
+        ],
+        open_orders=[],
+        open_algo_orders=[],
+    ) == Decimal("0")
+
+
+class FakeCoordinator:
+    def __init__(self) -> None:
+        self.rejections: list[dict[str, object]] = []
+        self.consumed: list[dict[str, object]] = []
+        self.processed: list[tuple[str, dict[str, object]]] = []
+        self.rejected_actions: list[str] = []
+
+    def record_strategy_proposal_rejection(self, **kwargs):
+        self.rejections.append(kwargs)
+
+    def consume_strategy_proposal(self, **kwargs):
+        self.consumed.append(kwargs)
+        return SimpleNamespace(
+            execution_action=SimpleNamespace(state=ExecutionActionState.READY)
+        )
+
+    def process_execution_action(self, execution_action_id: str, **kwargs):
+        self.processed.append((execution_action_id, kwargs))
+
+    def reject_execution_action_before_submission(
+        self,
+        execution_action_id: str,
+        **kwargs,
+    ):
+        self.rejected_actions.append((execution_action_id, kwargs["reason_code"]))
+
+
+def test_stream_tracker_uses_one_fresh_quote_and_mark_snapshot() -> None:
+    tracker = LiveEntryFactTracker()
+    cutoff = int(NOW.timestamp() * 1_000_000_000)
+    tracker.record_quote(
+        SimpleNamespace(
+            instrument_id="BTCUSDT-PERP.BINANCE",
+            bid_price="49999",
+            ask_price="50001",
+            ts_event=cutoff - 1_000_000_000,
+        )
+    )
+    tracker.record_mark(
+        SimpleNamespace(
+            instrument_id="BTCUSDT-PERP.BINANCE",
+            value="50002",
+            ts_event=cutoff - 2_000_000_000,
+        )
+    )
+
+    assert tracker.conservative_reference(
+        "BTCUSDT-PERP.BINANCE",
+        Direction.LONG,
+        cutoff_ns=cutoff,
+    ) == "50002"
+
+    try:
+        tracker.conservative_reference(
+            "BTCUSDT-PERP.BINANCE",
+            Direction.LONG,
+            cutoff_ns=cutoff + 4_000_000_000,
+        )
+    except ProductPreSubmitRejected as exc:
+        assert exc.reason_code == "STREAM_FACTS_STALE"
+    else:
+        raise AssertionError("stale stream facts must fail closed")
+
+
+def test_preliminary_sizing_allows_a_short_unchanged_quote_window() -> None:
+    tracker = LiveEntryFactTracker()
+    cutoff = int(NOW.timestamp() * 1_000_000_000)
+    tracker.record_quote(
+        SimpleNamespace(
+            instrument_id="BTCUSDT-PERP.BINANCE",
+            bid_price="49999",
+            ask_price="50001",
+            ts_event=cutoff - 10_000_000_000,
+        )
+    )
+    tracker.record_mark(
+        SimpleNamespace(
+            instrument_id="BTCUSDT-PERP.BINANCE",
+            value="50002",
+            ts_event=cutoff - 1_000_000_000,
+        )
+    )
+
+    assert tracker.conservative_reference(
+        "BTCUSDT-PERP.BINANCE",
+        Direction.LONG,
+        cutoff_ns=cutoff,
+        max_age_ns=15_000_000_000,
+    ) == "50002"
+
+
+def test_product_proposal_processor_enters_cap_and_exe_once_with_stable_identity() -> None:
+    async def scenario() -> FakeCoordinator:
+        coordinator = FakeCoordinator()
+
+        async def provider(_proposal):
+            return _facts()
+
+        processor = ProductProposalBoundary(
+            loop=asyncio.get_running_loop(),
+            coordinator=coordinator,
+            fact_provider=provider,
+            environment_id="demo-main",
+            environment_kind=EnvironmentKind.DEMO,
+            authority_class=AuthorityClass.DEMO_VALIDATION,
+            account_ref="demo-owner",
+        )
+        processor.submit(_proposal())
+        processor.submit(_proposal())
+        await processor.wait_idle()
+        processor.close()
+        return coordinator
+
+    coordinator = asyncio.run(scenario())
+    assert coordinator.rejections == []
+    assert len(coordinator.consumed) == 1
+    assert len(coordinator.processed) == 1
+    consumed = coordinator.consumed[0]
+    action_id, processed = coordinator.processed[0]
+    assert consumed["execution_action_id"] == action_id
+    assert len(consumed["client_order_id"]) == 32
+    assert processed["action_check"].environment_kind is EnvironmentKind.DEMO
+    assert processed["request_payload"]["profile"] == "ENTRY_MARKET"
+
+
+def test_product_proposal_processor_rejects_a_concurrent_source_conflict() -> None:
+    async def scenario() -> FakeCoordinator:
+        coordinator = FakeCoordinator()
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def provider(_proposal):
+            started.set()
+            await release.wait()
+            return _facts()
+
+        processor = ProductProposalBoundary(
+            loop=asyncio.get_running_loop(),
+            coordinator=coordinator,
+            fact_provider=provider,
+            environment_id="demo-main",
+            environment_kind=EnvironmentKind.DEMO,
+            authority_class=AuthorityClass.DEMO_VALIDATION,
+            account_ref="demo-owner",
+        )
+        processor.submit(_proposal())
+        await started.wait()
+        with pytest.raises(ProductPreSubmitRejected, match="SOURCE_IDENTITY_CONFLICT"):
+            processor.submit(_proposal_with_input_digest("3" * 64))
+        release.set()
+        await processor.wait_idle()
+        processor.close()
+        return coordinator
+
+    coordinator = asyncio.run(scenario())
+    assert len(coordinator.consumed) == 1
+    assert len(coordinator.processed) == 1
+
+
+def test_product_proposal_processor_persists_fail_closed_fact_rejection() -> None:
+    async def scenario() -> FakeCoordinator:
+        coordinator = FakeCoordinator()
+
+        async def provider(_proposal):
+            raise ProductPreSubmitRejected("STREAM_FACTS_STALE")
+
+        processor = ProductProposalBoundary(
+            loop=asyncio.get_running_loop(),
+            coordinator=coordinator,
+            fact_provider=provider,
+            environment_id="demo-main",
+            environment_kind=EnvironmentKind.DEMO,
+            authority_class=AuthorityClass.DEMO_VALIDATION,
+            account_ref="demo-owner",
+        )
+        processor.submit(_proposal())
+        await processor.wait_idle()
+        processor.close()
+        return coordinator
+
+    coordinator = asyncio.run(scenario())
+    assert coordinator.consumed == []
+    assert coordinator.processed == []
+    assert len(coordinator.rejections) == 1
+    assert coordinator.rejections[0]["reason_code"] == "STREAM_FACTS_STALE"
+
+
+def test_product_proposal_processor_rejects_ready_action_when_second_check_fails() -> None:
+    async def scenario() -> FakeCoordinator:
+        coordinator = FakeCoordinator()
+        calls = 0
+
+        async def provider(_proposal):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return _facts()
+            raise ProductPreSubmitRejected("FRESH_FACTS_CHANGED")
+
+        processor = ProductProposalBoundary(
+            loop=asyncio.get_running_loop(),
+            coordinator=coordinator,
+            fact_provider=provider,
+            environment_id="demo-main",
+            environment_kind=EnvironmentKind.DEMO,
+            authority_class=AuthorityClass.DEMO_VALIDATION,
+            account_ref="demo-owner",
+        )
+        processor.submit(_proposal())
+        await processor.wait_idle()
+        processor.close()
+        return coordinator
+
+    coordinator = asyncio.run(scenario())
+    assert len(coordinator.consumed) == 1
+    assert coordinator.processed == []
+    assert coordinator.rejected_actions == [
+        (
+            coordinator.consumed[0]["execution_action_id"],
+            "FRESH_FACTS_CHANGED",
+        )
+    ]

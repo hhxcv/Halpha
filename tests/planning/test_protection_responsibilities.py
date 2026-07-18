@@ -48,6 +48,10 @@ def _context() -> dict[str, object]:
         "indicator_source_cutoff_ns": 1_773_910_800_000_000_000,
         "quantity_step": "0.001",
         "price_tick_size": "0.1",
+        "entry_extension_boundary": "110",
+        "sizing_taker_fee_rate": "0.0006",
+        "sizing_effective_leverage": "5",
+        "instrument_rules_digest": "b" * 64,
     }
 
 

@@ -12,6 +12,9 @@ from tools.qualification.restart_b04_live_read_only_observation import (
 )
 
 
+SOURCE_SHA256_DIGEST = "2" * 64
+
+
 def _event(value: dict[str, object]) -> str:
     value["event_digest"] = content_digest(value)
     return json.dumps(value)
@@ -29,12 +32,14 @@ def test_restart_completion_requires_new_start_and_trimmed_ready(tmp_path: Path)
         "observed_at": (gap_started_at + timedelta(seconds=101)).isoformat(),
         "observation_id": "observation-1",
         "configuration_digest": "1" * 64,
+        "source_sha256_digest": SOURCE_SHA256_DIGEST,
     }
     ready = {
         "event": "READ_ONLY_RUNTIME_READY",
         "observed_at": (gap_started_at + timedelta(seconds=102)).isoformat(),
         "observation_id": "observation-1",
         "configuration_digest": "1" * 64,
+        "source_sha256_digest": SOURCE_SHA256_DIGEST,
         "profile": "BINANCE_LIVE_READ_ONLY",
         "product_runtime_started": True,
         "strategy_adapter_started": True,
@@ -50,13 +55,19 @@ def test_restart_completion_requires_new_start_and_trimmed_ready(tmp_path: Path)
     }
     events.write_text(_event(start) + "\n" + _event(ready) + "\n", encoding="utf-8")
 
-    assert process_start_count(events) == 1
+    assert process_start_count(
+        events,
+        observation_id="observation-1",
+        configuration_digest="1" * 64,
+        source_sha256_digest=SOURCE_SHA256_DIGEST,
+    ) == 1
     assert restart_completed(
         events,
         prior_start_count=1,
         gap_started_at=gap_started_at,
         observation_id="observation-1",
         configuration_digest="1" * 64,
+        source_sha256_digest=SOURCE_SHA256_DIGEST,
     )
     assert not restart_completed(
         events,
@@ -64,12 +75,16 @@ def test_restart_completion_requires_new_start_and_trimmed_ready(tmp_path: Path)
         gap_started_at=gap_started_at,
         observation_id="observation-1",
         configuration_digest="2" * 64,
+        source_sha256_digest=SOURCE_SHA256_DIGEST,
     )
     assert not restart_completed(
         events,
         prior_start_count=1,
         gap_started_at=gap_started_at,
         prior_event_offset=events.stat().st_size,
+        observation_id="observation-1",
+        configuration_digest="1" * 64,
+        source_sha256_digest=SOURCE_SHA256_DIGEST,
     )
 
 
@@ -81,12 +96,14 @@ def test_restart_completion_rejects_ready_from_another_observation(tmp_path: Pat
         "observed_at": (gap_started_at + timedelta(seconds=101)).isoformat(),
         "observation_id": "observation-1",
         "configuration_digest": "1" * 64,
+        "source_sha256_digest": SOURCE_SHA256_DIGEST,
     }
     wrong_ready = {
         "event": "READ_ONLY_RUNTIME_READY",
         "observed_at": (gap_started_at + timedelta(seconds=102)).isoformat(),
         "observation_id": "observation-2",
         "configuration_digest": "2" * 64,
+        "source_sha256_digest": SOURCE_SHA256_DIGEST,
         "profile": "BINANCE_LIVE_READ_ONLY",
         "product_runtime_started": True,
         "strategy_adapter_started": True,
@@ -111,6 +128,7 @@ def test_restart_completion_rejects_ready_from_another_observation(tmp_path: Pat
         gap_started_at=gap_started_at,
         observation_id="observation-1",
         configuration_digest="1" * 64,
+        source_sha256_digest=SOURCE_SHA256_DIGEST,
     )
 
 
@@ -127,6 +145,7 @@ def test_restart_completion_rejects_digest_invalid_start(tmp_path: Path) -> None
         "observed_at": (gap_started_at + timedelta(seconds=102)).isoformat(),
         "observation_id": "observation-1",
         "configuration_digest": "1" * 64,
+        "source_sha256_digest": SOURCE_SHA256_DIGEST,
         "profile": "BINANCE_LIVE_READ_ONLY",
         "product_runtime_started": True,
         "strategy_adapter_started": True,
@@ -151,4 +170,5 @@ def test_restart_completion_rejects_digest_invalid_start(tmp_path: Path) -> None
         gap_started_at=gap_started_at,
         observation_id="observation-1",
         configuration_digest="1" * 64,
+        source_sha256_digest=SOURCE_SHA256_DIGEST,
     )

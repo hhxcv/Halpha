@@ -64,6 +64,18 @@ RESEARCH_PACKAGE_EFFECT_KEYS = (
     "authority",
     "credential",
 )
+LIVE_WRITE_GATE_STATE_FIELDS = (
+    "live_write_build_capability",
+    "b05_package_eligibility",
+    "runtime_real_write_gate",
+)
+LIVE_WRITE_GATE_BINDING_INPUTS = (
+    "final_build_manifest_digest",
+    "user_authorization_ref",
+    "account_capital_limit_version_ref",
+    "machine_authorization_version_ref",
+    "plan_allocation_ref",
+)
 
 
 @dataclass(frozen=True)
@@ -438,7 +450,55 @@ def validate_plan(plan: Mapping[str, Any]) -> list[Violation]:
         "current_state.live_write_gate_evidence",
         violations,
     )
+    runtime_configuration = _mapping(
+        plan.get("runtime_configuration"),
+        "runtime_configuration",
+        violations,
+    )
+    live_write_gate_binding = _mapping(
+        runtime_configuration.get("live_write_gate_binding"),
+        "runtime_configuration.live_write_gate_binding",
+        violations,
+    )
     _validate_accepted_design_set_closure(plan, violations)
+
+    expected_gate_wiring = {
+        "schema_version": 1,
+        "state_separation_required": True,
+        "default_effective_gate": "CLOSED",
+        "location": "DETACHED_OUTSIDE_REPOSITORY_AND_BUILDMANIFEST",
+        "nonsecret": True,
+        "authorization_scope": "EXACT_ONE_EXISTING_ACTIVATION",
+        "file_security_profile": "WINDOWS_PROTECTED_EXACT_DACL_V1",
+        "credential_resolution_order": "DATABASE_GATE_BEFORE_BINANCE_SECRETS",
+    }
+    for field, expected in expected_gate_wiring.items():
+        if live_write_gate_binding.get(field) != expected:
+            violations.append(
+                Violation(
+                    "GOV-LIVE-GATE-003",
+                    f"runtime_configuration.live_write_gate_binding.{field}",
+                    f"must remain {expected!r}",
+                )
+            )
+    state_fields = _string_sequence(live_write_gate_binding.get("state_fields"))
+    if tuple(state_fields or ()) != LIVE_WRITE_GATE_STATE_FIELDS:
+        violations.append(
+            Violation(
+                "GOV-LIVE-GATE-003",
+                "runtime_configuration.live_write_gate_binding.state_fields",
+                f"must remain {list(LIVE_WRITE_GATE_STATE_FIELDS)}",
+            )
+        )
+    binding_inputs = _string_sequence(live_write_gate_binding.get("binding_inputs"))
+    if tuple(binding_inputs or ()) != LIVE_WRITE_GATE_BINDING_INPUTS:
+        violations.append(
+            Violation(
+                "GOV-LIVE-GATE-003",
+                "runtime_configuration.live_write_gate_binding.binding_inputs",
+                f"must remain {list(LIVE_WRITE_GATE_BINDING_INPUTS)}",
+            )
+        )
 
     package_records: dict[str, Mapping[str, Any]] = {}
     for package_id in ("B01", "B02", "B03", "B04", "B05"):
@@ -759,6 +819,7 @@ def validate_plan(plan: Mapping[str, Any]) -> list[Violation]:
             "account_capital_limit_version_ref",
             "machine_authorization_version_ref",
             "plan_allocation_ref",
+            "authorized_activation_id",
         )
         for field in required_evidence:
             value = live_write_evidence.get(field)

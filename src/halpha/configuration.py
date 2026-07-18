@@ -55,6 +55,20 @@ class ReleaseConfig(FrozenModel):
     ]
     database_name: str = Field(pattern=r"^halpha_(?:demo|live)$")
     build_manifest_path: str = Field(pattern=r"^build/[a-z0-9_./-]+\.json$")
+    live_write_gate_path: str | None = None
+
+    @model_validator(mode="after")
+    def validate_live_write_gate_path(self) -> "ReleaseConfig":
+        path_value = self.live_write_gate_path
+        if self.profile == "BINANCE_LIVE_WRITE":
+            if path_value is None:
+                raise ValueError("LIVE_WRITE_GATE_PATH_REQUIRED")
+            path = Path(path_value)
+            if not path.is_absolute() or path.suffix.lower() != ".json" or ".." in path.parts:
+                raise ValueError("LIVE_WRITE_GATE_PATH_INVALID")
+        elif path_value is not None:
+            raise ValueError("LIVE_WRITE_GATE_PATH_PROFILE_MISMATCH")
+        return self
 
 
 class AppConfig(FrozenModel):

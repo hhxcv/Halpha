@@ -17,6 +17,11 @@ from halpha.configuration import ConfigurationError, app_settings, load_settings
 from halpha.operational_logging import configure_halpha_logging
 from halpha.process_contract import ProcessRole, preflight
 from halpha.runtime_identity import RuntimeIdentityError, repository_root
+from halpha.source_identity import (
+    SourceIdentityError,
+    capture_product_runtime_source_identity,
+    source_sha256_digest,
+)
 from halpha.winvault import SecretResolutionError
 from halpha.windows_runtime import (
     WindowsRuntimeError,
@@ -38,6 +43,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps(report, sort_keys=True))
             return 0
         role_settings = app_settings(settings)
+        runtime_source_sha256 = capture_product_runtime_source_identity(
+            repository_root(),
+            config_path=args.config,
+        )
+        runtime_source_digest = source_sha256_digest(runtime_source_sha256)
         require_process_identity(role_settings.app_task_sid)
         secrets = resolve_app_secrets(role_settings, keyring.get_keyring())
         secret_values = [
@@ -58,16 +68,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             secrets,
             repo_root=repository_root(),
         )
+        gate_status = web_app.state.live_write_gate_status_provider()
         logger.info(
             "runtime_starting",
             profile=settings.release.profile,
             environment_id=settings.release.environment_id,
-            runtime_real_write_gate="CLOSED",
+            live_write_build_capability=gate_status.live_write_build_capability,
+            b05_package_eligibility=gate_status.b05_package_eligibility,
+            configured_runtime_real_write_gate=(
+                gate_status.configured_runtime_real_write_gate
+            ),
+            runtime_real_write_gate=gate_status.runtime_real_write_gate,
+            source_sha256_digest=runtime_source_digest,
+            source_file_count=len(runtime_source_sha256),
         )
     except (
         ConfigurationError,
         RuntimeIdentityError,
         SecretResolutionError,
+        SourceIdentityError,
         WebConfigurationError,
         WindowsRuntimeError,
     ) as exc:

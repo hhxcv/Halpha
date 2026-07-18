@@ -18,8 +18,14 @@ if str(ROOT / "src") not in sys.path:
 
 from halpha.configuration import load_settings, settings_digest
 from halpha.domain_values import content_digest
-from halpha.executor.forward_observation import ForwardObservationSpec
+from halpha.executor.forward_observation import (
+    ForwardObservationSpec,
+    capture_forward_observation_source_identity,
+)
 from halpha.planning.registry import OneShotParameters
+from halpha.source_identity import source_sha256_digest
+
+
 DEFAULT_CONFIG = ROOT / "config/halpha.live-read-only.toml"
 DEFAULT_PREREGISTRATION = (
     ROOT / "build/evidence/reports/b04-historical-preregistration.json"
@@ -80,11 +86,14 @@ def prepare(
 
     starts_at = starts_at.astimezone(UTC)
     observation_date = starts_at.strftime("%Y%m%d")
+    source_sha256 = capture_forward_observation_source_identity(ROOT)
     return ForwardObservationSpec(
         observation_id=f"b04-live-read-only-{observation_date}",
         activation_id=f"b04-live-read-only-btcusdt-{observation_date}",
         strategy_evidence_digest=evidence_digest,
         configuration_digest=settings_digest(settings),
+        source_sha256=source_sha256,
+        source_sha256_digest=source_sha256_digest(source_sha256),
         parameters=parameters,
         parameter_digest=parameter_digest,
         starts_at=starts_at,
@@ -136,6 +145,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "starts_at": spec.starts_at.isoformat(),
                 "minimum_end_at": spec.minimum_end_at.isoformat(),
                 "maximum_end_at": spec.maximum_end_at.isoformat(),
+                "source_sha256_digest": spec.source_sha256_digest,
                 "contains_secret": False,
             },
             ensure_ascii=False,

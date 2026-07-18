@@ -21,8 +21,10 @@ from halpha.configuration import load_settings, settings_digest
 from halpha.domain_values import canonical_decimal, content_digest
 from halpha.executor.forward_observation import (
     ForwardObservationSpec,
+    capture_forward_observation_source_identity,
     load_forward_observation_spec,
 )
+from halpha.source_identity import source_sha256_digest as source_manifest_digest
 
 
 DEFAULT_CONFIG = ROOT / "config/halpha.live-read-only.toml"
@@ -86,6 +88,7 @@ class EventLogScan:
     observation_identity_mismatch: bool = False
     parameter_digest_mismatch: bool = False
     configuration_digest_mismatch: bool = False
+    source_sha256_digest_mismatch: bool = False
     last_stop_at: datetime | None = None
     latest_source_ns: int | None = None
     recovery_source_floor_ns: int | None = None
@@ -121,6 +124,8 @@ def _record_event(
             scan.parameter_digest_mismatch = True
         if value.get("configuration_digest") != spec.configuration_digest:
             scan.configuration_digest_mismatch = True
+        if value.get("source_sha256_digest") != spec.source_sha256_digest:
+            scan.source_sha256_digest_mismatch = True
     try:
         if event == "OBSERVATION_PROCESS_STARTED":
             started_at = _event_datetime(value)
@@ -397,6 +402,9 @@ def verify(
         "account_commission_query_disabled": False,
         "frozen_observation_spec_valid": False,
         "configuration_matches_frozen_observation_spec": False,
+        "source_identity_captured": False,
+        "source_matches_frozen_observation_spec": False,
+        "source_stable_during_verification": False,
         "observation_event_log_present": events_path.is_file(),
         "event_log_complete_line_boundary": False,
         "event_integrity_valid": False,
@@ -431,6 +439,8 @@ def verify(
     errors: list[str] = []
     observations: dict[str, Any] = {
         "configuration_digest": None,
+        "frozen_source_sha256_digest": None,
+        "current_source_sha256_digest": None,
         "observation_id": None,
         "parameter_digest": None,
         "event_count": 0,
@@ -457,6 +467,15 @@ def verify(
         "first_live_exit_notional_cap": None,
         "capital_caps_are_qualification_evidence_not_authorization": True,
     }
+    source_at_start: dict[str, str] | None = None
+    try:
+        source_at_start = capture_forward_observation_source_identity(root)
+        checks["source_identity_captured"] = True
+        observations["current_source_sha256_digest"] = source_manifest_digest(
+            source_at_start
+        )
+    except Exception:
+        errors.append("OBSERVATION_SOURCE_CAPTURE_FAILED")
 
     settings = None
     if config_path.is_file():
@@ -483,6 +502,9 @@ def verify(
             spec = load_forward_observation_spec(spec_path)
             observations["observation_id"] = spec.observation_id
             observations["parameter_digest"] = spec.parameter_digest
+            observations["frozen_source_sha256_digest"] = (
+                spec.source_sha256_digest
+            )
             checks["frozen_observation_spec_valid"] = True
         except Exception as exc:
             errors.append(f"FORWARD_OBSERVATION_SPEC_INVALID:{type(exc).__name__}")
@@ -651,6 +673,35 @@ def verify(
             errors.append("OBSERVATION_PARAMETER_DIGEST_MISMATCH")
         if event_scan.configuration_digest_mismatch:
             errors.append("OBSERVATION_EVENT_CONFIGURATION_DIGEST_MISMATCH")
+        if event_scan.source_sha256_digest_mismatch:
+            errors.append("OBSERVATION_EVENT_SOURCE_DIGEST_MISMATCH")
+
+    source_at_end: dict[str, str] | None = None
+    try:
+        source_at_end = capture_forward_observation_source_identity(root)
+    except Exception:
+        if "OBSERVATION_SOURCE_CAPTURE_FAILED" not in errors:
+            errors.append("OBSERVATION_SOURCE_CAPTURE_FAILED")
+    if source_at_start is not None and source_at_end is not None:
+        checks["source_stable_during_verification"] = (
+            source_at_start == source_at_end
+        )
+        if not checks["source_stable_during_verification"]:
+            errors.append("OBSERVATION_SOURCE_CHANGED_DURING_VERIFICATION")
+        observations["current_source_sha256_digest"] = source_manifest_digest(
+            source_at_end
+        )
+    if (
+        spec is not None
+        and source_at_start is not None
+        and source_at_end is not None
+    ):
+        checks["source_matches_frozen_observation_spec"] = (
+            source_at_start == spec.source_sha256
+            and source_at_end == spec.source_sha256
+        )
+        if not checks["source_matches_frozen_observation_spec"]:
+            errors.append("OBSERVATION_SOURCE_IDENTITY_DRIFT")
 
     status = classify_live_read_only(checks, integrity_errors=errors)
     evidence: dict[str, Any] = {
@@ -660,20 +711,7 @@ def verify(
         "status": status,
         "checks": checks,
         "observations": observations,
-        "source_sha256": {
-            "src/halpha/executor/runtime.py": _sha256_file(
-                root / "src/halpha/executor/runtime.py"
-            ),
-            "src/halpha/executor/forward_observation.py": _sha256_file(
-                root / "src/halpha/executor/forward_observation.py"
-            ),
-            "src/halpha/planning/adapter.py": _sha256_file(
-                root / "src/halpha/planning/adapter.py"
-            ),
-            "tools/qualification/verify_b04_live_read_only.py": _sha256_file(
-                root / "tools/qualification/verify_b04_live_read_only.py"
-            ),
-        },
+        "source_sha256": source_at_end or source_at_start or {},
         "input_sha256": {
             "config": _sha256_file(config_path) if config_path.is_file() else None,
             "spec": _sha256_file(spec_path) if spec_path.is_file() else None,

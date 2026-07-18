@@ -182,6 +182,10 @@ def _create_unknown_entry(
             indicator_source_cutoff_ns=source_ns,
             quantity_step="0.001",
             price_tick_size="0.1",
+            entry_extension_boundary="51000",
+            sizing_taker_fee_rate="0.0006",
+            sizing_effective_leverage="5",
+            instrument_rules_digest="9" * 64,
         ),
     }
     proposal = StrategyProposal(

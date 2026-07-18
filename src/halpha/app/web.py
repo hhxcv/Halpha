@@ -18,6 +18,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
+import psycopg
 from pwdlib import PasswordHash
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -59,6 +60,7 @@ from halpha.app.security import (
 from halpha.build_manifest import manifest_sha256, verify_manifest
 from halpha.capital.repository import CapitalConflict
 from halpha.configuration import HalphaSettings, app_settings, settings_digest
+from halpha.live_write_gate import LiveWriteGateStatus, evaluate_live_write_gate
 from halpha.planning.repository import PlanningConflict
 from halpha.planning.transitions import ControlIntent
 from halpha.outcomes.repository import OutcomeConflict
@@ -112,7 +114,11 @@ class SettingsStatusResponse(FrozenResponse):
     build_manifest_violations: list[str]
     live_write_build_capability: str
     b05_package_eligibility: str
+    configured_runtime_real_write_gate: str
     runtime_real_write_gate: str
+    live_write_gate_violations: list[str]
+    user_authorization_ref: str | None
+    authorized_activation_id: str | None
     construction_package: str
     construction_status: str
     email_delivery_enabled: bool
@@ -506,6 +512,7 @@ def _operations_document(
     csrf_token: str,
     summary: dict[str, Any] | None = None,
     login_error: str | None = None,
+    runtime_real_write_gate: str = "CLOSED",
 ) -> str:
     profile = html.escape(settings.release.profile)
     account = html.escape(settings.release.account_id)
@@ -566,7 +573,7 @@ def _operations_document(
             <strong>Halpha operations</strong>
             <span class="env">ENV · {environment}</span>
             <span>ACCOUNT · {account}</span>
-            <span class="gate">REAL WRITE · CLOSED</span>
+            <span class="gate">REAL WRITE · {html.escape(runtime_real_write_gate)}</span>
             <span class="cutoff">SERVER FACT CUTOFF · {cutoff}</span>
           </header>
           <main class="workspace">
@@ -680,6 +687,29 @@ def create_app(
         settings.release.environment_id,
     )
     manifest = _manifest_status(repo_root.resolve(), settings)
+
+    def current_gate_status() -> LiveWriteGateStatus:
+        base_status = evaluate_live_write_gate(repo_root.resolve(), settings)
+        if base_status.configured_runtime_real_write_gate != "OPEN":
+            return base_status
+        try:
+            with psycopg.connect(
+                host="127.0.0.1",
+                port=5432,
+                dbname=settings.release.database_name,
+                user=f"{settings.release.database_name}_app",
+                password=app_secrets.database_password.get_secret_value(),
+                connect_timeout=2,
+                autocommit=True,
+            ) as connection:
+                return evaluate_live_write_gate(
+                    repo_root.resolve(),
+                    settings,
+                    connection=connection,
+                )
+        except Exception:
+            return base_status
+
     rate_limiter = LoginRateLimiter()
     frontend_dist = (static_dist or (repo_root / "frontend" / "dist")).resolve()
     planning_api = PostgreSQLPlanningApi(
@@ -692,6 +722,8 @@ def create_app(
         build_digest=(
             str(manifest["digest"]) if manifest["status"] == "VERIFIED" else None
         ),
+        profile=settings.release.profile,
+        gate_status_provider=current_gate_status,
     )
     outcomes_api = PostgreSQLOutcomesApi(
         database_name=settings.release.database_name,
@@ -707,6 +739,7 @@ def create_app(
         openapi_url="/api/v1/openapi.json",
     )
     app.state.workbench_projection = database
+    app.state.live_write_gate_status_provider = current_gate_status
 
     app.add_middleware(
         SessionMiddleware,
@@ -905,13 +938,14 @@ def create_app(
                 status_code=503,
                 detail={"code": "DATABASE_FACTS_UNAVAILABLE"},
             ) from None
+        gate_status = current_gate_status()
         return OverviewResponse(
             environment_kind=_environment_kind(settings),
             environment_id=settings.release.environment_id,
             account_id=settings.release.account_id,
             profile=settings.release.profile,
             authority_class=settings.release.authority_class,
-            runtime_real_write_gate="CLOSED",
+            runtime_real_write_gate=gate_status.runtime_real_write_gate,
             construction_package="B04",
             construction_status="IN_PROGRESS",
             server_fact_cutoff=str(summary["server_fact_cutoff"]),
@@ -1239,6 +1273,8 @@ def create_app(
     )
     def settings_status() -> SettingsStatusResponse:
         availability = database.availability()
+        current_manifest = _manifest_status(repo_root.resolve(), settings)
+        gate_status = current_gate_status()
         return SettingsStatusResponse(
             environment_kind=_environment_kind(settings),
             environment_id=settings.release.environment_id,
@@ -1252,12 +1288,18 @@ def create_app(
             database_reason_code=availability.get("reason_code"),
             server_fact_cutoff=availability.get("server_fact_cutoff"),
             config_digest=settings_digest(settings),
-            build_manifest_status=str(manifest["status"]),
-            build_manifest_digest=manifest["digest"],
-            build_manifest_violations=list(manifest["violations"]),
-            live_write_build_capability="NOT_QUALIFIED",
-            b05_package_eligibility="NOT_AUTHORIZED",
-            runtime_real_write_gate="CLOSED",
+            build_manifest_status=str(current_manifest["status"]),
+            build_manifest_digest=current_manifest["digest"],
+            build_manifest_violations=list(current_manifest["violations"]),
+            live_write_build_capability=gate_status.live_write_build_capability,
+            b05_package_eligibility=gate_status.b05_package_eligibility,
+            configured_runtime_real_write_gate=(
+                gate_status.configured_runtime_real_write_gate
+            ),
+            runtime_real_write_gate=gate_status.runtime_real_write_gate,
+            live_write_gate_violations=list(gate_status.violations),
+            user_authorization_ref=gate_status.user_authorization_ref,
+            authorized_activation_id=gate_status.authorized_activation_id,
             construction_package="B04",
             construction_status="IN_PROGRESS",
             email_delivery_enabled=settings.email.delivery_enabled,
@@ -1326,6 +1368,7 @@ def create_app(
                 authenticated=authenticated,
                 csrf_token=csrf_token,
                 summary=summary,
+                runtime_real_write_gate=current_gate_status().runtime_real_write_gate,
             )
         )
 
