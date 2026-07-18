@@ -5,11 +5,14 @@ status: ACCEPTED
 language: zh-CN
 as_of: 2026-07-18
 accepted_by: Halpha 项目所有者
-accepted_at: 2026-07-18T11:13:03+08:00
-supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T09:59:00+08:00
-document_update_reason: 修正 accepted_design_set 与 basis 的闭包，并为 R00–R03 增加 ENG-003 工作包启动契约及机械门；不改变 B04/B05 状态、现有证据、授权或三项真实写门
-state_updated_at: 2026-07-18T09:59:00+08:00
-state_update_reason: AI 主导独立研究与 monorepo 并行集成设计已接受；项目所有者以 OWNER-DIRECTION-20260718-PARALLEL-RESEARCH 条件授权在 B04 完成后启动 R00，并允许 R00–R02 通过独立 worktree/branch 与 B05 包级并行，当前研究目录、运行、政策和证据均未创建，R00 仍受 B04 完成门阻断。B04 当前工作树的历史、Binance Demo 产品完整周期、通知/结果、空库恢复、Windows/数据库故障、关键不变量追踪、确定性浏览器工作台及复杂度证据保持资格化；完整后端回归 247 tests 通过，固定 Node 24.18.0、Playwright 1.61.1 下桌面和 390px 窄屏三项通过、一项按设计跳过，九份 axe 无违规、两项布局无失败，人工复核未发现溢出、遮挡或高风险交互缺口。BINANCE_LIVE_READ_ONLY 仍是同一 Executor/TradingNode/HalphaStrategyAdapter 的公开 data-client-only 裁剪路径，不解析 Binance 凭据或产品数据库凭据且无 execution client、HalphaCoordinator、ExecutionAction repository、私有动作能力或场所写入；每条事件绑定同一 observation/参数/配置摘要，只在 runtime build 成功后记录进程启动，并对数据覆盖、缺口、受控重启和不完整尾行作机器判定。因 App/Executor 在源码加固后以新产品进程重启，旧 72 小时观察不再代表当前运行身份；Windows soak 已于 2026-07-18 08:57:28 本地时间重新建立无偏醒钟基线，至 09:12 已有两个检查点、醒钟 0.242114634 小时，App PID 6012/36392、Executor PID 3000/8308，全部当前检查为真且未观察到运行时代理值。临时切换任务仍从 2026-07-21 03:50 每五分钟复核，但不得早于新基线约 2026-07-21 08:57:28 满 72 小时后才停止 Demo 并启动 Executor-only 观察；2026-07-24 04:00 安排受控空窗，2026-07-28 04:10 起重复复核至实际 7–14 日窗口可冻结。任务保持有界 OWNER_INTERACTIVE_TOKEN，不保存所有者密码或新增长期高权限账户；SMTP 缺失独立保持未满足。09:21:44 的 B04 汇总只列出实际 SMTP、LIVE_READ_ONLY 7–14 日观察和 Windows 72 醒钟小时三项未满足，BuildManifest v2 对这三项及 B04 summary 保持 INCOMPLETE。当前工作树未提交，真实写工程能力、B05 授权和运行时真实写门均不变
+accepted_at: 2026-07-18T15:42:30+08:00
+supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T11:13:03+08:00
+document_update_reason: 项目所有者确认 R 系列目标、取消 R00 对 B04 的整包依赖，并把 R00 输入修正为固定但尚未资格化的候选依赖集与沙箱选择；B04 只在 R01 完成、研究政策冻结和 confirmation 边界固定时形成局部门
+state_updated_at: 2026-07-18T15:42:30+08:00
+state_update_reason: >-
+  项目所有者已确认 R00–R02 的既有目标与零产品 effects，并明确取消 R00 对 B04 的整包依赖；R00 已获授权，但研究目录、运行、政策和证据仍未创建，
+  当前等待本 ACCEPTED 计划进入干净 Git 基线并随后绑定 R00 base_revision 与完整输入身份。B04 完成只约束 R01 完成、research_policy 冻结和 confirmation_eligible_not_before 固定，
+  不约束 R00 启动或 R01 的非确认性建设；B04 的状态、证据、B05 授权和三项真实写门均不因本次研究轨修订改变。
 
 accepted_design_set:
   upper_level:
@@ -48,7 +51,7 @@ planning_horizon: >-
   首个 LIVE 闭环从激活到上述条件成立必须由用户主动在线监控，并已验证最小操作入口和 Binance 官方入口可用；P0 不宣称无人在线故障自动恢复。
   首个闭环使用 Binance USDⓈ-M 永续和 ONE_SHOT_DONCHIAN_ATR_BREAKOUT。P0 使用 MANUAL_PLAN_RESUME：Executor、主机或 PostgreSQL 写连续性丢失后开放激活先暂停，
   只读核对后由用户明确选择恢复激活、退出策略或用户接管；长期严格证据自动续行不在 P0 实现。除本计划显式登记、对 P0 产品闭环保持零 effects 的独立研究轨外，P0 之外产品模块暂不设计。
-  研究轨 R00–R02 在 B04 完成后可通过独立 worktree/branch 与 B05 包级并行，但不属于 P0 产品运行时；R03 仍等待 R02、B05、V01 与项目所有者证据选择。本计划不定义 P1–P3；上位设计保留交互形态可演进性不构成任何阶段的建设承诺或当前支持。
+  R00 在自身包契约冻结后可通过独立 worktree/branch 与 B04/B05 包级并行；R01 可在 R00 完成后开始，但完成、政策冻结和 confirmation 边界必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。研究轨不属于 P0 产品运行时；R03 仍等待 R02、B05、V01 与项目所有者证据选择。本计划不定义 P1–P3；上位设计保留交互形态可演进性不构成任何阶段的建设承诺或当前支持。
 
 stable_contract_references:
   rule: >-
@@ -105,7 +108,7 @@ basis:
 current_state:
   current_stage: P0
   design_status: ALIGNED
-  research_track_status: DESIGN_ACCEPTED_NOT_CREATED_R00_BLOCKED_UNTIL_B04_COMPLETE
+  research_track_status: R00_AUTHORIZED_BLOCKED_UNTIL_ACCEPTED_PLAN_COMMITTED_AND_CLEAN_BASE_BOUND
   implementation_status: B00 的 14/14 required outputs 资格证据保持有效；D00 已对齐，B01–B03 已完成；B04 的本地产品与机制证据（包括 LIVE_READ_ONLY 能力裁剪路径）已资格化并由 B04 总结聚合，72 小时 Windows 正在观察，LIVE_READ_ONLY 连续外部观察与实际 SMTP 尚未满足；BuildManifest v2 明确保持 INCOMPLETE，B05 继续按包依赖推进
   first_authorized_work: B04
   live_write_build_capability: NOT_QUALIFIED
@@ -1196,10 +1199,52 @@ research_track:
   status: ACCEPTED_NOT_CREATED
   current_package: R00
   owner_authorization:
-    status: AUTHORIZED_CONDITIONAL_ON_B04_COMPLETE
-    decision_ref: OWNER-DIRECTION-20260718-PARALLEL-RESEARCH
-    decided_at: 2026-07-18T09:59:00+08:00
+    status: AUTHORIZED
+    decision_ref: OWNER-DIRECTION-20260718-R00-INDEPENDENT-START
+    decided_at: 2026-07-18T15:42:30+08:00
+    supersedes: OWNER-DIRECTION-20260718-PARALLEL-RESEARCH 中 R00 依赖 B04 完成的条件
     scope: R00–R02 独立研究建设与试点；不授权 R03、产品变更、真实资金动作或任何真实写门变化
+  r00_candidate_inputs:
+    status: FROZEN_FOR_QUALIFICATION
+    identity: r00-candidate-inputs@v1.0.0
+    meaning: 本节只固定 R00 必须尝试资格化的候选选择，不声明 lock、sandbox、平台支持、许可证或运行边界已经 QUALIFIED
+    target_platform: Windows 10 Pro 22H2、10.0.19045、x64；CPython 3.13.14
+    resolution_probe:
+      observed_at: 2026-07-18T15:42:30+08:00
+      source: https://pypi.org/simple/
+      method: 'CPython 3.13.14 venv 中对全部精确直接依赖执行 pip 26.1.2 dry-run、ignore-installed 与 only-binary=:all:'
+      result: CANDIDATE_WHEEL_CLOSURE_RESOLVED_NOT_QUALIFIED
+    trusted_parent_direct_dependencies:
+      python: 3.13.14
+      pip: 26.1.2
+      pip_tools: 7.5.3
+      nautilus_trader: 1.230.0
+      numpy: 2.5.1
+      pandas: 2.3.3
+      pyarrow: 25.0.0
+      pandera_pandas: 0.32.1
+      scipy: 1.18.0
+      plotly: 6.9.0
+      pydantic: 2.13.4
+      jupyterlab: 4.6.1
+      jupytext: 1.19.4
+      pytest: 9.1.1
+      hypothesis: 6.156.6
+    worker_direct_dependency_subset:
+      python: 3.13.14
+      numpy: 2.5.1
+      pydantic: 2.13.4
+      exclusion: 不安装或挂载 NautilusTrader、runner、harness、evidence、数据文件、Jupyter、Plotly、SciPy、pandas、PyArrow、Pandera、产品包或产品配置
+    sandbox_selection:
+      candidate: WINDOWS_APPCONTAINER_JOB_OBJECT_NATIVE_LAUNCHER
+      provider_identity: Microsoft Windows 10.0.19045 built-in AppContainer and Job Object APIs
+      launcher_implementation: 可信父环境内的薄 Python 3.13.14 标准库 ctypes launcher；不实现 Python 语言沙箱，不安装 driver、service、VM、image、distro 或第四种依赖定义
+      launch_boundary: 无 capability AppContainer profile；STARTUPINFOEX security capabilities；suspended worker 在 resume 前加入禁止 breakaway、kill-on-close 的 Job Object
+      ipc_candidate: 继承匿名管道；每帧为 4-byte unsigned big-endian 长度头加无 BOM UTF-8 规范 JSON；先验最大 65536 bytes；stdout 只允许协议帧，stderr 并发有界排空
+      required_qualification: 文件与 reparse point、网络、环境/WinVault 秘密、父进程与引擎、子进程/进程树、CPU/内存/墙钟、partial frame/EOF/BrokenPipe/超限前分配、终止与零残留恶意 fixture 全部通过
+      current_qualification: NOT_QUALIFIED
+      host_observation: Windows Sandbox optional feature 当前为 DISABLED，且因缺少直接双向 stdio 契约不作为本候选；未执行系统功能启用、安装或重启
+      failure_result: 只允许公开、合成或脱敏材料 discovery；完整数据、confirmation holdout 和最终候选资格保持 DISABLED
   research_policy:
     status: NOT_FROZEN
     policy_ref: null
@@ -1219,7 +1264,7 @@ research_track:
     qualification: NOT_QUALIFIED
     execution_state: STOPPED
     rule: >-
-      R00–R02 可以与 B05 保持包级并行；资源隔离未资格化且 runtime_real_write_gate=OPEN 时，研究计算必须为 PAUSED 或 STOPPED。
+      R00 可与 B04/B05 保持包级并行，R01 可在 R00 完成后与 B04 的剩余观察并行，但不能在 B04 最终数据边界前完成；资源隔离未资格化且 runtime_real_write_gate=OPEN 时，研究计算必须为 PAUSED 或 STOPPED。
       资格化只能来自 R00 在目标宿主上的 CPU、内存、墙钟、进程树与零残留证据，不建立资源调度服务。
   preexisting_data_boundary:
     identity_rule: R00/R01 只接受 DAT-qualified 不可变 data_snapshot_ref 与 UTC `[start_inclusive,end_exclusive)` 半开区间；不建立 lineage 自动归一化、数据目录服务或第二事实权威
@@ -1235,7 +1280,7 @@ research_track:
     confirmation_eligible_not_before: null
     finalization_rule: >-
       上述历史 holdout 和尚在进行的 forward observation 都不能在研究根建立后补登记成新 holdout。B04 最终证据与研究政策冻结前已经读取或可获得的数据永久只能用于 discovery/validation；
-      R00 在 B04 完成证据中取得全部适用 DAT-qualified 快照的最大 event time，R01 将其后第一个 UTC 半开边界固定为 confirmation_eligible_not_before，确认性读取仍须先写不可逆 exposure claim。
+      R00 不读取 B04 完成证据或固定 confirmation 边界。R01 在完成前从 B04 最终证据取得全部适用 DAT-qualified 快照的最大 event time，并将其后第一个 UTC 半开边界固定为 confirmation_eligible_not_before；确认性读取仍须先写不可逆 exposure claim。
   r00_r02_effects:
     p0_build_order: NONE
     b01_b05_scope_dependency_status_evidence: NONE
@@ -1357,10 +1402,10 @@ construction_packages:
   R00:
     id: R00
     name: 研究栈、CLI 与 AI 边界资格化
-    eligibility: BLOCKED_UNTIL_B04_COMPLETE
+    eligibility: BLOCKED_UNTIL_ACCEPTED_PLAN_COMMITTED_AND_CLEAN_BASE_BOUND
     status: NOT_STARTED
-    contract_state: TO_BE_FROZEN_AT_PACKAGE_START
-    depends_on: [B04]
+    contract_state: PENDING_ACCEPTED_PLAN_IDENTITY_AND_CLEAN_BASE_REVISION
+    depends_on: []
     semantic_scopes:
       - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-DEP-004-REQ}
       - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-AICLI-001-REQ}
@@ -1370,12 +1415,12 @@ construction_packages:
     contracts:
       inputs:
         - {ref: accepted_design_set_and_basis, identity: null}
-        - {ref: qualified_research_dependency_lock_and_sandbox, identity: null}
+        - {ref: research_track.r00_candidate_inputs, identity: r00-candidate-inputs@v1.0.0}
       outputs:
         - {ref: research_workspace_cli_harness_and_sandbox_qualification}
     effects: {migration: NONE, runtime: NONE, release: NONE, authority: NONE, credential: NONE}
     integration_gate: R00_SELECTIVE_VALIDATION_AND_PATH_OWNERSHIP_GATE
-    authorization_ref: OWNER-DIRECTION-20260718-PARALLEL-RESEARCH
+    authorization_ref: OWNER-DIRECTION-20260718-R00-INDEPENDENT-START
     scope:
       - 建立独立 `research/**` 工作区、研究 Python 锁、可信父进程与隔离 worker 两个可删除物理 venv
       - 建立固定 ResearchStrategyHarness、Pydantic 研究政策/observation/intent schema 与 schema/validate/run/gate/freeze/verify 六个无状态 CLI 子命令
@@ -1384,7 +1429,7 @@ construction_packages:
       requirements:
         - 固定版本、锁摘要、许可证、父/worker 安装闭包、sys.path/DLL 根、sandbox/launcher/IPC 与恶意 fixture 证据可重演
         - 研究侧对产品数据库、迁移、产品进程、产品发布组、交易凭据、真实写路径和三项真实写门 effects 全为 NONE
-        - preexisting_data_boundary 已由 B04 完成证据固定，历史 holdout 与 forward observation 未被补登记为新 confirmation holdout
+        - R00 不消费 B04 完成证据、不固定或声称 confirmation_eligible_not_before；历史 holdout 与进行中的 forward observation 继续只作 discovery/validation，confirmation 保持禁用至 R01 完成门
       output_revision: null
   R01:
     id: R01
@@ -1496,11 +1541,12 @@ value_decision_gate:
 build_order: [D00, B00, B01, B02, B03, B04, B05]
 research_build_order: [R00, R01, R02, R03]
 post_p0_decision_order: [B05, V01]
-currently_authorized_work: [B04]
+currently_authorized_work: [B04, R00]
 parallelization_rule: >-
   B01–B03 已完成；B04 当前实施历史/Demo/LIVE_READ_ONLY 证据、完整工作台和运维闭环，B05 继续按前序包完成及 exit evidence 推进。
-  独立研究设计已经接受，但研究工作区、运行、政策和证据尚未创建，R00 在 B04 完成前保持阻断；B04 完成后，R00–R02 可通过独立 worktree/branch 与 B05 包级并行，
-  不改变 B01–B05、P0 build_order 或三项真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；资源隔离未资格化且
+  R00 已获授权且不再依赖 B04 完成，但只有本 ACCEPTED 计划进入干净 Git 基线、R00 绑定 base_revision 并冻结完整包契约后才可开始；之后可通过独立 worktree/branch 与 B04/B05 包级并行。
+  R01 可在 R00 完成后开始非确认性建设，但完成、research_policy 冻结和 confirmation_eligible_not_before 固定必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。
+  R00–R02 不改变 B01–B05、P0 build_order 或三项真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；资源隔离未资格化且
   runtime_real_write_gate=OPEN 时研究计算必须 PAUSED/STOPPED。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 授权和运行时真实写门继续分别 fail closed。
 
 owner_inputs_before_specific_gates:
@@ -1537,7 +1583,7 @@ definition_of_ready_to_start_p0:
     - D00 已接受 DEMO/LIVE 统一 EXE ExecutionAction、环境限定 CAP 和系统机制验证优先的协调版本集
   blocking: []
   remaining_runtime_inputs_before_B00: []
-  first_step: 继续 B04，基于 B03 已资格化的统一执行链建立历史、Demo、LIVE_READ_ONLY、完整工作台与运维证据；不得建立 LIVE 写动作、装载 LIVE 写凭据或打开真实写门
+  first_step: 继续 B04；并在本 ACCEPTED 计划形成干净 Git 基线、绑定 R00 base_revision 与其余输入身份后，以独立 worktree/branch 开始 R00，不等待 B04 完成；两轨均不得建立 LIVE 写动作、装载 LIVE 写凭据或打开真实写门
   current_assessment: >-
     P0 当前已完成 B01–B03，B04 正在实施证据、完整工作台与运维闭环，仍不具备真实交易资格。Windows 10 和 B00 的目标主机、固定 wheel、Demo 行情/订单/恢复与生命周期证据仍有效；
     账户实际 CROSSED/20x 不阻断建设，按 accepted CAP 兼容边界只读处理。live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED。
@@ -1612,9 +1658,16 @@ source_evidence:
       - https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page
 
       - https://github.com/mhammond/pywin32
+  - claim: R00 候选模型外边界使用 Windows AppContainer 的默认拒绝能力与目标宿主内置 API
+    urls:
+      - https://learn.microsoft.com/en-us/windows/win32/secauthz/appcontainer-isolation
+      - https://learn.microsoft.com/en-us/windows/win32/secauthz/implementing-an-appcontainer
+  - claim: R00 候选进程树与资源边界使用 Windows Job Object，禁止 breakaway 并以 kill-on-close 终止整棵进程树
+    urls:
+      - https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects
 
 final_acceptance_statement: >-
   本计划是项目所有者已接受的当前建设状态入口。DEMO 系统机制验证优先、DEMO/LIVE 共用 EXE 执行实现、环境限定 CAP、AI 主导独立研究、monorepo 并行集成及文档 Git-only 历史规则已进入 accepted_design_set；
-  D00=ALIGNED、B00=QUALIFIED、B01–B03=COMPLETED、B04=IN_PROGRESS，当前只授权 B04，B05 按依赖推进，B05 后执行人工 V01。研究设计已接受但当前尚未创建，R00 在 B04 完成前保持阻断；
-  之后 R00–R02 只以零 P0 effects、独立 worktree/branch 和资源 fail-closed 边界与 B05 包级并行，R03 继续等待 R02、B05、V01 与项目所有者证据选择。当前工作树未提交，BuildManifest 不具备发布资格；
+  D00=ALIGNED、B00=QUALIFIED、B01–B03=COMPLETED、B04=IN_PROGRESS，当前授权 B04 与 R00，B05 按依赖推进，B05 后执行人工 V01。研究设计已接受但当前尚未创建；R00 不依赖 B04，现只等待本计划进入干净 Git 基线、绑定 base_revision 与冻结完整包契约；
+  R01 可在 R00 完成后开始，但其完成、研究政策冻结和 confirmation 边界固定等待 B04 最终数据边界；R02 再按 R01 与政策门推进。R00–R02 只以零 P0 effects、独立 worktree/branch 和资源 fail-closed 边界并行，R03 继续等待 R02、B05、V01 与项目所有者证据选择。当前工作树未提交，BuildManifest 不具备发布资格；
   工程资格不等于真实资金权限，B05 未获授权且 runtime_real_write_gate 保持 CLOSED。
