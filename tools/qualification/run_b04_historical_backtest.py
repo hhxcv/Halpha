@@ -91,6 +91,21 @@ LATENCY_NANOS = {
     "update": 3_000_000,
     "cancel": 4_000_000,
 }
+SOURCE_FILES = (
+    "requirements/runtime.txt",
+    "src/halpha/capital/checks.py",
+    "src/halpha/capital/models.py",
+    "src/halpha/domain_values.py",
+    "src/halpha/planning/adapter.py",
+    "src/halpha/planning/bar_evaluation.py",
+    "src/halpha/planning/indicators.py",
+    "src/halpha/planning/models.py",
+    "src/halpha/planning/registry.py",
+    "src/halpha/planning/strategies/one_shot.py",
+    "src/halpha/planning/transitions.py",
+    "tools/qualification/build_b04_historical_catalog.py",
+    "tools/qualification/run_b04_historical_backtest.py",
+)
 
 
 class HistoricalBacktestError(RuntimeError):
@@ -103,6 +118,41 @@ def _canonical_json(value: object) -> str:
 
 def _digest(value: object) -> str:
     return sha256(_canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def _file_digest(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_sha256() -> dict[str, str]:
+    return {relative: _file_digest(ROOT / relative) for relative in SOURCE_FILES}
+
+
+def _source_binding_drift(
+    expected: dict[str, str],
+    actual: dict[str, str],
+) -> list[dict[str, str | None]]:
+    drift: list[dict[str, str | None]] = []
+    for relative, expected_digest in sorted(expected.items()):
+        actual_digest = actual.get(relative)
+        if actual_digest != expected_digest:
+            drift.append(
+                {
+                    "path": relative,
+                    "reason": (
+                        "SOURCE_FILE_NOT_IN_CURRENT_BINDING"
+                        if actual_digest is None
+                        else "SOURCE_SHA256_MISMATCH"
+                    ),
+                    "expected": expected_digest,
+                    "actual": actual_digest,
+                }
+            )
+    return drift
 
 
 def _datetime_from_ns(timestamp_ns: int) -> datetime:
@@ -908,7 +958,9 @@ def main() -> int:
     EVIDENCE_PATH.parent.mkdir(parents=True, exist_ok=True)
     partial_limit_text = os.environ.get("HALPHA_B04_HISTORICAL_MAX_EPISODES")
     partial_limit = int(partial_limit_text) if partial_limit_text else None
+    source_sha256_at_start: dict[str, str] | None = None
     try:
+        source_sha256_at_start = _source_sha256()
         preregistration = _load_verified(PREREGISTRATION_PATH)
         catalog_evidence = _load_verified(CATALOG_EVIDENCE_PATH)
         if catalog_evidence["status"] != "QUALIFIED":
@@ -918,6 +970,16 @@ def main() -> int:
             != preregistration["evidence_digest"]
         ):
             raise HistoricalBacktestError("HISTORICAL_MANIFEST_BINDING_MISMATCH")
+        preregistration_source_sha256 = preregistration.get("source_digests")
+        if not isinstance(preregistration_source_sha256, dict) or not all(
+            isinstance(relative, str) and isinstance(digest, str)
+            for relative, digest in preregistration_source_sha256.items()
+        ):
+            raise HistoricalBacktestError("PREREGISTRATION_SOURCE_BINDING_INVALID")
+        preregistration_source_drift = _source_binding_drift(
+            preregistration_source_sha256,
+            source_sha256_at_start,
+        )
         parameters = OneShotParameters.model_validate(
             preregistration["strategy"]["parameters"]
         )
@@ -968,6 +1030,15 @@ def main() -> int:
             technical_errors.append("PROTECTION_NOT_ACCEPTED_OR_GAP_EXIT_MISSED")
         if any(item["unhandled_order_rejections"] for item in traded):
             technical_errors.append("UNHANDLED_BACKTEST_ORDER_REJECTION")
+        source_sha256_at_end = _source_sha256()
+        source_stable_during_run = source_sha256_at_end == source_sha256_at_start
+        if not source_stable_during_run:
+            technical_errors.append("SOURCE_CHANGED_DURING_BACKTEST")
+        holdout_interpretation = (
+            "ORIGINAL_PREREGISTERED_SOURCE"
+            if not preregistration_source_drift
+            else "CURRENT_SOURCE_TECHNICAL_REVALIDATION_AFTER_HOLDOUT_EXPOSURE"
+        )
         evidence: dict[str, Any] = {
             "schema_version": 1,
             "stage": "B04_HISTORICAL_DEVELOPMENT_HOLDOUT",
@@ -975,6 +1046,12 @@ def main() -> int:
             "observed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "preregistration_digest": preregistration["evidence_digest"],
             "catalog_evidence_digest": catalog_evidence["evidence_digest"],
+            "source_sha256": source_sha256_at_start,
+            "preregistration_source_binding": {
+                "matches_current_source": not preregistration_source_drift,
+                "drift": preregistration_source_drift,
+                "holdout_interpretation": holdout_interpretation,
+            },
             "adapter_class": "halpha.planning.adapter.HalphaStrategyAdapter",
             "pure_logic_class": "halpha.planning.strategies.one_shot.OneShotDonchianAtrLogic",
             "proposal_bridge": "proposed_action_from_strategy_proposal",
@@ -993,6 +1070,8 @@ def main() -> int:
                 "holdout_average_net_r": holdout["average_net_r"],
                 "development_profit_factor": development["profit_factor"],
                 "holdout_profit_factor": holdout["profit_factor"],
+                "independent_unexposed_holdout": not preregistration_source_drift,
+                "holdout_interpretation": holdout_interpretation,
                 "not_an_authorization_or_profit_guarantee": True,
             },
             "technical_safety": {
@@ -1004,6 +1083,8 @@ def main() -> int:
                 "product_records_created": False,
                 "parallel_strategy_or_execution_runtime_created": False,
                 "historical_net_excludes_funding": True,
+                "current_source_bound": True,
+                "source_stable_during_run": source_stable_during_run,
             },
             "errors": technical_errors,
         }
@@ -1017,6 +1098,8 @@ def main() -> int:
             "funding_data_injected": False,
             "errors": [f"HISTORICAL_BACKTEST_FAILED:{type(exc).__name__}"],
         }
+        if source_sha256_at_start is not None:
+            evidence["source_sha256"] = source_sha256_at_start
     evidence["evidence_digest"] = _digest(evidence)
     EVIDENCE_PATH.write_text(
         json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n",

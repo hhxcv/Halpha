@@ -21,14 +21,29 @@ import win32serviceutil
 from halpha.configuration import load_settings, settings_digest
 from halpha.runtime_identity import require_repository_runtime
 from halpha.windows_runtime import current_process_sid, signal_stop_event
+from tools.qualification.source_binding import (
+    SourceBindingError,
+    capture_source_sha256,
+)
 from tools.qualification.verify_windows_runtime import _processes_by_module
 
 
 TASK_FOLDER = r"\Halpha"
+TASK_DISABLED = 1
 TASK_READY = 3
 TASK_RUNNING = 4
 TASK_RESULT_RUNNING = 267009
 DEFAULT_OUTPUT = Path("build/qualification/b04-windows-fault-drills.json")
+SOURCE_PATTERNS = (
+    "config/halpha.toml",
+    "migrations/versions/*.py",
+    "requirements/runtime.txt",
+    "src/halpha/**/*.py",
+    "tools/qualification/source_binding.py",
+    "src/halpha/source_identity.py",
+    "tools/qualification/verify_b04_windows_faults.py",
+    "tools/qualification/verify_windows_runtime.py",
+)
 
 
 class WindowsFaultQualificationError(RuntimeError):
@@ -101,6 +116,18 @@ def _tasks() -> tuple[Any, dict[str, Any]]:
     return folder, {"app": folder.GetTask("App"), "executor": folder.GetTask("Executor")}
 
 
+def _task_enablement(tasks: dict[str, Any]) -> dict[str, bool]:
+    return {role: bool(task.Enabled) for role, task in tasks.items()}
+
+
+def _apply_task_enablement(
+    tasks: dict[str, Any],
+    enabled: dict[str, bool],
+) -> None:
+    for role, value in enabled.items():
+        tasks[role].Enabled = value
+
+
 def _signal_role(settings: Any, role: str) -> None:
     if role == "app":
         name = settings.windows.app_stop_event
@@ -116,15 +143,31 @@ def _signal_role(settings: Any, role: str) -> None:
 
 
 def _stop_running(settings: Any, tasks: dict[str, Any], roles: Sequence[str]) -> None:
-    for role in roles:
-        if int(tasks[role].State) == TASK_RUNNING:
-            _signal_role(settings, role)
-    for role in roles:
-        _wait(
-            lambda role=role: int(tasks[role].State) == TASK_READY,
-            seconds=45,
-            reason=f"CONTROLLED_STOP_TIMEOUT role={role}",
-        )
+    original_enablement = {
+        role: bool(tasks[role].Enabled)
+        for role in roles
+    }
+    try:
+        # The production tasks have one-minute recovery triggers.  Disable them
+        # before signaling so a successful controlled stop cannot race the next
+        # trigger and look like a shutdown timeout.
+        for role in roles:
+            tasks[role].Enabled = False
+        for role in roles:
+            if int(tasks[role].State) == TASK_RUNNING:
+                _signal_role(settings, role)
+        for role in roles:
+            _wait(
+                lambda role=role: (
+                    int(tasks[role].State) in (TASK_DISABLED, TASK_READY)
+                    and not _processes_by_module()[role]
+                ),
+                seconds=45,
+                reason=f"CONTROLLED_STOP_TIMEOUT role={role}",
+            )
+    finally:
+        for role, enabled in original_enablement.items():
+            tasks[role].Enabled = enabled
 
 
 def _wait_product_ready(
@@ -338,7 +381,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     output = args.output.resolve()
     if not output.is_relative_to(root):
         raise WindowsFaultQualificationError("OUTPUT_OUTSIDE_REPOSITORY")
+    source_sha256_at_start = capture_source_sha256(root, SOURCE_PATTERNS)
+    settings = load_settings(args.config.resolve())
+    _folder, task_scope = _tasks()
+    original_task_enablement = _task_enablement(task_scope)
     try:
+        _apply_task_enablement(
+            task_scope,
+            {role: True for role in original_task_enablement},
+        )
         report = qualify(
             root,
             args.config.resolve(),
@@ -379,6 +430,56 @@ def main(argv: Sequence[str] | None = None) -> int:
             "errors": [reason, *recovery_errors],
         }
         report["evidence_digest"] = _canonical_digest(report)
+    task_scope_errors: list[str] = []
+    try:
+        _folder, task_scope = _tasks()
+        _stop_running(settings, task_scope, ("executor", "app"))
+    except Exception as scope_exc:
+        task_scope_errors.append(
+            f"TASK_SCOPE_STOP_FAILED type={type(scope_exc).__name__}"
+        )
+    try:
+        _folder, task_scope = _tasks()
+        _apply_task_enablement(task_scope, original_task_enablement)
+    except Exception as scope_exc:
+        task_scope_errors.append(
+            f"TASK_SCOPE_RESTORE_FAILED type={type(scope_exc).__name__}"
+        )
+    try:
+        _folder, task_scope = _tasks()
+        restored_task_enablement = _task_enablement(task_scope)
+    except Exception as scope_exc:
+        restored_task_enablement = {}
+        task_scope_errors.append(
+            f"TASK_SCOPE_VERIFY_FAILED type={type(scope_exc).__name__}"
+        )
+    task_enablement_restored = restored_task_enablement == original_task_enablement
+    report.setdefault("observations", {})["task_enablement_scope"] = {
+        "before": original_task_enablement,
+        "after": restored_task_enablement,
+    }
+    if task_scope_errors:
+        report.setdefault("errors", []).extend(task_scope_errors)
+        report["status"] = "REJECTED"
+    report["source_sha256"] = source_sha256_at_start
+    try:
+        source_stable = (
+            capture_source_sha256(root, SOURCE_PATTERNS) == source_sha256_at_start
+        )
+    except SourceBindingError as exc:
+        source_stable = False
+        report.setdefault("errors", []).append(
+            f"WINDOWS_FAULT_SOURCE_BINDING_FAILED:{exc}"
+        )
+    checks = report.setdefault("checks", {})
+    checks["scheduled_task_enablement_restored"] = task_enablement_restored
+    checks["source_stable_during_qualification"] = source_stable
+    if not source_stable or not task_enablement_restored or (
+        report.get("status") == "QUALIFIED" and not all(checks.values())
+    ):
+        report["status"] = "REJECTED"
+    report.pop("evidence_digest", None)
+    report["evidence_digest"] = _canonical_digest(report)
     _write_report(output, report)
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] == "QUALIFIED" else 2

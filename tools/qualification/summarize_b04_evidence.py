@@ -18,7 +18,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
-from halpha.build_manifest import DEFAULT_ARTIFACT_SPECS, SCHEMA_VERSION
+from halpha.build_manifest import DEFAULT_ARTIFACT_SPECS, SCHEMA_VERSION  # noqa: E402
+from halpha.source_identity import (  # noqa: E402
+    SourceIdentityError,
+    source_sha256_digest,
+)
 
 
 DEFAULT_OUTPUT = ROOT / "build/qualification/b04-summary.json"
@@ -48,6 +52,20 @@ EXPECTED_EXTERNAL_STAGES = {
     "actual_smtp_delivery": "B04_ACTUAL_SMTP_DELIVERY",
     "live_read_only_observation": "B04_BINANCE_LIVE_READ_ONLY_OBSERVATION",
     "windows_72h_soak": "B04_WINDOWS_72H_SOAK",
+}
+REQUIRED_SOURCE_SHA256_ARTIFACTS = {
+    "actual_smtp_delivery",
+    "browser_workbench",
+    "critical_invariant_trace",
+    "empty_database_restore",
+    "historical_backtest",
+    "implemented_complexity_budget",
+    "live_read_only_observation",
+    "notification_boundary",
+    "outcome_boundary",
+    "product_demo_cycle",
+    "windows_72h_soak",
+    "windows_fault_drills",
 }
 REQUIRED_B04_MANIFEST_BINDINGS = {
     "b04_historical_data",
@@ -91,7 +109,51 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _json_artifact(root: Path, relative: str) -> dict[str, Any]:
+def _source_sha256_evidence(root: Path, value: object) -> dict[str, Any]:
+    if value is None:
+        return {"status": "NOT_DECLARED", "drift": []}
+    if not isinstance(value, dict) or not value:
+        return {
+            "status": "REJECTED",
+            "drift": [{"path": None, "reason": "SOURCE_SHA256_MAP_INVALID"}],
+        }
+
+    drift: list[dict[str, Any]] = []
+    for relative, expected in sorted(value.items(), key=lambda item: str(item[0])):
+        if not isinstance(relative, str) or not relative or not isinstance(expected, str):
+            drift.append(
+                {
+                    "path": relative if isinstance(relative, str) else None,
+                    "reason": "SOURCE_SHA256_ENTRY_INVALID",
+                }
+            )
+            continue
+        source = (root / relative).resolve()
+        if not source.is_relative_to(root):
+            drift.append({"path": relative, "reason": "SOURCE_PATH_OUTSIDE_REPOSITORY"})
+            continue
+        if not source.is_file():
+            drift.append({"path": relative, "reason": "SOURCE_FILE_MISSING"})
+            continue
+        actual = _sha256_file(source)
+        if actual != expected:
+            drift.append(
+                {
+                    "path": relative,
+                    "reason": "SOURCE_SHA256_MISMATCH",
+                    "expected": expected,
+                    "actual": actual,
+                }
+            )
+    return {"status": "QUALIFIED" if not drift else "REJECTED", "drift": drift}
+
+
+def _json_artifact(
+    root: Path,
+    relative: str,
+    *,
+    require_source_sha256: bool = False,
+) -> dict[str, Any]:
     path = root / relative
     if not path.is_file():
         return {
@@ -122,7 +184,8 @@ def _json_artifact(root: Path, relative: str) -> dict[str, Any]:
     checks_all_true = (
         isinstance(checks, dict) and bool(checks) and all(item is True for item in checks.values())
     )
-    return {
+    source_sha256 = _source_sha256_evidence(root, value.get("source_sha256"))
+    result = {
         "path": relative,
         "status": value.get("status"),
         "stage": value.get("stage") or value.get("scope"),
@@ -130,7 +193,17 @@ def _json_artifact(root: Path, relative: str) -> dict[str, Any]:
         "evidence_digest": value.get("evidence_digest"),
         "sha256": _sha256_file(path),
         "checks_all_true": checks_all_true,
+        "source_sha256_status": source_sha256["status"],
+        "source_sha256_drift": source_sha256["drift"],
     }
+    if result["status"] == "QUALIFIED":
+        if source_sha256["status"] == "REJECTED":
+            result["status"] = "REJECTED"
+            result["error"] = "SOURCE_SHA256_DRIFT"
+        elif require_source_sha256 and source_sha256["status"] != "QUALIFIED":
+            result["status"] = "REJECTED"
+            result["error"] = "SOURCE_SHA256_REQUIRED"
+    return result
 
 
 def _pytest_summary(path: Path) -> dict[str, Any]:
@@ -172,11 +245,33 @@ def classify_summary(
 
 
 def windows_soak_contract_error(value: Mapping[str, Any]) -> str | None:
-    if value.get("schema_version") != 2:
-        return "WINDOWS_SOAK_SCHEMA_V2_REQUIRED"
+    if value.get("schema_version") != 3:
+        return "WINDOWS_SOAK_SCHEMA_V3_REQUIRED"
     checks = value.get("checks")
     if not isinstance(checks, dict):
         return "WINDOWS_SOAK_CHECKS_INVALID"
+    for required_check in (
+        "app_runtime_source_identity_matches_current",
+        "configuration_identity_unchanged",
+        "continuous_process_identity_unchanged",
+        "executor_runtime_source_identity_matches_current",
+        "source_identity_unchanged",
+    ):
+        if checks.get(required_check) is not True:
+            return f"WINDOWS_SOAK_REQUIRED_CHECK_FAILED:{required_check}"
+    source = value.get("source_sha256")
+    frozen_source_digest = value.get("source_sha256_digest")
+    current_source_digest = value.get("current_source_sha256_digest")
+    if not isinstance(source, dict) or not isinstance(frozen_source_digest, str):
+        return "WINDOWS_SOAK_SOURCE_IDENTITY_INVALID"
+    try:
+        actual_source_digest = source_sha256_digest(source)
+    except SourceIdentityError:
+        return "WINDOWS_SOAK_SOURCE_IDENTITY_INVALID"
+    if frozen_source_digest != actual_source_digest:
+        return "WINDOWS_SOAK_SOURCE_DIGEST_MISMATCH"
+    if current_source_digest != frozen_source_digest:
+        return "WINDOWS_SOAK_CURRENT_SOURCE_DIGEST_MISMATCH"
     if checks.get("minimum_72_hours_observed") is not True:
         return "WINDOWS_72_AWAKE_HOURS_NOT_MET"
     if checks.get("no_sleep_or_hibernate_over_60_seconds") is not True:
@@ -209,7 +304,11 @@ def windows_soak_contract_error(value: Mapping[str, Any]) -> str | None:
 def summarize(root: Path = ROOT) -> dict[str, Any]:
     root = root.resolve()
     artifacts = {
-        name: _json_artifact(root, relative)
+        name: _json_artifact(
+            root,
+            relative,
+            require_source_sha256=name in REQUIRED_SOURCE_SHA256_ARTIFACTS,
+        )
         for name, relative in JSON_ARTIFACTS.items()
     }
     pytest = _pytest_summary(root / "build/qualification/b04-pytest.xml")

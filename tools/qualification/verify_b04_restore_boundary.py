@@ -41,11 +41,32 @@ from tools.provisioning.provision_windows_tasks import (
     TASK_LOGON_PASSWORD,
     TASK_RUNLEVEL_LUA,
 )
+from tools.qualification.source_binding import (
+    SourceBindingError,
+    capture_source_sha256,
+)
 
 
 TASK_STATE_READY = 3
 TASK_STATE_RUNNING = 4
 DEFAULT_OUTPUT = Path("build/qualification/b04-empty-restore.json")
+SOURCE_PATTERNS = (
+    "config/halpha.toml",
+    "migrations/versions/*.py",
+    "requirements/runtime.txt",
+    "src/halpha/backup.py",
+    "src/halpha/configuration.py",
+    "src/halpha/database/**/*.py",
+    "src/halpha/process_contract.py",
+    "src/halpha/runtime_identity.py",
+    "src/halpha/windows_runtime.py",
+    "src/halpha/winvault.py",
+    "tools/provisioning/provision_halpha_databases.py",
+    "tools/provisioning/provision_windows_tasks.py",
+    "tools/qualification/source_binding.py",
+    "src/halpha/source_identity.py",
+    "tools/qualification/verify_b04_restore_boundary.py",
+)
 
 
 class RestoreQualificationError(RuntimeError):
@@ -338,6 +359,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     output = args.output.resolve()
     if not output.is_relative_to(root):
         raise RestoreQualificationError("RESTORE_QUALIFICATION_OUTPUT_OUTSIDE_REPOSITORY")
+    source_sha256_at_start = capture_source_sha256(root, SOURCE_PATTERNS)
     try:
         if args.child:
             if args.target_database is None:
@@ -363,7 +385,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             "status": "REJECTED",
             "reason": reason,
         }
-        _write_report(output, report)
+    report["source_sha256"] = source_sha256_at_start
+    try:
+        source_stable = (
+            capture_source_sha256(root, SOURCE_PATTERNS) == source_sha256_at_start
+        )
+    except SourceBindingError as exc:
+        source_stable = False
+        report.setdefault("errors", []).append(
+            f"RESTORE_SOURCE_BINDING_FAILED:{exc}"
+        )
+    checks = report.setdefault("checks", {})
+    checks["source_stable_during_qualification"] = source_stable
+    if not source_stable or (
+        report.get("status") == "QUALIFIED" and not all(checks.values())
+    ):
+        report["status"] = "REJECTED"
+    report.pop("evidence_digest", None)
+    report["evidence_digest"] = _canonical_digest(report)
+    _write_report(output, report)
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report.get("status") == "QUALIFIED" else 2
 

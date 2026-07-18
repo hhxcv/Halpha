@@ -22,10 +22,28 @@ if str(ROOT) not in sys.path:
 from halpha.app.notifications import PostgreSQLNotificationRepository
 from halpha.app.planning_api import PostgreSQLPlanningApi
 from halpha.winvault import require_win_vault_backend
+from tools.qualification.source_binding import (
+    SourceBindingError,
+    capture_source_sha256,
+)
 from tools.qualification.verify_b02_database_boundary import _connect
 
 
 DEFAULT_OUTPUT = ROOT / "build/qualification/b04-notification-boundary.json"
+SOURCE_PATTERNS = (
+    "migrations/versions/*.py",
+    "requirements/runtime.txt",
+    "src/halpha/app/notifications.py",
+    "src/halpha/app/planning_api.py",
+    "src/halpha/database/**/*.py",
+    "src/halpha/domain_values.py",
+    "src/halpha/user_workbench/**/*.py",
+    "src/halpha/winvault.py",
+    "tools/qualification/source_binding.py",
+    "src/halpha/source_identity.py",
+    "tools/qualification/verify_b02_database_boundary.py",
+    "tools/qualification/verify_b04_notification_boundary.py",
+)
 
 
 def _canonical(value: object) -> bytes:
@@ -55,6 +73,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+    source_sha256_at_start = capture_source_sha256(ROOT, SOURCE_PATTERNS)
 
     now = datetime.now(UTC)
     environment_id = f"qualification-b04-notification-{uuid4()}"
@@ -231,6 +250,13 @@ def main() -> int:
                 f"B04_NOTIFICATION_CLEANUP_FAILED:{type(exc).__name__}"
             )
 
+    try:
+        checks["source_stable_during_qualification"] = (
+            capture_source_sha256(ROOT, SOURCE_PATTERNS) == source_sha256_at_start
+        )
+    except SourceBindingError as exc:
+        checks["source_stable_during_qualification"] = False
+        errors.append(f"B04_NOTIFICATION_SOURCE_BINDING_FAILED:{exc}")
     evidence: dict[str, Any] = {
         "stage": "B04_NOTIFICATION_BOUNDARY",
         "observed_at": datetime.now(UTC).isoformat(),
@@ -240,6 +266,7 @@ def main() -> int:
         "observations": observations,
         "errors": errors,
         "venue_write_performed": False,
+        "source_sha256": source_sha256_at_start,
     }
     evidence["status"] = (
         "QUALIFIED" if checks and all(checks.values()) and not errors else "REJECTED"

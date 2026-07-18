@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from nautilus_trader.model.data import Bar, BarType
@@ -41,7 +42,7 @@ def _bar(bar_type: BarType, *, minute: int, close: str, high: str, low: str) -> 
     )
 
 
-def _evaluator() -> NautilusBarEntryEvaluator:
+def _evaluator(*, requires_live_warmup: bool = False) -> NautilusBarEntryEvaluator:
     start = datetime(2026, 1, 1, tzinfo=UTC)
     return NautilusBarEntryEvaluator(
         activation_id="activation-bar-evaluation",
@@ -65,6 +66,7 @@ def _evaluator() -> NautilusBarEntryEvaluator:
                 min_notional="5",
             ),
         ),
+        requires_live_warmup=requires_live_warmup,
     )
 
 
@@ -105,3 +107,127 @@ def test_duplicate_bar_is_idempotent_and_conflicting_identity_fails_closed() -> 
 
     with pytest.raises(BarEvaluationError, match="TARGET_BAR_IDENTITY_CONFLICT"):
         evaluator.accept(_bar(TARGET, minute=15, close="101", high="102", low="100"))
+
+
+def test_live_warmup_primes_indicators_without_historical_proposals() -> None:
+    evaluator = _evaluator(requires_live_warmup=True)
+    with pytest.raises(BarEvaluationError, match="LIVE_WARMUP_NOT_COMPLETE"):
+        evaluator.accept(_bar(SOURCE, minute=1, close="100", high="101", low="99"))
+
+    for index in range(20):
+        evaluator.accept_historical(
+            _bar(
+                TARGET,
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
+        )
+    for minute in range(286, 301):
+        evaluator.accept_historical(
+            _bar(SOURCE, minute=minute, close="120", high="121", low="119")
+        )
+
+    evaluator.complete_live_warmup()
+    assert evaluator.warmup_complete is True
+    assert evaluator.accept(
+        _bar(SOURCE, minute=300, close="120", high="121", low="119")
+    ) is None
+    assert evaluator.accept(
+        _bar(SOURCE, minute=301, close="120.5", high="121", low="120")
+    ) is None
+    proposal_input = evaluator.accept(
+        _bar(SOURCE, minute=302, close="120.8", high="121", low="120")
+    )
+    assert proposal_input is not None
+
+
+def test_live_warmup_rejects_a_gapped_source_tail() -> None:
+    evaluator = _evaluator(requires_live_warmup=True)
+    for index in range(20):
+        evaluator.accept_historical(
+            _bar(
+                TARGET,
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
+        )
+    for minute in (*range(285, 292), *range(293, 301)):
+        evaluator.accept_historical(
+            _bar(SOURCE, minute=minute, close="120", high="121", low="119")
+        )
+
+    with pytest.raises(BarEvaluationError, match="SOURCE_WARMUP_INCOMPLETE"):
+        evaluator.complete_live_warmup()
+
+
+def test_live_adapter_warms_history_before_subscribing_to_bars() -> None:
+    evaluator = _evaluator(requires_live_warmup=True)
+    adapter = HalphaStrategyAdapter(
+        activation_id=evaluator.activation_id,
+        logic=OneShotDonchianAtrLogic(evaluator.parameters),
+        state_provider=lambda: ActivationStrategyState(),
+        proposal_sink=lambda _proposal: None,
+        instrument_ref="BTCUSDT-PERP",
+        bar_evaluator=evaluator,
+        live_history_warmup=True,
+        current_time_provider=lambda: datetime(2026, 1, 2, 6, 7, 30, tzinfo=UTC),
+    )
+    request_id = uuid4()
+    events: list[tuple[str, object]] = []
+
+    adapter.subscribe_mark_prices = lambda instrument_id: events.append(
+        ("mark", instrument_id)
+    )
+    adapter.subscribe_quote_ticks = lambda instrument_id: events.append(
+        ("quote", instrument_id)
+    )
+    adapter.subscribe_bars = lambda bar_type: events.append(("bar", bar_type))
+
+    def request_aggregated_bars(bar_types, **kwargs):
+        events.append(("request", (bar_types, kwargs)))
+        return request_id
+
+    adapter.request_aggregated_bars = request_aggregated_bars
+    adapter.on_start()
+
+    assert [event[0] for event in events] == ["mark", "quote", "request"]
+    bar_types, request = events[-1][1]
+    # Nautilus expects requested bar types to be internally aggregated. The
+    # first composite names the external 1m source queried from Binance, and
+    # include_external_data forwards that source to on_historical_data.
+    assert bar_types == [evaluator.target_bar_type]
+    assert bar_types[0].is_internally_aggregated()
+    assert bar_types[0].is_composite()
+    assert bar_types[0].composite() == evaluator.source_bar_type
+    assert request["include_external_data"] is True
+    assert request["update_subscriptions"] is True
+    assert request["update_catalog"] is False
+    assert request["end"] - request["start"] < timedelta(hours=72, minutes=15)
+
+    for index in range(20):
+        adapter.on_historical_data(
+            _bar(
+                TARGET.standard(),
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
+        )
+    for minute in range(286, 301):
+        adapter.on_historical_data(
+            _bar(SOURCE, minute=minute, close="120", high="121", low="119")
+        )
+
+    request["callback"](request_id)
+
+    assert evaluator.warmup_complete is True
+    assert adapter.live_history_ready is True
+    assert events[-2:] == [
+        ("bar", SOURCE),
+        ("bar", evaluator.target_bar_type),
+    ]

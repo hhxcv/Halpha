@@ -66,5 +66,6 @@ def test_schema_two_requires_the_complete_b02_to_b04_evidence_set() -> None:
         "b04_actual_smtp_delivery",
         "b04_live_read_only_observation",
         "b04_summary",
+        "nonsecret_live_write_config",
     } <= names
     assert len(names) == len(DEFAULT_ARTIFACT_SPECS)

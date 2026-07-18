@@ -29,6 +29,7 @@ if str(ROOT / "src") not in sys.path:
 from halpha.configuration import load_settings, settings_digest
 from halpha.domain_values import content_digest
 from halpha.executor.forward_observation import (
+    ForwardObservationError,
     ForwardObservationSpec,
     load_forward_observation_spec,
 )
@@ -43,7 +44,10 @@ from tools.provisioning.provision_windows_tasks import (
     _task_account_password,
 )
 from tools.qualification.observe_b04_windows_soak import observe as observe_windows_soak
-from tools.qualification.prepare_b04_live_read_only_observation import prepare
+from tools.qualification.prepare_b04_live_read_only_observation import (
+    ForwardObservationPreparationError,
+    prepare,
+)
 
 
 DEFAULT_DEMO_CONFIG = ROOT / "config/halpha.toml"
@@ -62,6 +66,22 @@ TASK_STATE_RUNNING = 4
 
 class LiveReadOnlyTransitionError(RuntimeError):
     """A sanitized, fail-closed transition refusal."""
+
+
+def _prepare_spec(
+    *,
+    config_path: Path,
+    preregistration_path: Path,
+    starts_at: datetime,
+) -> ForwardObservationSpec:
+    try:
+        return prepare(
+            config_path=config_path,
+            preregistration_path=preregistration_path,
+            starts_at=starts_at,
+        )
+    except (ForwardObservationError, ForwardObservationPreparationError) as exc:
+        raise LiveReadOnlyTransitionError(str(exc)) from None
 
 
 def executor_arguments(
@@ -108,6 +128,7 @@ def is_trimmed_read_only_ready_event(
     *,
     observation_id: str,
     configuration_digest: str,
+    source_sha256_digest: str,
 ) -> bool:
     """Require the complete credential-free, non-persistent ready composition."""
 
@@ -115,6 +136,7 @@ def is_trimmed_read_only_ready_event(
         event.get("event") == "READ_ONLY_RUNTIME_READY"
         and event.get("observation_id") == observation_id
         and event.get("configuration_digest") == configuration_digest
+        and event.get("source_sha256_digest") == source_sha256_digest
         and event.get("profile") == "BINANCE_LIVE_READ_ONLY"
         and event.get("product_runtime_started") is True
         and event.get("strategy_adapter_started") is True
@@ -136,6 +158,7 @@ def latest_ready_event(
     not_before: datetime,
     observation_id: str,
     configuration_digest: str,
+    source_sha256_digest: str,
 ) -> dict[str, object] | None:
     """Find the latest capability-trimmed, digest-valid ready event."""
 
@@ -153,6 +176,7 @@ def latest_ready_event(
             event,
             observation_id=observation_id,
             configuration_digest=configuration_digest,
+            source_sha256_digest=source_sha256_digest,
         ):
             latest = event
     return latest
@@ -234,7 +258,7 @@ def _freeze_spec(
     preregistration_path: Path,
     spec_path: Path,
 ) -> ForwardObservationSpec:
-    spec = prepare(
+    spec = _prepare_spec(
         config_path=config_path,
         preregistration_path=preregistration_path,
         starts_at=datetime.now(UTC),
@@ -338,9 +362,16 @@ def transition(
     if events_path.suffix.lower() != ".jsonl":
         raise LiveReadOnlyTransitionError("OBSERVATION_EVENTS_FORMAT_INVALID")
 
-    spec = load_forward_observation_spec(spec_path) if spec_path.is_file() else None
+    try:
+        spec = (
+            load_forward_observation_spec(spec_path)
+            if spec_path.is_file()
+            else None
+        )
+    except ForwardObservationError as exc:
+        raise LiveReadOnlyTransitionError(str(exc)) from None
     if spec is not None:
-        expected_spec = prepare(
+        expected_spec = _prepare_spec(
             config_path=read_only_config,
             preregistration_path=preregistration_path,
             starts_at=spec.starts_at,
@@ -403,6 +434,7 @@ def transition(
             not_before=spec.starts_at,
             observation_id=spec.observation_id,
             configuration_digest=spec.configuration_digest,
+            source_sha256_digest=spec.source_sha256_digest,
         )
         return _report(
             output,
@@ -455,6 +487,7 @@ def transition(
             not_before=spec.starts_at,
             observation_id=spec.observation_id,
             configuration_digest=spec.configuration_digest,
+            source_sha256_digest=spec.source_sha256_digest,
         )
         if ready is not None:
             break
@@ -472,6 +505,7 @@ def transition(
         maximum_end_at=spec.maximum_end_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
         read_only_configuration_digest=settings_digest(read_only),
         observation_spec_digest=content_digest(spec.model_dump(mode="json")),
+        source_sha256_digest=spec.source_sha256_digest,
         executor_action_sha256=sha256(expected_arguments.encode("utf-8")).hexdigest(),
         app_task_enabled=False,
         executor_task_enabled=True,

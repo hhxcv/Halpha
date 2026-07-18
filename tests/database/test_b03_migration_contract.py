@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 
@@ -7,6 +8,9 @@ ROOT = Path(__file__).resolve().parents[2]
 MIGRATION = ROOT / "migrations" / "versions" / "20260717_0004_b03_execution_boundaries.py"
 CLIENT_ID_MIGRATION = (
     ROOT / "migrations" / "versions" / "20260717_0005_b03_client_order_identity.py"
+)
+NOT_SUBMITTED_REASON_MIGRATION = (
+    ROOT / "migrations" / "versions" / "20260718_0006_b04_not_submitted_reason.py"
 )
 
 
@@ -57,3 +61,76 @@ def test_client_order_uuid_is_unique_inside_each_environment() -> None:
     assert "uq_execution_action_client_order_identity" in source
     assert '("environment_id", "client_order_id")' in source
     assert 'postgresql_where=sa.text("client_order_id IS NOT NULL")' in source
+
+
+def test_not_submitted_actions_persist_a_stable_reason() -> None:
+    source = NOT_SUBMITTED_REASON_MIGRATION.read_text(encoding="utf-8")
+    assert 'down_revision = "20260717_0005"' in source
+    assert "not_submitted_reason" in source
+    assert "ck_execution_action_not_submitted_reason" in source
+    assert "LEGACY_DEFINITELY_NOT_SUBMITTED" in source
+    assert 'values.pop("not_submitted_reason")' in source
+    assert source.index('values.pop("not_submitted_reason")') < source.index(
+        'op.drop_column("execution_action", "not_submitted_reason"'
+    )
+
+
+def test_not_submitted_reason_downgrade_restores_the_legacy_state_digest(
+    monkeypatch,
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "b04_not_submitted_reason_migration",
+        NOT_SUBMITTED_REASON_MIGRATION,
+    )
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    row = {
+        "execution_action_id": "action-legacy-not-submitted",
+        "environment_id": "demo-main",
+        "state": "NOT_SUBMITTED",
+        "state_digest": "new-state-digest",
+        "not_submitted_reason": "LEGACY_DEFINITELY_NOT_SUBMITTED",
+    }
+
+    class Rows:
+        def mappings(self):
+            return (row,)
+
+    class Connection:
+        def __init__(self) -> None:
+            self.updates = []
+
+        def execute(self, _statement, parameters=None):
+            if parameters is None:
+                return Rows()
+            self.updates.append(parameters)
+            return None
+
+    connection = Connection()
+    operations = []
+    monkeypatch.setattr(migration.op, "get_bind", lambda: connection)
+    monkeypatch.setattr(
+        migration.op,
+        "drop_constraint",
+        lambda *args, **kwargs: operations.append(("constraint", args, kwargs)),
+    )
+    monkeypatch.setattr(
+        migration.op,
+        "drop_column",
+        lambda *args, **kwargs: operations.append(("column", args, kwargs)),
+    )
+
+    migration.downgrade()
+
+    legacy_values = dict(row)
+    legacy_values.pop("state_digest")
+    legacy_values.pop("not_submitted_reason")
+    assert connection.updates == [
+        {
+            "state_digest": migration._digest(legacy_values),
+            "execution_action_id": row["execution_action_id"],
+            "environment_id": row["environment_id"],
+        }
+    ]
+    assert [item[0] for item in operations] == ["constraint", "column"]

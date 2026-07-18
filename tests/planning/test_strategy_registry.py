@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 from datetime import UTC, datetime, timedelta
-from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -26,6 +25,7 @@ from halpha.planning.strategies.one_shot import (
     InstrumentQuantityRules,
     OneShotDonchianAtrLogic,
 )
+from halpha.source_identity import source_file_sha256
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -59,9 +59,9 @@ def test_static_registry_and_schema_are_build_bound() -> None:
     definition = describe_strategy(ONE_SHOT_STRATEGY_ID)
     schema = strategy_parameter_schema(ONE_SHOT_STRATEGY_ID)
     assert definition.strategy_version == "1.0.0"
-    assert definition.implementation_digest == sha256(
-        (ROOT / "src/halpha/planning/strategies/one_shot.py").read_bytes()
-    ).hexdigest()
+    assert definition.implementation_digest == source_file_sha256(
+        ROOT / "src/halpha/planning/strategies/one_shot.py"
+    )
     assert schema["additionalProperties"] is False
     assert schema["properties"]["initial_stop_atr_multiple"]["type"] == "string"
     assert definition.native_indicators == (

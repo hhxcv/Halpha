@@ -64,6 +64,7 @@ _ALLOWED_TRANSITIONS: dict[ExecutionActionState, frozenset[ExecutionActionState]
     ),
     ExecutionActionState.SUBMITTING: frozenset(
         {
+            ExecutionActionState.NOT_SUBMITTED,
             ExecutionActionState.SUBMITTED_UNKNOWN,
             ExecutionActionState.ACKNOWLEDGED,
             ExecutionActionState.WORKING,
@@ -248,6 +249,7 @@ def build_execution_action(
         "venue_fact_refs": (),
         "unknown_reason": None,
         "next_query_at": None,
+        "not_submitted_reason": None,
         "protection_digest": (
             content_digest(action_terms)
             if action_kind is ExecutionActionKind.PROTECTION
@@ -343,8 +345,11 @@ def begin_submission(
 def mark_not_submitted(
     action: ExecutionAction,
     *,
+    reason_code: str,
     observed_at: datetime,
 ) -> ExecutionAction:
+    if not reason_code or len(reason_code) > 160:
+        raise ValueError("NOT_SUBMITTED_REASON_INVALID")
     return _transition(
         action,
         target=ExecutionActionState.NOT_SUBMITTED,
@@ -352,6 +357,7 @@ def mark_not_submitted(
         updates={
             "unknown_reason": None,
             "next_query_at": None,
+            "not_submitted_reason": reason_code,
             "call_completed_at": (
                 observed_at if action.call_started_at is not None else None
             ),

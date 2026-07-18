@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Sequence
 
 import keyring
+import psycopg
 
 from halpha.configuration import (
     ConfigurationError,
@@ -25,11 +26,27 @@ from halpha.executor.forward_observation import (
     ForwardObservationError,
     ForwardObservationEvidence,
     load_forward_observation_spec,
+    require_forward_observation_source_identity,
 )
-from halpha.executor.runtime import ExecutorRuntimeError, ProductExecutorRuntime
+from halpha.executor.runtime import (
+    ExecutorRuntimeError,
+    ProductExecutorRuntime,
+    _connect_product_database,
+)
+from halpha.live_write_gate import (
+    LiveWriteGateError,
+    evaluate_live_write_gate,
+    require_live_write_gate_open,
+    require_live_write_gate_precheck,
+)
 from halpha.operational_logging import configure_halpha_logging
 from halpha.process_contract import ProcessRole, preflight
 from halpha.runtime_identity import RuntimeIdentityError, repository_root
+from halpha.source_identity import (
+    SourceIdentityError,
+    capture_product_runtime_source_identity,
+    source_sha256_digest,
+)
 from halpha.winvault import SecretResolutionError, executor_secret_resolver
 from halpha.windows_runtime import (
     WindowsRuntimeError,
@@ -48,11 +65,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         settings = load_settings(args.config)
+        repo_root = repository_root()
         report = preflight(ProcessRole.EXECUTOR, settings)
         if args.preflight_only:
+            gate_status = evaluate_live_write_gate(repo_root, settings)
+            report.update(
+                {
+                    "live_write_build_capability": gate_status.live_write_build_capability,
+                    "b05_package_eligibility": gate_status.b05_package_eligibility,
+                    "configured_runtime_real_write_gate": (
+                        gate_status.configured_runtime_real_write_gate
+                    ),
+                    "runtime_real_write_gate": gate_status.runtime_real_write_gate,
+                    "live_write_gate_violations": list(gate_status.violations),
+                }
+            )
             print(json.dumps(report, sort_keys=True))
             return 0
         role_settings = executor_settings(settings)
+        runtime_source_sha256 = capture_product_runtime_source_identity(
+            repo_root,
+            config_path=args.config,
+        )
+        runtime_source_digest = source_sha256_digest(runtime_source_sha256)
         read_only = settings.release.profile == "BINANCE_LIVE_READ_ONLY"
         observation = None
         observation_spec = None
@@ -63,7 +98,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ):
                 raise ExecutorRuntimeError("READ_ONLY_OBSERVATION_ARGUMENTS_REQUIRED")
             evidence_root = (
-                repository_root() / "build" / "evidence" / "reports"
+                repo_root / "build" / "evidence" / "reports"
             ).resolve()
             spec_path = args.forward_observation_spec.resolve()
             evidence_path = args.forward_observation_evidence.resolve()
@@ -79,6 +114,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             observation_spec = load_forward_observation_spec(spec_path)
             if observation_spec.configuration_digest != settings_digest(settings):
                 raise ExecutorRuntimeError("READ_ONLY_OBSERVATION_CONFIGURATION_DRIFT")
+            require_forward_observation_source_identity(
+                repo_root,
+                observation_spec,
+            )
             observation = ForwardObservationEvidence(observation_spec, evidence_path)
         elif (
             args.forward_observation_spec is not None
@@ -86,6 +125,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         ):
             raise ExecutorRuntimeError("FORWARD_OBSERVATION_ARGUMENTS_PROFILE_MISMATCH")
         require_process_identity(role_settings.executor_task_sid)
+        live_write = settings.release.profile == "BINANCE_LIVE_WRITE"
+        gate_status = (
+            require_live_write_gate_precheck(repo_root, settings)
+            if live_write
+            else evaluate_live_write_gate(repo_root, settings)
+        )
         with acquire_executor_mutex(
             name=role_settings.executor.mutex_name,
             task_sid=role_settings.executor_task_sid,
@@ -102,6 +147,42 @@ def main(argv: Sequence[str] | None = None) -> int:
                     role_settings.executor.database_credential_reference
                 )
             )
+            live_write_submission_guard = None
+            if live_write:
+                if database_password is None:
+                    raise ExecutorRuntimeError("PRODUCT_DATABASE_CREDENTIAL_REQUIRED")
+                gate_connection = _connect_product_database(
+                    psycopg.connect,
+                    database_name=settings.release.database_name,
+                    password=database_password.get_secret_value(),
+                )
+                try:
+                    gate_status = require_live_write_gate_open(
+                        repo_root,
+                        settings,
+                        gate_connection,
+                    )
+                finally:
+                    gate_connection.close()
+
+                def live_write_submission_guard(activation_id: str) -> None:
+                    current_connection = _connect_product_database(
+                        psycopg.connect,
+                        database_name=settings.release.database_name,
+                        password=database_password.get_secret_value(),
+                    )
+                    try:
+                        current_status = require_live_write_gate_open(
+                            repo_root,
+                            settings,
+                            current_connection,
+                        )
+                    finally:
+                        current_connection.close()
+                    if current_status.authorized_activation_id != activation_id:
+                        raise LiveWriteGateError(
+                            "LIVE_WRITE_ACTIVATION_SCOPE_MISMATCH"
+                        )
             if read_only:
                 api_key = None
                 api_secret = None
@@ -140,7 +221,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if proxy_url is not None:
                 secret_values.append(proxy_url)
             logger = configure_halpha_logging(
-                repository_root() / settings.maintenance.log_root,
+                repo_root / settings.maintenance.log_root,
                 role="executor",
                 secret_values=tuple(secret_values),
             )
@@ -158,8 +239,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 database_password=database_password,
                 api_key=api_key,
                 api_secret=api_secret,
-                log_directory=repository_root() / settings.maintenance.log_root,
+                log_directory=repo_root / settings.maintenance.log_root,
                 proxy_url=proxy_url,
+                runtime_real_write_gate=gate_status.runtime_real_write_gate,
+                live_write_activation_id=gate_status.authorized_activation_id,
+                live_write_submission_guard=live_write_submission_guard,
                 forward_observation_spec=observation_spec,
                 observation_proposal_sink=(
                     observation.record_proposal if observation is not None else None
@@ -188,6 +272,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         ),
                         "role": ProcessRole.EXECUTOR.value,
                         "paused_open_activations": paused_activations,
+                        "source_sha256_digest": runtime_source_digest,
+                        "source_file_count": len(runtime_source_sha256),
                         **runtime_evidence,
                     }
                     if observation is not None:
@@ -199,6 +285,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         environment_id=settings.release.environment_id,
                         paused_open_activations=paused_activations,
                         proxy_supplied=proxy_url is not None,
+                        source_sha256_digest=runtime_source_digest,
+                        source_file_count=len(runtime_source_sha256),
                         **runtime_evidence,
                     )
 
@@ -216,8 +304,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         ExecutorContinuityUnavailable,
         ExecutorRuntimeError,
         ForwardObservationError,
+        LiveWriteGateError,
         RuntimeIdentityError,
         SecretResolutionError,
+        SourceIdentityError,
         WindowsRuntimeError,
     ) as exc:
         print(json.dumps({"status": "STARTUP_REJECTED", "reason": str(exc)}, sort_keys=True))

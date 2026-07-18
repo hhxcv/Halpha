@@ -1,5 +1,5 @@
 {
-  "registry_digest": "cb7ce0c9b0683eb20978882563890ad008549f0868da6c662430d983c6fe6f4a",
+  "registry_digest": "c2a831bc6fb656d6d83038fb671300016ff8cb8e09fa9f3124450a3f4404185b",
   "registry_kind": "STATIC_BUILD_ARTIFACT",
   "schema_version": 1,
   "strategies": [
@@ -20,7 +20,7 @@
         "qualified_live_instrument": "BTCUSDT-PERP",
         "venue": "BINANCE_USDM"
       },
-      "implementation_digest": "022ca2fd3a432224ebf2fd92615ab761969bf71f4a2d1d8ec1d1a4762c149c96",
+      "implementation_digest": "66299533bb4a7fb56efe52e2ffb9fad281d4b29f0fe9cdb47049115d3323d32e",
       "implementation_path": "halpha.planning.strategies.one_shot:OneShotDonchianAtrLogic",
       "native_indicators": [
         "nautilus_trader.indicators.DonchianChannel",

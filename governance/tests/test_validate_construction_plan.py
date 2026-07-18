@@ -14,6 +14,7 @@ def empty_live_write_evidence() -> dict[str, object]:
         "account_capital_limit_version_ref": None,
         "machine_authorization_version_ref": None,
         "plan_allocation_ref": None,
+        "authorized_activation_id": None,
     }
 
 
@@ -40,6 +41,30 @@ def unresolved_blocked_plan() -> dict[str, object]:
             "b05_package_eligibility": "NOT_AUTHORIZED",
             "runtime_real_write_gate": "CLOSED",
             "live_write_gate_evidence": empty_live_write_evidence(),
+        },
+        "runtime_configuration": {
+            "live_write_gate_binding": {
+                "schema_version": 1,
+                "state_fields": [
+                    "live_write_build_capability",
+                    "b05_package_eligibility",
+                    "runtime_real_write_gate",
+                ],
+                "state_separation_required": True,
+                "default_effective_gate": "CLOSED",
+                "location": "DETACHED_OUTSIDE_REPOSITORY_AND_BUILDMANIFEST",
+                "nonsecret": True,
+                "binding_inputs": [
+                    "final_build_manifest_digest",
+                    "user_authorization_ref",
+                    "account_capital_limit_version_ref",
+                    "machine_authorization_version_ref",
+                    "plan_allocation_ref",
+                ],
+                "authorization_scope": "EXACT_ONE_EXISTING_ACTIVATION",
+                "file_security_profile": "WINDOWS_PROTECTED_EXACT_DACL_V1",
+                "credential_resolution_order": "DATABASE_GATE_BEFORE_BINANCE_SECRETS",
+            }
         },
         "formalization_record": {
             "status": "BLOCKED_BY_UPSTREAM_CONFLICT",
@@ -84,6 +109,7 @@ def authorized_live_write_evidence() -> dict[str, str]:
         "account_capital_limit_version_ref": "cap://account-limit/1",
         "machine_authorization_version_ref": "cap://machine-auth/1",
         "plan_allocation_ref": "cap://plan-allocation/1",
+        "authorized_activation_id": "tradeplan://activation/1",
     }
 
 
@@ -291,6 +317,13 @@ class ConstructionPlanGovernanceTests(unittest.TestCase):
         plan = unresolved_blocked_plan()
         plan["current_state"]["real_write_status"] = "DISABLED"
         self.assert_has_code(plan, "GOV-LIVE-GATE-002")
+
+    def test_rejects_live_gate_wiring_that_can_resolve_secrets_before_database_gate(self) -> None:
+        plan = unresolved_blocked_plan()
+        plan["runtime_configuration"]["live_write_gate_binding"][
+            "credential_resolution_order"
+        ] = "BINANCE_SECRETS_BEFORE_DATABASE_GATE"
+        self.assert_has_code(plan, "GOV-LIVE-GATE-003")
 
     def test_rejects_build_capability_before_b01_b04_complete(self) -> None:
         plan = unresolved_blocked_plan()

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 from uuid import NAMESPACE_URL, uuid5
 
 from nautilus_trader.trading.config import StrategyConfig
 from nautilus_trader.trading.strategy import Strategy
 from nautilus_trader.model.enums import OrderSide, TimeInForce, TriggerType
+from nautilus_trader.model.data import Bar
 from nautilus_trader.model.identifiers import ClientOrderId, InstrumentId
 from nautilus_trader.model.objects import Price, Quantity
 
@@ -87,6 +89,8 @@ class HalphaStrategyAdapter(Strategy):
         bar_event_sink: BarEventSink | None = None,
         quote_event_sink: QuoteEventSink | None = None,
         mark_price_event_sink: MarkPriceEventSink | None = None,
+        live_history_warmup: bool = False,
+        current_time_provider: Callable[[], datetime] | None = None,
     ) -> None:
         super().__init__(config=strategy_config_for_activation(activation_id))
         self._activation_id = activation_id
@@ -104,11 +108,28 @@ class HalphaStrategyAdapter(Strategy):
         self._bar_event_sink = bar_event_sink
         self._quote_event_sink = quote_event_sink
         self._mark_price_event_sink = mark_price_event_sink
+        self._live_history_warmup = live_history_warmup
+        self._current_time_provider = current_time_provider
+        self._history_request_id: str | None = None
+        self._live_bar_subscriptions_started = False
+        self._stopping = False
         self._persisted_orders: dict[str, Any] = {}
 
     @property
     def activation_id(self) -> str:
         return self._activation_id
+
+    @property
+    def live_history_ready(self) -> bool:
+        """Return whether the configured live history handoff is complete."""
+
+        if not self._live_history_warmup:
+            return True
+        return bool(
+            self._bar_evaluator is not None
+            and self._bar_evaluator.warmup_complete
+            and self._live_bar_subscriptions_started
+        )
 
     def evaluate_normalized_entry(self, evaluation: EntryEvaluationInput) -> None:
         result = self._logic.evaluate_entry(evaluation, self._state_provider())
@@ -116,15 +137,72 @@ class HalphaStrategyAdapter(Strategy):
             self._proposal_sink(result.proposal)
 
     def on_start(self) -> None:
-        if self._bar_evaluator is not None:
+        if self._bar_evaluator is not None and not self._live_history_warmup:
             for bar_type in self._bar_evaluator.subscribed_bar_types:
                 self.subscribe_bars(bar_type)
+            self._live_bar_subscriptions_started = True
         if self._instrument_id is not None:
             self.subscribe_mark_prices(self._instrument_id)
             self.subscribe_quote_ticks(self._instrument_id)
+        if self._bar_evaluator is not None and self._live_history_warmup:
+            self._begin_live_history_warmup()
+
+    def _begin_live_history_warmup(self) -> None:
+        if self._bar_evaluator is None or self._history_request_id is not None:
+            raise RuntimeError("LIVE_WARMUP_STATE_INVALID")
+        current_time = (
+            self._current_time_provider()
+            if self._current_time_provider is not None
+            else self.clock.utc_now()
+        )
+        if current_time.tzinfo is None:
+            raise RuntimeError("LIVE_WARMUP_TIMEZONE_REQUIRED")
+        minute_floor = current_time.astimezone(UTC).replace(second=0, microsecond=0)
+        warmup_end = minute_floor - timedelta(milliseconds=1)
+        fifteen_minute_floor = minute_floor.replace(
+            minute=(minute_floor.minute // 15) * 15,
+            second=0,
+            microsecond=0,
+        )
+        warmup_start = fifteen_minute_floor - timedelta(hours=72)
+        request_id = self.request_aggregated_bars(
+            [
+                self._bar_evaluator.target_bar_type,
+            ],
+            start=warmup_start,
+            end=warmup_end,
+            limit=1500,
+            callback=self._on_live_history_complete,
+            include_external_data=True,
+            update_subscriptions=True,
+            update_catalog=False,
+        )
+        self._history_request_id = str(request_id)
+
+    def on_historical_data(self, data: object) -> None:
+        if (
+            self._live_history_warmup
+            and self._bar_evaluator is not None
+            and isinstance(data, Bar)
+        ):
+            self._bar_evaluator.accept_historical(data)
+
+    def _on_live_history_complete(self, request_id: object) -> None:
+        if self._stopping:
+            return
+        if self._history_request_id != str(request_id):
+            raise RuntimeError("LIVE_WARMUP_REQUEST_ID_MISMATCH")
+        if self._bar_evaluator is None:
+            raise RuntimeError("LIVE_WARMUP_STATE_INVALID")
+        self._bar_evaluator.complete_live_warmup()
+        source, target = self._bar_evaluator.subscribed_bar_types
+        self.subscribe_bars(source)
+        self.subscribe_bars(target)
+        self._live_bar_subscriptions_started = True
 
     def on_stop(self) -> None:
-        if self._bar_evaluator is not None:
+        self._stopping = True
+        if self._bar_evaluator is not None and self._live_bar_subscriptions_started:
             for bar_type in reversed(self._bar_evaluator.subscribed_bar_types):
                 self.unsubscribe_bars(bar_type)
         if self._instrument_id is not None:

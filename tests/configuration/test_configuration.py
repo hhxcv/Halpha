@@ -15,6 +15,7 @@ from halpha.configuration import (
 
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLE = ROOT / "config" / "halpha.example.toml"
+LIVE_WRITE = ROOT / "config" / "halpha.live-write.toml"
 
 
 def test_explicit_toml_loads_with_stable_digest() -> None:
@@ -83,6 +84,32 @@ def test_live_profile_cannot_reuse_demo_credential_reference() -> None:
         profile="BINANCE_LIVE_WRITE",
         authority_class="LIVE_REAL_CAPITAL",
         database_name="halpha_live",
+        live_write_gate_path="D:/projects/Codex/Halpha.runtime/live-write-gate.json",
+    )
+    with pytest.raises(ConfigurationError, match="CONFIGURATION_INVALID"):
+        load_settings(EXAMPLE, constructor_values={"release": release})
+
+
+def test_live_write_profile_requires_one_detached_absolute_gate_binding() -> None:
+    settings = load_settings(LIVE_WRITE)
+    assert settings.release.profile == "BINANCE_LIVE_WRITE"
+    assert settings.release.live_write_gate_path == (
+        "D:/projects/Codex/Halpha.runtime/live-write-gate.json"
+    )
+    assert settings.executor.binance_api_key_reference is not None
+    assert "BINANCE_DEMO" not in settings.executor.binance_api_key_reference.service
+
+    release = settings.release.model_dump(mode="json")
+    release["live_write_gate_path"] = "build/live-write-gate.json"
+    with pytest.raises(ConfigurationError, match="CONFIGURATION_INVALID"):
+        load_settings(LIVE_WRITE, constructor_values={"release": release})
+
+
+def test_non_live_profile_forbids_a_live_write_gate_binding() -> None:
+    settings = load_settings(EXAMPLE)
+    release = settings.release.model_dump(mode="json")
+    release["live_write_gate_path"] = (
+        "D:/projects/Codex/Halpha.runtime/live-write-gate.json"
     )
     with pytest.raises(ConfigurationError, match="CONFIGURATION_INVALID"):
         load_settings(EXAMPLE, constructor_values={"release": release})

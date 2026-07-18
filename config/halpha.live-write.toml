@@ -1,0 +1,118 @@
+# Target-host, non-secret BINANCE_LIVE_WRITE runtime configuration.
+# The detached gate is outside Git and remains CLOSED until an exact build and
+# owner-authorized CAP activation are bound. Secret values stay only in WinVault.
+schema_version = 1
+
+[release]
+environment_id = "binance-live-primary"
+account_id = "binance-usdm-live-owner-primary"
+profile = "BINANCE_LIVE_WRITE"
+authority_class = "LIVE_REAL_CAPITAL"
+database_name = "halpha_live"
+build_manifest_path = "build/release/build-manifest.json"
+live_write_gate_path = "D:/projects/Codex/Halpha.runtime/live-write-gate.json"
+
+[app]
+bind = "127.0.0.1"
+port = 8765
+workers = 1
+reload = false
+
+[app.database_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE/App"
+account = "scram_password"
+
+[app.owner_password_hash_reference]
+service = "Halpha/Owner/BINANCE_LIVE"
+account = "password_hash"
+
+[app.session_signing_reference]
+service = "Halpha/Web/BINANCE_LIVE"
+account = "session_signing"
+
+[app.csrf_signing_reference]
+service = "Halpha/Web/BINANCE_LIVE"
+account = "csrf_signing"
+
+[app.smtp_credential_reference]
+service = "Halpha/SMTP/BINANCE_LIVE"
+account = "password"
+
+[executor]
+mutex_name = "Global\\Halpha.Executor.WriteOwner"
+
+[executor.database_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE/Executor"
+account = "scram_password"
+
+[executor.binance_api_key_reference]
+service = "Halpha/Binance/BINANCE_LIVE"
+account = "api_key"
+
+[executor.binance_api_secret_reference]
+service = "Halpha/Binance/BINANCE_LIVE"
+account = "api_secret"
+
+# Optional local route. Its URL is never stored in this repository.
+[executor.runtime_proxy_reference]
+service = "Halpha/Network/BINANCE_LIVE"
+account = "runtime_proxy"
+
+[maintenance]
+postgresql_bin_directory = "D:/Environment/PostgreSQL/17.10/bin"
+log_root = "logs"
+backup_root = "backups/postgresql"
+temporary_root = "tmp/backup"
+evidence_catalog_root = "build/evidence/catalog"
+evidence_raw_root = "build/evidence/raw"
+evidence_report_root = "build/evidence/reports"
+backup_retention_count = 14
+backup_schedule_local = "02:30"
+
+[maintenance.demo]
+environment_kind = "DEMO"
+database_name = "halpha_demo"
+backup_role_name = "halpha_demo_backup"
+migration_role_name = "halpha_demo_migration"
+
+[maintenance.demo.backup_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_DEMO/Backup"
+account = "scram_password"
+
+[maintenance.demo.migration_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_DEMO/Migration"
+account = "scram_password"
+
+[maintenance.live]
+environment_kind = "LIVE"
+database_name = "halpha_live"
+backup_role_name = "halpha_live_backup"
+migration_role_name = "halpha_live_migration"
+
+[maintenance.live.backup_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE/Backup"
+account = "scram_password"
+
+[maintenance.live.migration_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE/Migration"
+account = "scram_password"
+
+[email]
+delivery_enabled = true
+smtp_host = "smtp.163.com"
+smtp_port = 25
+smtp_username = "hhpubsender@163.com"
+sender = "hhpubsender@163.com"
+owner_recipient = "myalertbot@163.com"
+owner_route_ref = "owner-primary-email"
+require_starttls = true
+timeout_seconds = 10
+max_attempts = 3
+retry_delays_seconds = [60, 300, 900]
+
+[windows]
+app_task_sid = "S-1-5-21-3232469054-2536757209-439016548-1007"
+executor_task_sid = "S-1-5-21-3232469054-2536757209-439016548-1008"
+maintenance_sid = "S-1-5-21-3232469054-2536757209-439016548-1001"
+app_stop_event = "Global\\Halpha.App.Stop"
+executor_stop_event = "Global\\Halpha.Executor.Stop"

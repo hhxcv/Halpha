@@ -16,6 +16,11 @@ from halpha.capital.models import (
 )
 from halpha.capital.repository import PostgreSQLCapitalRepository
 from halpha.domain_values import canonical_decimal, content_digest, decimal_from_string
+from halpha.live_write_gate import (
+    GateStatusProvider,
+    LiveWriteGateStatus,
+    closed_live_write_gate_status,
+)
 from halpha.planning.models import RequestedLimits, TradePlanContent
 from halpha.planning.control_service import ActivationControlService
 from halpha.planning.registry import (
@@ -84,6 +89,9 @@ class ActivationPayload(ApiModel):
     capital_limit_version_id: str
     quote_asset: str = "USDT"
     owner_password: str
+    real_capital_acknowledged: bool = False
+    evidence_limitations_acknowledged: bool = False
+    online_monitoring_acknowledged: bool = False
 
 
 class ControlPayload(ApiModel):
@@ -115,6 +123,8 @@ class PostgreSQLPlanningApi:
         authority_class: str,
         account_ref: str,
         build_digest: str | None,
+        profile: str | None = None,
+        gate_status_provider: GateStatusProvider | None = None,
     ) -> None:
         self._database_name = database_name
         self._password = password
@@ -123,6 +133,24 @@ class PostgreSQLPlanningApi:
         self._authority_class = AuthorityClass(authority_class)
         self._account_ref = account_ref
         self._build_digest = build_digest
+        self._profile = profile or (
+            "BINANCE_DEMO"
+            if self._environment_kind is EnvironmentKind.DEMO
+            else (
+                "BINANCE_LIVE_WRITE"
+                if self._authority_class is AuthorityClass.LIVE_REAL_CAPITAL
+                else "BINANCE_LIVE_READ_ONLY"
+            )
+        )
+        self._gate_status_provider = (
+            gate_status_provider or closed_live_write_gate_status
+        )
+
+    def _gate_status(self) -> LiveWriteGateStatus:
+        try:
+            return self._gate_status_provider()
+        except Exception:
+            return closed_live_write_gate_status()
 
     def _connect(self) -> psycopg.Connection[Any]:
         try:
@@ -237,7 +265,6 @@ class PostgreSQLPlanningApi:
             terms={
                 "one_entry_cycle": True,
                 "resume_policy": "MANUAL_PLAN_RESUME",
-                "real_write_gate": "CLOSED",
             },
         )
         with self._connect() as connection:
@@ -307,6 +334,7 @@ class PostgreSQLPlanningApi:
         if self._build_digest is None:
             raise ValueError("BUILD_MANIFEST_UNAVAILABLE")
         plan_version_id = _stable_id(self._environment_id, "plan-version", idempotency_key)
+        gate_status = self._gate_status()
         with self._connect() as connection:
             repository = PostgreSQLPlanningRepository(connection, self._environment_id)
             try:
@@ -320,9 +348,11 @@ class PostgreSQLPlanningApi:
                         build_digest=self._build_digest,
                         evidence_digest=self._build_digest,
                         evidence_scope={
-                            "construction_package": "B02",
-                            "live_eligibility": False,
-                            "runtime_real_write_gate": "CLOSED",
+                            "construction_package": "B04",
+                            "live_eligibility": (
+                                gate_status.b05_package_eligibility == "AUTHORIZED"
+                            ),
+                            "runtime_real_write_gate": gate_status.runtime_real_write_gate,
                         },
                         fixed_at=observed_at,
                     )
@@ -484,6 +514,7 @@ class PostgreSQLPlanningApi:
             version = PostgreSQLPlanningRepository(
                 connection, self._environment_id
             ).get_version(plan_version_id)
+        gate_status = self._gate_status()
         return {
             "plan_version_id": version.plan_version_id,
             "environment_id": self._environment_id,
@@ -501,7 +532,18 @@ class PostgreSQLPlanningApi:
             "allowed_actions": sorted(version.allowed_actions),
             "actual_account_configuration": "B03_PRE_SUBMIT_FACT_NOT_REQUIRED_FOR_P0_ACTIVATION",
             "account_mode_policy": "USE_ACTUAL_CONFIGURATION_WITH_EFFECTIVE_LEVERAGE_MIN_ACTUAL_5",
-            "runtime_real_write_gate": "CLOSED",
+            "live_write_build_capability": gate_status.live_write_build_capability,
+            "b05_package_eligibility": gate_status.b05_package_eligibility,
+            "configured_runtime_real_write_gate": (
+                gate_status.configured_runtime_real_write_gate
+            ),
+            "runtime_real_write_gate": gate_status.runtime_real_write_gate,
+            "live_activation_eligible": (
+                self._profile == "BINANCE_LIVE_WRITE"
+                and gate_status.live_write_build_capability == "QUALIFIED"
+                and gate_status.b05_package_eligibility == "AUTHORIZED"
+                and gate_status.configured_runtime_real_write_gate == "CLOSED"
+            ),
             "capital_notice": "Halpha 内部互斥额度，不是 Binance 资金冻结或损失保证。",
         }
 
@@ -512,6 +554,28 @@ class PostgreSQLPlanningApi:
         idempotency_key: str,
         observed_at: datetime,
     ) -> dict[str, Any]:
+        gate_status = self._gate_status()
+        activation_terms: dict[str, bool] = {}
+        if self._profile == "BINANCE_LIVE_READ_ONLY":
+            raise ValueError("LIVE_READ_ONLY_ACTIVATION_FORBIDDEN")
+        if self._profile == "BINANCE_LIVE_WRITE":
+            if gate_status.live_write_build_capability != "QUALIFIED":
+                raise ValueError("LIVE_WRITE_BUILD_CAPABILITY_NOT_QUALIFIED")
+            if gate_status.b05_package_eligibility != "AUTHORIZED":
+                raise ValueError("B05_PACKAGE_NOT_AUTHORIZED")
+            if gate_status.configured_runtime_real_write_gate != "CLOSED":
+                raise ValueError("LIVE_WRITE_GATE_MUST_BE_CLOSED_FOR_ACTIVATION")
+            activation_terms = {
+                "real_capital_acknowledged": payload.real_capital_acknowledged,
+                "evidence_limitations_acknowledged": (
+                    payload.evidence_limitations_acknowledged
+                ),
+                "online_monitoring_acknowledged": (
+                    payload.online_monitoring_acknowledged
+                ),
+            }
+            if any(value is not True for value in activation_terms.values()):
+                raise ValueError("LIVE_OWNER_ACKNOWLEDGEMENTS_REQUIRED")
         activation_id = _stable_id(self._environment_id, "activation", idempotency_key)
         authorization_id = _stable_id(self._environment_id, "authorization", idempotency_key)
         allocation_id = _stable_id(self._environment_id, "allocation", idempotency_key)
@@ -529,6 +593,7 @@ class PostgreSQLPlanningApi:
                         capital_limit_version_id=payload.capital_limit_version_id,
                         quote_asset=payload.quote_asset,
                         observed_at=observed_at,
+                        activation_terms=activation_terms,
                     )
             except psycopg.errors.UniqueViolation as exc:
                 constraint_name = exc.diag.constraint_name
@@ -561,7 +626,7 @@ class PostgreSQLPlanningApi:
             ),
             "allocation": allocation.model_dump(mode="json"),
             "venue_write_created": False,
-            "runtime_real_write_gate": "CLOSED",
+            "runtime_real_write_gate": self._gate_status().runtime_real_write_gate,
         }
 
     def list_activations(self) -> list[dict[str, Any]]:
@@ -715,7 +780,7 @@ class PostgreSQLPlanningApi:
                 }
                 for row in stops
             ],
-            "runtime_real_write_gate": "CLOSED",
+            "runtime_real_write_gate": self._gate_status().runtime_real_write_gate,
         }
 
     def activation_timeline(self, activation_id: str) -> list[dict[str, Any]]:

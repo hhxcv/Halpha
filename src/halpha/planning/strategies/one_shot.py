@@ -152,6 +152,10 @@ class EntryRiskContext(BaseModel):
     indicator_source_cutoff_ns: int
     quantity_step: str
     price_tick_size: str
+    entry_extension_boundary: str
+    sizing_taker_fee_rate: str
+    sizing_effective_leverage: str
+    instrument_rules_digest: str
 
     @field_validator(
         "trigger_atr",
@@ -161,12 +165,35 @@ class EntryRiskContext(BaseModel):
         "take_profit_2_r",
         "quantity_step",
         "price_tick_size",
+        "entry_extension_boundary",
+        "sizing_effective_leverage",
     )
     @classmethod
     def positive_context_values(cls, value: str) -> str:
         return canonical_decimal(
             decimal_from_string(value, code="ENTRY_RISK_CONTEXT_INVALID", positive=True)
         )
+
+    @field_validator("sizing_taker_fee_rate")
+    @classmethod
+    def fee_rate_is_bounded(cls, value: str) -> str:
+        normalized = canonical_decimal(
+            decimal_from_string(
+                value,
+                code="ENTRY_RISK_CONTEXT_INVALID",
+                non_negative=True,
+            )
+        )
+        if Decimal(normalized) >= 1:
+            raise ValueError("ENTRY_RISK_CONTEXT_INVALID")
+        return normalized
+
+    @field_validator("instrument_rules_digest")
+    @classmethod
+    def rules_digest_is_sha256(cls, value: str) -> str:
+        if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+            raise ValueError("ENTRY_RISK_CONTEXT_INVALID")
+        return value
 
 
 class StrategyProposal(BaseModel):
@@ -234,8 +261,10 @@ class OneShotDonchianAtrLogic:
         extension = Decimal(self.parameters.max_entry_extension_atr) * atr
         if self.parameters.direction is Direction.LONG:
             triggered = all(close > upper for close in closes) and closes[-1] <= upper + extension
+            entry_extension_boundary = upper + extension
         else:
             triggered = all(close < lower for close in closes) and closes[-1] >= lower - extension
+            entry_extension_boundary = lower - extension
         if not triggered:
             return StrategyEvaluation(reason_code="ENTRY_CONDITION_FALSE")
 
@@ -287,6 +316,10 @@ class OneShotDonchianAtrLogic:
                 indicator_source_cutoff_ns=evaluation.indicators.source_cutoff_ns,
                 quantity_step=evaluation.rules.step_size,
                 price_tick_size=evaluation.rules.price_tick_size,
+                entry_extension_boundary=canonical_decimal(entry_extension_boundary),
+                sizing_taker_fee_rate=evaluation.taker_fee_rate,
+                sizing_effective_leverage=evaluation.effective_leverage,
+                instrument_rules_digest=content_digest(evaluation.rules),
             ),
         }
         return StrategyEvaluation(

@@ -288,10 +288,33 @@ def test_submitting_crash_becomes_query_only_unknown_and_never_returns_ready() -
     ) is unknown
     definitely_absent = mark_not_submitted(
         unknown,
+        reason_code="VENUE_QUERY_PROVED_ABSENT",
         observed_at=NOW + timedelta(seconds=4),
     )
     assert definitely_absent.state is ExecutionActionState.NOT_SUBMITTED
     assert definitely_absent.request_digest == unknown.request_digest
+    assert definitely_absent.not_submitted_reason == "VENUE_QUERY_PROVED_ABSENT"
+
+
+def test_submitting_can_close_not_submitted_when_local_evidence_proves_no_call() -> None:
+    submitting = begin_submission(
+        _action(),
+        capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+        request_payload={"order_type": "MARKET", "quantity": "0.001"},
+        observed_at=NOW + timedelta(seconds=1),
+    )
+
+    not_submitted = mark_not_submitted(
+        submitting,
+        reason_code="RUNTIME_REAL_WRITE_GATE_CLOSED",
+        observed_at=NOW + timedelta(seconds=2),
+    )
+
+    assert not_submitted.state is ExecutionActionState.NOT_SUBMITTED
+    assert not_submitted.request_digest == submitting.request_digest
+    assert not_submitted.call_started_at == submitting.call_started_at
+    assert not_submitted.call_completed_at == NOW + timedelta(seconds=2)
+    assert not_submitted.not_submitted_reason == "RUNTIME_REAL_WRITE_GATE_CLOSED"
 
 
 def test_authoritative_fact_advances_original_action_and_reconciliation_needs_closure() -> None:

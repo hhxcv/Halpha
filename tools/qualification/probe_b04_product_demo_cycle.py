@@ -49,6 +49,7 @@ from halpha.capital.models import (
 from halpha.configuration import executor_settings, load_settings
 from halpha.domain_values import canonical_decimal, content_digest
 from halpha.executor.continuity import PostgreSQLExecutorContinuityGuard
+from halpha.executor.product_entry import instrument_rules_payload
 from halpha.executor.runtime import ProductExecutorRuntime
 from halpha.outcomes.models import EvidencePurpose, PrimaryResult
 from halpha.outcomes.service import OutcomeApplicationService, review_id_for_activation
@@ -78,6 +79,7 @@ from halpha.venue_integration.models import (
     VenueFactSourceClass,
 )
 from halpha.venue_integration.repository import PostgreSQLVenueFactRepository
+from halpha.venue_integration.repository import VenueIntegrationConflict
 from halpha.winvault import executor_secret_resolver
 from tools.qualification.probe_binance_demo_clients import (
     _effective_leverage,
@@ -89,6 +91,10 @@ from tools.qualification.probe_binance_demo_order_roundtrip import (
     _responsibility_snapshot,
 )
 from tools.qualification.probe_binance_demo_reduce_only_topology import _account_api
+from tools.qualification.source_binding import (
+    SourceBindingError,
+    capture_source_sha256,
+)
 from tools.qualification.verify_b02_database_boundary import (
     _connect,
     _create_and_activate,
@@ -102,6 +108,29 @@ LOG_DIRECTORY = ROOT / "build/qualification/runtime/b04-product-demo-cycle"
 INSTRUMENT_ID = InstrumentId.from_str("BTCUSDT-PERP.BINANCE")
 INSTRUMENT_REF = "BTCUSDT-PERP"
 SYMBOL = "BTCUSDT"
+PRODUCT_SOURCE_PATTERNS = (
+    "config/halpha.toml",
+    "migrations/versions/*.py",
+    "requirements/runtime.txt",
+    "src/halpha/capital/**/*.py",
+    "src/halpha/configuration.py",
+    "src/halpha/database/**/*.py",
+    "src/halpha/domain_values.py",
+    "src/halpha/executor/**/*.py",
+    "src/halpha/outcomes/**/*.py",
+    "src/halpha/planning/**/*.py",
+    "src/halpha/runtime_identity.py",
+    "src/halpha/user_workbench/**/*.py",
+    "src/halpha/venue_integration/**/*.py",
+    "src/halpha/winvault.py",
+    "tools/qualification/probe_b04_product_demo_cycle.py",
+    "tools/qualification/probe_binance_demo_clients.py",
+    "tools/qualification/probe_binance_demo_order_roundtrip.py",
+    "tools/qualification/probe_binance_demo_reduce_only_topology.py",
+    "tools/qualification/source_binding.py",
+    "src/halpha/source_identity.py",
+    "tools/qualification/verify_b02_database_boundary.py",
+)
 
 
 async def _wait_for_action(
@@ -113,7 +142,13 @@ async def _wait_for_action(
 ) -> ExecutionAction:
     deadline = asyncio.get_running_loop().time() + timeout_seconds
     while asyncio.get_running_loop().time() < deadline:
-        action = runtime.coordinator.get_execution_action(action_id)
+        try:
+            action = runtime.coordinator.get_execution_action(action_id)
+        except VenueIntegrationConflict as exc:
+            if str(exc) != "EXECUTION_ACTION_NOT_FOUND":
+                raise
+            await asyncio.sleep(0.05)
+            continue
         if action.state in states:
             return action
         await asyncio.sleep(0.25)
@@ -226,8 +261,11 @@ async def _account_policy(
     )
 
 
-def _qualification_quantity(instrument: Any, reference_price: Decimal) -> str:
-    step = instrument.size_increment.as_decimal()
+def _qualification_quantity(
+    rules: dict[str, str],
+    reference_price: Decimal,
+) -> str:
+    step = Decimal(rules["step_size"])
     maximum = min(Decimal("0.004"), Decimal("800") / reference_price)
     units = int((maximum / step).to_integral_value(rounding=ROUND_DOWN))
     if units % 2:
@@ -704,6 +742,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+    source_sha256_at_start = capture_source_sha256(ROOT, PRODUCT_SOURCE_PATTERNS)
     started_at = datetime.now(UTC)
     environment_id = f"qualification-b04-product-{uuid4()}"
     account_ref = f"qualification-demo-account-{uuid4()}"
@@ -885,10 +924,11 @@ def main() -> int:
                 available_margin = canonical_decimal(
                     account.balance_free(Currency.from_str("USDT")).as_decimal()
                 )
-                quantity = _qualification_quantity(instrument, reference)
+                execution_rules = instrument_rules_payload(instrument)
+                quantity = _qualification_quantity(execution_rules, reference)
                 quantity_decimal = Decimal(quantity)
-                tick = instrument.price_increment.as_decimal()
-                step = instrument.size_increment.as_decimal()
+                tick = Decimal(execution_rules["price_tick_size"])
+                step = Decimal(execution_rules["step_size"])
                 trigger_atr = (reference * Decimal("0.20") / tick).to_integral_value(
                     rounding=ROUND_DOWN
                 ) * tick
@@ -908,6 +948,14 @@ def main() -> int:
                     indicator_source_cutoff_ns=int(quote.ts_event),
                     quantity_step=canonical_decimal(step),
                     price_tick_size=canonical_decimal(tick),
+                    entry_extension_boundary=canonical_decimal(
+                        reference + trigger_atr
+                    ),
+                    sizing_taker_fee_rate=canonical_decimal(instrument.taker_fee),
+                    sizing_effective_leverage=str(
+                        _effective_leverage(int(Decimal(leverage)))
+                    ),
+                    instrument_rules_digest=content_digest(execution_rules),
                 )
                 entry_at = datetime.now(UTC)
                 proposal_basis = {
@@ -940,48 +988,38 @@ def main() -> int:
                     **proposal_basis,
                     proposal_digest=content_digest(proposal_basis),
                 )
-                entry_check = _action_check(
-                    environment_id=environment_id,
-                    account_ref=account_ref,
-                    activation_id=ids["activation_id"],
-                    profile="ENTRY_MARKET",
-                    category=StopCategory.NEW_FUNDING,
-                    risk_class=RiskClass.RISK_INCREASING,
-                    checked_at=entry_at,
-                    quantity=quantity,
-                    conservative_price=conservative_price,
-                    available_margin=available_margin,
-                    margin_mode=margin_mode,
-                    leverage=leverage,
-                    current_position="0",
-                    post_position=quantity,
-                )
-                entry_action_id = str(uuid4())
-                coordinated = runtime.coordinator.consume_strategy_proposal(
-                    plan_event_id=str(uuid4()),
-                    execution_action_id=entry_action_id,
-                    proposal=proposal,
-                    action_check=entry_check,
-                    created_at=entry_at,
-                    client_order_id=uuid4().hex,
-                )
-                if coordinated.execution_action is None:
-                    raise RuntimeError("PRODUCT_ENTRY_ACTION_NOT_CREATED")
-                result = runtime.coordinator.process_execution_action(
+                entry_action_id = runtime.submit_strategy_proposal(proposal)
+                submitted = await _wait_for_action(
+                    runtime,
                     entry_action_id,
-                    action_check=entry_check,
-                    request_payload={
-                        "profile": "ENTRY_MARKET",
-                        "quantity": quantity,
-                    },
-                    observed_at=datetime.now(UTC),
+                    frozenset(
+                        {
+                            ExecutionActionState.SUBMITTED_UNKNOWN,
+                            ExecutionActionState.ACKNOWLEDGED,
+                            ExecutionActionState.WORKING,
+                            ExecutionActionState.PARTIALLY_FILLED,
+                            ExecutionActionState.FILLED,
+                            ExecutionActionState.NOT_SUBMITTED,
+                        }
+                    ),
                 )
-                evidence["venue_write_performed"] = result.venue_called
+                if submitted.state is ExecutionActionState.NOT_SUBMITTED:
+                    raise RuntimeError(
+                        "PRODUCT_ENTRY_NOT_SUBMITTED:"
+                        f"{submitted.not_submitted_reason or 'UNKNOWN'}"
+                    )
+                evidence["venue_write_performed"] = True
                 checks["entry_uses_persisted_product_gate"] = (
-                    result.venue_called
-                    and result.execution_action.state
-                    is ExecutionActionState.SUBMITTED_UNKNOWN
+                    submitted.state
+                    in {
+                        ExecutionActionState.SUBMITTED_UNKNOWN,
+                        ExecutionActionState.ACKNOWLEDGED,
+                        ExecutionActionState.WORKING,
+                        ExecutionActionState.PARTIALLY_FILLED,
+                        ExecutionActionState.FILLED,
+                    }
                 )
+                checks["entry_uses_production_proposal_processor"] = True
                 entry = await _wait_for_action(
                     runtime,
                     entry_action_id,
@@ -1545,6 +1583,9 @@ def main() -> int:
             checks["product_runtime_reconciliation_precedes_ready"] = (
                 runtime is not None and runtime.recovery_complete
             )
+            checks["live_history_warmup_precedes_product_ready"] = (
+                runtime is not None and runtime.strategy_history_warmup_complete
+            )
             flow_task = runtime.node.get_event_loop().create_task(product_flow())
 
         evidence["stage"] = "RUNNING_PRODUCT_DEMO"
@@ -1606,6 +1647,15 @@ def main() -> int:
 
     if not all(checks.values()) and not errors:
         errors.append("PRODUCT_DEMO_REQUIRED_CHECK_FAILED")
+    evidence["source_sha256"] = source_sha256_at_start
+    try:
+        checks["source_stable_during_qualification"] = (
+            capture_source_sha256(ROOT, PRODUCT_SOURCE_PATTERNS)
+            == source_sha256_at_start
+        )
+    except SourceBindingError as exc:
+        checks["source_stable_during_qualification"] = False
+        errors.append(f"PRODUCT_SOURCE_BINDING_FAILED:{exc}")
     evidence["observed_at"] = datetime.now(UTC).isoformat()
     evidence["status"] = (
         "QUALIFIED"

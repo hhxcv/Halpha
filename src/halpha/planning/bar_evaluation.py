@@ -66,6 +66,7 @@ class NautilusBarEntryEvaluator:
         decision_not_before: datetime,
         valid_until: datetime,
         sizing_provider: EntrySizingProvider,
+        requires_live_warmup: bool = False,
     ) -> None:
         if decision_not_before.tzinfo is None or valid_until.tzinfo is None:
             raise ValueError("BAR_EVALUATION_TIMEZONE_REQUIRED")
@@ -77,6 +78,8 @@ class NautilusBarEntryEvaluator:
         self.decision_not_before = decision_not_before.astimezone(UTC)
         self.valid_until = valid_until.astimezone(UTC)
         self.sizing_provider = sizing_provider
+        self._requires_live_warmup = requires_live_warmup
+        self._warmup_complete = not requires_live_warmup
         self.source_bar_type = BarType.from_str(
             f"{instrument_ref}.BINANCE-1-MINUTE-LAST-EXTERNAL"
         )
@@ -90,6 +93,10 @@ class NautilusBarEntryEvaluator:
         self._confirmation_bars: deque[Bar] = deque(
             maxlen=parameters.confirmation_bars_1m
         )
+        self._recent_target_timestamps: deque[int] = deque(
+            maxlen=max(parameters.channel_lookback_15m, 15)
+        )
+        self._recent_source_timestamps: deque[int] = deque(maxlen=15)
         self._donchian = DonchianChannel(parameters.channel_lookback_15m)
         self._atr = AverageTrueRange(
             period=14,
@@ -106,7 +113,64 @@ class NautilusBarEntryEvaluator:
     def subscribed_bar_types(self) -> tuple[BarType, BarType]:
         return self.source_bar_type, self.target_bar_type
 
+    @property
+    def warmup_complete(self) -> bool:
+        return self._warmup_complete
+
+    def accept_historical(self, bar: Bar) -> None:
+        """Prime the native indicators without producing historical actions."""
+
+        if not self._requires_live_warmup or self._warmup_complete:
+            raise BarEvaluationError("HISTORICAL_BAR_OUTSIDE_WARMUP")
+        bar_type = str(bar.bar_type)
+        if bar_type == str(self._delivered_target_bar_type):
+            self._accept_target(bar)
+        elif bar_type == str(self.source_bar_type):
+            self._accept_source_identity(bar, collect_confirmation=False)
+
+    def complete_live_warmup(self) -> None:
+        """Open the live handoff only after both source and target tails are continuous."""
+
+        if not self._requires_live_warmup:
+            raise BarEvaluationError("LIVE_WARMUP_NOT_CONFIGURED")
+        if self._warmup_complete:
+            return
+        target_count = max(self.parameters.channel_lookback_15m, 15)
+        if not self._is_continuous(
+            self._recent_target_timestamps,
+            interval_ns=900_000_000_000,
+            count=target_count,
+        ):
+            raise BarEvaluationError("TARGET_WARMUP_INCOMPLETE")
+        if not self._is_continuous(
+            self._recent_source_timestamps,
+            interval_ns=60_000_000_000,
+            count=15,
+        ):
+            raise BarEvaluationError("SOURCE_WARMUP_INCOMPLETE")
+        if not self._donchian.initialized or not self._atr.initialized:
+            raise BarEvaluationError("INDICATOR_WARMUP_INCOMPLETE")
+        self._confirmation_bars.clear()
+        self._warmup_complete = True
+
+    @staticmethod
+    def _is_continuous(
+        timestamps: deque[int],
+        *,
+        interval_ns: int,
+        count: int,
+    ) -> bool:
+        if len(timestamps) < count:
+            return False
+        recent = tuple(timestamps)[-count:]
+        return all(
+            later - earlier == interval_ns
+            for earlier, later in zip(recent, recent[1:])
+        )
+
     def accept(self, bar: Bar) -> EntryEvaluationInput | None:
+        if self._requires_live_warmup and not self._warmup_complete:
+            raise BarEvaluationError("LIVE_WARMUP_NOT_COMPLETE")
         bar_type = str(bar.bar_type)
         if bar_type == str(self._delivered_target_bar_type):
             self._accept_target(bar)
@@ -135,37 +199,20 @@ class NautilusBarEntryEvaluator:
         self._donchian.handle_bar(bar)
         self._atr.handle_bar(bar)
         self._indicator_bars.append(item)
+        self._recent_target_timestamps.append(bar.ts_event)
         self._confirmation_bars.clear()
         self._last_target_ts = bar.ts_event
         self._last_target_digest = digest
 
     def _accept_source(self, bar: Bar) -> EntryEvaluationInput | None:
-        digest = content_digest(
-            {
-                "bar_type": str(bar.bar_type),
-                "open": str(bar.open),
-                "high": str(bar.high),
-                "low": str(bar.low),
-                "close": str(bar.close),
-                "volume": str(bar.volume),
-                "ts_event_ns": bar.ts_event,
-            }
-        )
-        if self._last_source_ts is not None:
-            if bar.ts_event < self._last_source_ts:
-                raise BarEvaluationError("SOURCE_BAR_OUT_OF_ORDER")
-            if bar.ts_event == self._last_source_ts:
-                if digest != self._last_source_digest:
-                    raise BarEvaluationError("SOURCE_BAR_IDENTITY_CONFLICT")
-                return None
-        self._last_source_ts = bar.ts_event
-        self._last_source_digest = digest
+        accepted = self._accept_source_identity(bar, collect_confirmation=True)
+        if not accepted:
+            return None
         if self._last_target_ts is None or bar.ts_event <= self._last_target_ts:
             return None
         decision_at = _datetime_from_ns(bar.ts_event)
         if decision_at < self.decision_not_before or decision_at >= self.valid_until:
             return None
-        self._confirmation_bars.append(bar)
         if len(self._confirmation_bars) != self.parameters.confirmation_bars_1m:
             return None
         if len(self._indicator_bars) != self.parameters.channel_lookback_15m:
@@ -216,3 +263,29 @@ class NautilusBarEntryEvaluator:
             taker_fee_rate=sizing.taker_fee_rate,
             rules=sizing.rules,
         )
+
+    def _accept_source_identity(self, bar: Bar, *, collect_confirmation: bool) -> bool:
+        digest = content_digest(
+            {
+                "bar_type": str(bar.bar_type),
+                "open": str(bar.open),
+                "high": str(bar.high),
+                "low": str(bar.low),
+                "close": str(bar.close),
+                "volume": str(bar.volume),
+                "ts_event_ns": bar.ts_event,
+            }
+        )
+        if self._last_source_ts is not None:
+            if bar.ts_event < self._last_source_ts:
+                raise BarEvaluationError("SOURCE_BAR_OUT_OF_ORDER")
+            if bar.ts_event == self._last_source_ts:
+                if digest != self._last_source_digest:
+                    raise BarEvaluationError("SOURCE_BAR_IDENTITY_CONFLICT")
+                return False
+        self._last_source_ts = bar.ts_event
+        self._last_source_digest = digest
+        self._recent_source_timestamps.append(bar.ts_event)
+        if collect_confirmation:
+            self._confirmation_bars.append(bar)
+        return True

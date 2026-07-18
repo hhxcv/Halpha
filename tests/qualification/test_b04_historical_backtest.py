@@ -15,8 +15,59 @@ from nautilus_trader.model.identifiers import (
 
 from tools.qualification.run_b04_historical_backtest import (
     HistoricalEpisodeGateway,
+    SOURCE_FILES,
+    _source_binding_drift,
+    _source_sha256,
 )
 import tools.qualification.run_b04_historical_backtest as historical_backtest
+
+
+def test_historical_backtest_binds_its_complete_current_source_set() -> None:
+    required = {
+        "requirements/runtime.txt",
+        "src/halpha/capital/checks.py",
+        "src/halpha/capital/models.py",
+        "src/halpha/domain_values.py",
+        "src/halpha/planning/adapter.py",
+        "src/halpha/planning/bar_evaluation.py",
+        "src/halpha/planning/indicators.py",
+        "src/halpha/planning/models.py",
+        "src/halpha/planning/registry.py",
+        "src/halpha/planning/strategies/one_shot.py",
+        "src/halpha/planning/transitions.py",
+        "tools/qualification/build_b04_historical_catalog.py",
+        "tools/qualification/run_b04_historical_backtest.py",
+    }
+
+    source_sha256 = _source_sha256()
+
+    assert set(SOURCE_FILES) == required
+    assert set(source_sha256) == required
+    assert all(
+        len(digest) == 64
+        and all(character in "0123456789abcdef" for character in digest)
+        for digest in source_sha256.values()
+    )
+
+
+def test_preregistered_source_drift_is_explicit_and_deterministic() -> None:
+    expected = {"a.py": "a" * 64, "missing.py": "b" * 64}
+    actual = {"a.py": "c" * 64}
+
+    assert _source_binding_drift(expected, actual) == [
+        {
+            "path": "a.py",
+            "reason": "SOURCE_SHA256_MISMATCH",
+            "expected": "a" * 64,
+            "actual": "c" * 64,
+        },
+        {
+            "path": "missing.py",
+            "reason": "SOURCE_FILE_NOT_IN_CURRENT_BINDING",
+            "expected": "b" * 64,
+            "actual": None,
+        },
+    ]
 
 
 def _rejected_event(client_order_id: str) -> OrderRejected:

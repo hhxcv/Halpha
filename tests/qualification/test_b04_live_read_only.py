@@ -108,6 +108,7 @@ def test_event_scan_rejects_process_start_configuration_drift(tmp_path) -> None:
         observation_id="observation-1",
         parameter_digest="1" * 64,
         configuration_digest="2" * 64,
+        source_sha256_digest="4" * 64,
     )
     events_path = tmp_path / "events.jsonl"
     events_path.write_bytes(
@@ -117,6 +118,7 @@ def test_event_scan_rejects_process_start_configuration_drift(tmp_path) -> None:
             observation_id=spec.observation_id,
             parameter_digest=spec.parameter_digest,
             configuration_digest="3" * 64,
+            source_sha256_digest=spec.source_sha256_digest,
         )
     )
 
@@ -126,6 +128,31 @@ def test_event_scan_rejects_process_start_configuration_drift(tmp_path) -> None:
     assert scan.configuration_digest_mismatch is True
 
 
+def test_event_scan_rejects_source_identity_drift(tmp_path) -> None:
+    spec = SimpleNamespace(
+        observation_id="observation-1",
+        parameter_digest="1" * 64,
+        configuration_digest="2" * 64,
+        source_sha256_digest="4" * 64,
+    )
+    events_path = tmp_path / "events.jsonl"
+    events_path.write_bytes(
+        _event_line(
+            event="OBSERVATION_PROCESS_STARTED",
+            observed_at="2026-07-18T00:00:00Z",
+            observation_id=spec.observation_id,
+            parameter_digest=spec.parameter_digest,
+            configuration_digest=spec.configuration_digest,
+            source_sha256_digest="5" * 64,
+        )
+    )
+
+    scan = scan_event_log(events_path, spec=spec)
+
+    assert scan.process_start_count == 1
+    assert scan.source_sha256_digest_mismatch is True
+
+
 def test_event_scan_proves_controlled_process_gap_even_when_bars_are_contiguous(
     tmp_path,
 ) -> None:
@@ -133,6 +160,7 @@ def test_event_scan_proves_controlled_process_gap_even_when_bars_are_contiguous(
         observation_id="observation-1",
         parameter_digest="1" * 64,
         configuration_digest="2" * 64,
+        source_sha256_digest="4" * 64,
     )
     stopped_at = "2026-07-18T00:00:00Z"
     started_at = "2026-07-18T00:01:40Z"
@@ -148,6 +176,7 @@ def test_event_scan_proves_controlled_process_gap_even_when_bars_are_contiguous(
                     observation_id=spec.observation_id,
                     parameter_digest=spec.parameter_digest,
                     configuration_digest=spec.configuration_digest,
+                    source_sha256_digest=spec.source_sha256_digest,
                 ),
                 _event_line(
                     event="OBSERVATION_PROCESS_STOPPED",
@@ -155,6 +184,7 @@ def test_event_scan_proves_controlled_process_gap_even_when_bars_are_contiguous(
                     observation_id=spec.observation_id,
                     parameter_digest=spec.parameter_digest,
                     configuration_digest=spec.configuration_digest,
+                    source_sha256_digest=spec.source_sha256_digest,
                 ),
                 _event_line(
                     event="OBSERVATION_PROCESS_STARTED",
@@ -162,6 +192,7 @@ def test_event_scan_proves_controlled_process_gap_even_when_bars_are_contiguous(
                     observation_id=spec.observation_id,
                     parameter_digest=spec.parameter_digest,
                     configuration_digest=spec.configuration_digest,
+                    source_sha256_digest=spec.source_sha256_digest,
                 ),
                 _event_line(
                     event="BAR_OBSERVED",
@@ -170,6 +201,7 @@ def test_event_scan_proves_controlled_process_gap_even_when_bars_are_contiguous(
                     observation_id=spec.observation_id,
                     parameter_digest=spec.parameter_digest,
                     configuration_digest=spec.configuration_digest,
+                    source_sha256_digest=spec.source_sha256_digest,
                 ),
             )
         )

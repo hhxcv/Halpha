@@ -44,3 +44,25 @@ def test_tracked_file_change_invalidates_digest(tmp_path: Path) -> None:
     (tmp_path / "implementation.py").write_text("VALUE = 2\n", encoding="utf-8")
     after = compute_record_digest(record, root=tmp_path, baseline_patterns=())
     assert before != after
+
+
+def test_text_line_ending_change_does_not_invalidate_digest(tmp_path: Path) -> None:
+    (tmp_path / "spec.md").write_bytes(b"accepted\n")
+    implementation = tmp_path / "implementation.py"
+    implementation.write_bytes(b"VALUE = 1\n")
+    (tmp_path / "test_impl.py").write_bytes(b"def test_value(): pass\n")
+    record = {
+        "requirement_id": "TEST-001",
+        "spec_source": ["spec.md"],
+        "delivery_horizon": "P0_REQUIRED",
+        "implementation_paths": ["implementation.py"],
+        "forbidden_calls": ["forbidden.call"],
+        "tests": ["test_impl.py"],
+        "build_gate": ["pytest test_impl.py"],
+        "evidence_digest": "PENDING",
+        "implementation_status": "PARTIAL",
+        "deviation_status": "NONE",
+    }
+    lf_digest = compute_record_digest(record, root=tmp_path, baseline_patterns=())
+    implementation.write_bytes(b"VALUE = 1\r\n")
+    assert compute_record_digest(record, root=tmp_path, baseline_patterns=()) == lf_digest

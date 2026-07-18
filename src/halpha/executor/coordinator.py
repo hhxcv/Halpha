@@ -14,12 +14,15 @@ from halpha.capital.models import (
     ActionCheckInput,
     AuthorityClass,
     EnvironmentKind,
+    PlanAllocation,
     RiskClass,
 )
 from halpha.capital.service import CapitalApplicationService
 from halpha.domain_values import content_digest
 from halpha.outcomes.service import OutcomeApplicationService, review_id_for_activation
 from halpha.planning.models import (
+    ConditionJudgement,
+    ConditionResult,
     PlanActivation,
     PlanEvent,
     PlanLifecycle,
@@ -123,6 +126,8 @@ class HalphaCoordinator:
         account_ref: str,
         venue_ref: str = "BINANCE",
         runtime_real_write_gate: str = "CLOSED",
+        live_write_activation_id: str | None = None,
+        live_write_submission_guard: Callable[[str], None] | None = None,
     ) -> None:
         if environment_kind == "DEMO":
             if (
@@ -134,6 +139,9 @@ class HalphaCoordinator:
             if (
                 authority_class != "LIVE_REAL_CAPITAL"
                 or execution_profile_ref != "BINANCE_LIVE_WRITE"
+                or runtime_real_write_gate != "OPEN"
+                or live_write_activation_id is None
+                or live_write_submission_guard is None
             ):
                 raise ValueError("EXECUTION_PROFILE_MISMATCH")
         else:
@@ -147,6 +155,8 @@ class HalphaCoordinator:
         self._account_ref = account_ref
         self._venue_ref = venue_ref
         self._runtime_real_write_gate = runtime_real_write_gate
+        self._live_write_activation_id = live_write_activation_id
+        self._live_write_submission_guard = live_write_submission_guard
         self._planning = PlanningApplicationService(connection, environment_id)
         self._capital = CapitalApplicationService(connection, environment_id)
         self._action_repository = PostgreSQLExecutionActionRepository(
@@ -168,6 +178,69 @@ class HalphaCoordinator:
 
     def get_execution_action(self, execution_action_id: str) -> ExecutionAction:
         return self._action_repository.get(execution_action_id)
+
+    def get_entry_sizing_allocation(self, activation_id: str) -> PlanAllocation:
+        with self._connection.transaction():
+            return self._capital.get_allocation_snapshot(activation_id)
+
+    def record_strategy_proposal_rejection(
+        self,
+        *,
+        plan_event_id: str,
+        proposal: StrategyProposal,
+        reason_code: str,
+        observed_at: datetime,
+    ) -> PlanEvent:
+        """Persist a fail-closed proposal outcome without creating an EXE action."""
+
+        with self._connection.transaction():
+            return self._planning.record_plan_event(
+                plan_event_id=plan_event_id,
+                activation_id=proposal.activation_id,
+                rule_id=proposal.rule_id,
+                source_identity=proposal.source_identity,
+                source_cutoff=proposal.source_cutoff,
+                input_digest=proposal.input_digest,
+                reason_code=reason_code,
+                proposed_action=None,
+                no_action_reason=reason_code,
+                condition_judgement=ConditionJudgement(
+                    rule_id=proposal.rule_id,
+                    source_identity=proposal.source_identity,
+                    source_cutoff=proposal.source_cutoff,
+                    input_digest=proposal.input_digest,
+                    result=ConditionResult.UNKNOWN,
+                    reason_code=reason_code,
+                    next_responsibility="NONE",
+                ),
+                capital_decision={
+                    "accepted": False,
+                    "reason_code": f"NOT_EVALUATED_{reason_code}",
+                },
+                created_at=observed_at,
+            )
+
+    def reject_execution_action_before_submission(
+        self,
+        execution_action_id: str,
+        *,
+        reason_code: str,
+        observed_at: datetime,
+    ) -> ExecutionAction:
+        """Close a READY action when the second fresh-fact check fails."""
+
+        with self._connection.transaction():
+            action = self._action_repository.get(
+                execution_action_id,
+                for_update=True,
+            )
+            if action.state is not ExecutionActionState.READY:
+                return action
+            return self._execution.record_definitely_not_submitted(
+                execution_action_id,
+                reason_code=reason_code,
+                observed_at=observed_at,
+            )
 
     def reconcile_execution_action(
         self,
@@ -234,6 +307,7 @@ class HalphaCoordinator:
             if normalized.definitely_not_submitted and action is not None:
                 self._execution.record_definitely_not_submitted(
                     action.execution_action_id,
+                    reason_code="NAUTILUS_ORDER_DENIED",
                     observed_at=observed_at,
                 )
                 return normalized
@@ -302,6 +376,12 @@ class HalphaCoordinator:
     ) -> CoordinatedProposalResult:
         """Commit PlanEvent and accepted ExecutionAction in one DB transaction."""
 
+        if (
+            self._environment_kind == "LIVE"
+            and proposal.activation_id != self._live_write_activation_id
+        ):
+            raise RuntimeError("LIVE_WRITE_ACTIVATION_SCOPE_MISMATCH")
+        self._require_current_live_write_gate(proposal.activation_id)
         with self._connection.transaction():
             event = self._planning.consume_strategy_proposal(
                 plan_event_id=plan_event_id,
@@ -331,8 +411,14 @@ class HalphaCoordinator:
 
         if self._environment_kind == "LIVE" and self._runtime_real_write_gate != "OPEN":
             raise RuntimeError("RUNTIME_REAL_WRITE_GATE_CLOSED")
+        self._require_current_live_write_gate(action_check.activation_id)
         with self._connection.transaction():
             action = self._action_repository.get(execution_action_id, for_update=True)
+            if (
+                self._environment_kind == "LIVE"
+                and action.activation_id != self._live_write_activation_id
+            ):
+                raise RuntimeError("LIVE_WRITE_ACTIVATION_SCOPE_MISMATCH")
             activation = self._planning.get_activation(action.activation_id, for_update=True)
             block_reason = _submission_block_reason(action, activation)
             if block_reason is not None:
@@ -348,6 +434,7 @@ class HalphaCoordinator:
                     )
                 rejected = self._execution.record_definitely_not_submitted(
                     execution_action_id,
+                    reason_code=decision.reason_code,
                     observed_at=observed_at,
                 )
                 return ProcessExecutionResult(
@@ -362,6 +449,21 @@ class HalphaCoordinator:
                 observed_at=observed_at,
             )
 
+        try:
+            self._require_current_live_write_gate(prepared.activation_id)
+        except RuntimeError:
+            with self._connection.transaction():
+                not_submitted = self._execution.record_definitely_not_submitted(
+                    prepared.execution_action_id,
+                    reason_code="RUNTIME_REAL_WRITE_GATE_CLOSED",
+                    observed_at=observed_at,
+                )
+            return ProcessExecutionResult(
+                not_submitted,
+                venue_called=False,
+                reason_code="RUNTIME_REAL_WRITE_GATE_CLOSED",
+            )
+
         permit = self._gate.authorize_committed_submission(
             prepared.execution_action_id,
             expected_state_digest=prepared.state_digest,
@@ -372,6 +474,7 @@ class HalphaCoordinator:
             with self._connection.transaction():
                 not_submitted = self._execution.record_definitely_not_submitted(
                     prepared.execution_action_id,
+                    reason_code="VENUE_CLIENT_DEFINITELY_NOT_SUBMITTED",
                     observed_at=observed_at,
                 )
             return ProcessExecutionResult(
@@ -423,6 +526,17 @@ class HalphaCoordinator:
             venue_called=True,
             reason_code=f"VENUE_{updated.state.value}",
         )
+
+    def _require_current_live_write_gate(self, activation_id: str) -> None:
+        if self._environment_kind != "LIVE":
+            return
+        guard = self._live_write_submission_guard
+        if guard is None:
+            raise RuntimeError("RUNTIME_REAL_WRITE_GATE_CLOSED")
+        try:
+            guard(activation_id)
+        except Exception:
+            raise RuntimeError("RUNTIME_REAL_WRITE_GATE_CLOSED") from None
 
     def apply_venue_fact(
         self,

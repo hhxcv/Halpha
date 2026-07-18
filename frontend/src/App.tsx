@@ -4,10 +4,13 @@ import {
   AppBar,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Divider,
   Drawer,
+  FormControlLabel,
+  FormGroup,
   IconButton,
   LinearProgress,
   Link,
@@ -300,7 +303,12 @@ function WorkbenchFrame({ status }: { status: SettingsStatus }) {
           >
             事实截止 {formatUtc(status.server_fact_cutoff)}
           </Typography>
-          <Chip label="REAL WRITE · CLOSED" size="small" color="warning" variant="outlined" />
+          <Chip
+            label={`REAL WRITE · ${status.runtime_real_write_gate}`}
+            size="small"
+            color={status.runtime_real_write_gate === "OPEN" ? "error" : "warning"}
+            variant="outlined"
+          />
         </Toolbar>
       </AppBar>
       <Drawer
@@ -448,7 +456,10 @@ function SettingsPage() {
         { label: "BuildManifest", value: `${status.build_manifest_status} · ${shortDigest(status.build_manifest_digest)}` },
         { label: "真实写工程能力", value: status.live_write_build_capability },
         { label: "B05 包资格", value: status.b05_package_eligibility },
-        { label: "真实写运行门", value: status.runtime_real_write_gate },
+        { label: "运行门配置", value: status.configured_runtime_real_write_gate },
+        { label: "有效真实写运行门", value: status.runtime_real_write_gate },
+        { label: "授权决策引用", value: status.user_authorization_ref ?? "NONE" },
+        { label: "授权激活", value: status.authorized_activation_id ?? "NONE" },
         { label: "邮件投递", value: `${status.email_configuration_status} · ${status.email_delivery_enabled ? "ENABLED" : "DISABLED"}` },
         { label: "视图取得时间", value: formatUtc(status.view_retrieved_at) },
       ]} />
@@ -457,6 +468,14 @@ function SettingsPage() {
           <Typography variant="h2" sx={{ mb: 2 }}>Manifest 核对结果</Typography>
           <Stack component="ul" spacing={1} sx={{ pl: 2.5, color: "text.secondary" }}>
             {status.build_manifest_violations.map((violation) => <Typography component="li" key={violation} className="mono" variant="body2">{violation}</Typography>)}
+          </Stack>
+        </Box>
+      )}
+      {status.live_write_gate_violations.length > 0 && (
+        <Box component="section" sx={{ mt: 5, pt: 3, borderTop: 1, borderColor: "divider" }}>
+          <Typography variant="h2" sx={{ mb: 2 }}>真实写门核对结果</Typography>
+          <Stack component="ul" spacing={1} sx={{ pl: 2.5, color: "text.secondary" }}>
+            {status.live_write_gate_violations.map((violation) => <Typography component="li" key={violation} className="mono" variant="body2">{violation}</Typography>)}
           </Stack>
         </Box>
       )}
@@ -555,12 +574,35 @@ function CapitalPage() {
 function PlanActivationRoute() {
   const { planVersionId = "" } = useParams();
   const navigate = useNavigate();
+  const { status } = useOutletContext<FrameContext>();
   const preview = useQuery({ queryKey: ["activation-preview", planVersionId], queryFn: () => getActivationPreview(planVersionId), enabled: Boolean(planVersionId) });
   const capital = useQuery({ queryKey: ["capital"], queryFn: getCapital });
   const [password, setPassword] = useState("");
+  const [realCapitalAcknowledged, setRealCapitalAcknowledged] = useState(false);
+  const [evidenceLimitationsAcknowledged, setEvidenceLimitationsAcknowledged] = useState(false);
+  const [onlineMonitoringAcknowledged, setOnlineMonitoringAcknowledged] = useState(false);
+  const liveWrite = status.profile === "BINANCE_LIVE_WRITE";
+  const liveReadOnly = status.profile === "BINANCE_LIVE_READ_ONLY";
   const limitId = String(capital.data?.limits[0]?.capital_limit_version_id ?? "");
+  const livePackageReady = Boolean(preview.data?.live_activation_eligible);
+  const acknowledgementsComplete = realCapitalAcknowledged && evidenceLimitationsAcknowledged && onlineMonitoringAcknowledged;
+  const activationEnabled = Boolean(
+    password
+    && limitId
+    && preview.data
+    && !liveReadOnly
+    && (!liveWrite || (livePackageReady && acknowledgementsComplete)),
+  );
   const mutation = useMutation({
-    mutationFn: () => createActivation({ plan_version_id: planVersionId, capital_limit_version_id: limitId, quote_asset: "USDT", owner_password: password }),
+    mutationFn: () => createActivation({
+      plan_version_id: planVersionId,
+      capital_limit_version_id: limitId,
+      quote_asset: "USDT",
+      owner_password: password,
+      real_capital_acknowledged: liveWrite && realCapitalAcknowledged,
+      evidence_limitations_acknowledged: liveWrite && evidenceLimitationsAcknowledged,
+      online_monitoring_acknowledged: liveWrite && onlineMonitoringAcknowledged,
+    }),
     onSuccess: (result) => { const activation = result.activation as Record<string, unknown> | undefined; navigate(`/activations/${valueOf(activation, "activation_id")}`); },
   });
   return (
@@ -568,11 +610,29 @@ function PlanActivationRoute() {
       <PageHeader eyebrow="B04 · ACTIVATION REVIEW" title="激活复核" description="激活会原子固定机器授权、三轴互斥额度和独立 PlanActivation；随后只有唯一 Executor 能经持久 ExecutionAction 越过所属环境的场所写边界。" />
       {(preview.isPending || capital.isPending) && <LinearProgress aria-label="正在读取激活复核" />}
       {(preview.isError || capital.isError) && <Alert severity="error">当前复核事实不可用，不能激活。</Alert>}
-      {preview.data && <><FactGrid facts={[{ label: "环境 / 授权类别", value: `${valueOf(preview.data, "environment_kind")} / ${valueOf(preview.data, "authority_class")}` }, { label: "账户", value: valueOf(preview.data, "account_ref") }, { label: "Instrument / 方向", value: `${valueOf(preview.data, "instrument_ref")} / ${valueOf(preview.data, "direction")}` }, { label: "策略", value: valueOf(preview.data, "strategy_ref") }, { label: "参数摘要", value: shortDigest(valueOf(preview.data, "parameter_digest")) }, { label: "有效期", value: formatUtc(valueOf(preview.data, "valid_until")) }]} /><Alert severity="info" variant="outlined" sx={{ mt: 3 }}>P0 不要求账户预设为逐仓或 1–5x。运行时使用账户实际 ISOLATED/CROSSED 与 actual_leverage，并按 effective_leverage=min(actual,5) 向下收敛；系统不会自动修改账户。</Alert><Alert severity="warning" variant="outlined" sx={{ mt: 2 }}>{valueOf(preview.data, "capital_notice")}</Alert></>}
+      {preview.data && <><FactGrid facts={[{ label: "环境 / 授权类别", value: `${valueOf(preview.data, "environment_kind")} / ${valueOf(preview.data, "authority_class")}` }, { label: "账户", value: valueOf(preview.data, "account_ref") }, { label: "Instrument / 方向", value: `${valueOf(preview.data, "instrument_ref")} / ${valueOf(preview.data, "direction")}` }, { label: "策略", value: valueOf(preview.data, "strategy_ref") }, { label: "参数摘要", value: shortDigest(valueOf(preview.data, "parameter_digest")) }, { label: "有效期", value: formatUtc(valueOf(preview.data, "valid_until")) }, ...(liveWrite ? [{ label: "真实写工程能力", value: valueOf(preview.data, "live_write_build_capability") }, { label: "B05 包资格", value: valueOf(preview.data, "b05_package_eligibility") }, { label: "运行门配置 / 有效状态", value: `${valueOf(preview.data, "configured_runtime_real_write_gate")} / ${valueOf(preview.data, "runtime_real_write_gate")}` }] : [])]} /><Alert severity="info" variant="outlined" sx={{ mt: 3 }}>P0 不要求账户预设为逐仓或 1–5x。运行时使用账户实际 ISOLATED/CROSSED 与 actual_leverage，并按 effective_leverage=min(actual,5) 向下收敛；系统不会自动修改账户。</Alert><Alert severity="warning" variant="outlined" sx={{ mt: 2 }}>{valueOf(preview.data, "capital_notice")}</Alert></>}
+      {liveWrite && (
+        <Box component="section" sx={{ mt: 3, p: 2, border: 1, borderColor: "warning.dark", bgcolor: "rgba(230,164,67,.06)" }}>
+          <Typography variant="overline" color="warning.main">REAL CAPITAL AUTHORIZATION</Typography>
+          <Typography variant="h2" sx={{ mt: .5, mb: 1 }}>建立精确范围的真实资金机器授权</Typography>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            本操作会持久化 MachineAuthorization、PlanAllocation 与 PlanActivation，但不会调用 Binance，也不会打开运行门。运行门仅能在最终 BuildManifest、所有者授权引用及本次激活的精确记录引用全部绑定后另行开启。
+          </Typography>
+          <FormGroup>
+            <FormControlLabel control={<Checkbox checked={realCapitalAcknowledged} onChange={(event) => setRealCapitalAcknowledged(event.target.checked)} />} label="我确认这是 REAL 资金授权，范围仅限本次计划、账户、合约和三轴额度" />
+            <FormControlLabel control={<Checkbox checked={evidenceLimitationsAcknowledged} onChange={(event) => setEvidenceLimitationsAcknowledged(event.target.checked)} />} label="我已阅读并接受当前证据局限；Demo 与回测表现不等于实盘表现" />
+            <FormControlLabel control={<Checkbox checked={onlineMonitoringAcknowledged} onChange={(event) => setOnlineMonitoringAcknowledged(event.target.checked)} />} label="我将在运行门打开期间保持在线监控，并可立即停止、退出或接管" />
+          </FormGroup>
+        </Box>
+      )}
+      {!liveWrite && !liveReadOnly && <Alert severity="info" variant="outlined" sx={{ mt: 3 }}>Demo 首要验证系统流程、持久动作、防重复、保护、核对、停止、恢复与接管机制；策略表现验证是次要目标，且不能直接外推到实盘。</Alert>}
+      {liveReadOnly && <Alert severity="warning" sx={{ mt: 3 }}>LIVE_READ_ONLY 仅用于公共市场观察，不具备计划激活或场所写能力。</Alert>}
       <TextField label="重新输入本机所有者口令" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" fullWidth sx={{ mt: 3 }} />
       {!limitId && <Alert severity="warning" sx={{ mt: 2 }}>请先在“资金与授权”建立账户边界版本。</Alert>}
+      {liveWrite && !livePackageReady && <Alert severity="warning" sx={{ mt: 2 }}>真实写工程能力、B05 包授权或关闭态预备条件尚未满足；当前不能建立 REAL 激活。</Alert>}
+      {liveWrite && livePackageReady && !acknowledgementsComplete && <Alert severity="warning" sx={{ mt: 2 }}>请逐项确认真实资金范围、证据局限和在线监控责任。</Alert>}
       {mutation.isError && <Alert severity="error" sx={{ mt: 2 }}>激活未提交：{mutation.error instanceof ApiFailure ? mutation.error.code : "结果未知"}</Alert>}
-      <Button variant="contained" color="warning" sx={{ mt: 3 }} disabled={!password || !limitId || mutation.isPending || !preview.data} onClick={() => mutation.mutate()}>确认建立 DEMO 激活</Button>
+      <Button variant="contained" color="warning" sx={{ mt: 3 }} disabled={!activationEnabled || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? "正在提交激活…" : liveWrite ? "确认建立 REAL 激活（不打开运行门）" : "确认建立 DEMO 激活"}</Button>
     </Box>
   );
 }

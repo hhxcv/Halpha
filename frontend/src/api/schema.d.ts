@@ -544,6 +544,16 @@ export interface components {
         ActivationPayload: {
             /** Capital Limit Version Id */
             capital_limit_version_id: string;
+            /**
+             * Evidence Limitations Acknowledged
+             * @default false
+             */
+            evidence_limitations_acknowledged: boolean;
+            /**
+             * Online Monitoring Acknowledged
+             * @default false
+             */
+            online_monitoring_acknowledged: boolean;
             /** Owner Password */
             owner_password: string;
             /** Plan Version Id */
@@ -553,6 +563,11 @@ export interface components {
              * @default USDT
              */
             quote_asset: string;
+            /**
+             * Real Capital Acknowledged
+             * @default false
+             */
+            real_capital_acknowledged: boolean;
         };
         /** CapitalLimitPayload */
         CapitalLimitPayload: {
@@ -690,6 +705,8 @@ export interface components {
             account_id: string;
             /** Authority Class */
             authority_class: string;
+            /** Authorized Activation Id */
+            authorized_activation_id: string | null;
             /** B05 Package Eligibility */
             b05_package_eligibility: string;
             /** Bind */
@@ -702,6 +719,8 @@ export interface components {
             build_manifest_violations: string[];
             /** Config Digest */
             config_digest: string;
+            /** Configured Runtime Real Write Gate */
+            configured_runtime_real_write_gate: string;
             /** Construction Package */
             construction_package: string;
             /** Construction Status */
@@ -722,6 +741,8 @@ export interface components {
             environment_kind: string;
             /** Live Write Build Capability */
             live_write_build_capability: string;
+            /** Live Write Gate Violations */
+            live_write_gate_violations: string[];
             /** Port */
             port: number;
             /** Profile */
@@ -730,6 +751,8 @@ export interface components {
             runtime_real_write_gate: string;
             /** Server Fact Cutoff */
             server_fact_cutoff: string | null;
+            /** User Authorization Ref */
+            user_authorization_ref: string | null;
             /** View Retrieved At */
             view_retrieved_at: string;
         };

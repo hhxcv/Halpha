@@ -23,6 +23,10 @@ EXPECTED_TEST_MATRIX = {
     ): "passed",
     (
         "chromium-desktop",
+        "B04 renders the synthetic LIVE authorization target state without opening or exercising the real-write path",
+    ): "passed",
+    (
+        "chromium-desktop",
         "B04 rejects a stale control submission instead of applying a newer activation version",
     ): "passed",
     (
@@ -31,8 +35,22 @@ EXPECTED_TEST_MATRIX = {
     ): "passed",
     (
         "chromium-narrow",
+        "B04 renders the synthetic LIVE authorization target state without opening or exercising the real-write path",
+    ): "passed",
+    (
+        "chromium-narrow",
         "B04 rejects a stale control submission instead of applying a newer activation version",
     ): "skipped",
+}
+EXPECTED_LAYOUT_ATTACHMENTS = {
+    "b04-operations-layout.json",
+    "b04-synthetic-live-closed-layout.json",
+    "b04-synthetic-live-open-layout.json",
+}
+EXPECTED_SCREENSHOT_ATTACHMENTS = {
+    "b04-gap-unknown-max-loss.png",
+    "b04-synthetic-live-closed.png",
+    "b04-synthetic-live-open.png",
 }
 EXPECTED_CLI_SCREENSHOTS = {
     "output/playwright/b04-activation-gap-cli-1440x1000.png": (1440, 1000),
@@ -128,6 +146,8 @@ def _playwright_summary(
     layout_attachment_count = 0
     layout_failures = 0
     screenshot_attachments: list[dict[str, Any]] = []
+    synthetic_target_attachment_count = 0
+    synthetic_target_failures = 0
     routes: set[str] = set()
     result_error_count = 0
 
@@ -150,7 +170,7 @@ def _playwright_summary(
                 url = value.get("url")
                 if isinstance(url, str):
                     routes.add(urlparse(url).path)
-            elif name == "b04-operations-layout.json":
+            elif name in EXPECTED_LAYOUT_ATTACHMENTS:
                 layout_attachment_count += 1
                 value = _attachment_json(attachment)
                 if (
@@ -158,7 +178,7 @@ def _playwright_summary(
                     or value.get("offenders") != []
                 ):
                     layout_failures += 1
-            elif name == "b04-gap-unknown-max-loss.png":
+            elif name in EXPECTED_SCREENSHOT_ATTACHMENTS:
                 data = _attachment_bytes(attachment)
                 width, height = _png_dimensions(data)
                 target = screenshot_directory / f"{project}-{name}"
@@ -171,23 +191,43 @@ def _playwright_summary(
                         "height": height,
                     }
                 )
+            elif name == "synthetic-live-target-state.json":
+                synthetic_target_attachment_count += 1
+                value = _attachment_json(attachment)
+                if value != {
+                    "fixture_kind": "SYNTHETIC_LIVE_TARGET_STATE",
+                    "current_authorization": False,
+                    "venue_writes": False,
+                    "activation_submission_exercised": False,
+                    "capital_limit_fixture": (
+                        "SYNTHETIC_NON_SUBMITTED_TARGET_STATE"
+                    ),
+                    "purpose": "UI_AND_GATE_MECHANISM_VALIDATION_ONLY",
+                }:
+                    synthetic_target_failures += 1
 
     qualified = (
         isinstance(argv, list)
         and bool(argv)
         and argv[0] == EXACT_NODE
         and config.get("version") == EXPECTED_PLAYWRIGHT_VERSION
-        and stats.get("expected") == 3
+        and stats.get("expected") == 5
         and stats.get("skipped") == 1
         and stats.get("unexpected") == 0
         and stats.get("flaky") == 0
         and matrix == EXPECTED_TEST_MATRIX
         and result_error_count == 0
-        and axe_attachment_count == 9
+        and axe_attachment_count == 13
         and axe_violation_count == 0
-        and layout_attachment_count == 2
+        and layout_attachment_count == 6
         and layout_failures == 0
-        and len(screenshot_attachments) == 2
+        and len(screenshot_attachments) == 6
+        and all(
+            item["width"] == (1440 if "chromium-desktop" in item["path"] else 390)
+            for item in screenshot_attachments
+        )
+        and synthetic_target_attachment_count == 2
+        and synthetic_target_failures == 0
     )
     return {
         "path": report_path.relative_to(root).as_posix(),
@@ -204,6 +244,8 @@ def _playwright_summary(
         "axe_violation_count": axe_violation_count,
         "layout_attachment_count": layout_attachment_count,
         "layout_failures": layout_failures,
+        "synthetic_target_attachment_count": synthetic_target_attachment_count,
+        "synthetic_target_failures": synthetic_target_failures,
         "routes": sorted(routes),
         "screenshot_attachments": screenshot_attachments,
         "status": "QUALIFIED" if qualified else "REJECTED",

@@ -14,6 +14,7 @@ from halpha.capital.models import (
     AuthorityClass,
     CapDecision,
     EnvironmentKind,
+    PlanAllocation,
     StopCategory,
     StopStateVersion,
 )
@@ -41,6 +42,16 @@ class CapitalApplicationService:
             allocation=allocation,
             stop_states=stop_states,
         )
+
+    def get_allocation_snapshot(
+        self,
+        activation_id: str,
+        *,
+        for_update: bool = False,
+    ) -> PlanAllocation:
+        """Expose the CAP-owned immutable snapshot without leaking its repository."""
+
+        return self._capital.get_allocation(activation_id, for_update=for_update)
 
     def stop_new_risk_for_external_activity(
         self,

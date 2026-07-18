@@ -34,6 +34,7 @@ from nautilus_trader.trading.config import ImportableControllerConfig
 from nautilus_trader.trading.controller import Controller
 from pydantic import SecretStr
 
+from halpha.capital.models import AuthorityClass, EnvironmentKind
 from halpha.configuration import ExecutorSettingsView
 from halpha.domain_values import canonical_decimal
 from halpha.planning.bar_evaluation import (
@@ -60,6 +61,13 @@ from halpha.venue_integration.repository import PostgreSQLExecutionActionReposit
 
 from .coordinator import HalphaCoordinator
 from .forward_observation import ForwardObservationSpec
+from .product_entry import (
+    LiveEntryFactTracker,
+    ProductPreSubmitFactProvider,
+    ProductPreSubmitRejected,
+    ProductProposalBoundary,
+    build_live_entry_sizing_snapshot,
+)
 
 
 _PROFILE_SPEC = {
@@ -301,6 +309,9 @@ class ProductExecutorRuntime:
         connector: Callable[..., Any] = psycopg.connect,
         node_factory: Callable[..., TradingNode] = TradingNode,
         loop: asyncio.AbstractEventLoop | None = None,
+        runtime_real_write_gate: str = "CLOSED",
+        live_write_activation_id: str | None = None,
+        live_write_submission_guard: Callable[[str], None] | None = None,
     ) -> None:
         self._settings = settings
         self._database_password = database_password
@@ -317,11 +328,15 @@ class ProductExecutorRuntime:
         self._node_factory = node_factory
         self._loop = loop or asyncio.new_event_loop()
         self._owns_loop = loop is None
+        self._runtime_real_write_gate = runtime_real_write_gate
+        self._live_write_activation_id = live_write_activation_id
+        self._live_write_submission_guard = live_write_submission_guard
         self._connection: Any | None = None
         self._node: TradingNode | None = None
         self._lifecycle: ActivationAdapterLifecycle | None = None
         self._coordinator: HalphaCoordinator | None = None
         self._capability: object | None = None
+        self._proposal_processors: dict[str, ProductProposalBoundary] = {}
         self._recovery_complete = False
         self._recovered_action_count = 0
 
@@ -337,6 +352,14 @@ class ProductExecutorRuntime:
             raise ExecutorRuntimeError("PRODUCT_RUNTIME_NOT_BUILT")
         return self._coordinator
 
+    def submit_strategy_proposal(self, proposal: StrategyProposal) -> str:
+        """Enter the production EXE boundary used by the adapter proposal sink."""
+
+        processor = self._proposal_processors.get(proposal.activation_id)
+        if processor is None:
+            raise ExecutorRuntimeError("PRODUCT_PROPOSAL_PROCESSOR_NOT_READY")
+        return processor.submit(proposal)
+
     @property
     def recovery_complete(self) -> bool:
         return self._recovery_complete
@@ -345,11 +368,41 @@ class ProductExecutorRuntime:
     def recovered_action_count(self) -> int:
         return self._recovered_action_count
 
+    @property
+    def strategy_history_warmup_complete(self) -> bool:
+        lifecycle = self._lifecycle
+        if lifecycle is None:
+            return False
+        return all(
+            lifecycle.adapter_for_activation(activation_id).live_history_ready
+            for activation_id in lifecycle.activation_ids
+        )
+
+    async def _wait_for_strategy_history_warmup(
+        self,
+        *,
+        timeout_seconds: float = 60.0,
+    ) -> None:
+        deadline = self._loop.time() + timeout_seconds
+        while not self.strategy_history_warmup_complete:
+            if self._loop.time() >= deadline:
+                raise ExecutorRuntimeError("LIVE_HISTORY_WARMUP_TIMEOUT")
+            await asyncio.sleep(0.05)
+
     def build(self) -> None:
         if self._node is not None:
             raise ExecutorRuntimeError("PRODUCT_RUNTIME_ALREADY_BUILT")
         release = self._settings.release
         read_only = release.profile == "BINANCE_LIVE_READ_ONLY"
+        if (
+            release.profile == "BINANCE_LIVE_WRITE"
+            and (
+                self._runtime_real_write_gate != "OPEN"
+                or self._live_write_activation_id is None
+                or self._live_write_submission_guard is None
+            )
+        ):
+            raise ExecutorRuntimeError("RUNTIME_REAL_WRITE_GATE_CLOSED")
         database_password = self._database_password
         if read_only:
             if database_password is not None:
@@ -433,7 +486,9 @@ class ProductExecutorRuntime:
                 authority_class=release.authority_class,
                 execution_profile_ref=release.profile,
                 account_ref=release.account_id,
-                runtime_real_write_gate="CLOSED",
+                runtime_real_write_gate=self._runtime_real_write_gate,
+                live_write_activation_id=self._live_write_activation_id,
+                live_write_submission_guard=self._live_write_submission_guard,
             )
             self._coordinator = coordinator
         except ExecutorRuntimeError:
@@ -507,6 +562,7 @@ class ProductExecutorRuntime:
             decision_not_before=spec.starts_at,
             valid_until=spec.entry_valid_until,
             sizing_provider=self._read_only_sizing_snapshot,
+            requires_live_warmup=True,
         )
         self._lifecycle.start(
             ActivationAdapterSpec(
@@ -523,6 +579,7 @@ class ProductExecutorRuntime:
                     bar_event_sink=self._observation_bar_sink,
                     quote_event_sink=self._observation_quote_sink,
                     mark_price_event_sink=self._observation_mark_price_sink,
+                    live_history_warmup=True,
                 ),
             )
         )
@@ -534,11 +591,49 @@ class ProductExecutorRuntime:
             self._connection,
             self._settings.release.environment_id,
         )
-        for activation in planning.list_open_activations():
+        activations = planning.list_open_activations()
+        if self._settings.release.profile == "BINANCE_LIVE_WRITE":
+            authorized_activation_id = self._live_write_activation_id
+            if (
+                authorized_activation_id is None
+                or len(activations) != 1
+                or activations[0].activation_id != authorized_activation_id
+            ):
+                raise ExecutorRuntimeError("LIVE_WRITE_ACTIVATION_SET_MISMATCH")
+        for activation in activations:
             version = planning.get_version(activation.plan_version_ref)
             parameters = OneShotParameters.model_validate(
                 version.strategy_basis.normalized_parameters
             )
+            tracker = LiveEntryFactTracker()
+            api_key = self._api_key
+            api_secret = self._api_secret
+            if api_key is None or api_secret is None:
+                raise ExecutorRuntimeError("BINANCE_CREDENTIAL_REQUIRED")
+            fact_provider = ProductPreSubmitFactProvider(
+                node=self.node,
+                profile=self._settings.release.profile,
+                api_key=api_key,
+                api_secret=api_secret,
+                proxy_url=self._proxy_url,
+            )
+            environment_kind = (
+                EnvironmentKind.DEMO
+                if self._settings.release.profile == "BINANCE_DEMO"
+                else EnvironmentKind.LIVE
+            )
+            processor = ProductProposalBoundary(
+                loop=self._loop,
+                coordinator=self.coordinator,
+                fact_provider=fact_provider,
+                environment_id=self._settings.release.environment_id,
+                environment_kind=environment_kind,
+                authority_class=AuthorityClass(
+                    self._settings.release.authority_class
+                ),
+                account_ref=self._settings.release.account_id,
+            )
+            self._proposal_processors[activation.activation_id] = processor
 
             def state_provider(
                 activation_id: str = activation.activation_id,
@@ -554,8 +649,51 @@ class ProductExecutorRuntime:
                     ),
                 )
 
-            def proposal_sink(_proposal: object) -> None:
-                raise ExecutorRuntimeError("LIVE_MARKET_FACT_GATE_NOT_READY")
+            def proposal_sink(
+                proposal: StrategyProposal,
+            ) -> None:
+                self.submit_strategy_proposal(proposal)
+
+            def sizing_provider(
+                _bar: object,
+                *,
+                activation_id: str = activation.activation_id,
+                instrument_ref: str = activation.instrument_ref,
+                direction=activation.direction,
+                used_tracker: LiveEntryFactTracker = tracker,
+            ) -> EntrySizingSnapshot | None:
+                instrument_id = f"{instrument_ref}.BINANCE"
+                instrument = self.node.cache.instrument(
+                    InstrumentId.from_str(instrument_id)
+                )
+                account = self.node.cache.account_for_venue(BINANCE)
+                if instrument is None or account is None:
+                    return None
+                try:
+                    allocation = self.coordinator.get_entry_sizing_allocation(
+                        activation_id
+                    )
+                    return build_live_entry_sizing_snapshot(
+                        instrument_id=instrument_id,
+                        direction=direction,
+                        cutoff_ns=self.node.kernel.clock.timestamp_ns(),
+                        tracker=used_tracker,
+                        instrument=instrument,
+                        account=account,
+                        allocation=allocation,
+                    )
+                except ProductPreSubmitRejected:
+                    return None
+
+            evaluator = NautilusBarEntryEvaluator(
+                activation_id=activation.activation_id,
+                instrument_ref=activation.instrument_ref,
+                parameters=parameters,
+                decision_not_before=version.valid_from,
+                valid_until=version.valid_until,
+                sizing_provider=sizing_provider,
+                requires_live_warmup=True,
+            )
 
             normalizer = self.coordinator.build_nautilus_event_normalizer(
                 leaves_quantity_for_client_order_id=lambda client_order_id: (
@@ -570,20 +708,36 @@ class ProductExecutorRuntime:
                     observed_at=datetime.now(UTC),
                 )
 
+            def adapter_factory(
+                activation_id: str = activation.activation_id,
+                instrument_ref: str = activation.instrument_ref,
+                logic: OneShotDonchianAtrLogic = OneShotDonchianAtrLogic(
+                    parameters
+                ),
+                used_state_provider=state_provider,
+                used_proposal_sink=proposal_sink,
+                used_event_sink=event_sink,
+                used_evaluator: NautilusBarEntryEvaluator = evaluator,
+                used_tracker: LiveEntryFactTracker = tracker,
+            ) -> HalphaStrategyAdapter:
+                return HalphaStrategyAdapter(
+                    activation_id=activation_id,
+                    logic=logic,
+                    state_provider=used_state_provider,
+                    proposal_sink=used_proposal_sink,
+                    instrument_ref=instrument_ref,
+                    persisted_action_capability=capability,
+                    execution_event_sink=used_event_sink,
+                    bar_evaluator=used_evaluator,
+                    quote_event_sink=used_tracker.record_quote,
+                    mark_price_event_sink=used_tracker.record_mark,
+                    live_history_warmup=True,
+                )
+
             self._lifecycle.start(
                 ActivationAdapterSpec(
                     activation_id=activation.activation_id,
-                    factory=lambda activation_id=activation.activation_id, logic=OneShotDonchianAtrLogic(parameters), state_provider=state_provider, event_sink=event_sink: (
-                        HalphaStrategyAdapter(
-                            activation_id=activation_id,
-                            logic=logic,
-                            state_provider=state_provider,
-                            proposal_sink=proposal_sink,
-                            instrument_ref=activation.instrument_ref,
-                            persisted_action_capability=capability,
-                            execution_event_sink=event_sink,
-                        )
-                    ),
+                    factory=adapter_factory,
                 )
             )
 
@@ -601,6 +755,7 @@ class ProductExecutorRuntime:
         read_only = self._settings.release.profile == "BINANCE_LIVE_READ_ONLY"
         if read_only:
             self._start_read_only_adapter()
+            await self._wait_for_strategy_history_warmup()
             if on_ready is not None:
                 on_ready(
                     {
@@ -615,7 +770,7 @@ class ProductExecutorRuntime:
                         "execution_action_repository_loaded": False,
                         "persisted_action_capability_loaded": False,
                         "startup_execution_reconciliation": "NOT_APPLICABLE",
-                        "runtime_real_write_gate": "CLOSED",
+                        "runtime_real_write_gate": self._runtime_real_write_gate,
                     }
                 )
             await self._loop.run_in_executor(None, stop_wait)
@@ -632,6 +787,7 @@ class ProductExecutorRuntime:
         )
         self._recovered_action_count = len(recovered)
         self._recovery_complete = True
+        await self._wait_for_strategy_history_warmup()
         if on_ready is not None:
             on_ready(
                 {
@@ -639,7 +795,7 @@ class ProductExecutorRuntime:
                     "database_continuity_guard_completed": True,
                     "startup_reconciliation_completed": True,
                     "recovered_unresolved_actions": len(recovered),
-                    "runtime_real_write_gate": "CLOSED",
+                    "runtime_real_write_gate": self._runtime_real_write_gate,
                 }
             )
         await self._loop.run_in_executor(None, stop_wait)
@@ -665,6 +821,9 @@ class ProductExecutorRuntime:
                 task.cancel()
 
     def close(self) -> None:
+        for processor in self._proposal_processors.values():
+            processor.close()
+        self._proposal_processors.clear()
         if self._lifecycle is not None:
             try:
                 self._lifecycle.stop_all()
