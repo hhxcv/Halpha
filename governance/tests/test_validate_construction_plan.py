@@ -100,9 +100,9 @@ def add_research_track(plan: dict[str, object]) -> dict[str, object]:
     plan["construction_packages"].update(
         {
             "R00": {
-                "eligibility": "BLOCKED_UNTIL_B04_COMPLETE",
+                "eligibility": "BLOCKED_UNTIL_PACKAGE_CONTRACT_FROZEN",
                 "status": "NOT_STARTED",
-                "depends_on": ["B04"],
+                "depends_on": [],
             },
             "R01": {
                 "eligibility": "BLOCKED_UNTIL_R00_COMPLETE",
@@ -123,14 +123,17 @@ def add_research_track(plan: dict[str, object]) -> dict[str, object]:
     )
     plan["research_track"] = {
         "owner_authorization": {
-            "status": "AUTHORIZED_CONDITIONAL_ON_B04_COMPLETE",
-            "decision_ref": "OWNER-DIRECTION-20260718-PARALLEL-RESEARCH",
+            "status": "AUTHORIZED",
+            "decision_ref": "OWNER-DIRECTION-20260718-R00-INDEPENDENT-START",
         },
         "research_policy": {"status": "NOT_FROZEN"},
         "owner_selected_evidence_ref": None,
         "runtime_overlap": {
             "qualification": "NOT_QUALIFIED",
             "execution_state": "STOPPED",
+        },
+        "preexisting_data_boundary": {
+            "confirmation_eligible_not_before": None,
         },
         "r00_r02_effects": {
             "p0_build_order": "NONE",
@@ -389,12 +392,43 @@ class ConstructionPlanGovernanceTests(unittest.TestCase):
         self.assert_has_code(plan, "GOV-RESEARCH-DAG-001")
         self.assert_has_code(plan, "GOV-RESEARCH-DAG-002")
 
-    def test_rejects_r00_before_b04_complete(self) -> None:
+    def test_allows_r00_while_b04_is_in_progress(self) -> None:
         plan = add_research_track(aligned_b04_in_progress_plan())
         bind_research_package_contract(plan, "R00")
         plan["construction_packages"]["R00"]["eligibility"] = "ELIGIBLE"
         plan["construction_packages"]["R00"]["status"] = "IN_PROGRESS"
-        self.assert_has_code(plan, "GOV-RESEARCH-SEQUENCE-002")
+        self.assertEqual(validate_plan(plan), [])
+
+    def test_allows_r01_to_start_while_b04_is_in_progress(self) -> None:
+        plan = add_research_track(aligned_b04_in_progress_plan())
+        bind_research_package_contract(plan, "R00", completed=True)
+        plan["construction_packages"]["R00"]["eligibility"] = "ELIGIBLE"
+        plan["construction_packages"]["R00"]["status"] = "COMPLETED"
+        bind_research_package_contract(plan, "R01")
+        plan["construction_packages"]["R01"]["eligibility"] = "ELIGIBLE"
+        plan["construction_packages"]["R01"]["status"] = "IN_PROGRESS"
+        self.assertEqual(validate_plan(plan), [])
+
+    def test_rejects_r01_completion_before_b04_and_boundary_freeze(self) -> None:
+        plan = add_research_track(aligned_b04_in_progress_plan())
+        for package_id in ("R00", "R01"):
+            bind_research_package_contract(plan, package_id, completed=True)
+            plan["construction_packages"][package_id]["eligibility"] = "ELIGIBLE"
+            plan["construction_packages"][package_id]["status"] = "COMPLETED"
+        plan["research_track"]["research_policy"]["status"] = "FROZEN"
+        self.assert_has_code(plan, "GOV-RESEARCH-R01-001")
+
+    def test_allows_r01_completion_after_b04_and_boundary_freeze(self) -> None:
+        plan = add_research_track(aligned_b00_to_b04_complete_plan())
+        for package_id in ("R00", "R01"):
+            bind_research_package_contract(plan, package_id, completed=True)
+            plan["construction_packages"][package_id]["eligibility"] = "ELIGIBLE"
+            plan["construction_packages"][package_id]["status"] = "COMPLETED"
+        plan["research_track"]["research_policy"]["status"] = "FROZEN"
+        plan["research_track"]["preexisting_data_boundary"][
+            "confirmation_eligible_not_before"
+        ] = "2026-07-19T00:00:00Z"
+        self.assertEqual(validate_plan(plan), [])
 
     def test_rejects_r00_eligibility_without_frozen_package_contract(self) -> None:
         plan = add_research_track(aligned_b00_to_b04_complete_plan())
@@ -488,6 +522,9 @@ class ConstructionPlanGovernanceTests(unittest.TestCase):
             plan["construction_packages"][package_id]["eligibility"] = "ELIGIBLE"
             plan["construction_packages"][package_id]["status"] = "COMPLETED"
         plan["research_track"]["research_policy"]["status"] = "FROZEN"
+        plan["research_track"]["preexisting_data_boundary"][
+            "confirmation_eligible_not_before"
+        ] = "2026-07-19T00:00:00Z"
         plan["research_track"]["owner_selected_evidence_ref"] = (
             "research-evidence://selected/candidate-1"
         )

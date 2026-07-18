@@ -820,7 +820,7 @@ def validate_plan(plan: Mapping[str, Any]) -> list[Violation]:
             )
 
         required_research_dependencies = {
-            "R00": {"B04"},
+            "R00": set(),
             "R01": {"R00"},
             "R02": {"R01"},
             "R03": {"R02", "B05", "V01"},
@@ -865,12 +865,12 @@ def validate_plan(plan: Mapping[str, Any]) -> list[Violation]:
             violations,
         )
         owner_authorization_status = _normalize(owner_authorization.get("status"))
-        if owner_authorization_status != "AUTHORIZED_CONDITIONAL_ON_B04_COMPLETE":
+        if owner_authorization_status != "AUTHORIZED":
             violations.append(
                 Violation(
                     "GOV-RESEARCH-AUTH-001",
                     "research_track.owner_authorization.status",
-                    "must be AUTHORIZED_CONDITIONAL_ON_B04_COMPLETE",
+                    "must be AUTHORIZED for the explicitly scoped R00-R02 research track",
                 )
             )
         owner_decision_ref = owner_authorization.get("decision_ref")
@@ -984,20 +984,12 @@ def validate_plan(plan: Mapping[str, Any]) -> list[Violation]:
         r00_eligibility = _normalize(research_packages["R00"].get("eligibility"))
         r00_started = _is_started_or_later(research_packages["R00"].get("status"))
         if r00_started or r00_eligibility in {"ELIGIBLE", "AUTHORIZED"}:
-            if not _is_complete(package_records["B04"].get("status")):
-                violations.append(
-                    Violation(
-                        "GOV-RESEARCH-SEQUENCE-002",
-                        "construction_packages.R00.eligibility",
-                        "cannot become eligible or advance until B04 is complete",
-                    )
-                )
-            if owner_authorization_status != "AUTHORIZED_CONDITIONAL_ON_B04_COMPLETE":
+            if owner_authorization_status != "AUTHORIZED":
                 violations.append(
                     Violation(
                         "GOV-RESEARCH-AUTH-001",
                         "construction_packages.R00.status",
-                        "cannot advance without the conditional owner authorization",
+                        "cannot advance without the scoped owner authorization",
                     )
                 )
 
@@ -1018,6 +1010,38 @@ def validate_plan(plan: Mapping[str, Any]) -> list[Violation]:
                         f"cannot become eligible or advance until {dependency} is complete",
                     )
                 )
+
+        r01_complete = _is_complete(research_packages["R01"].get("status"))
+        if r01_complete:
+            preexisting_data_boundary = _mapping(
+                research_track.get("preexisting_data_boundary"),
+                "research_track.preexisting_data_boundary",
+                violations,
+            )
+            confirmation_boundary = preexisting_data_boundary.get(
+                "confirmation_eligible_not_before"
+            )
+            r01_completion_prerequisites = (
+                (
+                    _is_complete(package_records["B04"].get("status")),
+                    "construction_packages.B04.status",
+                    "must be complete before R01 can complete",
+                ),
+                (
+                    isinstance(confirmation_boundary, str)
+                    and bool(confirmation_boundary.strip()),
+                    "research_track.preexisting_data_boundary.confirmation_eligible_not_before",
+                    "must bind the post-B04 UTC boundary before R01 can complete",
+                ),
+                (
+                    policy_status == "FROZEN",
+                    "research_track.research_policy.status",
+                    "must be FROZEN before R01 can complete",
+                ),
+            )
+            for passed, path, message in r01_completion_prerequisites:
+                if not passed:
+                    violations.append(Violation("GOV-RESEARCH-R01-001", path, message))
 
         r02_eligibility = _normalize(research_packages["R02"].get("eligibility"))
         r02_started = _is_started_or_later(research_packages["R02"].get("status"))
