@@ -8,14 +8,14 @@ accepted_by: Halpha 项目所有者
 accepted_at: 2026-07-18T23:18:42+08:00
 supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T20:13:31+08:00
 document_update_reason: 接受可信 AI 研究工程边界简化，删除 R00 的安全 sandbox、父进程/worker、第二研究 venv、observation/intent 与专用 IPC；保留按错误成本选择的审查、校验、重演、holdout、人工最终审查和产品内重新资格化
-state_updated_at: 2026-07-19T00:46:26+08:00
+state_updated_at: 2026-07-19T01:03:13+08:00
 state_update_reason: >-
   HALPHA-RSCH-TRUST-SIMPLIFICATION-001 协调版本集已经接受；B04/B05、P0 build_order、BuildManifest 和三项真实写门不变。
   R00 的方向授权和 depends_on=[] 保持存在，但既有 ac5270fc344ea4502c6238a13857fc0573aa3f01 / 113bbe9c8a6afbc0cc6ec37663677444029da5e8 绑定只属于被替代合同；
   简化 R00 必须重新绑定包含本接受文本的干净 base_revision 与 accepted_design_set_and_basis 输入身份并冻结完整包合同后方可继续，当前保持 NOT_STARTED 与阻断。
-  B04 当前源码的后端、前端、Playwright、Demo 产品周期、Windows/数据库故障演练、空库恢复、SMTP 实际投递、复杂度与历史技术复验均已完成即时资格化；后端当前为 332 tests，其中 LIVE_WRITE 构建预备直接消费者 62 tests 通过。历史当前参数在 development/holdout 均未显示正收益，且因预注册基线早于本轮源码只作为技术复验，不构成策略有效、盈利保证或真实资金授权。
-  SMTP 凭据仅投影给 App，Executor 不可见；资格邮件已由 smtp.163.com 接受。故障演练同时修复了受控停止与一分钟恢复触发器的竞争，随后重新通过。配置和产品源码变化后，App/Executor 已于 2026-07-18T16:29:14Z 建立最终 schema v3 Windows 72 小时基线，2026-07-18T16:35:00Z 的首个自动检查点全部当前检查为真且源码摘要无漂移；临时任务已按该基线重建，将在 72 小时满足后自动切换无凭据 LIVE_READ_ONLY，并安排受控重启与七天后最终复核。
-  B04 当前源码已在最新 origin/main 基线之上形成实现提交 81e2dc032b940d19fffa51268f5ea12ca1a0bba6，PR workflow 尚待运行；当前仅等待 Windows 72 小时和 LIVE_READ_ONLY 7–14 天证据。最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED，未加载 LIVE 凭据、未建立外置授权绑定、未发生真实资金写入。
+  B04 当前分支在最新 origin/main 基线之上形成实现提交 81e2dc032b940d19fffa51268f5ea12ca1a0bba6，并以 78b0fe5314562e6d39eebb0ca635c0bb63488d9d 修复 Windows CRLF 对源码身份的误漂移：文本按规范 LF、二进制按原始字节计算身份。当前后端 334 tests、前端 3 tests 与构建、治理 42 tests、文档校验均通过；本轮 B04 Playwright 命令的 6 个用例因环境条件全部 skip，不作为新增浏览器通过证据。
+  上一轮 Playwright、Demo 产品周期、Windows/数据库故障演练、空库恢复、SMTP 实际投递、复杂度与历史技术复验证据绑定旧源码身份；严格 B04 汇总已将当前状态判为 REJECTED，必须重跑当前源码资格化后才能恢复为当前有效证据。既有 SMTP 邮件仍是 smtp.163.com 已接受的历史外部观察，但不冒充当前源码绑定结果；SMTP 凭据继续只投影给 App，Executor 不可见。
+  App/Executor 已于 2026-07-18T17:00:01Z 以当前源码重建 schema v3 Windows 72 小时基线，初始检查全部为真；临时任务将在 2026-07-22T01:10:02+08:00 起尝试切换无凭据 LIVE_READ_ONLY，2026-07-23T01:15:02+08:00 安排受控重启，2026-07-29T01:15:02+08:00 起最终复核。PR workflow 尚待运行。最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED，未加载 LIVE 凭据、未建立外置授权绑定、未发生真实资金写入。
 
 accepted_design_set:
   upper_level:
@@ -113,7 +113,7 @@ current_state:
   current_stage: P0
   design_status: ALIGNED
   research_track_status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE_NOT_STARTED
-  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 当前源码的即时资格化、Playwright、Demo 产品周期、Windows 故障演练、空库恢复、SMTP 实际投递和历史技术复验已通过；App/Executor 已于 2026-07-18T16:29:14Z 建立最终 72 小时连续运行基线，临时任务将在基线满足后自动切换至无凭据 LIVE_READ_ONLY 观察；72 小时与 7–14 天观察仍未满足，BuildManifest 保持 INCOMPLETE，B05 未获授权
+  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 实现和跨平台源码身份修复已完成自动测试，但旧源码绑定的即时与外部证据已经过期，当前源码资格化需重跑；App/Executor 已于 2026-07-18T17:00:01Z 重建 72 小时连续运行基线，临时任务将在基线满足后自动切换至无凭据 LIVE_READ_ONLY 观察；当前源码资格化、72 小时与 7–14 天观察仍未满足，BuildManifest 保持 INCOMPLETE，B05 未获授权
   first_authorized_work: B04
   live_write_build_capability: NOT_QUALIFIED
   b05_package_eligibility: NOT_AUTHORIZED
@@ -128,41 +128,42 @@ current_state:
     authorized_activation_id: null
   latest_implementation_observation:
     package: B04
-    status: IN_PROGRESS_TIME_BOUND_OBSERVATION
-    observed_at: 2026-07-18T16:35:17Z
+    status: IN_PROGRESS_CURRENT_SOURCE_REQUALIFICATION_AND_TIME_BOUND_OBSERVATION
+    observed_at: 2026-07-18T17:00:13Z
     base_commit_sha: 39e500f56c0a1012020fc54faf096a92e2ea2b27
-    commit_sha: 81e2dc032b940d19fffa51268f5ea12ca1a0bba6
+    commit_sha: 78b0fe5314562e6d39eebb0ca635c0bb63488d9d
     workflow_run_id: null
     workflow_conclusion: PENDING_PULL_REQUEST
     evidence_ref: build/qualification/b04-summary.json
-    evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee
+    evidence_digest: sha256:25933f759af2a3d182c7ccaf9ca2586a9ef2ac16b5e154c8c2d8c043ea44abff
     validated_checks:
-      backend_pytest: {result: 332_PASSED, evidence_ref: build/qualification/b04-pytest.xml}
+      backend_pytest: {result: 334_PASSED}
       live_write_preparation_unit_tests: {result: 62_PASSED_INCLUDED_IN_BACKEND_TOTAL}
       frontend_types_openapi_and_build: {result: PASSED}
       frontend_vitest: {result: 3_PASSED}
-      playwright_workbench: {result: 5_PASSED_1_INTENTIONALLY_SKIPPED, evidence_digest: sha256:4ddd47230cdaea74366b6690d7b6d090644f6a4188eea4e315a0de6072073026}
-      demo_product_cycle: {result: QUALIFIED, evidence_digest: sha256:b2fbeeaf536c0ec22dae42056ca997dcaddc49f7ec95e345b983ca14154500e9}
-      windows_fault_drills: {result: QUALIFIED, evidence_digest: sha256:485ecdd1291975069401fbdc6eec2a4236277fd5d8feca987f871d686735a9e5}
-      empty_database_restore: {result: QUALIFIED, evidence_digest: sha256:e84b46d43c74f0e0df468ef1978f77ccbba4374bfb346d808e1849bc5af5f79a}
-      smtp_actual_delivery: {result: QUALIFIED_SERVER_ACCEPTED, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
-      historical_technical_revalidation: {result: QUALIFIED_NOT_INDEPENDENT_UNEXPOSED_HOLDOUT, evidence_digest: sha256:32632da866ae61af042d0bd61f3bb5b8f26e9fdc47fb9c59c5b99afe7b62af05}
-      critical_invariant_registry: {result: PASSED, evidence_digest: sha256:1954833d4e7195b3af4981d65c09a484223f1b7c257825348d37e46ed2bf0f66}
+      playwright_workbench: {result: CURRENT_SOURCE_NOT_QUALIFIED_6_SKIPPED_THIS_RUN}
+      demo_product_cycle: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
+      windows_fault_drills: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
+      empty_database_restore: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
+      smtp_actual_delivery: {result: PRIOR_SERVER_ACCEPTANCE_OBSERVED_CURRENT_SOURCE_BINDING_NOT_QUALIFIED, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
+      historical_technical_revalidation: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
+      critical_invariant_registry: {result: CURRENT_AUTOMATED_TESTS_PASSED_ARTIFACT_REQUALIFICATION_REQUIRED}
     current_evidence_refs:
-      - {ref: build/qualification/b04-summary.json, status: IN_PROGRESS, observed_at: 2026-07-18T16:35:17Z, evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee}
-      - {ref: build/qualification/b04-smtp-delivery.json, status: QUALIFIED, observed_at: 2026-07-18T16:16:23Z, configuration_digest: sha256:5b524e6e5e29421c517e2c074b075b091f541aa8d2ce106874e0d7ca8b99d1e7, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
-      - {ref: build/qualification/b04-windows-72h-soak.json, status: IN_PROGRESS, baseline_at: 2026-07-18T16:29:14Z, latest_checkpoint_at: 2026-07-18T16:35:00Z, source_sha256_digest: sha256:690699481828ee4da06f25eba7c023688a975a9c9ee0e3b28ddbdc624e10284d, evidence_digest: sha256:0a0c9ec12c74f51096b8af19989ce5ddeb18c92a5179fd90b1e054d93062e7cc}
-      - {ref: build/qualification/b04-live-read-only-transition-task.json, status: PROVISIONED, observed_at: 2026-07-19T00:29:28+08:00, evidence_digest: sha256:bd0bb2ccabcfb7a862d8985e92685d98a5e896be9ef3faecd6240d124046535e}
+      - {ref: build/qualification/b04-summary.json, status: REJECTED_CURRENT_SOURCE_REQUALIFICATION_REQUIRED, observed_at: 2026-07-18T17:00:13Z, evidence_digest: sha256:25933f759af2a3d182c7ccaf9ca2586a9ef2ac16b5e154c8c2d8c043ea44abff}
+      - {ref: build/qualification/b04-smtp-delivery.json, status: HISTORICAL_SERVER_ACCEPTANCE_SOURCE_BINDING_SUPERSEDED, observed_at: 2026-07-18T16:16:23Z, configuration_digest: sha256:5b524e6e5e29421c517e2c074b075b091f541aa8d2ce106874e0d7ca8b99d1e7, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
+      - {ref: build/qualification/b04-windows-72h-soak.json, status: IN_PROGRESS, baseline_at: 2026-07-18T17:00:01Z, latest_checkpoint_at: 2026-07-18T17:00:01Z, source_sha256_digest: sha256:3410de5b9de0a2226a321edc70e81504105f1bb4cf0df7bceb7698526c00f9c8, evidence_digest: sha256:8dd55ee9d5d9fe4cc79a0a8b1fb37e12f8aaa2b516b3aa13b0907f8705e267e1}
+      - {ref: build/qualification/b04-live-read-only-transition-task.json, status: PROVISIONED, observed_at: 2026-07-19T01:00:02+08:00, evidence_digest: sha256:5474400034630793d33f4d04e66063aa459788f0dea9e6e0233fa6baa9b932cf}
     superseded_observations:
       - {evidence_digest: sha256:222b4ca29c9c6d6d75f7c126e7d228a80578a552a653073f533ad4712fc5cb52, reason: PRODUCT_SOURCE_FRONTEND_AND_SMTP_CONFIGURATION_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T16:29:14Z}
-    unmet_exit_evidence: [BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
-    evidence_scope: 当前证明本轮当前源码的即时工程验证、浏览器可视化、Demo 系统机制周期、故障演练、SMTP 实际投递和历史技术复验已通过，并已建立源码、配置与进程身份冻结的 72 小时基线；历史 holdout 因预注册基线早于本轮源码，只是技术复验而非独立未暴露样本，不构成盈利保证；本观察仍不证明 B04 完成、BuildManifest 可发布、B05 已授权或任何真实资金写能力
+      - {evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee, reason: SOURCE_IDENTITY_IMPLEMENTATION_AND_PRODUCT_SOURCE_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T17:00:01Z}
+    unmet_exit_evidence: [CURRENT_SOURCE_BOUND_B04_QUALIFICATION, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
+    evidence_scope: 当前只证明本轮代码自动测试、前端构建、治理与文档校验通过，并已为最终当前源码建立源码、配置与进程身份冻结的 72 小时基线；上一源码身份的浏览器、Demo 周期、故障、恢复、SMTP 和历史技术证据均明确标为历史观察，不能替代当前源码资格化；本观察不证明 B04 完成、BuildManifest 可发布、B05 已授权或任何真实资金写能力
     superseded_by: null
     build_manifest_ref: build/release/build-manifest.json
     build_manifest_schema_version: 2
     build_manifest_completeness: SCHEMA_V2_CURRENT_SOURCE_AND_B04_EVIDENCE_INCOMPLETE
     build_manifest_eligible: false
-    build_manifest_limit: 当前 B04 源码已形成上述实现提交，但 PR workflow 与外部/时间证据尚未完成；最终 BuildManifest 必须在全部证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
+    build_manifest_limit: 当前 B04 源码已形成上述实现提交，但 PR workflow、当前源码绑定资格化与外部/时间证据尚未完成；最终 BuildManifest 必须在全部证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
   warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。D00/B00/B01 资格不等于真实资金权限，runtime_real_write_gate 仍为 CLOSED
 
 formalization_record:
