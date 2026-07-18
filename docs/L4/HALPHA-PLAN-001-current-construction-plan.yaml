@@ -8,14 +8,14 @@ accepted_by: Halpha 项目所有者
 accepted_at: 2026-07-18T23:18:42+08:00
 supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T20:13:31+08:00
 document_update_reason: 接受可信 AI 研究工程边界简化，删除 R00 的安全 sandbox、父进程/worker、第二研究 venv、observation/intent 与专用 IPC；保留按错误成本选择的审查、校验、重演、holdout、人工最终审查和产品内重新资格化
-state_updated_at: 2026-07-19T00:35:17+08:00
+state_updated_at: 2026-07-19T00:46:26+08:00
 state_update_reason: >-
   HALPHA-RSCH-TRUST-SIMPLIFICATION-001 协调版本集已经接受；B04/B05、P0 build_order、BuildManifest 和三项真实写门不变。
   R00 的方向授权和 depends_on=[] 保持存在，但既有 ac5270fc344ea4502c6238a13857fc0573aa3f01 / 113bbe9c8a6afbc0cc6ec37663677444029da5e8 绑定只属于被替代合同；
   简化 R00 必须重新绑定包含本接受文本的干净 base_revision 与 accepted_design_set_and_basis 输入身份并冻结完整包合同后方可继续，当前保持 NOT_STARTED 与阻断。
   B04 当前源码的后端、前端、Playwright、Demo 产品周期、Windows/数据库故障演练、空库恢复、SMTP 实际投递、复杂度与历史技术复验均已完成即时资格化；后端当前为 332 tests，其中 LIVE_WRITE 构建预备直接消费者 62 tests 通过。历史当前参数在 development/holdout 均未显示正收益，且因预注册基线早于本轮源码只作为技术复验，不构成策略有效、盈利保证或真实资金授权。
   SMTP 凭据仅投影给 App，Executor 不可见；资格邮件已由 smtp.163.com 接受。故障演练同时修复了受控停止与一分钟恢复触发器的竞争，随后重新通过。配置和产品源码变化后，App/Executor 已于 2026-07-18T16:29:14Z 建立最终 schema v3 Windows 72 小时基线，2026-07-18T16:35:00Z 的首个自动检查点全部当前检查为真且源码摘要无漂移；临时任务已按该基线重建，将在 72 小时满足后自动切换无凭据 LIVE_READ_ONLY，并安排受控重启与七天后最终复核。
-  当前 B04 仅等待 Windows 72 小时和 LIVE_READ_ONLY 7–14 天证据。最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED，未加载 LIVE 凭据、未建立外置授权绑定、未发生真实资金写入。
+  B04 当前源码已在最新 origin/main 基线之上形成实现提交 81e2dc032b940d19fffa51268f5ea12ca1a0bba6，PR workflow 尚待运行；当前仅等待 Windows 72 小时和 LIVE_READ_ONLY 7–14 天证据。最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED，未加载 LIVE 凭据、未建立外置授权绑定、未发生真实资金写入。
 
 accepted_design_set:
   upper_level:
@@ -130,10 +130,10 @@ current_state:
     package: B04
     status: IN_PROGRESS_TIME_BOUND_OBSERVATION
     observed_at: 2026-07-18T16:35:17Z
-    base_commit_sha: a2433afc9ebb6535ef1c6d989925fd07934d7a71
-    commit_sha: null
+    base_commit_sha: 39e500f56c0a1012020fc54faf096a92e2ea2b27
+    commit_sha: 81e2dc032b940d19fffa51268f5ea12ca1a0bba6
     workflow_run_id: null
-    workflow_conclusion: NOT_RUN_UNCOMMITTED
+    workflow_conclusion: PENDING_PULL_REQUEST
     evidence_ref: build/qualification/b04-summary.json
     evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee
     validated_checks:
@@ -162,7 +162,7 @@ current_state:
     build_manifest_schema_version: 2
     build_manifest_completeness: SCHEMA_V2_CURRENT_SOURCE_AND_B04_EVIDENCE_INCOMPLETE
     build_manifest_eligible: false
-    build_manifest_limit: 当前工作树未提交且资格制品仍对应先前源码；必须在本轮全量验证和外部/时间证据完成后重建，保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
+    build_manifest_limit: 当前 B04 源码已形成上述实现提交，但 PR workflow 与外部/时间证据尚未完成；最终 BuildManifest 必须在全部证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
   warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。D00/B00/B01 资格不等于真实资金权限，runtime_real_write_gate 仍为 CLOSED
 
 formalization_record:
