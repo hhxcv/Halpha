@@ -5,16 +5,17 @@ status: ACCEPTED
 language: zh-CN
 as_of: 2026-07-19
 accepted_by: Halpha 项目所有者
-accepted_at: 2026-07-19T10:10:02+08:00
-supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T23:18:42+08:00
-document_update_reason: 接受建设继续与长期观察彻底分离，并在当前 B04 包内完成旧 b05_package_eligibility 到 b05_real_capital_eligibility 的产品迁移；修正为关闭态真实资金资格先绑定 BuildManifest、用户决定和资本额度、激活后运行门再绑定授权与分配的两阶段门禁
-state_updated_at: 2026-07-19T10:10:02+08:00
+accepted_at: 2026-07-19T12:15:09+08:00
+supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-19T10:10:02+08:00
+document_update_reason: 接受工程证据按具体声明和依赖闭包分段继承与重验；建设继续门仅组合既有 8 小时 Windows 醒钟平台连续性与当前构建即时资格，不把旧构建运行时长转移给当前构建，发布和真实资金长期观察继续等待当前精确提交基线
+state_updated_at: 2026-07-19T12:15:09+08:00
 state_update_reason: >-
-  HALPHA-ENG-001@v1.8.0 与 HALPHA-ENG-002@v0.9.0 已接受建设继续和长期观察分离：B04 的短时门只允许另行授权的后续建设，不表示 B04 完成、BuildManifest 可发布、B05 真实资金已授权或运行时真实写门开放。
-  当前 B04 包已把运行实现、API、CLI、工作台、证据汇总与测试统一迁移为 b05_real_capital_eligibility；旧字段只作为 fail-closed 负向输入。关闭态资格只绑定最终 BuildManifest、用户授权与精确 AccountCapitalLimitVersion；REAL 激活原子建立 MachineAuthorization、PlanAllocation 与 Activation 后，OPEN 绑定才可引用并数据库复核这些记录。
-  后端 340 项、前端 3 项、生产构建、89 项门禁/治理定向测试和 6 项关键不变量登记通过；App/Executor 已在 2026-07-19T09:59:01+08:00 重启并运行最终当前源码，/operations 返回 200。未加载 LIVE 写凭据、未建立 LIVE ExecutionAction、未发生真实资金写入。
-  2026-07-18T17:00:01Z 建立的 Windows 醒钟基线在 8.166865 小时时仍连续，但随后本次源码迁移和受控进程重启改变了冻结身份；2026-07-19T01:59:16Z 证据以 8.987333 小时明确 REJECTED。该旧基线不能继承到当前源码；本轮实现 commit 547fa05f8f58d3b471568c7a5bac4bd397258396 已通过 PR #7 以 main merge commit 27abac1037b1e4206d756e9c130b36ac960d2916 合并，后续由独立 observer 绑定该 main 提交并重新开始短时门和长期观察。
-  Windows 72 小时与无凭据 LIVE_READ_ONLY 7–14 日时长要求保持不变，旧冻结构建的长期观察已拒绝；对应 checkpoint、transition、restart 与 finalizer 计划任务已停用，终态证据不再被改写。其失败只取消该构建的发布/真实资金资格，不抹除本次已通过自动验证的迁移实现。
+  HALPHA-ENG-001@v1.9.0 与 HALPHA-ENG-002@v0.10.0 已接受证据按具体声明和依赖闭包分段复用、重解释与重采。提交变化不再统一重置无关证据，但旧构建的进程或精确运行时连续性不得转移给当前构建。
+  原始 build/qualification/b04-windows-72h-soak.json 的 canonical digest 已严格重算一致；2026-07-19T01:10:02.506926Z 检查点以 Windows unbiased interrupt clock 证明同次启动下 8.166865 个醒钟小时，只资格化宿主平台连续性，不证明当前构建已连续运行 8 小时。
+  当前产品源码位于 commit b7978b6a785904ff9fdc24b77561c8d7b0b4d660、product runtime digest=sha256:9f72c9a3504f460f1407f513839e516cea3c50c716e9e01e5967ada87f9442b4；全量后端 345 项通过，App/Executor 启动源码一致、Executor READY 与启动核对完成、/operations=200、runtime_real_write_gate=CLOSED。
+  只读评估器 b04-construction-continuation-finalizer@1 在 2026-07-19T04:15:09.460675Z 形成 QUALIFIED 派生证据。B04 建设继续门因此通过，但只允许另行授权的后续建设；它不表示 B04 完成、BuildManifest 可发布、B05 建设已授权、真实资金已授权或运行时真实写门开放。
+  Windows 72 小时与无凭据 LIVE_READ_ONLY 7–14 日仍绑定当前精确构建。由于本次稳定设计、治理和资格工具变更尚未形成提交，长期观察保持 PENDING_COMMITTED_BASELINE；旧冻结构建的长期尝试继续明确为 REJECTED 历史观察，不得充当当前长期证据。
+  B05 建设需要项目所有者单独决定，当前未取得该决定，因此 b05_construction_eligibility 仍为 BLOCKED；B05 真实资金还继续等待长期观察、最终 BuildManifest、用户授权和资本范围。
   R00 的方向授权和 depends_on=[] 保持存在，但新的干净 base_revision、accepted_design_set_and_basis 输入身份与完整包合同仍未冻结，当前保持 NOT_STARTED。
   最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED，未加载 LIVE 写凭据、未建立 LIVE ExecutionAction、未发生真实资金写入。
 
@@ -35,7 +36,7 @@ accepted_design_set:
     - HALPHA-SYS-001@v1.6.0
     - HALPHA-OUT-001@v1.5.0
     - HALPHA-UX-001@v1.6.0
-    - HALPHA-ENG-001@v1.8.0
+    - HALPHA-ENG-001@v1.9.0
   l3:
     - HALPHA-ALP-002@v0.5.0
     - HALPHA-TRADEPLAN-002@v0.10.0
@@ -45,7 +46,7 @@ accepted_design_set:
     - HALPHA-OUT-002@v0.8.0
     - HALPHA-UX-002@v0.11.0
     - HALPHA-SYS-002@v0.9.0
-    - HALPHA-ENG-002@v0.9.0
+    - HALPHA-ENG-002@v0.10.0
     - HALPHA-ALP-003@v0.4.0
     - HALPHA-ENG-003@v0.4.0
 
@@ -69,8 +70,8 @@ stable_contract_references:
   live_write_authority_principle: HALPHA-CON-001@v2.11.0#CON-GOV-005、#CON-CAP-003、#CON-CAP-005、#CON-CAP-006；HALPHA-CAP-001@v2.10.0#CAP-MOD-001-REQ
   command_and_receipt: HALPHA-UX-002@v0.11.0
   records_processes_and_transactions: HALPHA-SYS-002@v0.9.0#SYS-AUTO-SCH-001、#SYS-AUTO-WORK-001
-  build_and_component_boundary: HALPHA-ENG-002@v0.9.0
-  engineering_quality: HALPHA-ENG-001@v1.8.0
+  build_and_component_boundary: HALPHA-ENG-002@v0.10.0
+  engineering_quality: HALPHA-ENG-001@v1.9.0
   research_and_parallel_integration: HALPHA-ALP-003@v0.4.0、HALPHA-ENG-003@v0.4.0
   document_version_history: HALPHA-DOC-001@v1.11.0#DOC-LOC-001
   l4_change_rule: 稳定契约变化先修订其 L2/L3 所有者；L4 只能选择、收缩或记录当前事实，不得复制后再局部改写。
@@ -92,8 +93,8 @@ basis:
     - HALPHA-OUT-001@v1.5.0
     - HALPHA-UX-001@v1.6.0
     - HALPHA-SYS-001@v1.6.0
-    - HALPHA-ENG-001@v1.8.0
-  owner_confirmed_at: 2026-07-19T02:23:28+08:00
+    - HALPHA-ENG-001@v1.9.0
+  owner_confirmed_at: 2026-07-19T11:57:24+08:00
   current_p0_selections:
     strategy_configuration: 代码策略加 JSON Schema 参数；不启用 DSL、代码上传或可视化编排
     target_host: Windows 10
@@ -115,7 +116,7 @@ current_state:
   current_stage: P0
   design_status: ALIGNED
   research_track_status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE_NOT_STARTED
-  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 已完成 b05_real_capital_eligibility 产品迁移并通过当前自动验证，实现 commit=547fa05f8f58d3b471568c7a5bac4bd397258396、main merge commit=27abac1037b1e4206d756e9c130b36ac960d2916；旧冻结源码的 8 小时建设继续门和长期观察因源码/进程身份漂移明确 REJECTED，新基线尚未由独立 observer 建立。BuildManifest 保持 INCOMPLETE，B05 建设和真实资金均未授权
+  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 建设继续门已按声明级证据重裁决为 QUALIFIED，只复用 8.166865 小时 Windows 醒钟平台连续性并组合当前 345 项测试与启动冒烟，不声称当前构建连续运行 8 小时。长期观察等待本次变更提交后的精确构建基线，BuildManifest 保持 INCOMPLETE；B05 建设缺少单独项目所有者授权而继续 BLOCKED，真实资金亦未授权
   first_authorized_work: B04
   live_write_build_capability: NOT_QUALIFIED
   b05_construction_eligibility: BLOCKED
@@ -131,21 +132,24 @@ current_state:
     authorized_activation_id: null
   latest_implementation_observation:
     package: B04
-    status: IN_PROGRESS_REQUALIFICATION_REQUIRED
-    observed_at: 2026-07-19T01:59:16.189667Z
-    base_commit_sha: 893767e08466a03f94ebfd08a3b41747edf1a455
-    commit_sha: 547fa05f8f58d3b471568c7a5bac4bd397258396
-    workflow_run_id: 29669697543
-    workflow_conclusion: SUCCESS
-    workflow_head_commit_sha: 9340a77d6b1fcddb8d9385e8d56c73dad37ad9ec
-    evidence_ref: build/qualification/b04-windows-72h-soak.json
-    evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
+    status: CONSTRUCTION_CONTINUATION_GATE_QUALIFIED_LONG_OBSERVATION_PENDING_COMMITTED_BASELINE
+    observed_at: 2026-07-19T04:15:09.460675Z
+    base_commit_sha: b7978b6a785904ff9fdc24b77561c8d7b0b4d660
+    commit_sha: b7978b6a785904ff9fdc24b77561c8d7b0b4d660
+    source_state: UNCOMMITTED_GOVERNANCE_AND_QUALIFICATION_CHANGES_OVER_UNCHANGED_PRODUCT_RUNTIME_SOURCE
+    workflow_run_id: null
+    workflow_conclusion: PENDING_CURRENT_CHANGES
+    workflow_head_commit_sha: null
+    evidence_ref: build/qualification/b04-construction-continuation.json
+    evidence_digest: sha256:c98366ceb8343a04ba7abb6989fad97249a832050a7f865cbc45887ca44cba09
     validated_checks:
-      backend_pytest: {result: 340_PASSED}
-      live_write_preparation_and_governance_unit_tests: {result: 89_PASSED_AND_4_SUBTESTS_INCLUDED_IN_BACKEND_TOTAL}
+      backend_pytest: {result: 345_PASSED, junit_digest: "sha256:aef68ef10e400e2a0887ba189adb6095847e654973e1d1a1f34734619a7bf952"}
+      construction_continuation_finalizer: {result: QUALIFIED, evaluator_version: b04-construction-continuation-finalizer@1}
+      platform_continuity: {result: QUALIFIED_8_166865_WINDOWS_AWAKE_HOURS_ONLY, current_build_process_continuity_8h: NOT_CLAIMED}
+      live_write_preparation_and_governance_unit_tests: {result: CURRENT_TARGETED_CHECKS_PASSED}
       frontend_types_openapi_and_build: {result: PASSED}
       frontend_vitest: {result: 3_PASSED}
-      playwright_workbench: {result: CURRENT_SOURCE_NOT_QUALIFIED_6_SKIPPED_THIS_RUN}
+      playwright_workbench: {result: PRIOR_QUALIFIED_EVIDENCE_UNCHANGED_NOT_RERUN_FOR_CONSTRUCTION_GATE}
       demo_product_cycle: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
       windows_fault_drills: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
       empty_database_restore: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
@@ -153,8 +157,9 @@ current_state:
       historical_technical_revalidation: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
       critical_invariant_registry: {result: QUALIFIED_6_RECORDS, evidence_digest: sha256:3cdb9e48f15f8f84909f1910803ba87b4cdea0d51f9fd9d478c980fa703ebb99}
       product_field_migration: {result: QUALIFIED_OLD_FIELD_FAIL_CLOSED_ONLY}
-      app_executor_current_source_restart: {result: QUALIFIED_OPERATIONS_HTTP_200}
+      app_executor_current_source_restart: {result: QUALIFIED_SOURCE_MATCH_READY_RECONCILIATION_AND_OPERATIONS_HTTP_200}
     current_evidence_refs:
+      - {ref: build/qualification/b04-construction-continuation.json, status: QUALIFIED_SUCCESSOR_CONSTRUCTION_ONLY, observed_at: 2026-07-19T04:15:09.460675Z, evidence_digest: "sha256:c98366ceb8343a04ba7abb6989fad97249a832050a7f865cbc45887ca44cba09"}
       - {ref: build/qualification/b02-summary-migration-check.json, status: REJECTED_PRECOMMIT_WORKTREE_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:54.485892Z, evidence_digest: sha256:7c2cb425090eb479013650229fcde71e8d03f05c73da524079932742b9b3b8da}
       - {ref: build/qualification/b03-summary-migration-check.json, status: REJECTED_PRECOMMIT_WORKTREE_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:56.345206Z, evidence_digest: sha256:50e8cf3da7b02d6ac3e22e1e4ef8440bdddd5ae4a8582a1422dc549ec9d59945}
       - {ref: build/qualification/b04-smtp-delivery.json, status: HISTORICAL_SERVER_ACCEPTANCE_SOURCE_BINDING_SUPERSEDED, observed_at: 2026-07-18T16:16:23Z, configuration_digest: sha256:5b524e6e5e29421c517e2c074b075b091f541aa8d2ce106874e0d7ca8b99d1e7, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
@@ -163,15 +168,15 @@ current_state:
     superseded_observations:
       - {evidence_digest: sha256:222b4ca29c9c6d6d75f7c126e7d228a80578a552a653073f533ad4712fc5cb52, reason: PRODUCT_SOURCE_FRONTEND_AND_SMTP_CONFIGURATION_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T16:29:14Z}
       - {evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee, reason: SOURCE_IDENTITY_IMPLEMENTATION_AND_PRODUCT_SOURCE_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T17:00:01Z}
-    unmet_exit_evidence: [COMMITTED_CURRENT_SOURCE_BASELINE_AND_8H_CONTINUATION_GATE, CURRENT_SOURCE_BOUND_B04_QUALIFICATION, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
-    evidence_scope: 当前证明 commit 547fa05f8f58d3b471568c7a5bac4bd397258396 中的 b05_real_capital_eligibility 迁移、两阶段门禁、自动测试、前端构建、关键不变量、运行进程切换和关闭的真实写边界通过，且 PR #7 与 main merge workflow 成功；旧冻结源码的短时门与长期观察因源码/进程漂移明确失败。该失败不否定本次实现，但在建立新基线前不证明 B04 完成、BuildManifest 可发布、B05 建设或真实资金已授权，也不产生任何真实资金写能力
+    unmet_exit_evidence: [COMMITTED_CURRENT_EXACT_BUILD_LONG_OBSERVATION_BASELINE, CURRENT_SOURCE_BOUND_B04_RELEASE_QUALIFICATION, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
+    evidence_scope: 当前只证明 Windows 同次启动 8.166865 醒钟小时的平台连续性，以及 commit b7978b6a785904ff9fdc24b77561c8d7b0b4d660 对应产品运行源码在当前 345 项测试、App/Executor 启动身份、READY/核对、/operations 和关闭真实写门范围内满足建设继续条件。它不证明当前构建连续运行 8 小时，不证明 B04 完成或 BuildManifest 可发布，也不授予 B05 建设、真实资金或真实写能力
     superseded_by: null
     build_manifest_ref: build/release/build-manifest.json
     build_manifest_schema_version: 2
     build_manifest_completeness: SCHEMA_V2_CURRENT_SOURCE_AND_B04_EVIDENCE_INCOMPLETE
     build_manifest_eligible: false
-    build_manifest_limit: 当前 B04 迁移已形成实现 commit 547fa05f8f58d3b471568c7a5bac4bd397258396，PR #7 与 main merge workflow 均成功，但尚无新基线和当前源码绑定的长期证据；旧冻结构建已经因身份漂移失效。8 小时建设继续门不产生可发布 BuildManifest，最终 BuildManifest 必须在全部发布证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
-  warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。短时建设继续、工程构建能力、B05 真实资金资格和运行时真实写门彼此独立，当前后三者仍未满足且 runtime_real_write_gate=CLOSED
+    build_manifest_limit: B04 建设继续门已通过，但只消费平台连续性与当前即时资格；尚无本次变更提交后的精确构建长期基线。最终 BuildManifest 必须在 72 小时 Windows、7–14 日 LIVE_READ_ONLY 和其余发布证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
+  warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。建设继续门已通过，但工程发布能力、B05 建设授权、B05 真实资金资格和运行时真实写门彼此独立；后三类权限仍未满足且 runtime_real_write_gate=CLOSED
 
 formalization_record:
   status: ALIGNED
@@ -196,7 +201,7 @@ formalization_record:
     - HALPHA-OUT-002@v0.8.0
     - HALPHA-UX-002@v0.11.0
     - HALPHA-SYS-002@v0.9.0
-    - HALPHA-ENG-002@v0.9.0
+    - HALPHA-ENG-002@v0.10.0
   current_selections:
     recovery_mode: MANUAL_PLAN_RESUME
     execution_model: UNIFIED_EXE_EXECUTION_ACTION
@@ -206,29 +211,26 @@ formalization_record:
 
 governance_gate_evidence:
   evidence_kind: LATEST_COMMITTED_GOVERNANCE_WORKFLOW_OBSERVATION
-  observed_at: 2026-07-19T10:08:23+08:00
-  commit_sha: 27abac1037b1e4206d756e9c130b36ac960d2916
-  workflow_run_id: 29669714361
+  observed_at: 2026-07-19T10:12:11+08:00
+  commit_sha: b7978b6a785904ff9fdc24b77561c8d7b0b4d660
+  workflow_run_id: 29669820173
   workflow_conclusion: SUCCESS
-  evidence_digest: sha256:9e4d5432145d06e33033e9bf63ac041877ea96c3f466d0c0135d226e6f5ed6f1
+  evidence_digest: sha256:a77cecb6070dd0e7a6cc8bdc6122d8789e6a190c55be8397007cd9b149c43bdd
   evidence_digest_basis: commit_sha|workflow_run_id|workflow_conclusion|event|pull_request|merged_at 的字段值以 `|` 原样连接、UTF-8 编码且无尾随换行
   superseded_by: null
   source:
-    pull_request: https://github.com/hhxcv/Halpha/pull/7
-    merged_at: 2026-07-19T02:08:08Z
+    pull_request: https://github.com/hhxcv/Halpha/pull/8
+    merged_at: 2026-07-19T02:11:57Z
     merged_to: main
     workflow_event: push
-    workflow_run: https://github.com/hhxcv/Halpha/actions/runs/29669714361
-  repository_status: PR #7 已合并；上述 main merge commit 的 Documentation governance workflow 成功
+    workflow_run: https://github.com/hhxcv/Halpha/actions/runs/29669820173
+  repository_status: PR #8 已合并；上述 main merge commit 的 Documentation governance workflow 成功
   validator: governance/validate_construction_plan.py
   workflow: .github/workflows/docs-governance.yml
   local_checks_before_merge:
-    - 当前 PLAN 治理校验 0 violations
-    - 全量本地 pytest 340 tests 通过；仅有 NautilusTrader/NumPy 上游 2 条 DeprecationWarning
-    - 文档本轮 6 files、0 errors、0 warnings；accepted bundle 完整性 5 files、0 errors、0 warnings
-    - YAML 解析、责任登记、索引和 ACCEPTED 中英文 bundle 哈希一致
+    - PR #8 的本地检查明细不从 PR #7 复制；已提交事实只引用该 merge commit 的成功 Documentation governance workflow
   external_enforcement: UNKNOWN；已证明 workflow 在 PR/head push/main merge push 上成功，不等于 GitHub ruleset 或 branch protection 已把它设为 required check
-  limitation: 该证据覆盖 PR #7 与 main merge commit 27abac1037b1e4206d756e9c130b36ac960d2916 的治理 workflow；本次仅状态同步不改变产品源码，也不等于新观察基线已建立。门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
+  limitation: 该证据覆盖 PR #8 与 main merge commit b7978b6a785904ff9fdc24b77561c8d7b0b4d660 的治理 workflow；当前未提交变更另以 latest_implementation_observation 和本轮本地检查记录，不冒充已提交 workflow。门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
 
 complexity_budget:
   comparison_baseline: 本轮正式化前设计
@@ -325,7 +327,7 @@ runtime_architecture:
     capital: HALPHA-CAP-002@v1.2.0
     execution: HALPHA-EXE-002@v1.2.0#EXE-AUTO-SUM-001、#EXE-AUTO-SUB-001
     current_topology: 单一 halpha-executor、单一 TradingNode、同一 active profile；DEMO/LIVE 共用同一 EXE 实现并分别实例化，精确组件接线与 profile 写能力由本节其他配置固定
-  direct_write_guard_contract: HALPHA-ENG-002@v0.9.0#ENG-AUTO-NTL-001-REQ
+  direct_write_guard_contract: HALPHA-ENG-002@v0.10.0#ENG-AUTO-NTL-001-REQ
 
 p0_recovery_selection:
   policy: MANUAL_PLAN_RESUME
@@ -333,7 +335,7 @@ p0_recovery_selection:
     - HALPHA-TRADEPLAN-002@v0.10.0#TRADEPLAN-AUTO-LIF-001
     - HALPHA-EXE-002@v1.2.0#EXE-AUTO-HO-001
     - HALPHA-SYS-002@v0.9.0#SYS-AUTO-REC-001-REQ
-    - HALPHA-ENG-002@v0.9.0#ENG-AUTO-BLD-001-REQ
+    - HALPHA-ENG-002@v0.10.0#ENG-AUTO-BLD-001-REQ
   current_limit: 长期 AUTO_CONTINUE 不在 P0；B05 的当前在线要求由 construction_packages.B05.real_capital_preconditions 记录
   evidence_horizon: B02 验证暂停/命令边界，B03 验证动作恢复，B04 验证 Windows 故障链；本计划不复制状态、命令或失败规则
 
@@ -609,14 +611,14 @@ runtime_configuration:
     product_result_contract: HALPHA-EXE-002@v1.2.0；核对投影、UNKNOWN、产品终态、原身份查询与禁止重复 submit 的稳定语义不在 L4 复制
     exact_config_digest: 由 build/qualification/b00-qualification-latest.json 固定 B00 配置证据；B01 BuildManifest 再绑定产品构建摘要
   numeric_contract:
-    normative_source: HALPHA-ENG-002@v0.9.0#ENG-AUTO-NTL-003-REQ
+    normative_source: HALPHA-ENG-002@v0.10.0#ENG-AUTO-NTL-003-REQ
     current_implementation: Python Decimal、PostgreSQL NUMERIC 与 NautilusTrader 原生数值边界
     qualification_status: B00_QUALIFIED；B02/B03 按建设包 exit_evidence 继续验证当前实现，不在 L4 复制数值、摘要、量化或失败规则
   database:
     transaction_isolation: READ COMMITTED
     claim_pattern: SQLAlchemy with_for_update(skip_locked=True) 只由 HalphaCoordinator 或 NotificationDispatcher 使用
     concurrency: stable lock order + unique constraint + expected state_version CAS
-    unavailable_contract: HALPHA-SYS-002@v0.9.0、HALPHA-ENG-002@v0.9.0；数据库不可用失败语义不在 L4 复制
+    unavailable_contract: HALPHA-SYS-002@v0.9.0、HALPHA-ENG-002@v0.10.0；数据库不可用失败语义不在 L4 复制
   logging:
     halpha_events:
       format: structlog JSON Lines
@@ -1174,20 +1176,20 @@ design_formalization_gate:
     - id: CAP-P0-SCOPE
       normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-CAP-002@v1.2.0]
     - id: UX-LIMITED-OPERATION-ENTRY
-      normative_sources: [HALPHA-UX-001@v1.6.0, HALPHA-UX-002@v0.11.0, HALPHA-SYS-002@v0.9.0, HALPHA-ENG-002@v0.9.0]
+      normative_sources: [HALPHA-UX-001@v1.6.0, HALPHA-UX-002@v0.11.0, HALPHA-SYS-002@v0.9.0, HALPHA-ENG-002@v0.10.0]
     - id: DEMO-EXECUTION-OWNER
-      normative_sources: [HALPHA-ARC-001@v1.9.0, HALPHA-EXE-001@v1.7.0, HALPHA-EXE-002@v1.2.0, HALPHA-ENG-002@v0.9.0]
+      normative_sources: [HALPHA-ARC-001@v1.9.0, HALPHA-EXE-001@v1.7.0, HALPHA-EXE-002@v1.2.0, HALPHA-ENG-002@v0.10.0]
     - id: DEMO-EVIDENCE-PURPOSE
-      normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-OUT-002@v0.8.0, HALPHA-UX-002@v0.11.0, HALPHA-ENG-002@v0.9.0]
+      normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-OUT-002@v0.8.0, HALPHA-UX-002@v0.11.0, HALPHA-ENG-002@v0.10.0]
     - id: DOCUMENT-VERSION-HISTORY
       normative_sources: [HALPHA-DOC-001@v1.11.0]
     - id: CONSTRUCTION-LONG-OBSERVATION-SEPARATION
-      normative_sources: [HALPHA-ENG-001@v1.8.0, HALPHA-ENG-002@v0.9.0]
+      normative_sources: [HALPHA-ENG-001@v1.9.0, HALPHA-ENG-002@v0.10.0]
   preserved_evidence:
     - 全部拟自研责任已按“当前消费者→成熟组件→一手能力证据→差异性质→总复杂度影响→采用/按组件妥协/最小补充/暂不支持”复核；固定 1.230.0 close_position 因无 cache 恢复缺口不进入 P0 写链
     - B00 的 14/14 required outputs 资格化证据保持为实现证据；它不替代 ACCEPTED 设计或真实资金授权
   deferred_not_blocking_p0: [长期 AUTO_CONTINUE 恢复引擎]
-  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04 已完成本轮字段与两阶段门禁迁移并通过 PR #7 合并到 main，旧冻结构建的建设继续门和长期观察因源码/进程身份漂移 REJECTED，等待独立 observer 建立新基线。短时门只控制另行授权的后续建设；真实写工程能力仍未资格化，B05 建设和真实资金均未授权，runtime_real_write_gate=CLOSED
+  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04 建设继续门按 8.166865 小时 Windows 醒钟平台声明与当前 345 项测试/启动冒烟组合判定 QUALIFIED，当前构建 8 小时进程连续性明确 NOT_CLAIMED。精确构建长期观察等待本次变更提交后的新基线；真实写工程能力仍未资格化，B05 建设缺少单独授权而 BLOCKED，真实资金未授权，runtime_real_write_gate=CLOSED
 
 dependency_qualification_gate:
   id: B00
@@ -1412,80 +1414,109 @@ construction_packages:
   B04:
     name: 证据、完整工作台与运维闭环
     eligibility: ELIGIBLE
-    status: IN_PROGRESS_CONSTRUCTION_GATE_AND_LONG_OBSERVATION
+    status: IN_PROGRESS_LONG_OBSERVATION
     started_at: 2026-07-17T20:36:56+08:00
     depends_on: [B03]
     construction_continuation_gate:
       purpose: SUCCESSOR_CONSTRUCTION_ONLY
       target_blocking_hours: 8
       hard_max_blocking_hours: 24
-      status: REJECTED
+      decision_semantics: POINT_IN_TIME_IMPACT_SCOPED_CONSTRUCTION_PERMISSION
+      evidence_composition: PLATFORM_CONTINUITY_PLUS_CURRENT_BUILD_IMMEDIATE_QUALIFICATION
+      status: QUALIFIED
       started_at: 2026-07-18T17:00:01Z
       target_decision_at: 2026-07-19T01:00:01Z
       hard_deadline_at: 2026-07-19T17:00:01Z
+      qualified_at: 2026-07-19T04:15:09.460675Z
       extension:
         status: NOT_USED
         allowed_only_for: EXPLICIT_DIURNAL_CONSUMER_WITH_OWNER_RECORDED_REASON
         reason: null
         owner_decision_ref: null
-      frozen_baseline:
-        identity_status: FROZEN
-        observation_outcome: REJECTED_SOURCE_AND_PROCESS_IDENTITY_DRIFT
-        commit_sha: 78b0fe5314562e6d39eebb0ca635c0bb63488d9d
-        source_sha256_digest: sha256:3410de5b9de0a2226a321edc70e81504105f1bb4cf0df7bceb7698526c00f9c8
-        dependency_locks:
-          python_runtime: sha256:f44743679f033d09c6395ad5bcd1411fb1bf810a4dcc4e70b3632635e878805b
-          npm: sha256:0d5df4ffda1efad5d7d0b525948db652749a23cb5c67b9ca6890fb3700ca7463
-        migration_head: "20260718_0006"
-        build_artifacts:
-          backend: sha256:41fc67209495b17b12e6722f99db0703c2609bb1f42062e18aac3aaff6ad8646
-          frontend: sha256:e4f0237afce5a2bafd689d09cb710df69717f82fb1598c7a368a6cda924dc62e
-        nonsecret_configuration_digest: sha256:5b524e6e5e29421c517e2c074b075b091f541aa8d2ce106874e0d7ca8b99d1e7
-        observation_tool_digest: sha256:453cc3cbcffee6f03589bf48aec7c9d49305d03de62428766324ea96a286fc36
-        process_identity_ref: build/qualification/b04-windows-72h-soak.json#baseline_processes
-        dependency_closure: PRODUCT_RUNTIME_SOURCE_LOCKS_MIGRATIONS_BUILT_UI_RUNTIME_CONFIG_AND_SOAK_OBSERVER
-        read_only_rule: 冻结闭包保持只读；后续建设使用独立 branch/worktree；闭包内变化不得继承本观察结论，闭包外变化仅在证明无影响后可引用未受影响部分
       required:
-        - CURRENT_SOURCE_IMMEDIATE_AUTOMATED_INTEGRATION_DEMO_FAULT_AND_ROLLBACK_CHECKS_QUALIFIED
-        - EXACT_SOURCE_CONFIG_PROCESS_IDENTITY_8_WINDOWS_AWAKE_HOURS
+        - PLATFORM_CONTINUITY_AT_LEAST_8_WINDOWS_AWAKE_HOURS_QUALIFIED
+        - CURRENT_BUILD_IMMEDIATE_AUTOMATED_INTEGRATION_DEMO_FAULT_AND_ROLLBACK_CHECKS_QUALIFIED
+        - CURRENT_BUILD_STARTUP_SMOKE_QUALIFIED
         - RUNTIME_REAL_WRITE_GATE_CLOSED_AT_DECISION
         - NO_UNISOLATED_CORE_DEFECT
       current_evidence:
-        observed_at: 2026-07-19T01:59:16.189667Z
-        immediate_qualification: QUALIFIED_AUTOMATED_CHECKS_BUT_BASELINE_REJECTED
-        windows_awake_identity_hours: 8.987332774055556
-        source_configuration_process_identity_unchanged: false
+        observed_at: 2026-07-19T04:15:09.460675Z
+        platform_continuity:
+          status: QUALIFIED
+          claim: SAME_BOOT_WINDOWS_AWAKE_PLATFORM_CONTINUITY_AT_LEAST_8H
+          qualified_checkpoint_at: 2026-07-19T01:10:02.506926Z
+          awake_elapsed_hours: 8.16686521111111
+          raw_evidence_ref: build/qualification/b04-windows-72h-soak.json
+          raw_evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
+          dependency_closure: WINDOWS_UNBIASED_INTERRUPT_CLOCK_AND_SAME_BOOT_OBSERVATION
+          rule_reevaluation: {method: REEVALUATE_RAW_EVIDENCE, evaluator_version: b04-construction-continuation-finalizer@1, prior_rule_digest: "sha256:155602c1515de426cc181245a4005e09c2460d8805c71956c6a73b40424778be", current_rule_digest: "sha256:c35238e3a147b621dcd7e590791863f367547216e073324b26f9fe94f6bfbbb7"}
+        current_build:
+          status: QUALIFIED
+          commit_sha: b7978b6a785904ff9fdc24b77561c8d7b0b4d660
+          product_runtime_source_digest: sha256:9f72c9a3504f460f1407f513839e516cea3c50c716e9e01e5967ada87f9442b4
+          junit_ref: build/qualification/b04-construction-continuation-pytest.xml
+          junit_digest: sha256:aef68ef10e400e2a0887ba189adb6095847e654973e1d1a1f34734619a7bf952
+          junit_summary: {tests: 345, failures: 0, errors: 0, skipped: 0}
+          immediate_tests_qualified: true
+          startup_smoke_qualified: true
+          operations_http_status: 200
+          app_runtime_source_matches_current: true
+          executor_runtime_source_matches_current: true
+          executor_product_runtime_ready: true
         runtime_real_write_gate: CLOSED
-        unisolated_core_defect_status: NONE_IN_CURRENT_AUTOMATED_VALIDATION
-        evidence_ref: build/qualification/b04-windows-72h-soak.json
-        evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
+        unisolated_core_defect_status: NONE
+        current_build_process_continuity_8h: NOT_CLAIMED
+        evidence_ref: build/qualification/b04-construction-continuation.json
+        evidence_digest: sha256:c98366ceb8343a04ba7abb6989fad97249a832050a7f865cbc45887ca44cba09
       permits: [SEPARATELY_AUTHORIZED_SUCCESSOR_CONSTRUCTION]
       does_not_permit: [B04_COMPLETE, BUILD_MANIFEST_RELEASE_ELIGIBLE, B05_REAL_CAPITAL_ACTIVATION, RUNTIME_REAL_WRITE_GATE_OPEN]
-      decision_rule: 8 小时目标后只有明确日周期消费者且项目所有者记录理由才可延长；24 小时绝对截止时必须形成 QUALIFIED 或 REJECTED，未完成长期证据继续按 long_observation 非阻塞观察
+      decision_rule: 8 小时平台连续性声明只证明 Windows 同次启动的醒钟时间；与当前构建即时测试和启动冒烟组合后只可许可另行授权的后续建设，不声称当前构建已连续运行 8 小时。点时资格可因闭包内缺陷暂停依赖切片，但无关变化不追溯撤销
     long_observation:
-      status: REJECTED
-      frozen_baseline_ref: construction_packages.B04.construction_continuation_gate.frozen_baseline
+      status: PENDING
+      current_baseline:
+        identity_status: PENDING_COMMITTED_BASELINE
+        commit_sha: null
+        source_sha256_digest: null
+        dependency_locks: null
+        migration_head: null
+        build_artifacts: null
+        nonsecret_configuration_digest: null
+        observation_tool_digest: null
+        process_identity_ref: null
+        dependency_closure: PRODUCT_RUNTIME_SOURCE_LOCKS_MIGRATIONS_BUILT_UI_RUNTIME_CONFIG_PROCESS_AND_SOAK_OBSERVER
+        read_only_rule: 基线只可在当前变更提交并集成后由独立 observer 冻结；后续建设使用独立 branch/worktree，精确构建长期结论不得跨闭包变化继承
       windows_awake_runtime:
         required_hours: 72
-        status: REJECTED
-        baseline_at: 2026-07-18T17:00:01Z
-        latest_checkpoint_at: 2026-07-19T01:59:16.189667Z
-        awake_elapsed_hours: 8.987332774055556
+        status: PENDING_BASELINE
+        baseline_ref: construction_packages.B04.long_observation.current_baseline
+        baseline_at: null
+        latest_checkpoint_at: null
+        awake_elapsed_hours: 0
         evidence_ref: build/qualification/b04-windows-72h-soak.json
-        evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
+        evidence_digest: null
       live_read_only_market:
         minimum_natural_days: 7
         maximum_natural_days_if_no_complete_trigger_or_expiry: 14
-        status: CANCELLED_BASELINE_REJECTED
+        status: PENDING_WINDOWS_72H
         started_at: null
         qualified_at: null
         observed_natural_days: 0
         evidence_ref: build/qualification/b04-live-read-only.json
         evidence_digest: null
+      prior_attempts:
+        - status: REJECTED_SOURCE_AND_PROCESS_IDENTITY_DRIFT
+          baseline_at: 2026-07-18T17:00:01Z
+          rejected_at: 2026-07-19T01:59:16.189667Z
+          commit_sha: 78b0fe5314562e6d39eebb0ca635c0bb63488d9d
+          source_sha256_digest: sha256:3410de5b9de0a2226a321edc70e81504105f1bb4cf0df7bceb7698526c00f9c8
+          awake_elapsed_hours: 8.987332774055556
+          evidence_ref: build/qualification/b04-windows-72h-soak.json
+          evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
+          superseded_by: construction_packages.B04.long_observation.current_baseline
       construction_effect: NON_BLOCKING_AFTER_CONSTRUCTION_CONTINUATION_GATE_QUALIFIED
       release_effect: BLOCKING
       real_capital_activation_effect: BLOCKING
-      failure_effect: 当前冻结构建不得发布或用于真实资金，真实写门保持关闭；只暂停依赖该缺陷的切片，修复后建立新基线并按影响重验，不作废无依赖的已完成建设
+      failure_effect: 当前精确构建不得发布或用于真实资金，真实写门保持关闭；只暂停依赖该缺陷的切片，修复后建立新基线并按具体声明重验，不作废无依赖的已完成建设，也不撤销未受影响的平台连续性声明
       completion_rule: Windows 72 小时、LIVE_READ_ONLY 7–14 日和全部 B04 发布证据满足后，才可由独立 finalizer 将 B04 标为 COMPLETED 并资格化当前 BuildManifest
     scope:
       - 从 schema 合法范围冻结一组用户选择参数、方向和精确 manifest，执行 BacktestEngine development/holdout 与 ReportProvider 判定；默认值仅作初始建议
@@ -1690,8 +1721,8 @@ research_build_order: [R00, R01, R02, R03]
 post_p0_decision_order: [B05, V01]
 currently_authorized_work: [B04]
 parallelization_rule: >-
-  B01–B03 已完成；B04 当前实施当前源码即时资格、8 小时建设继续门、历史/Demo/LIVE_READ_ONLY 证据、完整工作台和运维闭环。建设继续门 QUALIFIED 后，只有项目所有者另行授权时 B05 才可在独立 branch/worktree 中开始代码、配置、UI、回退和无真实写测试；它不等待 B04 COMPLETE，但不得加载 LIVE 写凭据、建立 LIVE ExecutionAction、激活真实资金或打开真实写门。
-  B04 的 Windows 72 小时与 LIVE_READ_ONLY 7–14 日观察继续非阻塞运行；它们与最终当前 BuildManifest 仍是 B04 完成、发布和 B05 真实资金激活的硬前提。长期观察失败时只暂停依赖缺陷的切片并取消该冻结构建的发布/真实资金资格，不自动抹除无依赖建设。
+  B01–B03 已完成；B04 建设继续门已按 8.166865 小时 Windows 醒钟平台连续性与当前构建即时资格组合判定 QUALIFIED。只有项目所有者另行授权时 B05 才可在独立 branch/worktree 中开始代码、配置、UI、回退和无真实写测试；它不等待 B04 COMPLETE，但不得加载 LIVE 写凭据、建立 LIVE ExecutionAction、激活真实资金或打开真实写门。
+  B04 的 Windows 72 小时与 LIVE_READ_ONLY 7–14 日观察等待本次变更形成提交后绑定当前精确构建并非阻塞运行；它们与最终当前 BuildManifest 仍是 B04 完成、发布和 B05 真实资金激活的硬前提。长期观察失败时只暂停依赖缺陷的切片并取消该冻结构建的发布/真实资金资格，不自动抹除无依赖建设，也不撤销未受影响的平台声明。
   项目所有者对 R00 的建设方向授权保持存在且 R00 不依赖 B04 完成；可信 AI 简化设计已经接受，但新的 base_revision、accepted_design_set_and_basis 输入身份与完整包契约尚未重新冻结，因此必须先形成新的干净治理绑定，不能直接沿用被替代合同继续实施。
   R01 可在 R00 完成后开始非确认性建设，但完成、research_policy 冻结和 confirmation_eligible_not_before 固定必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。
   R00–R02 不改变 B01–B05、P0 build_order、B05 建设/真实资金资格或运行时真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；研究资源与交易产品或开放责任竞争时必须降低并发、PAUSED 或 STOPPED，不为此建设安全隔离或资源调度平台。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 真实资金资格和运行时真实写门继续分别 fail closed。
@@ -1732,10 +1763,10 @@ definition_of_ready_to_start_p0:
     - D00 已接受 DEMO/LIVE 统一 EXE ExecutionAction、环境限定 CAP 和系统机制验证优先的协调版本集
   blocking: []
   remaining_runtime_inputs_before_B00: []
-  first_step: 由独立 observer 对 main merge commit 27abac1037b1e4206d756e9c130b36ac960d2916 建立新的只读源码/配置/进程基线并重新判定 8 小时建设继续门；门达到 QUALIFIED 后仍须项目所有者另行授权，才能在独立 branch/worktree 开始 B05 无真实写建设。任何建设轨均不得加载 LIVE 写凭据、建立 LIVE ExecutionAction 或打开真实写门
+  first_step: 本次变更形成干净提交并集成后，由独立 observer 对该精确提交建立只读源码/配置/进程长期观察基线；B04 建设继续门已经 QUALIFIED，但 B05 无真实写建设仍须项目所有者另行授权。任何建设轨均不得加载 LIVE 写凭据、建立 LIVE ExecutionAction 或打开真实写门
   current_assessment: >-
-    P0 当前已完成 B01–B03；B04 已完成旧 b05_package_eligibility 到 b05_real_capital_eligibility 的当前产品迁移并通过自动验证，实现 commit=547fa05f8f58d3b471568c7a5bac4bd397258396 已通过 PR #7 合并到 main，App/Executor 已切换到相同产品源码。旧冻结源码的建设继续门和长期观察因源码/进程身份漂移明确 REJECTED，新基线尚未建立，仍不具备真实交易资格。
-    账户实际持仓模式和杠杆变化不阻断建设，按 accepted CAP 兼容边界并以账户实际配置只读处理。B04 construction_continuation_gate=REJECTED、live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED。
+    P0 当前已完成 B01–B03；B04 建设继续门已按声明级依赖闭包重裁决为 QUALIFIED：旧证据只贡献 8.166865 小时 Windows 醒钟平台连续性，当前构建以 345 项测试和 App/Executor 启动冒烟资格化，未声称当前构建连续运行 8 小时。72 小时 Windows 与 7–14 日 LIVE_READ_ONLY 长期观察等待本次变更提交后的精确构建新基线，当前仍不具备发布或真实交易资格。
+    账户实际持仓模式和杠杆变化不阻断建设，按 accepted CAP 兼容边界并以账户实际配置只读处理。B04 construction_continuation_gate=QUALIFIED、live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED（缺少单独项目所有者授权）、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED。
 
 source_evidence:
   - claim: NautilusTrader v1.230.0 tag、源码、许可证与 Controller
@@ -1808,7 +1839,8 @@ source_evidence:
 
       - https://github.com/mhammond/pywin32
 final_acceptance_statement: >-
-  本计划已接受建设继续与长期观察分离：B04 以 8 个 Windows 醒钟小时为正常建设阻塞目标、24 小时为绝对上限；到期必须形成 QUALIFIED 或 REJECTED，不能用长期观察无限阻断建设。
-  Windows 72 小时和 LIVE_READ_ONLY 7–14 日观察完整保留，在短时门通过后对另行授权的建设非阻塞，但继续阻断 B04 完成、发布、当前 BuildManifest 资格和真实资金激活。
+  本计划已接受建设继续与长期观察分离，并以具体证据声明及其依赖闭包决定不重置、重解释或重采；提交变化本身不统一重置无关证据，旧构建进程时长也不得转移给当前构建。
+  B04 建设继续门现为 QUALIFIED：它只把 8.166865 小时 Windows 醒钟平台连续性与当前 345 项测试、App/Executor 启动冒烟和关闭真实写门组合为点时建设许可，明确不声称当前构建已连续运行 8 小时。
+  Windows 72 小时和 LIVE_READ_ONLY 7–14 日观察完整保留，等待本次变更提交后绑定当前精确构建；它们对另行授权的建设非阻塞，但继续阻断 B04 完成、发布、当前 BuildManifest 资格和真实资金激活。
   B05 建设资格与真实资金资格分别记录；建设阶段只能修改和验证代码、配置、UI、回退及无真实写路径，不加载 LIVE 写凭据、不建立 LIVE ExecutionAction、不打开真实写门。真实资金仍要求长期观察、当前 BuildManifest、用户授权和资本范围全部满足。
-  R00 仍不依赖 B04，但必须重新绑定包含本接受文本的干净 base_revision、accepted_design_set_and_basis 输入身份并冻结简化合同后方可实施；工程资格不等于真实资金权限，当前 B05 两项资格均为 BLOCKED 且 runtime_real_write_gate=CLOSED。
+  R00 仍不依赖 B04，但必须重新绑定包含本接受文本的干净 base_revision、accepted_design_set_and_basis 输入身份并冻结简化合同后方可实施；工程资格不等于真实资金权限，当前 B05 建设因缺少单独授权而 BLOCKED、真实资金资格也为 BLOCKED，runtime_real_write_gate=CLOSED。
