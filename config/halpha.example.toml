@@ -8,7 +8,6 @@ account_id = "binance-usdm-demo-owner-primary"
 profile = "BINANCE_DEMO"
 authority_class = "DEMO_VALIDATION"
 database_name = "halpha_demo"
-build_manifest_path = "build/release/build-manifest.json"
 
 [app]
 bind = "127.0.0.1"

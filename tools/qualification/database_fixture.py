@@ -143,9 +143,7 @@ def create_and_activate(
         activation_id=ids["activation_id"],
         environment_kind=EnvironmentKind.DEMO,
         authority_class=AuthorityClass.DEMO_VALIDATION,
-        build_digest="a" * 64,
-        evidence_digest="b" * 64,
-        evidence_scope={"environment": "DEMO", "instrument": instrument_ref},
+        product_build_id="a" * 64,
         observed_at=now,
     )
     return ids

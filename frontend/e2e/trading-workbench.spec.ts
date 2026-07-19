@@ -146,10 +146,8 @@ test("the workbench renders the synthetic LIVE strategy-start target state witho
     account_id: "synthetic-live-target-account",
     profile: "BINANCE_LIVE_WRITE",
     authority_class: "LIVE_REAL_CAPITAL",
-    build_manifest_status: "VERIFIED",
-    build_manifest_digest: "sha256:synthetic-live-target-build-manifest",
-    build_manifest_violations: [],
-    live_write_build_capability: "QUALIFIED",
+    product_build_id: "a".repeat(64),
+    app_executor_product_build_consistent: true,
     configured_runtime_real_write_gate: "CLOSED",
     runtime_real_write_gate: "CLOSED",
     live_write_gate_violations: [],
@@ -170,7 +168,8 @@ test("the workbench renders the synthetic LIVE strategy-start target state witho
       environment_kind: "LIVE",
       authority_class: "LIVE_REAL_CAPITAL",
       account_ref: "synthetic-live-target-account",
-      live_write_build_capability: "QUALIFIED",
+      product_build_id: "a".repeat(64),
+      product_build_consistent: true,
       configured_runtime_real_write_gate: "CLOSED",
       runtime_real_write_gate: "CLOSED",
       live_activation_eligible: true,
@@ -215,7 +214,7 @@ test("the workbench renders the synthetic LIVE strategy-start target state witho
   };
   await page.reload();
   await expect(page.getByText("REAL WRITE · OPEN")).toBeVisible();
-  await expect(page.getByText("真实账户交易实现或当前事实尚未满足；当前不能启动 REAL 策略。")).toBeVisible();
+  await expect(page.getByText("当前产品版本或交易所变更请求配置不一致；当前不能启动 REAL 策略。")).toBeVisible();
   await expect(page.getByRole("button", { name: "启动 REAL 策略" })).toBeDisabled();
   await assertAccessible(page, testInfo, "trading-synthetic-live-open");
   await assertNoDocumentOverflow(page, testInfo, "trading-synthetic-live-open");

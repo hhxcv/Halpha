@@ -42,7 +42,7 @@ current_facts:
   evidence_limit: >-
     历史测试和观察只说明当时输入；当前实现仍在连续修改，因此不把历史结果表述为当前产品闭环或真实账户交易能力。
   persistence:
-    migration_head: 20260720_0008
+    migration_head: 20260720_0009
     demo_database_at_head: true
     live_database_at_head: true
     product_record_family_count: 10
@@ -93,10 +93,10 @@ current_strategy:
 
 product_build:
   target: ONE_PRODUCT_BUILD_ID
-  current_product_build_id: null
-  implementation: src/halpha/build_manifest.py
-  current_status: NOT_CREATED_FOR_CURRENT_PRODUCT_INPUTS
-  rule: 由实现读取实际产品输入；历史构建记录不代表当前构建
+  current_product_build_id: cad1459d89a6ffca1f9e4ef818dbfef27be1041eeff1377cdf7d45b455e5d0bc
+  implementation: src/halpha/product_build.py
+  current_status: CALCULATED_BY_APP_AND_EXECUTOR
+  rule: 只散列产品运行文件和有效非秘密配置；时间、Git 状态、文档、测试与验证报告不参与
 
 current_iteration:
   focus: 完成交易工作台剩余交互和真实账户路径的无凭据实现，保持交易所变更请求关闭
@@ -108,7 +108,7 @@ current_iteration:
     - 完成交易工作台剩余交互
     - 完成真实账户交易路径的无凭据实现、秘密最后加载和禁止请求反例
     - 按每次改动影响重跑策略、Demo、数据库、Windows、SMTP、前端和故障检查
-    - 生成 product_build_id，并检查部署、停止、备份、恢复和接管
+    - 检查部署、停止、备份、恢复和接管
     - 由用户在产品中配置并激活一次受限真实计划
 
 real_account_trading:

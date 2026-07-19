@@ -448,12 +448,14 @@ def test_executor_entry_checks_live_gate_before_resolving_binance_secrets() -> N
     source = (ROOT / "src" / "halpha" / "executor" / "__main__.py").read_text(
         encoding="utf-8"
     )
-    assert source.index("require_live_write_gate_precheck(repo_root, settings)") < source.index(
-        "api_key = resolver.resolve(key_reference)"
-    )
-    assert source.index("gate_status = require_live_write_gate_open(") < source.index(
-        "api_key = resolver.resolve(key_reference)"
-    )
+    runtime_entry = source.index("live_write =")
+    secret_resolution = source.index("api_key = resolver.resolve(key_reference)")
+    precheck = source.index("require_live_write_gate_precheck(", runtime_entry)
+    open_check = source.index("require_live_write_gate_open(", precheck)
+    assert runtime_entry < precheck < open_check < secret_resolution
+    assert "current_product_build_id=product_build_id" in source[
+        precheck:secret_resolution
+    ]
 
 
 def test_runtime_strategy_proposal_boundary_requires_the_activation_processor() -> None:

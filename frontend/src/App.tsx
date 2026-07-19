@@ -317,16 +317,19 @@ function OverviewPage() {
 
 function SettingsPage() {
   const { status } = useOutletContext<FrameContext>();
+  const buildConsistency = status.app_executor_product_build_consistent === null
+    ? "未核对"
+    : status.app_executor_product_build_consistent ? "一致" : "不一致";
   const emailMutation = useMutation({
     mutationFn: sendTestEmail,
   });
   return (
     <Box sx={{ width: "min(1120px, calc(100% - 32px))", mx: "auto", py: { xs: 4, sm: 6 } }}>
-      <PageHeader eyebrow="READ-ONLY RUNTIME CONFIGURATION" title="环境与构建状态" description="仅显示非秘密运行身份、摘要和当前门禁。凭据值与 CSRF 签名材料不会进入浏览器。" />
+      <PageHeader eyebrow="READ-ONLY RUNTIME CONFIGURATION" title="环境与产品版本" description="显示当前运行环境、产品版本和交易所变更请求开关；凭据值不会进入浏览器。" />
       {!status.database_available && <Alert severity="error" variant="outlined" sx={{ mb: 3 }}>数据库不可用；事实截止点为 UNKNOWN。读取失败时不得向交易所提交变更请求。</Alert>}
-      {status.build_manifest_status !== "VERIFIED" && (
+      {status.app_executor_product_build_consistent === false && (
         <Alert severity="warning" variant="outlined" sx={{ mb: 3 }}>
-          产品构建状态为 {status.build_manifest_status}。当前不允许向交易所提交变更请求。
+          App、Executor 与当前门绑定的产品版本不一致。当前不允许向交易所提交变更请求。
         </Alert>
       )}
       <FactGrid facts={[
@@ -336,22 +339,13 @@ function SettingsPage() {
         { label: "执行模式", value: status.authority_class },
         { label: "本机监听", value: `${status.bind}:${status.port}` },
         { label: "数据库", value: `${status.database_name} · ${status.database_available ? "AVAILABLE" : "UNKNOWN"}` },
-        { label: "配置摘要", value: shortDigest(status.config_digest) },
-        { label: "产品构建", value: `${status.build_manifest_status} · ${shortDigest(status.build_manifest_digest)}` },
-        { label: "真实账户交易实现", value: status.live_write_build_capability },
+        { label: "产品版本", value: shortDigest(status.product_build_id) },
+        { label: "App / Executor 产品版本", value: buildConsistency },
         { label: "交易所变更请求配置", value: status.configured_runtime_real_write_gate },
         { label: "当前交易所变更请求", value: status.runtime_real_write_gate },
         { label: "邮件投递", value: `${status.email_configuration_status} · ${status.email_delivery_enabled ? "ENABLED" : "DISABLED"}` },
         { label: "视图取得时间", value: formatUtc(status.view_retrieved_at) },
       ]} />
-      {status.build_manifest_violations.length > 0 && (
-        <Box component="section" sx={{ mt: 5, pt: 3, borderTop: 1, borderColor: "divider" }}>
-          <Typography variant="h2" sx={{ mb: 2 }}>Manifest 核对结果</Typography>
-          <Stack component="ul" spacing={1} sx={{ pl: 2.5, color: "text.secondary" }}>
-            {status.build_manifest_violations.map((violation) => <Typography component="li" key={violation} className="mono" variant="body2">{violation}</Typography>)}
-          </Stack>
-        </Box>
-      )}
       {status.live_write_gate_violations.length > 0 && (
         <Box component="section" sx={{ mt: 5, pt: 3, borderTop: 1, borderColor: "divider" }}>
           <Typography variant="h2" sx={{ mb: 2 }}>交易所变更请求边界核对结果</Typography>
@@ -389,7 +383,7 @@ function PlansPage() {
       </Stack>
       {query.isPending && <LinearProgress aria-label="正在读取计划" />}
       {query.isError && <Alert severity="error">计划事实不可用；页面没有显示缓存副本。</Alert>}
-      {fixMutation.isError && <Alert severity="warning" sx={{ mb: 2 }}>固定失败：{fixMutation.error instanceof ApiFailure ? fixMutation.error.code : "结果未知"}。产品构建输入漂移时必须先重建并核对。</Alert>}
+      {fixMutation.isError && <Alert severity="warning" sx={{ mb: 2 }}>确认失败：{fixMutation.error instanceof ApiFailure ? fixMutation.error.code : "结果未知"}。请刷新当前计划后重试。</Alert>}
       <Stack spacing={1.5}>
         {(query.data ?? []).map((plan) => (
           <Box key={plan.plan_id} sx={{ p: 2.5, border: 1, borderColor: "divider", bgcolor: "background.paper" }}>
@@ -447,7 +441,8 @@ function PlanActivationRoute() {
           { label: "交易金额", value: `${valueOf(preview.data, "trade_amount")} USDT` },
           { label: "有效期", value: formatUtc(valueOf(preview.data, "valid_until")) },
           ...(liveWrite ? [
-            { label: "真实账户交易实现", value: valueOf(preview.data, "live_write_build_capability") },
+            { label: "产品版本", value: shortDigest(valueOf(preview.data, "product_build_id")) },
+            { label: "产品版本绑定", value: valueOf(preview.data, "product_build_consistent") === "true" ? "一致" : "不一致" },
             { label: "交易所变更请求", value: valueOf(preview.data, "configured_runtime_real_write_gate") },
           ] : []),
         ]} />
@@ -455,7 +450,7 @@ function PlanActivationRoute() {
       </>}
       {!liveWrite && !liveReadOnly && <Alert severity="info" variant="outlined" sx={{ mt: 3 }}>Demo 首要验证系统流程、持久动作、防重复、保护、核对、停止、恢复与接管机制；策略表现验证是次要目标，且不能直接外推到实盘。</Alert>}
       {liveReadOnly && <Alert severity="warning" sx={{ mt: 3 }}>LIVE_READ_ONLY 仅用于公共市场观察，不能激活计划或向交易所提交变更请求。</Alert>}
-      {liveWrite && !realAccountReady && <Alert severity="warning" sx={{ mt: 2 }}>真实账户交易实现或当前事实尚未满足；当前不能启动 REAL 策略。</Alert>}
+      {liveWrite && !realAccountReady && <Alert severity="warning" sx={{ mt: 2 }}>当前产品版本或交易所变更请求配置不一致；当前不能启动 REAL 策略。</Alert>}
       {mutation.isError && <Alert severity="error" sx={{ mt: 2 }}>激活未提交：{mutation.error instanceof ApiFailure ? mutation.error.code : "结果未知"}</Alert>}
       <Button variant="contained" color="warning" sx={{ mt: 3 }} disabled={!activationEnabled || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? "正在启动…" : liveWrite ? "启动 REAL 策略" : "启动 DEMO 策略"}</Button>
     </Box>

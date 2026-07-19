@@ -5,9 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from hashlib import sha256
 import html
-import json
 from pathlib import Path
 from typing import Any
 
@@ -43,10 +41,10 @@ from halpha.app.notifications import (
 )
 from halpha.app.secrets import AppSecrets
 from halpha.app.security import CsrfMiddleware, LocalRequestBoundaryMiddleware
-from halpha.build_manifest import manifest_sha256, verify_manifest
 from halpha.capital.repository import CapitalConflict
-from halpha.configuration import HalphaSettings, app_settings, settings_digest
+from halpha.configuration import HalphaSettings, app_settings
 from halpha.live_write_gate import LiveWriteGateStatus, evaluate_live_write_gate
+from halpha.product_build import calculate_product_build_id
 from halpha.planning.repository import PlanningConflict
 from halpha.planning.transitions import ControlIntent
 from halpha.outcomes.repository import OutcomeConflict
@@ -86,11 +84,8 @@ class SettingsStatusResponse(FrozenResponse):
     database_available: bool
     database_reason_code: str | None
     server_fact_cutoff: str | None
-    config_digest: str
-    build_manifest_status: str
-    build_manifest_digest: str | None
-    build_manifest_violations: list[str]
-    live_write_build_capability: str
+    product_build_id: str
+    app_executor_product_build_consistent: bool | None
     configured_runtime_real_write_gate: str
     runtime_real_write_gate: str
     live_write_gate_violations: list[str]
@@ -106,28 +101,6 @@ def _utc_now() -> str:
 
 def _environment_kind(settings: HalphaSettings) -> str:
     return "DEMO" if settings.release.profile == "BINANCE_DEMO" else "LIVE"
-
-
-def _manifest_status(repo_root: Path, settings: HalphaSettings) -> dict[str, Any]:
-    path = repo_root / settings.release.build_manifest_path
-    if not path.is_file():
-        return {"status": "MISSING", "digest": None, "violations": []}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(payload, dict):
-            raise TypeError("manifest root")
-        violations = verify_manifest(repo_root, payload)
-        return {
-            "status": "VERIFIED" if not violations else "DRIFT",
-            "digest": manifest_sha256(payload),
-            "violations": violations,
-        }
-    except Exception as exc:
-        return {
-            "status": "INVALID",
-            "digest": sha256(path.read_bytes()).hexdigest(),
-            "violations": [f"MANIFEST_READ_FAILED_{type(exc).__name__.upper()}"],
-        }
 
 
 def _csrf_token(request: Request) -> str:
@@ -596,6 +569,7 @@ def create_app(
     app_secrets: AppSecrets,
     *,
     repo_root: Path,
+    product_build_id: str | None = None,
     projection: WorkbenchProjection | None = None,
     static_dist: Path | None = None,
 ) -> FastAPI:
@@ -607,10 +581,16 @@ def create_app(
         app_secrets.database_password,
         settings.release.environment_id,
     )
-    manifest = _manifest_status(repo_root.resolve(), settings)
+    current_product_build_id = product_build_id or calculate_product_build_id(
+        repo_root.resolve(), settings
+    )
 
     def current_gate_status() -> LiveWriteGateStatus:
-        base_status = evaluate_live_write_gate(repo_root.resolve(), settings)
+        base_status = evaluate_live_write_gate(
+            repo_root.resolve(),
+            settings,
+            current_product_build_id=current_product_build_id,
+        )
         if base_status.configured_runtime_real_write_gate != "OPEN":
             return base_status
         try:
@@ -626,6 +606,7 @@ def create_app(
                 return evaluate_live_write_gate(
                     repo_root.resolve(),
                     settings,
+                    current_product_build_id=current_product_build_id,
                     connection=connection,
                 )
         except Exception:
@@ -639,15 +620,7 @@ def create_app(
         environment_kind=_environment_kind(settings),
         authority_class=settings.release.authority_class,
         account_ref=settings.release.account_id,
-        build_digest=(
-            str(manifest["digest"])
-            if manifest["digest"] is not None
-            and (
-                manifest["status"] == "VERIFIED"
-                or settings.release.profile == "BINANCE_DEMO"
-            )
-            else None
-        ),
+        product_build_id=current_product_build_id,
         profile=settings.release.profile,
         gate_status_provider=current_gate_status,
     )
@@ -948,7 +921,6 @@ def create_app(
     )
     def settings_status() -> SettingsStatusResponse:
         availability = database.availability()
-        current_manifest = _manifest_status(repo_root.resolve(), settings)
         gate_status = current_gate_status()
         return SettingsStatusResponse(
             environment_kind=_environment_kind(settings),
@@ -962,11 +934,10 @@ def create_app(
             database_available=bool(availability["database_available"]),
             database_reason_code=availability.get("reason_code"),
             server_fact_cutoff=availability.get("server_fact_cutoff"),
-            config_digest=settings_digest(settings),
-            build_manifest_status=str(current_manifest["status"]),
-            build_manifest_digest=current_manifest["digest"],
-            build_manifest_violations=list(current_manifest["violations"]),
-            live_write_build_capability=gate_status.live_write_build_capability,
+            product_build_id=current_product_build_id,
+            app_executor_product_build_consistent=(
+                gate_status.product_build_consistent
+            ),
             configured_runtime_real_write_gate=(
                 gate_status.configured_runtime_real_write_gate
             ),

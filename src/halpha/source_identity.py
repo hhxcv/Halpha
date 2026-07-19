@@ -33,17 +33,6 @@ _TEXT_SOURCE_SUFFIXES = frozenset(
     }
 )
 
-PRODUCT_RUNTIME_SOURCE_PATTERNS = (
-    "pyproject.toml",
-    "requirements/runtime.txt",
-    "src/halpha/**/*.py",
-    "src/halpha/**/*.json",
-    "migrations/**/*.py",
-    "frontend/dist/**/*",
-    "tools/provisioning/*.py",
-)
-
-
 class SourceIdentityError(RuntimeError):
     """A sanitized source-identity failure."""
 
@@ -116,24 +105,6 @@ def capture_stable_source_sha256(
     if first != second:
         raise SourceIdentityError("SOURCE_IDENTITY_CHANGED_DURING_CAPTURE")
     return second
-
-
-def capture_product_runtime_source_identity(
-    root: Path,
-    *,
-    config_path: Path,
-) -> dict[str, str]:
-    """Capture the code, built UI, lock and exact config loaded by a product runtime."""
-
-    repository_root = root.resolve()
-    resolved_config = config_path.resolve()
-    if not resolved_config.is_relative_to(repository_root) or not resolved_config.is_file():
-        raise SourceIdentityError("PRODUCT_RUNTIME_CONFIG_OUTSIDE_REPOSITORY")
-    config_pattern = resolved_config.relative_to(repository_root).as_posix()
-    return capture_stable_source_sha256(
-        repository_root,
-        (*PRODUCT_RUNTIME_SOURCE_PATTERNS, config_pattern),
-    )
 
 
 def validate_source_sha256(value: Mapping[str, str]) -> dict[str, str]:

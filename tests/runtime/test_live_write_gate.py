@@ -25,7 +25,7 @@ from halpha.live_write_gate_cli import (
 
 ROOT = Path(__file__).resolve().parents[2]
 LIVE_CONFIG = ROOT / "config" / "halpha.live-write.toml"
-MANIFEST_DIGEST = "a" * 64
+PRODUCT_BUILD_ID = "a" * 64
 NOW = datetime(2026, 7, 18, 12, tzinfo=UTC)
 
 
@@ -41,13 +41,12 @@ def _settings(tmp_path: Path):
 
 def _binding(settings, *, gate: str) -> LiveWriteGateBinding:
     return LiveWriteGateBinding(
-        schema_version=2,
+        schema_version=3,
         environment_id=settings.release.environment_id,
         account_id=settings.release.account_id,
         profile="BINANCE_LIVE_WRITE",
-        live_write_build_capability="QUALIFIED",
         runtime_real_write_gate=gate,
-        build_manifest_digest=MANIFEST_DIGEST,
+        product_build_id=PRODUCT_BUILD_ID,
         effective_at=NOW - timedelta(minutes=1),
         expires_at=NOW + timedelta(hours=1),
     )
@@ -80,27 +79,41 @@ class _Result:
 
 
 class _Connection:
-    def __init__(self, *, activation_ids: tuple[str, ...] = ("activation-live-001",)):
+    def __init__(
+        self,
+        *,
+        activation_ids: tuple[str, ...] = ("activation-live-001",),
+        product_build_id: str = PRODUCT_BUILD_ID,
+    ):
         self._activation_ids = activation_ids
+        self._product_build_id = product_build_id
 
     def execute(self, query: str, _parameters):
         assert "plan_activation" in query
 
         class _Rows:
-            def __init__(self, activation_ids: tuple[str, ...]):
+            def __init__(
+                self,
+                activation_ids: tuple[str, ...],
+                product_build_id: str,
+            ):
                 self._activation_ids = activation_ids
+                self._product_build_id = product_build_id
 
             def fetchall(self):
-                return [(activation_id,) for activation_id in self._activation_ids]
+                return [
+                    (activation_id, self._product_build_id)
+                    for activation_id in self._activation_ids
+                ]
 
-        return _Rows(self._activation_ids)
+        return _Rows(self._activation_ids, self._product_build_id)
 
 
 @pytest.fixture
-def qualified_manifest(monkeypatch: pytest.MonkeyPatch) -> None:
+def current_product_build(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "halpha.live_write_gate._manifest_assessment",
-        lambda _repo_root, _settings: (MANIFEST_DIGEST, True, []),
+        "halpha.live_write_gate.calculate_product_build_id",
+        lambda _repo_root, _settings: PRODUCT_BUILD_ID,
     )
     monkeypatch.setattr(
         "halpha.live_write_gate.assert_live_write_gate_security",
@@ -114,14 +127,15 @@ def qualified_manifest(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_closed_binding_separates_build_identity_and_runtime_switch(
     tmp_path: Path,
-    qualified_manifest: None,
+    current_product_build: None,
 ) -> None:
     settings = _settings(tmp_path)
     _write_binding(settings, _binding(settings, gate="CLOSED"))
 
     status = evaluate_live_write_gate(ROOT, settings, now=NOW)
 
-    assert status.live_write_build_capability == "QUALIFIED"
+    assert status.product_build_id == PRODUCT_BUILD_ID
+    assert status.product_build_consistent is True
     assert status.configured_runtime_real_write_gate == "CLOSED"
     assert status.runtime_real_write_gate == "CLOSED"
     assert status.authorized_activation_id is None
@@ -129,7 +143,7 @@ def test_closed_binding_separates_build_identity_and_runtime_switch(
 
 def test_legacy_authorization_field_is_rejected_fail_closed(
     tmp_path: Path,
-    qualified_manifest: None,
+    current_product_build: None,
 ) -> None:
     settings = _settings(tmp_path)
     payload = _binding(settings, gate="CLOSED").model_dump(mode="json")
@@ -141,7 +155,7 @@ def test_legacy_authorization_field_is_rejected_fail_closed(
 
     status = evaluate_live_write_gate(ROOT, settings, now=NOW)
 
-    assert status.live_write_build_capability == "QUALIFIED"
+    assert status.product_build_consistent is None
     assert status.configured_runtime_real_write_gate == "CLOSED"
     assert status.runtime_real_write_gate == "CLOSED"
     assert status.violations == (
@@ -151,7 +165,7 @@ def test_legacy_authorization_field_is_rejected_fail_closed(
 
 def test_open_binding_requires_database_verification_before_becoming_effective(
     tmp_path: Path,
-    qualified_manifest: None,
+    current_product_build: None,
 ) -> None:
     settings = _settings(tmp_path)
     _write_binding(settings, _binding(settings, gate="OPEN"))
@@ -181,7 +195,7 @@ def test_open_binding_requires_database_verification_before_becoming_effective(
 )
 def test_open_gate_requires_exactly_one_current_plan_activation(
     tmp_path: Path,
-    qualified_manifest: None,
+    current_product_build: None,
     activation_ids: tuple[str, ...],
     reason: str,
 ) -> None:
@@ -223,7 +237,7 @@ def test_gate_file_requires_the_exact_protected_windows_acl(tmp_path: Path) -> N
     assert_live_write_gate_directory_security(path.parent, settings)
 
 
-def test_provisioning_rejects_manifest_mismatch_before_creating_target(
+def test_provisioning_rejects_product_build_mismatch_before_creating_target(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -237,15 +251,15 @@ def test_provisioning_rejects_manifest_mismatch_before_creating_target(
         }
     )
     monkeypatch.setattr(
-        "halpha.live_write_gate._manifest_assessment",
-        lambda _repo_root, _settings: ("b" * 64, True, []),
+        "halpha.live_write_gate.calculate_product_build_id",
+        lambda _repo_root, _settings: "b" * 64,
     )
     monkeypatch.setattr(
         "halpha.live_write_gate_cli.require_process_identity",
         lambda _sid: None,
     )
 
-    with pytest.raises(LiveWriteGateError, match="LIVE_WRITE_GATE_MANIFEST_MISMATCH"):
+    with pytest.raises(LiveWriteGateError, match="LIVE_WRITE_GATE_PRODUCT_BUILD_MISMATCH"):
         provision_live_write_gate_binding(
             ROOT,
             settings,
@@ -258,7 +272,7 @@ def test_provisioning_rejects_manifest_mismatch_before_creating_target(
 
 def test_provisioning_accepts_only_the_exact_closed_postcondition(
     tmp_path: Path,
-    qualified_manifest: None,
+    current_product_build: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = _settings(tmp_path)
@@ -287,7 +301,8 @@ def test_provisioning_accepts_only_the_exact_closed_postcondition(
         "status": "PROVISIONED",
         "configured_runtime_real_write_gate": "CLOSED",
         "runtime_real_write_gate": "CLOSED",
-        "live_write_build_capability": "QUALIFIED",
+        "product_build_id": PRODUCT_BUILD_ID,
+        "product_build_consistent": True,
         "violations": [],
     }
     assert LiveWriteGateBinding.model_validate_json(
@@ -297,7 +312,7 @@ def test_provisioning_accepts_only_the_exact_closed_postcondition(
 
 def test_provisioning_open_remains_effectively_closed_until_database_recheck(
     tmp_path: Path,
-    qualified_manifest: None,
+    current_product_build: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = _settings(tmp_path)

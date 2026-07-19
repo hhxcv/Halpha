@@ -90,7 +90,6 @@ class CodeStrategyDefinition(BaseModel):
     allowed_action_profiles: tuple[str, ...]
     supported_directions: tuple[Direction, ...]
     economic_scope: dict[str, Any]
-    build_digest: str | None = None
 
 
 class FixedStrategyPlanBasis(BaseModel):
@@ -105,9 +104,7 @@ class FixedStrategyPlanBasis(BaseModel):
     fact_input_contract: dict[str, Any]
     allowed_action_profiles: tuple[str, ...]
     economic_scope: dict[str, Any]
-    build_digest: str
-    evidence_digest: str
-    evidence_scope: dict[str, Any]
+    product_build_id: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 def _implementation_path() -> Path:
@@ -224,9 +221,7 @@ def build_fixed_plan_basis(
     strategy_id: str,
     parameters: dict[str, Any],
     *,
-    build_digest: str,
-    evidence_digest: str,
-    evidence_scope: dict[str, Any],
+    product_build_id: str,
 ) -> FixedStrategyPlanBasis:
     definition = describe_strategy(strategy_id)
     normalized = validate_parameters(strategy_id, parameters)
@@ -245,7 +240,5 @@ def build_fixed_plan_basis(
         },
         allowed_action_profiles=definition.allowed_action_profiles,
         economic_scope=definition.economic_scope,
-        build_digest=build_digest,
-        evidence_digest=evidence_digest,
-        evidence_scope=evidence_scope,
+        product_build_id=product_build_id,
     )

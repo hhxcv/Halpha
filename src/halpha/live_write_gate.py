@@ -19,8 +19,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 import win32file
 import win32security
 
-from halpha.build_manifest import manifest_sha256, verify_manifest
 from halpha.configuration import HalphaSettings
+from halpha.product_build import calculate_product_build_id
+from halpha.source_identity import SourceIdentityError
 from halpha.windows_runtime import BUILTIN_ADMINISTRATORS_SID, SYSTEM_SID
 
 
@@ -33,13 +34,12 @@ class _FrozenModel(BaseModel):
 
 
 class LiveWriteGateBinding(_FrozenModel):
-    schema_version: Literal[2]
+    schema_version: Literal[3]
     environment_id: str
     account_id: str
     profile: Literal["BINANCE_LIVE_WRITE"]
-    live_write_build_capability: Literal["QUALIFIED"]
     runtime_real_write_gate: Literal["CLOSED", "OPEN"]
-    build_manifest_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    product_build_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     effective_at: datetime
     expires_at: datetime
 
@@ -53,10 +53,10 @@ class LiveWriteGateBinding(_FrozenModel):
 
 
 class LiveWriteGateStatus(_FrozenModel):
-    live_write_build_capability: Literal["NOT_QUALIFIED", "QUALIFIED"]
     configured_runtime_real_write_gate: Literal["CLOSED", "OPEN"]
     runtime_real_write_gate: Literal["CLOSED", "OPEN"]
-    build_manifest_digest: str | None = None
+    product_build_id: str | None = None
+    product_build_consistent: bool | None = None
     authorized_activation_id: str | None = None
     binding_effective_at: datetime | None = None
     binding_expires_at: datetime | None = None
@@ -170,28 +170,6 @@ def assert_live_write_gate_directory_security(
     )
 
 
-def _manifest_assessment(repo_root: Path, settings: HalphaSettings) -> tuple[str | None, bool, list[str]]:
-    path = (repo_root / settings.release.build_manifest_path).resolve()
-    if not path.is_relative_to(repo_root.resolve()):
-        return None, False, ["BUILD_MANIFEST_PATH_OUTSIDE_REPOSITORY"]
-    if not path.is_file() or path.is_symlink():
-        return None, False, ["BUILD_MANIFEST_MISSING"]
-    try:
-        manifest = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(manifest, dict):
-            raise TypeError("manifest root")
-        digest = manifest_sha256(manifest)
-        violations = verify_manifest(repo_root, manifest)
-        capability = (
-            not violations
-            and manifest.get("build_eligible") is True
-            and manifest.get("completeness") == {"status": "COMPLETE", "missing_required": []}
-        )
-        return digest, capability, list(violations)
-    except Exception as exc:
-        return None, False, [f"BUILD_MANIFEST_INVALID_{type(exc).__name__.upper()}"]
-
-
 def require_live_write_gate_binding_provisionable(
     repo_root: Path,
     settings: HalphaSettings,
@@ -211,18 +189,15 @@ def require_live_write_gate_binding_provisionable(
     observed_at = now or datetime.now(UTC)
     if not (binding.effective_at <= observed_at < binding.expires_at):
         raise LiveWriteGateError("LIVE_WRITE_GATE_BINDING_NOT_CURRENT")
-    manifest_digest, capability, violations = _manifest_assessment(
-        repo_root,
-        settings,
-    )
-    if manifest_digest is None or not capability:
+    try:
+        current_product_build_id = calculate_product_build_id(repo_root, settings)
+    except SourceIdentityError as exc:
         raise LiveWriteGateError(
-            "LIVE_WRITE_GATE_BUILD_NOT_QUALIFIED reasons="
-            + ",".join(violations or ("BUILD_NOT_QUALIFIED",))
-        )
-    if binding.build_manifest_digest != manifest_digest:
-        raise LiveWriteGateError("LIVE_WRITE_GATE_MANIFEST_MISMATCH")
-    return manifest_digest
+            f"LIVE_WRITE_GATE_PRODUCT_BUILD_UNAVAILABLE reason={exc}"
+        ) from None
+    if binding.product_build_id != current_product_build_id:
+        raise LiveWriteGateError("LIVE_WRITE_GATE_PRODUCT_BUILD_MISMATCH")
+    return current_product_build_id
 
 
 def _read_binding(
@@ -259,18 +234,22 @@ def _read_binding(
 def _database_assessment(
     connection: Any,
     settings: HalphaSettings,
+    product_build_id: str,
 ) -> tuple[list[str], str | None]:
     rows = connection.execute(
         """
-        SELECT activation_id
-        FROM halpha.plan_activation
-        WHERE environment_id = %s
-          AND environment_kind = 'LIVE'
-          AND authority_class = 'LIVE_REAL_CAPITAL'
-          AND account_ref = %s
-          AND lifecycle IN ('RUNNING', 'EXITING')
-          AND responsibility_owner = 'HALPHA'
-        ORDER BY created_at, activation_id
+        SELECT activation.activation_id, plan.product_build_id
+        FROM halpha.plan_activation AS activation
+        JOIN halpha.trade_plan_version AS plan
+          ON plan.environment_id = activation.environment_id
+         AND plan.plan_version_id = activation.plan_version_ref
+        WHERE activation.environment_id = %s
+          AND activation.environment_kind = 'LIVE'
+          AND activation.authority_class = 'LIVE_REAL_CAPITAL'
+          AND activation.account_ref = %s
+          AND activation.lifecycle IN ('RUNNING', 'EXITING')
+          AND activation.responsibility_owner = 'HALPHA'
+        ORDER BY activation.created_at, activation.activation_id
         """,
         (settings.release.environment_id, settings.release.account_id),
     ).fetchall()
@@ -278,16 +257,20 @@ def _database_assessment(
         return ["LIVE_WRITE_CURRENT_ACTIVATION_MISSING"], None
     if len(rows) != 1:
         return ["LIVE_WRITE_CURRENT_ACTIVATION_AMBIGUOUS"], None
+    if str(rows[0][1]) != product_build_id:
+        return ["LIVE_WRITE_PLAN_PRODUCT_BUILD_MISMATCH"], None
     return [], str(rows[0][0])
 
 
-def closed_live_write_gate_status() -> LiveWriteGateStatus:
+def closed_live_write_gate_status(
+    product_build_id: str | None = None,
+) -> LiveWriteGateStatus:
     """Return the profile-neutral closed state used by non-LIVE_WRITE callers."""
 
     return LiveWriteGateStatus(
-        live_write_build_capability="NOT_QUALIFIED",
         configured_runtime_real_write_gate="CLOSED",
         runtime_real_write_gate="CLOSED",
+        product_build_id=product_build_id,
     )
 
 
@@ -295,24 +278,42 @@ def evaluate_live_write_gate(
     repo_root: Path,
     settings: HalphaSettings,
     *,
+    current_product_build_id: str | None = None,
     connection: Any | None = None,
     now: datetime | None = None,
 ) -> LiveWriteGateStatus:
     """Return the effective gate; any missing or conflicting input closes it."""
 
+    if current_product_build_id is not None:
+        product_build_id = current_product_build_id
+        product_build_violations: list[str] = []
+    else:
+        try:
+            product_build_id = calculate_product_build_id(repo_root, settings)
+            product_build_violations = []
+        except SourceIdentityError as exc:
+            product_build_id = None
+            product_build_violations = [
+                f"LIVE_WRITE_PRODUCT_BUILD_UNAVAILABLE_{type(exc).__name__.upper()}"
+            ]
+
     if settings.release.profile != "BINANCE_LIVE_WRITE":
-        return closed_live_write_gate_status()
+        return LiveWriteGateStatus(
+            configured_runtime_real_write_gate="CLOSED",
+            runtime_real_write_gate="CLOSED",
+            product_build_id=product_build_id,
+            violations=tuple(product_build_violations),
+        )
 
     observed_at = now or datetime.now(UTC)
-    manifest_digest, capability, violations = _manifest_assessment(repo_root, settings)
+    violations = list(product_build_violations)
     binding, binding_violations = _read_binding(settings, repo_root)
     violations.extend(binding_violations)
     if binding is None:
         return LiveWriteGateStatus(
-            live_write_build_capability="QUALIFIED" if capability else "NOT_QUALIFIED",
             configured_runtime_real_write_gate="CLOSED",
             runtime_real_write_gate="CLOSED",
-            build_manifest_digest=manifest_digest,
+            product_build_id=product_build_id,
             violations=tuple(sorted(set(violations))),
         )
 
@@ -320,12 +321,15 @@ def evaluate_live_write_gate(
         violations.append("LIVE_WRITE_GATE_ENVIRONMENT_MISMATCH")
     if binding.account_id != settings.release.account_id:
         violations.append("LIVE_WRITE_GATE_ACCOUNT_MISMATCH")
-    if manifest_digest is None or binding.build_manifest_digest != manifest_digest:
-        violations.append("LIVE_WRITE_GATE_MANIFEST_MISMATCH")
+    product_build_consistent = (
+        product_build_id is not None and binding.product_build_id == product_build_id
+    )
+    if not product_build_consistent:
+        violations.append("LIVE_WRITE_GATE_PRODUCT_BUILD_MISMATCH")
     if not (binding.effective_at <= observed_at < binding.expires_at):
         violations.append("LIVE_WRITE_GATE_BINDING_EXPIRED_OR_NOT_EFFECTIVE")
 
-    configured_gate = binding.runtime_real_write_gate if capability and not violations else "CLOSED"
+    configured_gate = binding.runtime_real_write_gate if not violations else "CLOSED"
     authorized_activation_id: str | None = None
     if configured_gate == "OPEN":
         if connection is None:
@@ -335,16 +339,17 @@ def evaluate_live_write_gate(
                 database_violations, authorized_activation_id = _database_assessment(
                     connection,
                     settings,
+                    product_build_id,
                 )
                 violations.extend(database_violations)
             except Exception as exc:
                 violations.append(f"LIVE_WRITE_DATABASE_BINDING_UNAVAILABLE_{type(exc).__name__.upper()}")
     effective_gate = "OPEN" if configured_gate == "OPEN" and not violations else "CLOSED"
     return LiveWriteGateStatus(
-        live_write_build_capability="QUALIFIED" if capability else "NOT_QUALIFIED",
         configured_runtime_real_write_gate=configured_gate,
         runtime_real_write_gate=effective_gate,
-        build_manifest_digest=manifest_digest,
+        product_build_id=product_build_id,
+        product_build_consistent=product_build_consistent,
         authorized_activation_id=(
             authorized_activation_id if effective_gate == "OPEN" else None
         ),
@@ -358,9 +363,15 @@ def require_live_write_gate_precheck(
     repo_root: Path,
     settings: HalphaSettings,
     *,
+    current_product_build_id: str | None = None,
     now: datetime | None = None,
 ) -> LiveWriteGateStatus:
-    status = evaluate_live_write_gate(repo_root, settings, now=now)
+    status = evaluate_live_write_gate(
+        repo_root,
+        settings,
+        current_product_build_id=current_product_build_id,
+        now=now,
+    )
     expected_only = {"LIVE_WRITE_DATABASE_BINDING_NOT_VERIFIED"}
     if (
         status.configured_runtime_real_write_gate != "OPEN"
@@ -377,9 +388,16 @@ def require_live_write_gate_open(
     settings: HalphaSettings,
     connection: Any,
     *,
+    current_product_build_id: str | None = None,
     now: datetime | None = None,
 ) -> LiveWriteGateStatus:
-    status = evaluate_live_write_gate(repo_root, settings, connection=connection, now=now)
+    status = evaluate_live_write_gate(
+        repo_root,
+        settings,
+        current_product_build_id=current_product_build_id,
+        connection=connection,
+        now=now,
+    )
     if status.runtime_real_write_gate != "OPEN":
         raise LiveWriteGateError(
             "LIVE_WRITE_GATE_CLOSED reasons=" + ",".join(status.violations or ("GATE_CLOSED",))

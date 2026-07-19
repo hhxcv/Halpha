@@ -481,20 +481,14 @@ export interface components {
         SettingsStatusResponse: {
             /** Account Id */
             account_id: string;
+            /** App Executor Product Build Consistent */
+            app_executor_product_build_consistent: boolean | null;
             /** Authority Class */
             authority_class: string;
             /** Authorized Activation Id */
             authorized_activation_id: string | null;
             /** Bind */
             bind: string;
-            /** Build Manifest Digest */
-            build_manifest_digest: string | null;
-            /** Build Manifest Status */
-            build_manifest_status: string;
-            /** Build Manifest Violations */
-            build_manifest_violations: string[];
-            /** Config Digest */
-            config_digest: string;
             /** Configured Runtime Real Write Gate */
             configured_runtime_real_write_gate: string;
             /** Database Available */
@@ -511,12 +505,12 @@ export interface components {
             environment_id: string;
             /** Environment Kind */
             environment_kind: string;
-            /** Live Write Build Capability */
-            live_write_build_capability: string;
             /** Live Write Gate Violations */
             live_write_gate_violations: string[];
             /** Port */
             port: number;
+            /** Product Build Id */
+            product_build_id: string;
             /** Profile */
             profile: string;
             /** Runtime Real Write Gate */

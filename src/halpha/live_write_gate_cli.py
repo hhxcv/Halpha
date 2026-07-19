@@ -108,8 +108,8 @@ def provision_live_write_gate_binding(
 
     status = evaluate_live_write_gate(root, settings)
     common_postconditions = (
-        status.live_write_build_capability == "QUALIFIED"
-        and status.build_manifest_digest == binding.build_manifest_digest
+        status.product_build_consistent is True
+        and status.product_build_id == binding.product_build_id
     )
     if binding.runtime_real_write_gate == "OPEN":
         postcondition_valid = (
@@ -134,7 +134,8 @@ def provision_live_write_gate_binding(
             status.configured_runtime_real_write_gate
         ),
         "runtime_real_write_gate": status.runtime_real_write_gate,
-        "live_write_build_capability": status.live_write_build_capability,
+        "product_build_id": status.product_build_id,
+        "product_build_consistent": status.product_build_consistent,
         "violations": list(status.violations),
     }
 

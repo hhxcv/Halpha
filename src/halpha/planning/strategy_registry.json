@@ -1,5 +1,5 @@
 {
-  "registry_digest": "e5925c3901da1a80312b338f8fbcd017ee22b54618b2b63014d28704e8391852",
+  "registry_digest": "1bb21f9886d1574b354c7fcf4b0ff9ed5dd242ddfd51057b8d71fd5f754a2502",
   "registry_kind": "STATIC_BUILD_ARTIFACT",
   "schema_version": 1,
   "strategies": [
@@ -11,7 +11,6 @@
         "TAKE_PROFIT_2",
         "REDUCE_OR_CLOSE_MARKET"
       ],
-      "build_digest": null,
       "display_name": "单次 Donchian 突破与 ATR 风险退出",
       "economic_scope": {
         "funding_model": "NOT_MODELED_IN_BACKTEST",

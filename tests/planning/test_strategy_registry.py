@@ -91,16 +91,14 @@ def test_parameter_validation_is_authoritative_and_exact() -> None:
         )
 
 
-def test_fixed_basis_binds_parameters_build_and_evidence() -> None:
+def test_fixed_basis_binds_parameters_and_product_build() -> None:
     basis = build_fixed_plan_basis(
         ONE_SHOT_STRATEGY_ID,
         _parameters(direction="SHORT"),
-        build_digest="a" * 64,
-        evidence_digest="b" * 64,
-        evidence_scope={"environment": "DEMO", "instrument": "BTCUSDT-PERP"},
+        product_build_id="a" * 64,
     )
     assert basis.normalized_parameters["direction"] == "SHORT"
-    assert basis.build_digest == "a" * 64
+    assert basis.product_build_id == "a" * 64
     assert basis.parameter_digest == content_digest(basis.normalized_parameters)
 
 

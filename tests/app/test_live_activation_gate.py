@@ -13,14 +13,14 @@ NOW = datetime(2026, 7, 18, 12, tzinfo=UTC)
 
 def _status(
     *,
-    capability: str = "QUALIFIED",
+    consistent: bool | None = True,
     configured: str = "CLOSED",
 ) -> LiveWriteGateStatus:
     return LiveWriteGateStatus(
-        live_write_build_capability=capability,
         configured_runtime_real_write_gate=configured,
         runtime_real_write_gate="CLOSED",
-        build_manifest_digest="a" * 64 if capability == "QUALIFIED" else None,
+        product_build_id="a" * 64,
+        product_build_consistent=consistent,
     )
 
 
@@ -32,7 +32,7 @@ def _api(status: LiveWriteGateStatus) -> PostgreSQLPlanningApi:
         environment_kind="LIVE",
         authority_class="LIVE_REAL_CAPITAL",
         account_ref="binance-usdm-live-owner-primary",
-        build_digest="a" * 64,
+        product_build_id="a" * 64,
         profile="BINANCE_LIVE_WRITE",
         gate_status_provider=lambda: status,
     )
@@ -46,8 +46,8 @@ def _payload() -> ActivationPayload:
     ("status", "reason"),
     (
         (
-            _status(capability="NOT_QUALIFIED"),
-            "LIVE_WRITE_BUILD_CAPABILITY_NOT_QUALIFIED",
+            _status(consistent=False),
+            "LIVE_WRITE_PRODUCT_BUILD_MISMATCH",
         ),
         (
             _status(configured="OPEN"),
