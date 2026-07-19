@@ -34,6 +34,7 @@ EXPECTED_PROCESS_ENTRYPOINTS = {
     "halpha-executor": "halpha.executor.__main__:main",
 }
 EXPECTED_AUXILIARY_ENTRYPOINTS = {
+    "halpha-auth": "halpha.app.auth_cli:main",
     "halpha-backup": "halpha.backup:main",
     "halpha-control": "halpha.control:main",
 }
@@ -315,6 +316,7 @@ def build_evidence(root: Path = ROOT) -> dict[str, Any]:
                 "requirements/runtime.in",
                 "src/halpha/database/record_families.py",
                 "src/halpha/process_contract.py",
+                "src/halpha/app/notifications.py",
                 "src/halpha/executor/coordinator.py",
                 "src/halpha/executor/runtime.py",
                 "src/halpha/executor/forward_observation.py",

@@ -120,6 +120,6 @@
     "product_record_families": 16,
     "additional_dependency_owned_workers": 0,
     "parallel_execution_or_backtest_stack": false,
-    "status": "NO_LIFECYCLE_COMPLEXITY_INCREASE_OVER_ACCEPTED_L4"
+    "status": "NO_UNNECESSARY_LIFECYCLE_COMPLEXITY"
   }
 }
