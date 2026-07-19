@@ -317,47 +317,30 @@ class DocumentationValidatorTests(unittest.TestCase):
 
         self.assertEqual(messages, ["Markdown 标题残留 diff 加号"])
 
-    def test_bilingual_pair_uses_filename_and_anchor_structure(self) -> None:
+    def test_chinese_document_does_not_require_a_translation(self) -> None:
         zh = self.write(
-            "docs/L1/HALPHA-TST-001-pair.zh-CN.md",
-            """# 中文【TST-001】
+            "docs/L1/HALPHA-TST-001-document.zh-CN.md",
+            """# 中文文档
 
 **文档编号：** HALPHA-TST-001
 **层级：** L1-A
 **语言版本：** zh-CN
+**上位文档或条款：** HALPHA-CON-001
+**本文档负责：** 测试
+**本文档不负责：** 产品语义
 
-## 规则【TST-002】
-""",
-        )
-        en = self.write(
-            "docs/L1/HALPHA-TST-001-pair.en-US.md",
-            """# English【TST-001】
-
-**Document ID:** HALPHA-TST-001
-**Level:** L1-A
-**Language Edition:** en-US
-
-## Rule【TST-002】
+## 规则
 """,
         )
 
-        self.assertEqual(
-            validator.validate_bilingual_pairs(self.repo, {zh, en}),
-            [],
-        )
+        self.assertEqual(self.validate(zh), [])
 
-        en.write_text(
-            en.read_text(encoding="utf-8").replace("TST-002", "TST-003"),
-            encoding="utf-8",
-        )
-        messages = [
-            issue.message
-            for issue in validator.validate_bilingual_pairs(self.repo, {zh, en})
-        ]
-        self.assertEqual(
-            messages,
-            ["双语配对标题层级或语义锚点不一致：HALPHA-TST-001-pair.zh-CN.md"],
-        )
+    def test_rejects_english_pair_file(self) -> None:
+        en = self.write("docs/L1/HALPHA-TST-001-document.en-US.md", "# English\n")
+
+        messages = [issue.message for issue in self.validate(en)]
+
+        self.assertEqual(messages, ["L0–L4 只保留中文正文，不得创建英文配对文件"])
 
 if __name__ == "__main__":
     unittest.main()

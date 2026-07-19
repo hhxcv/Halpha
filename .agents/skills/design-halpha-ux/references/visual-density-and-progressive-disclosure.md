@@ -4,7 +4,7 @@
 
 Design a modern professional trading workbench, not a SaaS landing page, OA portal, generic admin dashboard, or decorative crypto product.
 
-Follow `HALPHA-UX-001#UX-VIS-001`: professionalism comes from accurate semantics, comparison, and traceable context, not from density, jargon, or action count. Compactness is a means only when it improves the current task outcome.
+Follow HALPHA-UX-001: professionalism comes from accurate semantics, comparison, and traceable context, not from density, jargon, or action count. Compactness is a means only when it improves the current task outcome.
 
 Use Apple-like component discipline rather than consumer-product imitation:
 
@@ -34,7 +34,7 @@ Measure density with useful facts, comparisons, and reachable actions per viewpo
 
 ## Current Information Layers
 
-Map every item to the four semantic layers owned by `HALPHA-UX-001#UX-INF-001` before choosing a component:
+Map every item to the information layers described by HALPHA-UX-001 before choosing a component:
 
 | Current layer | Default presentation |
 |---|---|

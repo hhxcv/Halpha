@@ -4,13 +4,13 @@ Applies to design, implementation, review, documentation, and validation work wi
 
 ## Authority and Current State
 
-- Product and system semantics come from the files currently present in `docs/L0`–`docs/L4`; Git commits record their history.
+- Product and system semantics come from the Chinese files currently present in `docs/L0`–`docs/L4`; each document exists in one current copy and Git commits record its history.
 - Use `docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml` as the entry point for current state; if the file does not exist or lacks a record, treat the state as unknown. Do not use an older Git revision to fill a gap in the current files.
 - Halpha is a single-owner, self-funded, personally maintained project. Do not assume institution-grade governance, approval, high-availability, or compliance requirements, and do not describe account or capital scale decided by the owner outside the system as a Halpha capability or guarantee.
 
 ## Specialized Guidance Entry Points
 
-- When creating, modifying, splitting, reviewing, or validating L0–L4 documents, responsibility registries, the current plan, or documentation indexes, use [`write-halpha-docs`](.agents/skills/write-halpha-docs/SKILL.md). Maintain the specific layering, terminology, content-quality, synchronization-scope, and validation requirements only in that skill.
+- When creating, modifying, splitting, reviewing, or validating L0–L4 documents or the current plan, use [`write-halpha-docs`](.agents/skills/write-halpha-docs/SKILL.md). Maintain the specific layering, ownership, complexity, and validation guidance only in that skill; do not create translations, proposal/accept copies, bundles, responsibility registries, or navigation indexes.
 - When implementing, testing, refactoring, qualifying dependencies, changing builds or runtime configuration, or handling implementation evidence that conflicts with design, use [`develop-halpha`](.agents/skills/develop-halpha/SKILL.md). Follow its design-reading, value-tradeoff, impact-validation, and L4/L3/L2+ inconsistency decision gates.
 - When designing or reviewing Halpha page scope, information architecture, wireframes, high-fidelity prototypes, interaction states, command feedback, risk confirmation, responsive behavior, accessibility, or UI acceptance evidence, use [`design-halpha-ux`](.agents/skills/design-halpha-ux/SKILL.md). Apply its professional-trader, personal-maintenance complexity, progressive-disclosure, feedback, and risk-control guidance before implementation.
 - Register future specialized guidance in this section; do not copy complete workflows, templates, or reference material back into this file.

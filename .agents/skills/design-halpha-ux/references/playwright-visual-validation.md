@@ -2,7 +2,7 @@
 
 ## Scope and Authority
 
-Use this workflow for every executable Halpha prototype, implemented frontend change, or rendered-UI review. It operationalizes the real-rendering and browser-acceptance requirements in `HALPHA-UX-001#UX-QLT-001`, `#UX-L3-001`, `HALPHA-UX-002#UX-AUTO-TST-001`, and the current L4 plan. It does not create routes, states, commands, breakpoints, or acceptance semantics.
+Use this workflow for executable Halpha prototypes, implemented frontend changes, or rendered-UI reviews when browser evidence is proportionate to the impact. It applies the current HALPHA-UX-001, HALPHA-UX-002 and L4 plan; it does not create routes, states, commands, breakpoints, or product semantics.
 
 Use the `playwright` skill and a real browser. An available interactive browser debugger may supplement diagnosis, but preserve reproducible Playwright evidence. Vitest, component tests, DOM inspection, axe, and static screenshots are complementary; none replaces this visual interaction loop.
 

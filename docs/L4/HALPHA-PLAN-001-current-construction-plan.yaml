@@ -3,349 +3,132 @@ document_id: HALPHA-PLAN-001
 level: L4
 language: zh-CN
 as_of: 2026-07-19
-current_plan_summary: >-
-  当前建设保持完整 P0、Windows 10 和动作级安全，使用一个产品构建标识与一次计划激活的
-  有界机器执行范围；不设置建设继续门、多轴资格、双摘要、外置资金授权链、固定长期观察
-  或研究阶段平台。无产品运行影响的独立策略研究不等待产品建设。
+
+current_summary: >-
+  当前目标是在现有 Windows 10 单机上完成 P0 最小交易闭环。流程按实际影响验证，
+  不设置小时门、多轴资格、外置资金授权链或默认长期观察。独立策略研究可与产品建设并行。
+
+current_scope:
+  stage: P0
+  status: IN_PROGRESS
+  outcome: >-
+    完成计划配置与固定、一次激活、持续监控、动作执行、保护、退出、核对、复盘和用户接管。
+  includes:
+    - DEMO 完整闭环
+    - LIVE_READ_ONLY 公开行情观察
+    - LIVE_WRITE 无凭据建设、安全反例和一次受限真实激活能力
+    - 本地交易工作台、Windows 运行、邮件通知、备份恢复和官方入口接管
+  excludes:
+    - 第二个正式策略
+    - 多账户、多场所和组合优化
+    - 自动扩大资金范围
+    - 高可用、微服务、机构审批或治理平台
+
+current_decisions:
+  target_host: Windows 10 Pro 22H2 x64
+  host_rule: 不迁移、不缩减目标；如实记录依赖支持限制，并以本机直接验证判断当前可用性
+  product_scope: 完成全部 P0 内容
+  development_flow: 在已授权 P0 范围内按直接依赖连续实施，不设置建设继续门
+  build_identity: 每组产品输入只使用一个 product_build_id
+  observation: 只有当前发布、部署或真实资金决定提出直接问题时才增加观察
+  research: 独立研究不依赖产品建设完成，可在 research 路径并行进行
 
 current_facts:
   source:
-    branch: main
-    local_head: aa115a426113f4a143215a591cb064f24c906aca
-    origin_main: aa115a426113f4a143215a591cb064f24c906aca
-    working_tree: DIRTY
-  existing_build_artifact:
-    path: build/release/build-manifest.json
-    schema_version: 2
-    source_revision: a2433afc9ebb6535ef1c6d989925fd07934d7a71
-    build_eligible: false
-    interpretation: 历史未完成制品；它不证明当前产品构建已经完成或可用
-  recorded_package_history:
-    B00: QUALIFIED_FOR_RECORDED_SCOPE
-    B01: COMPLETED_RECORDED
-    B02: COMPLETED_RECORDED
-    B03: COMPLETED_RECORDED
-    B04: IN_PROGRESS
-    B05: NOT_STARTED
+    repository: 当前 Git 工作区
+    identity_rule: 构建或验证时直接读取提交、分支和工作树；本计划不抄写易失真的 SHA
+    checked_at: 2026-07-19
   runtime:
     real_write_state: CLOSED
     live_credentials_loaded: false
     live_execution_actions_created: false
     venue_live_writes_observed: false
   evidence_limit: >-
-    旧测试和观察只保留为历史事实。当前设计目标尚未全部实现，因此不声称完整 P0、
-    当前产品构建或真实执行已经可用；缺少直接记录的结果保持未知。
-
-current_decisions:
-  target_host: KEEP_WINDOWS_10_PRO_22H2_X64
-  target_host_scope: 不迁移 Windows Server，不缩减产品目标；记录供应商支持限制并在实际主机验证
-  product_scope: COMPLETE_ALL_P0_CONTENT
-  development_flow: 一个已授权 P0 结果内按直接依赖连续实现，不设置按小时建设继续门
-  capital_authority: 用户配置并激活一个完整计划；该激活是机器新增风险的唯一授权入口并直接携带本次有界执行范围
-  real_write: 不建立外置 gate、第二资金授权对象或 provisioning 流程
-  build_identity: 一个 product_build_id
-  observation: 只在当前发布、部署或真实资金决定提出直接问题时增加，不预设固定时长
-  research: 独立 research 工作可以与产品建设并行，不等待 Demo 或产品包完成
-
-p0_product_scope:
-  outcome: >-
-    在单一所有者、单机 Windows 10、Binance USDⓈ-M 环境完成计划配置、固定、
-    一次激活、持续监控、动作执行、保护、退出、核对、复盘和责任闭合的最小闭环。
-  includes:
-    - DEMO 完整交易闭环
-    - LIVE_READ_ONLY 公开行情与策略观察
-    - LIVE_WRITE 的无凭据建设、直接安全测试和一次受限真实激活能力
-    - 本地交易工作台与前端不可用时的 Binance 官方接管指引
-    - 邮件通知、Windows 启停、互斥、日志、备份、恢复和用户接管
-  excludes:
-    - 第二正式策略
-    - 多账户、多场所或组合优化
-    - 自动扩大资金范围
-    - 研究平台、治理平台或机构审批
-    - 高可用、微服务和多数据库产品
+    历史测试和观察只说明当时输入；当前实现尚未完成全部 P0，因此不声明产品闭环或真实执行已经可用。
 
 target_runtime:
   host:
     operating_system: Windows 10 Pro 22H2
     build: 10.0.19045
     architecture: x64
-    caveat: >-
-      当前 NautilusTrader 版本的已记录供应商 Windows 常规支持边界不包含该主机。
-      项目如实记录这一限制，以本机安装、启动、停止、重启和联合链路测试判断当前可用性；
-      不把本机测试表述为供应商保证。
+    dependency_caveat: >-
+      当前 NautilusTrader 版本的常规 Windows 支持边界不包含该主机；项目记录此限制，
+      通过本机安装、启停、重启和联合链路验证判断当前可用性，不表述为供应商保证。
   trading:
     venue: Binance USDⓈ-M
     demo_instruments: [BTCUSDT-PERP, ETHUSDT-PERP]
     first_live_instrument: BTCUSDT-PERP
     strategy: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
-    position_mode: USE_ACTUAL_READ_ONLY
-    asset_mode: USE_ACTUAL_READ_ONLY
-    accepted_margin_modes: [ISOLATED, CROSSED]
-    internal_leverage_cap: 5
     account_configuration_mutation: DISABLED
   topology:
     database: PostgreSQL
-    database_count: 1
     processes: [halpha-app, halpha-executor]
     venue_write_paths_per_environment: 1
-    web: 127.0.0.1 local Web
+    web: 127.0.0.1 本地 Web
     notification: EMAIL_ONLY
 
-current_components:
-  selected_at: 2026-07-16
-  backend:
+component_sources:
+  python_locks:
+    - requirements/runtime.txt
+    - requirements/dev.txt
+  frontend_lock: frontend/package-lock.json
+  project_metadata: pyproject.toml
+  runtime_configuration: config/*.toml
+  key_current_versions:
     python: 3.13.14
     nautilus_trader: 1.230.0
-    fastapi: 0.139.0
-    uvicorn: 0.51.0
-    starlette: 1.3.1
-    pydantic: 2.13.4
-    sqlalchemy: 2.0.51
-    alembic: 1.18.5
-    psycopg: 3.3.4
-    keyring: 25.7.0
-    pywin32: 312
-  database:
     postgresql: 17.10
-  frontend:
     node: 24.18.0
-    react: 19.2.7
-    typescript: 5.9.3
-    vite: 8.1.4
-    mui: 9.2.0
-    rjsf: 6.6.2
-    tanstack_query: 5.101.2
-  testing:
-    pytest: 9.1.1
-    hypothesis: 6.156.6
-    vitest: 4.1.10
-    playwright: 1.61.1
-  lock_rule: Python 使用带 hashes 的锁定依赖；前端使用 package-lock.json 与 npm ci；运行时不下载
+  rule: 精确依赖以锁文件为准；运行时不下载依赖
 
-first_strategy:
+current_strategy:
   owner: HALPHA-ALP-002
-  identity:
-    strategy_id: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
-    strategy_version: 1.0.0
-    registry: src/halpha/planning/strategy_registry.json
-    instrument: BTCUSDT-PERP
-    supported_directions: [LONG, SHORT]
-    first_live_direction: LONG
-  current_parameter_schema:
-    direction: {type: enum, allowed: [LONG, SHORT], default: null}
-    channel_lookback_15m: {type: integer, min: 20, max: 96, default: 20}
-    confirmation_bars_1m: {type: integer, min: 1, max: 3, default: 2}
-    initial_stop_atr_multiple: {type: decimal_string, min: '1.0', max: '3.0', default: '1.5'}
-    max_entry_extension_atr: {type: decimal_string, min: '0.1', max: '1.0', default: '0.5'}
-    take_profit_1_r: {type: decimal_string, min: '1.0', max: '3.0', default: '1.5'}
-    take_profit_1_fraction: {type: decimal_string, min: '0.25', max: '0.75', default: '0.50'}
-    take_profit_2_r: {type: decimal_string, min: '2.0', max: '6.0', default: '3.0'}
-    max_hold_bars_15m: {type: integer, min: 4, max: 672, default: 96}
-    entry_valid_minutes: {type: integer, min: 15, max: 10080, default: 1440}
-    cross_constraint: take_profit_2_r must be greater than take_profit_1_r
-  fixed_values:
-    atr_period: 14
-    atr_ma_type: WILDER
-    atr_use_previous: true
-    risk_budget_fraction_of_max_allowed_loss: '0.80'
-    entry_notional_buffer_rate: '0.0020'
-    slippage_buffer_per_side: '0.0010'
-    protection_trigger_price: LAST_PRICE mapped to Binance CONTRACT_PRICE
-    donchian: nautilus_trader.indicators.DonchianChannel
-    atr: nautilus_trader.indicators.AverageTrueRange
-  selected_test_scope:
-    status: MUST_BE_RERUN_ON_FINAL_PRODUCT_INPUTS
-    direction: LONG
-    normalized_parameters:
-      direction: LONG
-      channel_lookback_15m: 96
-      confirmation_bars_1m: 3
-      initial_stop_atr_multiple: '1'
-      max_entry_extension_atr: '0.1'
-      take_profit_1_r: '1'
-      take_profit_1_fraction: '0.75'
-      take_profit_2_r: '2'
-      max_hold_bars_15m: 96
-      entry_valid_minutes: 1440
-    capital_proxy:
-      settlement_asset: USDT
-      max_margin: '100'
-      max_notional: '500'
-      max_allowed_loss: '50'
-      effective_leverage: '5'
-    rule: >-
-      最终产品输入上重跑这组方向、参数、资本代理和模型；其他参数或方向在另行测试前只用于 DEMO。
-  data:
-    source_1m: '{instrument_id}-1-MINUTE-LAST-EXTERNAL'
-    target_15m: '{instrument_id}-15-MINUTE-LAST-INTERNAL@1-MINUTE-EXTERNAL'
-    warmup: 最多请求 72 小时 1m 数据以形成连续 15m 指标输入；这是数据窗口，不是建设观察门
-    max_age_seconds:
-      mark_price: 3
-      top_of_book: 3
-      instrument_rules_and_account: 5
-      source_1m_after_expected_close: 65
-    failure: 缺失、重复、未闭合、乱序、过期或 cutoff 不完整时不产生或提交新增风险
-  enabled_actions:
-    - ENTRY_MARKET
-    - CANCEL_ORDER
-    - PROTECTIVE_STOP_REDUCE_ONLY
-    - TAKE_PROFIT_1
-    - TAKE_PROFIT_2
-    - REDUCE_OR_CLOSE_MARKET
-  protection:
-    first_fill_frozen_values: [first_fill_price, first_fill_time, trigger_atr, R, time_exit_due_at]
-    protection_gap_exit_deadline_seconds: 30
-    loss_events: [MARK_PRICE, POSITION_STATE, FILL, COMMISSION, FUNDING]
-    loss_recalculation_seconds_with_open_position: 5
-    positive_position_unknown_exit_deadline_seconds: 30
-  historical_model:
-    engine: nautilus_trader.backtest.engine.BacktestEngine
-    data_range:
-      development: 2022-01-01T00:00:00Z/2024-12-31T23:59:59Z
-      holdout: 2025-01-01T00:00:00Z/2026-06-30T23:59:59Z
-    fee_rate: '0.0006'
-    slippage: OneTickSlippageFillModel
-    funding: NOT_MODELED
-    limitation: >-
-      历史结果不含 funding，且 bar、固定费率、单 tick 滑点、延迟和无订单簿深度与实时不同；
-      只支持限定机制判断，不证明完整实时净收益或 Alpha。
+  strategy_id: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
+  strategy_version: 1.0.0
+  registry: src/halpha/planning/strategy_registry.json
+  instrument: BTCUSDT-PERP
+  supported_directions: [LONG, SHORT]
+  historical_limit: 历史模型未包含 funding，只支持机制检查，不证明实时净收益或 Alpha
 
 product_build:
   target: ONE_PRODUCT_BUILD_ID
   current_product_build_id: null
-  inputs:
-    - src/**
-    - migrations/**
-    - pyproject.toml
-    - Python lock files
-    - frontend source and package-lock.json
-    - frontend dist
-    - non-secret runtime configuration
-    - strategy registry
-  excludes:
-    - research/**
-    - ordinary documentation and indexes
-    - historical evidence files
-    - developer-local tools not imported by product
+  implementation: src/halpha/build_manifest.py
   current_status: NOT_CREATED_FOR_CURRENT_PRODUCT_INPUTS
-  creation_rule: >-
-    当前产品输入实现并验证完成后生成一个 product_build_id；历史 BuildManifest 不作为当前产品身份或可用性证据。
+  rule: 由实现读取实际产品输入；历史构建记录不代表当前构建
 
-current_product_work:
-  outcome: COMPLETE_P0
+current_work:
   status: IN_PROGRESS
-  execution_scope: >-
-    只在用户已授权的 P0 结果范围内按直接依赖连续完成剩余切片；B04/B05 标签、经过小时数和独立研究
-    不扩大任务授权，也不自行授权提交、推送、运行配置或真实写变更。
-  already_recorded:
-    - 基础工程、数据库、配置、计划、数据、执行和通知已有实现
-    - Demo 主体、Windows 运行、恢复、故障和历史策略材料已有旧记录
   remaining:
-    - 删除额外授权对象、资格状态和硬编码建设状态
-    - 完成交易工作台剩余交互与实际浏览器测试
-    - 完成一个 PlanActivation 直接携带本次机器执行范围
-    - 完成真实写无凭据代码、秘密最后加载和关闭态反例测试
+    - 删除残留的额外授权、资格状态和硬编码建设状态
+    - 完成交易工作台剩余交互和实际浏览器检查
+    - 使 PlanActivation 直接携带本次资本与动作边界
+    - 完成真实写无凭据实现、秘密最后加载和关闭态反例
     - 在最终产品输入上重跑策略、Demo、数据库、Windows、SMTP、前端和故障检查
-    - 生成一个 product_build_id 并完成部署、停止、备份、恢复和接管检查
-    - 由用户在产品内配置并激活一次受限真实计划；执行完成后保持可停止和可接管
-  execution_rule:
-    - 直接依赖满足即可继续下一切片
-    - 相关自动测试和实际链路检查通过后集成
-    - required browser tests 不得以 skip 冒充通过
-    - 不为等待时间保留可修改 builder
-    - 发现问题只重跑受影响检查，不重置无关证据
+    - 生成 product_build_id，并检查部署、停止、备份、恢复和接管
+    - 由用户在产品中配置并激活一次受限真实计划
   completion:
-    - 完整范围的后端、前端和浏览器检查通过
+    - 后端、前端和浏览器相关检查通过
     - Demo 完整周期通过
-    - Windows 启停、互斥、凭据权限、日志、备份和恢复通过
+    - Windows 启停、互斥、凭据、日志、备份和恢复通过
     - product_build_id 与部署输入一致
-    - 一次受限真实计划完成入场、保护、退出、核对、复盘与责任闭合
-    - STOP_NEW_RISK、EXIT_STRATEGY 和 USER_TAKEOVER 可用
+    - 一次受限真实激活完成入场、保护、退出、核对、复盘和责任闭合
+    - 停止新增风险、退出策略和用户接管可用
 
 live_safety:
-  owner_documents:
-    activation: HALPHA-TRADEPLAN-002
-    limits: HALPHA-CAP-002
-    execution: HALPHA-EXE-002
+  design_owner: HALPHA-TRADEPLAN-002、HALPHA-CAP-002、HALPHA-EXE-002、HALPHA-SYS-002
   real_write_state: CLOSED
   current_activation_id: null
   live_credentials_loaded: false
-  single_authority: PlanActivation
-  user_flow: 用户人工配置完整计划并激活；激活同时固定本次账户、工具、方向、限制、有效期和允许动作
-  no_second_authority:
-    - no external gate file
-    - no per-action real-capital authorization path
-    - no AccountCapitalLimitVersion
-    - no MachineAuthorizationVersion
-    - no PlanAllocation
-    - no StopStateVersion
-    - no second capital authorization receipt
-  secret_order: >-
-    Executor 先核对 product_build_id、数据库、唯一写者、PlanActivation、账户事实、
-    限制、停止状态和动作唯一，最后才读取 Binance LIVE secret。
-  controls: [STOP_NEW_RISK, EXIT_STRATEGY, USER_TAKEOVER]
-  unknown_result: 不提交新增风险；已有持仓优先保护、退出或用户接管
+  unique_writer_confirmed: false
+  facts_current: false
 
 independent_research:
   product_work_dependency: NONE
-  relationship_to_product_work: MAY_RUN_IN_PARALLEL_WITHOUT_PRODUCT_EFFECTS
-  current_question: NOT_SELECTED_IN_THIS_PLAN
   owned_path: research/**
-  product_effects:
-    database: NONE
-    migration: NONE
-    runtime: NONE
-    credentials: NONE
-    venue_write: NONE
-    product_build_id: NONE
-  minimum_output:
-    - question and falsification condition
-    - source, cutoff and limitations
-    - code or notebook and actual command
-    - results, failures and unmodeled costs
-    - conclusion and next decision
-  product_entry: >-
-    只有项目所有者明确选中结果后，才在正式产品路径按普通产品变更重新实现或审查、测试并生成新 product_build_id。
+  current_question: NOT_SELECTED
+  product_effects: NONE_UNTIL_OWNER_SELECTS_RESULT
 
-observation_policy:
+observation:
   mandatory_elapsed_gate: NONE
-  default: 直接测试、实际短链路检查和人工确认
-  add_observation_only_when:
-    - 当前发布、部署或真实资金决定提出直接测试无法回答的问题
-    - 事先写明被观察输入、成功条件、停止条件和消费者
-  invalidation: 只在被观察输入或测量方法相关变化时重做；不拼接不同产品输入的时长
-
-complexity_budget:
-  excluded:
-    - construction continuation gate
-    - multi-axis build and real-capital eligibility
-    - build_digest plus qualification_digest
-    - external live-write gate and DACL provisioning
-    - AccountCapitalLimitVersion, MachineAuthorizationVersion, PlanAllocation and StopStateVersion
-    - per-action real-capital authorization mode
-    - generic Task, Receipt and Notification workflow
-    - separate ImprovementHandoff record and workflow
-    - separate DAT observation, derivation, quality, correction and lineage object families
-    - separate EXE submission, protection and reconciliation object families
-    - separate monorepo and worktree governance contract duplicated by ALP-003, ENG-002 and AGENTS.md
-    - separate research-opportunity routing and portfolio-comparison domains without current consumers
-    - four-stage research workflow and evidence platform
-    - mandatory 72-hour and 7-to-14-day observation
-  added_persistent_records: 0
-  added_persistent_workers: 0
-  added_runtime_processes: 0
-  added_databases: 0
-  added_venue_write_paths: 0
-  added_governance_platforms: 0
-  current_operability_targets:
-    fresh_clone_to_demo_minutes: 120
-    database_restore_to_operations_minutes: 60
-    stop_new_risk_user_actions: 1
-    required_browser_test_skips: 0
-
-effect_boundaries:
-  does_not_prove_implementation_complete: true
-  does_not_open_real_write: true
-  does_not_authorize_commit: true
-  does_not_authorize_push: true
-  does_not_authorize_runtime_change: true
+  current_observation: NONE

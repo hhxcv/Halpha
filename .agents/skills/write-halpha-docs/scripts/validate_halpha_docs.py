@@ -23,7 +23,7 @@ import yaml
 
 
 DOC_NAME_RE = re.compile(
-    r"^(HALPHA-[A-Z]+-\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*\.(zh-CN|en-US)\.md$"
+    r"^(HALPHA-[A-Z]+-\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*\.zh-CN\.md$"
 )
 METADATA_RE = re.compile(r"^\*\*([^*]+?)[：:]\*\*\s*(.*?)\s*$")
 SEMANTIC_ANCHOR_RE = re.compile(r"【([A-Z][A-Z0-9-]+)】")
@@ -120,71 +120,6 @@ def first_value(metadata: dict[str, str], *keys: str) -> str | None:
         if key in metadata:
             return metadata[key]
     return None
-
-
-def heading_anchor_signature(text: str) -> tuple[tuple[int, tuple[str, ...]], ...]:
-    """Return language-neutral heading levels and semantic anchors."""
-
-    signature: list[tuple[int, tuple[str, ...]]] = []
-    for line in text.splitlines():
-        heading = MARKDOWN_HEADING_RE.match(line)
-        if not heading:
-            continue
-        marker = line.lstrip().split(maxsplit=1)[0]
-        signature.append(
-            (len(marker), tuple(SEMANTIC_ANCHOR_RE.findall(heading.group(1))))
-        )
-    return tuple(signature)
-
-
-def validate_bilingual_pairs(repo: Path, targets: set[Path]) -> list[Issue]:
-    """Check L0/L1 language pairs directly from their ordinary filenames."""
-
-    issues: list[Issue] = []
-    checked: set[tuple[Path, Path]] = set()
-    for path in sorted(targets, key=lambda item: str(item).lower()):
-        match = DOC_NAME_RE.match(path.name)
-        rel = relative_path(repo, path)
-        if (
-            not match
-            or len(rel.parts) < 2
-            or rel.parts[0] != "docs"
-            or rel.parts[1] not in {"L0", "L1"}
-        ):
-            continue
-        language = match.group(2)
-        other_language = "en-US" if language == "zh-CN" else "zh-CN"
-        counterpart = path.with_name(
-            path.name.replace(f".{language}.md", f".{other_language}.md")
-        )
-        pair = tuple(sorted((path.resolve(), counterpart.resolve()), key=str))
-        if pair in checked:
-            continue
-        checked.add(pair)
-        if not counterpart.is_file():
-            issues.append(Issue("ERROR", path, f"缺少双语配对文件：{counterpart.name}"))
-            continue
-
-        first_text, first_decode_issues = decode_utf8(path)
-        second_text, second_decode_issues = decode_utf8(counterpart)
-        issues.extend(first_decode_issues)
-        issues.extend(second_decode_issues)
-        if first_text is None or second_text is None:
-            continue
-
-        first_metadata = parse_metadata(first_text)
-        second_metadata = parse_metadata(second_text)
-        for label, keys in (
-            ("文档编号", ("文档编号", "Document ID")),
-            ("层级", ("层级", "Level")),
-        ):
-            if first_value(first_metadata, *keys) != first_value(second_metadata, *keys):
-                issues.append(Issue("ERROR", path, f"双语配对{label}不一致：{counterpart.name}"))
-        if heading_anchor_signature(first_text) != heading_anchor_signature(second_text):
-            issues.append(
-                Issue("ERROR", path, f"双语配对标题层级或语义锚点不一致：{counterpart.name}")
-            )
-    return issues
 
 
 def relative_path(repo: Path, path: Path) -> Path:
@@ -299,11 +234,9 @@ def validate_l3_header(path: Path, metadata: dict[str, str]) -> list[Issue]:
     # Deliberately do not decide whether a dependency is semantically direct; that
     # check has a separate owner.
     issues: list[Issue] = []
-    l3_type = first_value(metadata, "L3 类型", "L3 Type")
-    direct_dependencies = first_value(metadata, "直接依赖", "Direct Dependencies")
-    vertical_constraints = first_value(
-        metadata, "适用纵向约束", "Applicable Vertical Constraints"
-    )
+    l3_type = first_value(metadata, "L3 类型")
+    direct_dependencies = first_value(metadata, "直接依赖")
+    vertical_constraints = first_value(metadata, "适用纵向约束")
 
     if not l3_type:
         issues.append(Issue("ERROR", path, "L3 文档头缺少 L3 类型"))
@@ -311,12 +244,7 @@ def validate_l3_header(path: Path, metadata: dict[str, str]) -> list[Issue]:
         issues.append(Issue("ERROR", path, f"L3 类型无效：{l3_type}"))
 
     owner_key = "主要语义所有者" if l3_type == "DOMAIN" else "协调所有者"
-    owner_label = (
-        "Primary Semantic Owner" if l3_type == "DOMAIN" else "Coordination Owner"
-    )
-    if l3_type in {"DOMAIN", "ORCHESTRATION"} and not first_value(
-        metadata, owner_key, owner_label
-    ):
+    if l3_type in {"DOMAIN", "ORCHESTRATION"} and not first_value(metadata, owner_key):
         issues.append(Issue("ERROR", path, f"L3 文档头缺少{owner_key}"))
 
     if not direct_dependencies:
@@ -344,18 +272,27 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
     rel = relative_path(repo, path)
     match = DOC_NAME_RE.match(path.name)
 
+    if (
+        len(rel.parts) > 1
+        and rel.parts[0] == "docs"
+        and re.fullmatch(r"L[0-4]", rel.parts[1])
+        and path.name.endswith(".en-US.md")
+    ):
+        issues.append(Issue("ERROR", path, "L0–L4 只保留中文正文，不得创建英文配对文件"))
+
     if match and rel.parts and rel.parts[0] == "docs":
         metadata = parse_metadata(text)
-        doc_id = first_value(metadata, "文档编号", "Document ID")
-        level = first_value(metadata, "层级", "Level")
-        language = first_value(metadata, "语言版本", "Language Edition")
+        doc_id = first_value(metadata, "文档编号")
+        level = first_value(metadata, "层级")
+        language = first_value(metadata, "语言版本")
 
-        expected_id, expected_language = match.groups()
+        expected_id = match.group(1)
+        expected_language = "zh-CN"
 
         required = {
-            "文档编号/Document ID": doc_id,
-            "层级/Level": level,
-            "语言版本/Language Edition": language,
+            "文档编号": doc_id,
+            "层级": level,
+            "语言版本": language,
         }
         for label, value in required.items():
             if not value:
@@ -384,17 +321,9 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
             )
 
         if level and not level.startswith("L0"):
-            upstream = first_value(
-                metadata,
-                "上位文档",
-                "上位文档或条款",
-                "Upstream Documents",
-                "Parent Documents",
-            )
-            governs = first_value(metadata, "本文档负责", "This Document Governs")
-            not_governs = first_value(
-                metadata, "本文档不负责", "This Document Does Not Govern"
-            )
+            upstream = first_value(metadata, "上位文档", "上位文档或条款")
+            governs = first_value(metadata, "本文档负责")
+            not_governs = first_value(metadata, "本文档不负责")
             if not upstream:
                 issues.append(Issue("ERROR", path, "缺少上位文档或条款元数据"))
             if not governs:
@@ -571,41 +500,6 @@ def validate_yaml(path: Path, text: str) -> tuple[object | None, list[Issue]]:
             issues.append(Issue("ERROR", path, "当前建设计划 schema_version 必须为 3"))
         if data.get("level") != "L4":
             issues.append(Issue("ERROR", path, "HALPHA-PLAN-001 的 level 必须为 L4"))
-    if data.get("registry_kind") == "non_normative_machine_index":
-        responsibilities = data.get("responsibilities")
-        if not isinstance(responsibilities, list):
-            issues.append(Issue("ERROR", path, "L2 责任登记缺少 responsibilities 列表"))
-        else:
-            ids = [item.get("id") for item in responsibilities if isinstance(item, dict)]
-            duplicates = [item for item, count in Counter(ids).items() if item and count > 1]
-            for item in duplicates:
-                issues.append(Issue("ERROR", path, f"L2 责任编号重复：{item}"))
-        if data.get("schema_version") != 3:
-            issues.append(Issue("ERROR", path, "当前 L2 责任登记 schema_version 必须为 3"))
-        for key in ("language",):
-            if key not in data:
-                issues.append(Issue("ERROR", path, f"当前 L2 责任登记缺少键：{key}"))
-        if isinstance(responsibilities, list):
-            required_item_keys = {
-                "id",
-                "shape",
-                "responsibility_source",
-                "l2_document",
-                "scope_source",
-                "owned_stable_semantics",
-            }
-            for index, item in enumerate(responsibilities):
-                if not isinstance(item, dict):
-                    issues.append(Issue("ERROR", path, f"L2 责任第 {index + 1} 项不是映射"))
-                    continue
-                for key in sorted(required_item_keys.difference(item)):
-                    issues.append(
-                        Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 缺少键：{key}")
-                    )
-                if item.get("shape") not in {"horizontal", "vertical"}:
-                    issues.append(
-                        Issue("ERROR", path, f"L2 责任 {item.get('id', index + 1)} 的 shape 无效")
-                    )
     return data, issues
 
 
@@ -645,7 +539,6 @@ def main() -> int:
 
     issues: list[Issue] = []
     checked = 0
-    issues.extend(validate_bilingual_pairs(repo, targets))
     for path in sorted(targets, key=lambda item: str(item).lower()):
         if not path.exists():
             issues.append(Issue("ERROR", path, "路径不存在"))
