@@ -5,15 +5,15 @@ status: ACCEPTED
 language: zh-CN
 as_of: 2026-07-19
 accepted_by: Halpha 项目所有者
-accepted_at: 2026-07-19T10:03:02+08:00
+accepted_at: 2026-07-19T10:05:45+08:00
 supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T23:18:42+08:00
 document_update_reason: 接受建设继续与长期观察彻底分离，并在当前 B04 包内完成旧 b05_package_eligibility 到 b05_real_capital_eligibility 的产品迁移；修正为关闭态真实资金资格先绑定 BuildManifest、用户决定和资本额度、激活后运行门再绑定授权与分配的两阶段门禁
-state_updated_at: 2026-07-19T10:03:02+08:00
+state_updated_at: 2026-07-19T10:05:45+08:00
 state_update_reason: >-
   HALPHA-ENG-001@v1.8.0 与 HALPHA-ENG-002@v0.9.0 已接受建设继续和长期观察分离：B04 的短时门只允许另行授权的后续建设，不表示 B04 完成、BuildManifest 可发布、B05 真实资金已授权或运行时真实写门开放。
   当前 B04 包已把运行实现、API、CLI、工作台、证据汇总与测试统一迁移为 b05_real_capital_eligibility；旧字段只作为 fail-closed 负向输入。关闭态资格只绑定最终 BuildManifest、用户授权与精确 AccountCapitalLimitVersion；REAL 激活原子建立 MachineAuthorization、PlanAllocation 与 Activation 后，OPEN 绑定才可引用并数据库复核这些记录。
   后端 340 项、前端 3 项、生产构建、89 项门禁/治理定向测试和 6 项关键不变量登记通过；App/Executor 已在 2026-07-19T09:59:01+08:00 重启并运行最终当前源码，/operations 返回 200。未加载 LIVE 写凭据、未建立 LIVE ExecutionAction、未发生真实资金写入。
-  2026-07-18T17:00:01Z 建立的 Windows 醒钟基线在 8.166865 小时时仍连续，但随后本次源码迁移和受控进程重启改变了冻结身份；2026-07-19T01:59:16Z 证据以 8.987333 小时明确 REJECTED。该旧基线不能继承到当前源码；只有形成实际提交后才能冻结新的 commit_sha 并重新开始短时门和长期观察。
+  2026-07-18T17:00:01Z 建立的 Windows 醒钟基线在 8.166865 小时时仍连续，但随后本次源码迁移和受控进程重启改变了冻结身份；2026-07-19T01:59:16Z 证据以 8.987333 小时明确 REJECTED。该旧基线不能继承到当前源码；本轮实现已形成 commit 547fa05f8f58d3b471568c7a5bac4bd397258396，待合并到 main 后再由独立 observer 绑定合并提交并重新开始短时门和长期观察。
   Windows 72 小时与无凭据 LIVE_READ_ONLY 7–14 日时长要求保持不变，旧冻结构建的长期观察已拒绝；对应 checkpoint、transition、restart 与 finalizer 计划任务已停用，终态证据不再被改写。其失败只取消该构建的发布/真实资金资格，不抹除本次已通过自动验证的迁移实现。
   R00 的方向授权和 depends_on=[] 保持存在，但新的干净 base_revision、accepted_design_set_and_basis 输入身份与完整包合同仍未冻结，当前保持 NOT_STARTED。
   最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED，未加载 LIVE 写凭据、未建立 LIVE ExecutionAction、未发生真实资金写入。
@@ -115,7 +115,7 @@ current_state:
   current_stage: P0
   design_status: ALIGNED
   research_track_status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE_NOT_STARTED
-  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 已完成 b05_real_capital_eligibility 产品迁移并通过当前自动验证，旧冻结源码的 8 小时建设继续门和长期观察因源码/进程身份漂移明确 REJECTED；当前工作树尚未提交，不能建立可验证 commit_sha 的新基线。BuildManifest 保持 INCOMPLETE，B05 建设和真实资金均未授权
+  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 已完成 b05_real_capital_eligibility 产品迁移并通过当前自动验证，实现 commit=547fa05f8f58d3b471568c7a5bac4bd397258396；旧冻结源码的 8 小时建设继续门和长期观察因源码/进程身份漂移明确 REJECTED，新基线等待合并到 main 后建立。BuildManifest 保持 INCOMPLETE，B05 建设和真实资金均未授权
   first_authorized_work: B04
   live_write_build_capability: NOT_QUALIFIED
   b05_construction_eligibility: BLOCKED
@@ -134,9 +134,9 @@ current_state:
     status: IN_PROGRESS_REQUALIFICATION_REQUIRED
     observed_at: 2026-07-19T01:59:16.189667Z
     base_commit_sha: 893767e08466a03f94ebfd08a3b41747edf1a455
-    commit_sha: null
+    commit_sha: 547fa05f8f58d3b471568c7a5bac4bd397258396
     workflow_run_id: null
-    workflow_conclusion: NOT_RUN_UNCOMMITTED
+    workflow_conclusion: NOT_RUN_LOCAL_BRANCH
     workflow_head_commit_sha: null
     evidence_ref: build/qualification/b04-windows-72h-soak.json
     evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
@@ -155,8 +155,8 @@ current_state:
       product_field_migration: {result: QUALIFIED_OLD_FIELD_FAIL_CLOSED_ONLY}
       app_executor_current_source_restart: {result: QUALIFIED_OPERATIONS_HTTP_200}
     current_evidence_refs:
-      - {ref: build/qualification/b02-summary-migration-check.json, status: REJECTED_UNCOMMITTED_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:54.485892Z, evidence_digest: sha256:7c2cb425090eb479013650229fcde71e8d03f05c73da524079932742b9b3b8da}
-      - {ref: build/qualification/b03-summary-migration-check.json, status: REJECTED_UNCOMMITTED_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:56.345206Z, evidence_digest: sha256:50e8cf3da7b02d6ac3e22e1e4ef8440bdddd5ae4a8582a1422dc549ec9d59945}
+      - {ref: build/qualification/b02-summary-migration-check.json, status: REJECTED_PRECOMMIT_WORKTREE_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:54.485892Z, evidence_digest: sha256:7c2cb425090eb479013650229fcde71e8d03f05c73da524079932742b9b3b8da}
+      - {ref: build/qualification/b03-summary-migration-check.json, status: REJECTED_PRECOMMIT_WORKTREE_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:56.345206Z, evidence_digest: sha256:50e8cf3da7b02d6ac3e22e1e4ef8440bdddd5ae4a8582a1422dc549ec9d59945}
       - {ref: build/qualification/b04-smtp-delivery.json, status: HISTORICAL_SERVER_ACCEPTANCE_SOURCE_BINDING_SUPERSEDED, observed_at: 2026-07-18T16:16:23Z, configuration_digest: sha256:5b524e6e5e29421c517e2c074b075b091f541aa8d2ce106874e0d7ca8b99d1e7, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
       - {ref: build/qualification/b04-windows-72h-soak.json, status: REJECTED_SOURCE_AND_PROCESS_IDENTITY_DRIFT, baseline_at: 2026-07-18T17:00:01Z, latest_checkpoint_at: 2026-07-19T01:59:16.189667Z, awake_elapsed_hours: 8.987332774055556, source_sha256_digest: sha256:3410de5b9de0a2226a321edc70e81504105f1bb4cf0df7bceb7698526c00f9c8, current_source_sha256_digest: sha256:9f72c9a3504f460f1407f513839e516cea3c50c716e9e01e5967ada87f9442b4, evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396}
       - {ref: build/qualification/b04-live-read-only-transition-task.json, status: DISABLED_AFTER_BASELINE_REJECTED, observed_at: 2026-07-19T01:00:02+08:00, evidence_digest: sha256:5474400034630793d33f4d04e66063aa459788f0dea9e6e0233fa6baa9b932cf}
@@ -164,13 +164,13 @@ current_state:
       - {evidence_digest: sha256:222b4ca29c9c6d6d75f7c126e7d228a80578a552a653073f533ad4712fc5cb52, reason: PRODUCT_SOURCE_FRONTEND_AND_SMTP_CONFIGURATION_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T16:29:14Z}
       - {evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee, reason: SOURCE_IDENTITY_IMPLEMENTATION_AND_PRODUCT_SOURCE_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T17:00:01Z}
     unmet_exit_evidence: [COMMITTED_CURRENT_SOURCE_BASELINE_AND_8H_CONTINUATION_GATE, CURRENT_SOURCE_BOUND_B04_QUALIFICATION, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
-    evidence_scope: 当前证明 b05_real_capital_eligibility 迁移、两阶段门禁、自动测试、前端构建、关键不变量、运行进程切换和关闭的真实写边界通过；旧冻结源码的短时门与长期观察因源码/进程漂移明确失败。该失败不否定本次实现，但在实际提交并建立新基线前不证明 B04 完成、BuildManifest 可发布、B05 建设或真实资金已授权，也不产生任何真实资金写能力
+    evidence_scope: 当前证明 commit 547fa05f8f58d3b471568c7a5bac4bd397258396 中的 b05_real_capital_eligibility 迁移、两阶段门禁、自动测试、前端构建、关键不变量、运行进程切换和关闭的真实写边界通过；旧冻结源码的短时门与长期观察因源码/进程漂移明确失败。该失败不否定本次实现，但在合并并建立新基线前不证明 B04 完成、BuildManifest 可发布、B05 建设或真实资金已授权，也不产生任何真实资金写能力
     superseded_by: null
     build_manifest_ref: build/release/build-manifest.json
     build_manifest_schema_version: 2
     build_manifest_completeness: SCHEMA_V2_CURRENT_SOURCE_AND_B04_EVIDENCE_INCOMPLETE
     build_manifest_eligible: false
-    build_manifest_limit: 当前 B04 迁移仍是未提交工作树，不能绑定最终 commit_sha；旧冻结构建已经因身份漂移失效。8 小时建设继续门不产生可发布 BuildManifest，最终 BuildManifest 必须在全部发布证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
+    build_manifest_limit: 当前 B04 迁移已形成实现 commit 547fa05f8f58d3b471568c7a5bac4bd397258396，但尚无合并后 workflow、新基线和当前源码绑定的长期证据；旧冻结构建已经因身份漂移失效。8 小时建设继续门不产生可发布 BuildManifest，最终 BuildManifest 必须在全部发布证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
   warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。短时建设继续、工程构建能力、B05 真实资金资格和运行时真实写门彼此独立，当前后三者仍未满足且 runtime_real_write_gate=CLOSED
 
 formalization_record:
@@ -228,7 +228,7 @@ governance_gate_evidence:
     - 文档 changed 检查 25 files、0 errors、0 warnings；accepted bundle 完整性 5 files、0 errors、0 warnings
     - YAML 解析、责任登记、索引和 ACCEPTED 中英文 bundle 哈希一致
   external_enforcement: UNKNOWN；已证明 workflow 在 PR/head push/main merge push 上成功，不等于 GitHub ruleset 或 branch protection 已把它设为 required check
-  limitation: 该证据只覆盖 PR #2 已提交基线；当前未提交的 ACCEPTED 变更仅有本地校验，必须在实际提交后取得新的 workflow 证据才能取代本记录。门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
+  limitation: 该证据只覆盖 PR #2 已提交基线；当前 B04 变更已形成本地 commit 547fa05f8f58d3b471568c7a5bac4bd397258396，但尚未取得 PR/main workflow 证据，合并后必须以新的 workflow 观察取代本记录。门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
 
 complexity_budget:
   comparison_baseline: 本轮正式化前设计
@@ -1187,7 +1187,7 @@ design_formalization_gate:
     - 全部拟自研责任已按“当前消费者→成熟组件→一手能力证据→差异性质→总复杂度影响→采用/按组件妥协/最小补充/暂不支持”复核；固定 1.230.0 close_position 因无 cache 恢复缺口不进入 P0 写链
     - B00 的 14/14 required outputs 资格化证据保持为实现证据；它不替代 ACCEPTED 设计或真实资金授权
   deferred_not_blocking_p0: [长期 AUTO_CONTINUE 恢复引擎]
-  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04 已完成本轮字段与两阶段门禁迁移，旧冻结构建的建设继续门和长期观察因源码/进程身份漂移 REJECTED，等待实际提交后建立新基线。短时门只控制另行授权的后续建设；真实写工程能力仍未资格化，B05 建设和真实资金均未授权，runtime_real_write_gate=CLOSED
+  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04 已完成本轮字段与两阶段门禁迁移并形成实现 commit 547fa05f8f58d3b471568c7a5bac4bd397258396，旧冻结构建的建设继续门和长期观察因源码/进程身份漂移 REJECTED，等待合并后建立新基线。短时门只控制另行授权的后续建设；真实写工程能力仍未资格化，B05 建设和真实资金均未授权，runtime_real_write_gate=CLOSED
 
 dependency_qualification_gate:
   id: B00
@@ -1732,9 +1732,9 @@ definition_of_ready_to_start_p0:
     - D00 已接受 DEMO/LIVE 统一 EXE ExecutionAction、环境限定 CAP 和系统机制验证优先的协调版本集
   blocking: []
   remaining_runtime_inputs_before_B00: []
-  first_step: 先把当前已验证的 B04 迁移形成实际提交，再由独立 observer 对该 commit_sha 建立新的只读源码/配置/进程基线并重新判定 8 小时建设继续门；门达到 QUALIFIED 后仍须项目所有者另行授权，才能在独立 branch/worktree 开始 B05 无真实写建设。任何建设轨均不得加载 LIVE 写凭据、建立 LIVE ExecutionAction 或打开真实写门
+  first_step: 合并当前 PR 后，由独立 observer 对 main 合并提交建立新的只读源码/配置/进程基线并重新判定 8 小时建设继续门；门达到 QUALIFIED 后仍须项目所有者另行授权，才能在独立 branch/worktree 开始 B05 无真实写建设。任何建设轨均不得加载 LIVE 写凭据、建立 LIVE ExecutionAction 或打开真实写门
   current_assessment: >-
-    P0 当前已完成 B01–B03；B04 已完成旧 b05_package_eligibility 到 b05_real_capital_eligibility 的当前产品迁移并通过自动验证，App/Executor 已切换到当前源码。旧冻结源码的建设继续门和长期观察因源码/进程身份漂移明确 REJECTED，当前未提交工作树尚不能建立新 commit_sha 基线，仍不具备真实交易资格。
+    P0 当前已完成 B01–B03；B04 已完成旧 b05_package_eligibility 到 b05_real_capital_eligibility 的当前产品迁移并通过自动验证，实现 commit=547fa05f8f58d3b471568c7a5bac4bd397258396，App/Executor 已切换到相同产品源码。旧冻结源码的建设继续门和长期观察因源码/进程身份漂移明确 REJECTED，新基线等待合并到 main 后建立，仍不具备真实交易资格。
     账户实际持仓模式和杠杆变化不阻断建设，按 accepted CAP 兼容边界并以账户实际配置只读处理。B04 construction_continuation_gate=REJECTED、live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED。
 
 source_evidence:
