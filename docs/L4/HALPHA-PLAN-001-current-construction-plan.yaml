@@ -5,16 +5,16 @@ status: ACCEPTED
 language: zh-CN
 as_of: 2026-07-19
 accepted_by: Halpha 项目所有者
-accepted_at: 2026-07-19T13:24:49+08:00
-supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-19T10:10:02+08:00
-document_update_reason: 接受工程证据按具体声明和依赖闭包分段继承与重验；建设继续门仅组合既有 8 小时 Windows 醒钟平台连续性与当前构建即时资格，不把旧构建运行时长转移给当前构建，发布和真实资金长期观察继续等待当前精确提交基线
-state_updated_at: 2026-07-19T13:24:49+08:00
+accepted_at: 2026-07-19T13:29:41+08:00
+supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-19T13:24:49+08:00
+document_update_reason: 记录声明级证据与建设继续门实现已通过 PR #9 集成到 main；本次仅收敛合并后状态和相关 workflow 证据，属于 B04 证据闭包外的 L4 状态更新，不改变产品源码、门结论、发布资格或真实资金边界
+state_updated_at: 2026-07-19T13:29:41+08:00
 state_update_reason: >-
   HALPHA-ENG-001@v1.9.0 与 HALPHA-ENG-002@v0.10.0 已接受证据按具体声明和依赖闭包分段复用、重解释与重采。提交变化不再统一重置无关证据，但旧构建的进程或精确运行时连续性不得转移给当前构建。
   原始 build/qualification/b04-windows-72h-soak.json 的 canonical digest 已严格重算一致；2026-07-19T01:10:02.506926Z 检查点以 Windows unbiased interrupt clock 证明同次启动下 8.166865 个醒钟小时，只资格化宿主平台连续性，不证明当前构建已连续运行 8 小时。
-  当前稳定设计、治理和资格工具已形成分支提交 860c6aa73054f993efc64d666329009acb4f8d9f，产品运行源码摘要仍为 sha256:9f72c9a3504f460f1407f513839e516cea3c50c716e9e01e5967ada87f9442b4；全量后端 345 项通过，App/Executor 启动源码一致、Executor READY 与启动核对完成、/operations=200、runtime_real_write_gate=CLOSED。
-  只读评估器 b04-construction-continuation-finalizer@1 在 2026-07-19T05:24:49.569652Z 对该分支提交形成 QUALIFIED 派生证据。B04 建设继续门因此通过，但只允许另行授权的后续建设；它不表示 B04 完成、BuildManifest 可发布、B05 建设已授权、真实资金已授权或运行时真实写门开放。
-  Windows 72 小时与无凭据 LIVE_READ_ONLY 7–14 日仍绑定当前精确构建。由于该分支提交尚未集成到 main，长期观察保持 PENDING_COMMITTED_BASELINE；旧冻结构建的长期尝试继续明确为 REJECTED 历史观察，不得充当当前长期证据。
+  当前稳定设计、治理和资格工具的资格提交 860c6aa73054f993efc64d666329009acb4f8d9f 已通过 PR #9 集成为 main merge commit 809bf458ffd8307aa7cf6e82a8c342deb4c606e7，合并后 Documentation governance workflow 29674881381=SUCCESS；产品运行源码摘要仍为 sha256:9f72c9a3504f460f1407f513839e516cea3c50c716e9e01e5967ada87f9442b4。
+  只读评估器 b04-construction-continuation-finalizer@1 在 2026-07-19T05:24:49.569652Z 对资格提交形成 QUALIFIED 派生证据；全量后端 345 项通过，App/Executor 启动源码一致、Executor READY 与启动核对完成、/operations=200、runtime_real_write_gate=CLOSED。B04 建设继续门因此通过，但只允许另行授权的后续建设，不表示发布或真实资金资格。
+  Windows 72 小时与无凭据 LIVE_READ_ONLY 7–14 日仍须由独立 observer 在开始时冻结当前 main 的精确构建。长期观察基线记录保持 PENDING_COMMITTED_BASELINE，表示已存在可冻结的已提交源码但尚未形成只读观察基线；旧冻结构建的长期尝试继续明确为 REJECTED 历史观察。
   B05 建设需要项目所有者单独决定，当前未取得该决定，因此 b05_construction_eligibility 仍为 BLOCKED；B05 真实资金还继续等待长期观察、最终 BuildManifest、用户授权和资本范围。
   R00 的方向授权和 depends_on=[] 保持存在，但新的干净 base_revision、accepted_design_set_and_basis 输入身份与完整包合同仍未冻结，当前保持 NOT_STARTED。
   最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED，未加载 LIVE 写凭据、未建立 LIVE ExecutionAction、未发生真实资金写入。
@@ -116,7 +116,7 @@ current_state:
   current_stage: P0
   design_status: ALIGNED
   research_track_status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE_NOT_STARTED
-  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 建设继续门已按声明级证据重裁决为 QUALIFIED，只复用 8.166865 小时 Windows 醒钟平台连续性并组合当前 345 项测试与启动冒烟，不声称当前构建连续运行 8 小时。长期观察等待本次变更提交后的精确构建基线，BuildManifest 保持 INCOMPLETE；B05 建设缺少单独项目所有者授权而继续 BLOCKED，真实资金亦未授权
+  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 建设继续门实现已通过 PR #9 合并到 main，并按声明级证据重裁决为 QUALIFIED，只复用 8.166865 小时 Windows 醒钟平台连续性并组合当前 345 项测试与启动冒烟，不声称当前构建连续运行 8 小时。长期观察等待独立 observer 冻结当前 main 精确构建，BuildManifest 保持 INCOMPLETE；B05 建设缺少单独项目所有者授权而继续 BLOCKED，真实资金亦未授权
   first_authorized_work: B04
   live_write_build_capability: NOT_QUALIFIED
   b05_construction_eligibility: BLOCKED
@@ -136,10 +136,11 @@ current_state:
     observed_at: 2026-07-19T05:24:49.569652Z
     base_commit_sha: b7978b6a785904ff9fdc24b77561c8d7b0b4d660
     commit_sha: 860c6aa73054f993efc64d666329009acb4f8d9f
-    source_state: COMMITTED_BRANCH_PENDING_MAIN_INTEGRATION_WITH_UNCHANGED_PRODUCT_RUNTIME_SOURCE
-    workflow_run_id: null
-    workflow_conclusion: PENDING_CURRENT_CHANGES
-    workflow_head_commit_sha: null
+    source_state: QUALIFICATION_REVISION_MERGED_TO_MAIN_L4_ONLY_POST_MERGE_SYNC_OUTSIDE_EVIDENCE_CLOSURE
+    integrated_main_commit_sha: 809bf458ffd8307aa7cf6e82a8c342deb4c606e7
+    workflow_run_id: 29674881381
+    workflow_conclusion: SUCCESS
+    workflow_head_commit_sha: 809bf458ffd8307aa7cf6e82a8c342deb4c606e7
     evidence_ref: build/qualification/b04-construction-continuation.json
     evidence_digest: sha256:c8c23a614a3cb67ecb4c8b256d705e29492d73c0cb154a03dad08aec9e132f5c
     validated_checks:
@@ -169,13 +170,13 @@ current_state:
       - {evidence_digest: sha256:222b4ca29c9c6d6d75f7c126e7d228a80578a552a653073f533ad4712fc5cb52, reason: PRODUCT_SOURCE_FRONTEND_AND_SMTP_CONFIGURATION_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T16:29:14Z}
       - {evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee, reason: SOURCE_IDENTITY_IMPLEMENTATION_AND_PRODUCT_SOURCE_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T17:00:01Z}
     unmet_exit_evidence: [COMMITTED_CURRENT_EXACT_BUILD_LONG_OBSERVATION_BASELINE, CURRENT_SOURCE_BOUND_B04_RELEASE_QUALIFICATION, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
-    evidence_scope: 当前只证明 Windows 同次启动 8.166865 醒钟小时的平台连续性，以及分支提交 860c6aa73054f993efc64d666329009acb4f8d9f 对应规则、评估器和未改变的产品运行源码在当前 345 项测试、App/Executor 启动身份、READY/核对、/operations 和关闭真实写门范围内满足建设继续条件。它不证明当前构建连续运行 8 小时，不证明 B04 完成或 BuildManifest 可发布，也不授予 B05 建设、真实资金或真实写能力
+    evidence_scope: 当前只证明 Windows 同次启动 8.166865 醒钟小时的平台连续性，以及资格提交 860c6aa73054f993efc64d666329009acb4f8d9f 中的规则、评估器和未改变的产品运行源码在当前 345 项测试、App/Executor 启动身份、READY/核对、/operations 和关闭真实写门范围内满足建设继续条件；该提交已通过 PR #9 集成到 main。它不证明当前构建连续运行 8 小时，不证明 B04 完成或 BuildManifest 可发布，也不授予 B05 建设、真实资金或真实写能力
     superseded_by: null
     build_manifest_ref: build/release/build-manifest.json
     build_manifest_schema_version: 2
     build_manifest_completeness: SCHEMA_V2_CURRENT_SOURCE_AND_B04_EVIDENCE_INCOMPLETE
     build_manifest_eligible: false
-    build_manifest_limit: B04 建设继续门已通过，但只消费平台连续性与当前即时资格；尚无本次变更提交后的精确构建长期基线。最终 BuildManifest 必须在 72 小时 Windows、7–14 日 LIVE_READ_ONLY 和其余发布证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
+    build_manifest_limit: B04 建设继续门已通过，但只消费平台连续性与当前即时资格；已合并源码尚未由独立 observer 冻结为精确构建长期基线。最终 BuildManifest 必须在 72 小时 Windows、7–14 日 LIVE_READ_ONLY 和其余发布证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
   warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。建设继续门已通过，但工程发布能力、B05 建设授权、B05 真实资金资格和运行时真实写门彼此独立；后三类权限仍未满足且 runtime_real_write_gate=CLOSED
 
 formalization_record:
@@ -210,27 +211,29 @@ formalization_record:
   scope_limit: 长期 AUTO_CONTINUE 恢复引擎和 P1–P3 交互形态设计继续延期；V01 已登记为 B05 后人工决定门，最小关键不变量追踪纳入 B02，均不得扩展为统计、治理或授权平台
 
 governance_gate_evidence:
-  evidence_kind: LATEST_COMMITTED_GOVERNANCE_WORKFLOW_OBSERVATION
-  observed_at: 2026-07-19T10:12:11+08:00
-  commit_sha: b7978b6a785904ff9fdc24b77561c8d7b0b4d660
-  workflow_run_id: 29669820173
+  evidence_kind: LATEST_RELEVANT_B04_IMPLEMENTATION_MERGE_WORKFLOW_OBSERVATION
+  observed_at: 2026-07-19T13:27:53+08:00
+  commit_sha: 809bf458ffd8307aa7cf6e82a8c342deb4c606e7
+  workflow_run_id: 29674881381
   workflow_conclusion: SUCCESS
-  evidence_digest: sha256:a77cecb6070dd0e7a6cc8bdc6122d8789e6a190c55be8397007cd9b149c43bdd
+  evidence_digest: sha256:1f2f7380396f0971cd38eb51eb3bb042b0ceb55c95b0408a32fce9ba431bbebb
   evidence_digest_basis: commit_sha|workflow_run_id|workflow_conclusion|event|pull_request|merged_at 的字段值以 `|` 原样连接、UTF-8 编码且无尾随换行
   superseded_by: null
   source:
-    pull_request: https://github.com/hhxcv/Halpha/pull/8
-    merged_at: 2026-07-19T02:11:57Z
+    pull_request: https://github.com/hhxcv/Halpha/pull/9
+    merged_at: 2026-07-19T05:27:37Z
     merged_to: main
     workflow_event: push
-    workflow_run: https://github.com/hhxcv/Halpha/actions/runs/29669820173
-  repository_status: PR #8 已合并；上述 main merge commit 的 Documentation governance workflow 成功
+    workflow_run: https://github.com/hhxcv/Halpha/actions/runs/29674881381
+  repository_status: PR #9 已合并；上述 main merge commit 的 Documentation governance workflow 成功
   validator: governance/validate_construction_plan.py
   workflow: .github/workflows/docs-governance.yml
   local_checks_before_merge:
-    - PR #8 的本地检查明细不从 PR #7 复制；已提交事实只引用该 merge commit 的成功 Documentation governance workflow
+    - 全量本地 pytest 345 tests 通过；仅有 NautilusTrader/NumPy 上游 2 条 DeprecationWarning
+    - 治理和资格定向测试 80 passed、4 subtests passed；建设计划 0 violations
+    - 文档 6 files、0 errors、0 warnings；accepted bundle 完整性 5 files、0 errors、0 warnings
   external_enforcement: UNKNOWN；已证明 workflow 在 PR/head push/main merge push 上成功，不等于 GitHub ruleset 或 branch protection 已把它设为 required check
-  limitation: 该证据覆盖 PR #8 与 main merge commit b7978b6a785904ff9fdc24b77561c8d7b0b4d660 的治理 workflow；当前分支提交另以 latest_implementation_observation 和本轮本地检查记录，尚不冒充 main workflow。门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
+  limitation: 该证据覆盖 PR #9 与 B04 实现 merge commit 809bf458ffd8307aa7cf6e82a8c342deb4c606e7 的治理 workflow。本次 post-merge 只更新 L4 当前状态，明确位于 B04 产品、运行时、评估器和证据谓词依赖闭包之外；它不要求以自身 merge commit 反复替代本实现证据。门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
 
 complexity_budget:
   comparison_baseline: 本轮正式化前设计
@@ -1189,7 +1192,7 @@ design_formalization_gate:
     - 全部拟自研责任已按“当前消费者→成熟组件→一手能力证据→差异性质→总复杂度影响→采用/按组件妥协/最小补充/暂不支持”复核；固定 1.230.0 close_position 因无 cache 恢复缺口不进入 P0 写链
     - B00 的 14/14 required outputs 资格化证据保持为实现证据；它不替代 ACCEPTED 设计或真实资金授权
   deferred_not_blocking_p0: [长期 AUTO_CONTINUE 恢复引擎]
-  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04 建设继续门按 8.166865 小时 Windows 醒钟平台声明与当前 345 项测试/启动冒烟组合判定 QUALIFIED，当前构建 8 小时进程连续性明确 NOT_CLAIMED。精确构建长期观察等待本次变更提交后的新基线；真实写工程能力仍未资格化，B05 建设缺少单独授权而 BLOCKED，真实资金未授权，runtime_real_write_gate=CLOSED
+  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04 建设继续门实现已通过 PR #9 集成到 main，并按 8.166865 小时 Windows 醒钟平台声明与当前 345 项测试/启动冒烟组合判定 QUALIFIED，当前构建 8 小时进程连续性明确 NOT_CLAIMED。精确构建长期观察等待独立 observer 冻结当前 main；真实写工程能力仍未资格化，B05 建设缺少单独授权而 BLOCKED，真实资金未授权，runtime_real_write_gate=CLOSED
 
 dependency_qualification_gate:
   id: B00
@@ -1484,7 +1487,7 @@ construction_packages:
         observation_tool_digest: null
         process_identity_ref: null
         dependency_closure: PRODUCT_RUNTIME_SOURCE_LOCKS_MIGRATIONS_BUILT_UI_RUNTIME_CONFIG_PROCESS_AND_SOAK_OBSERVER
-        read_only_rule: 基线只可在当前变更提交并集成后由独立 observer 冻结；后续建设使用独立 branch/worktree，精确构建长期结论不得跨闭包变化继承
+        read_only_rule: 已存在可冻结的 main 源码；基线只可由独立 observer 在开始时绑定当时精确 commit、配置和进程身份，后续建设使用独立 branch/worktree，精确构建长期结论不得跨闭包变化继承
       windows_awake_runtime:
         required_hours: 72
         status: PENDING_BASELINE
@@ -1722,7 +1725,7 @@ post_p0_decision_order: [B05, V01]
 currently_authorized_work: [B04]
 parallelization_rule: >-
   B01–B03 已完成；B04 建设继续门已按 8.166865 小时 Windows 醒钟平台连续性与当前构建即时资格组合判定 QUALIFIED。只有项目所有者另行授权时 B05 才可在独立 branch/worktree 中开始代码、配置、UI、回退和无真实写测试；它不等待 B04 COMPLETE，但不得加载 LIVE 写凭据、建立 LIVE ExecutionAction、激活真实资金或打开真实写门。
-  B04 的 Windows 72 小时与 LIVE_READ_ONLY 7–14 日观察等待本次变更形成提交后绑定当前精确构建并非阻塞运行；它们与最终当前 BuildManifest 仍是 B04 完成、发布和 B05 真实资金激活的硬前提。长期观察失败时只暂停依赖缺陷的切片并取消该冻结构建的发布/真实资金资格，不自动抹除无依赖建设，也不撤销未受影响的平台声明。
+  B04 的 Windows 72 小时与 LIVE_READ_ONLY 7–14 日观察等待独立 observer 在开始时冻结当前 main 的精确构建并非阻塞运行；它们与最终当前 BuildManifest 仍是 B04 完成、发布和 B05 真实资金激活的硬前提。长期观察失败时只暂停依赖缺陷的切片并取消该冻结构建的发布/真实资金资格，不自动抹除无依赖建设，也不撤销未受影响的平台声明。
   项目所有者对 R00 的建设方向授权保持存在且 R00 不依赖 B04 完成；可信 AI 简化设计已经接受，但新的 base_revision、accepted_design_set_and_basis 输入身份与完整包契约尚未重新冻结，因此必须先形成新的干净治理绑定，不能直接沿用被替代合同继续实施。
   R01 可在 R00 完成后开始非确认性建设，但完成、research_policy 冻结和 confirmation_eligible_not_before 固定必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。
   R00–R02 不改变 B01–B05、P0 build_order、B05 建设/真实资金资格或运行时真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；研究资源与交易产品或开放责任竞争时必须降低并发、PAUSED 或 STOPPED，不为此建设安全隔离或资源调度平台。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 真实资金资格和运行时真实写门继续分别 fail closed。
@@ -1765,7 +1768,7 @@ definition_of_ready_to_start_p0:
   remaining_runtime_inputs_before_B00: []
   first_step: 本次变更形成干净提交并集成后，由独立 observer 对该精确提交建立只读源码/配置/进程长期观察基线；B04 建设继续门已经 QUALIFIED，但 B05 无真实写建设仍须项目所有者另行授权。任何建设轨均不得加载 LIVE 写凭据、建立 LIVE ExecutionAction 或打开真实写门
   current_assessment: >-
-    P0 当前已完成 B01–B03；B04 建设继续门已按声明级依赖闭包重裁决为 QUALIFIED：旧证据只贡献 8.166865 小时 Windows 醒钟平台连续性，当前构建以 345 项测试和 App/Executor 启动冒烟资格化，未声称当前构建连续运行 8 小时。72 小时 Windows 与 7–14 日 LIVE_READ_ONLY 长期观察等待本次变更提交后的精确构建新基线，当前仍不具备发布或真实交易资格。
+    P0 当前已完成 B01–B03；B04 建设继续门实现已通过 PR #9 集成到 main，并按声明级依赖闭包重裁决为 QUALIFIED：旧证据只贡献 8.166865 小时 Windows 醒钟平台连续性，当前构建以 345 项测试和 App/Executor 启动冒烟资格化，未声称当前构建连续运行 8 小时。72 小时 Windows 与 7–14 日 LIVE_READ_ONLY 长期观察等待独立 observer 冻结当前 main 精确构建，当前仍不具备发布或真实交易资格。
     账户实际持仓模式和杠杆变化不阻断建设，按 accepted CAP 兼容边界并以账户实际配置只读处理。B04 construction_continuation_gate=QUALIFIED、live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED（缺少单独项目所有者授权）、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED。
 
 source_evidence:
@@ -1841,6 +1844,6 @@ source_evidence:
 final_acceptance_statement: >-
   本计划已接受建设继续与长期观察分离，并以具体证据声明及其依赖闭包决定不重置、重解释或重采；提交变化本身不统一重置无关证据，旧构建进程时长也不得转移给当前构建。
   B04 建设继续门现为 QUALIFIED：它只把 8.166865 小时 Windows 醒钟平台连续性与当前 345 项测试、App/Executor 启动冒烟和关闭真实写门组合为点时建设许可，明确不声称当前构建已连续运行 8 小时。
-  Windows 72 小时和 LIVE_READ_ONLY 7–14 日观察完整保留，等待本次变更提交后绑定当前精确构建；它们对另行授权的建设非阻塞，但继续阻断 B04 完成、发布、当前 BuildManifest 资格和真实资金激活。
+  Windows 72 小时和 LIVE_READ_ONLY 7–14 日观察完整保留，等待独立 observer 在开始时绑定当前 main 精确构建；它们对另行授权的建设非阻塞，但继续阻断 B04 完成、发布、当前 BuildManifest 资格和真实资金激活。
   B05 建设资格与真实资金资格分别记录；建设阶段只能修改和验证代码、配置、UI、回退及无真实写路径，不加载 LIVE 写凭据、不建立 LIVE ExecutionAction、不打开真实写门。真实资金仍要求长期观察、当前 BuildManifest、用户授权和资本范围全部满足。
   R00 仍不依赖 B04，但必须重新绑定包含本接受文本的干净 base_revision、accepted_design_set_and_basis 输入身份并冻结简化合同后方可实施；工程资格不等于真实资金权限，当前 B05 建设因缺少单独授权而 BLOCKED、真实资金资格也为 BLOCKED，runtime_real_write_gate=CLOSED。
