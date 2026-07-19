@@ -38,7 +38,7 @@ B05_CONSTRUCTION_ELIGIBILITY_STATES = {"BLOCKED", "ELIGIBLE", "AUTHORIZED"}
 B05_REAL_CAPITAL_ELIGIBILITY_STATES = {"BLOCKED", "AUTHORIZED"}
 RUNTIME_REAL_WRITE_GATE_STATES = {"CLOSED", "OPEN"}
 CONSTRUCTION_CONTINUATION_GATE_STATES = {"PENDING", "QUALIFIED", "REJECTED"}
-LONG_OBSERVATION_STATES = {"IN_PROGRESS", "QUALIFIED", "REJECTED"}
+LONG_OBSERVATION_STATES = {"PENDING", "IN_PROGRESS", "QUALIFIED", "REJECTED"}
 SHA256_DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 VERSION_IDENTITY_PATTERN = re.compile(
@@ -459,6 +459,8 @@ def _validate_b04_observation_gates(
         "purpose": "SUCCESSOR_CONSTRUCTION_ONLY",
         "target_blocking_hours": 8,
         "hard_max_blocking_hours": 24,
+        "decision_semantics": "POINT_IN_TIME_IMPACT_SCOPED_CONSTRUCTION_PERMISSION",
+        "evidence_composition": "PLATFORM_CONTINUITY_PLUS_CURRENT_BUILD_IMMEDIATE_QUALIFICATION",
     }
     for field, expected in expected_gate_values.items():
         if gate.get(field) != expected:
@@ -472,8 +474,9 @@ def _validate_b04_observation_gates(
 
     required = _string_sequence(gate.get("required"))
     expected_required = (
-        "CURRENT_SOURCE_IMMEDIATE_AUTOMATED_INTEGRATION_DEMO_FAULT_AND_ROLLBACK_CHECKS_QUALIFIED",
-        "EXACT_SOURCE_CONFIG_PROCESS_IDENTITY_8_WINDOWS_AWAKE_HOURS",
+        "PLATFORM_CONTINUITY_AT_LEAST_8_WINDOWS_AWAKE_HOURS_QUALIFIED",
+        "CURRENT_BUILD_IMMEDIATE_AUTOMATED_INTEGRATION_DEMO_FAULT_AND_ROLLBACK_CHECKS_QUALIFIED",
+        "CURRENT_BUILD_STARTUP_SMOKE_QUALIFIED",
         "RUNTIME_REAL_WRITE_GATE_CLOSED_AT_DECISION",
         "NO_UNISOLATED_CORE_DEFECT",
     )
@@ -591,71 +594,14 @@ def _validate_b04_observation_gates(
             )
         )
 
-    baseline = _mapping(gate.get("frozen_baseline"), f"{gate_path}.frozen_baseline", violations)
-    if _normalize(baseline.get("identity_status")) != "FROZEN":
+    if "frozen_baseline" in gate:
         violations.append(
             Violation(
-                "GOV-OBSERVATION-BASELINE-001",
-                f"{gate_path}.frozen_baseline.identity_status",
-                "must be FROZEN",
+                "GOV-CONTINUATION-EVIDENCE-002",
+                f"{gate_path}.frozen_baseline",
+                "must not bind the construction permission to an exact-build long-observation baseline",
             )
         )
-    commit_sha = baseline.get("commit_sha")
-    if not isinstance(commit_sha, str) or not GIT_COMMIT_PATTERN.fullmatch(commit_sha.strip()):
-        violations.append(
-            Violation(
-                "GOV-OBSERVATION-BASELINE-001",
-                f"{gate_path}.frozen_baseline.commit_sha",
-                "must bind a full lowercase 40-hex Git commit",
-            )
-        )
-    for field in (
-        "source_sha256_digest",
-        "nonsecret_configuration_digest",
-        "observation_tool_digest",
-    ):
-        value = baseline.get(field)
-        if not isinstance(value, str) or not SHA256_DIGEST_PATTERN.fullmatch(value.strip()):
-            violations.append(
-                Violation(
-                    "GOV-OBSERVATION-BASELINE-001",
-                    f"{gate_path}.frozen_baseline.{field}",
-                    "must bind a lowercase sha256:<64 hex> digest",
-                )
-            )
-    for mapping_field in ("dependency_locks", "build_artifacts"):
-        values = _mapping(
-            baseline.get(mapping_field),
-            f"{gate_path}.frozen_baseline.{mapping_field}",
-            violations,
-        )
-        if not values:
-            violations.append(
-                Violation(
-                    "GOV-OBSERVATION-BASELINE-001",
-                    f"{gate_path}.frozen_baseline.{mapping_field}",
-                    "must bind at least one digest",
-                )
-            )
-        for name, value in values.items():
-            if not isinstance(value, str) or not SHA256_DIGEST_PATTERN.fullmatch(value.strip()):
-                violations.append(
-                    Violation(
-                        "GOV-OBSERVATION-BASELINE-001",
-                        f"{gate_path}.frozen_baseline.{mapping_field}.{name}",
-                        "must bind a lowercase sha256:<64 hex> digest",
-                    )
-                )
-    for field in ("migration_head", "process_identity_ref", "dependency_closure", "read_only_rule"):
-        value = baseline.get(field)
-        if not isinstance(value, str) or not value.strip():
-            violations.append(
-                Violation(
-                    "GOV-OBSERVATION-BASELINE-001",
-                    f"{gate_path}.frozen_baseline.{field}",
-                    "must be non-empty",
-                )
-            )
 
     current_evidence = _mapping(
         gate.get("current_evidence"), f"{gate_path}.current_evidence", violations
@@ -685,22 +631,48 @@ def _validate_b04_observation_gates(
                 "must bind a lowercase sha256:<64 hex> digest",
             )
         )
+    platform = _mapping(
+        current_evidence.get("platform_continuity"),
+        f"{gate_path}.current_evidence.platform_continuity",
+        violations,
+    )
+    current_build = _mapping(
+        current_evidence.get("current_build"),
+        f"{gate_path}.current_evidence.current_build",
+        violations,
+    )
     if gate_status == "QUALIFIED":
         qualified_checks = (
             (
-                _normalize(current_evidence.get("immediate_qualification")) == "QUALIFIED",
-                "immediate_qualification",
+                _normalize(platform.get("status")) == "QUALIFIED",
+                "platform_continuity.status",
                 "must be QUALIFIED",
             ),
             (
-                isinstance(current_evidence.get("windows_awake_identity_hours"), (int, float))
-                and float(current_evidence["windows_awake_identity_hours"]) >= 8.0,
-                "windows_awake_identity_hours",
+                platform.get("claim")
+                == "SAME_BOOT_WINDOWS_AWAKE_PLATFORM_CONTINUITY_AT_LEAST_8H",
+                "platform_continuity.claim",
+                "must remain the platform-only continuity claim",
+            ),
+            (
+                isinstance(platform.get("awake_elapsed_hours"), (int, float))
+                and float(platform["awake_elapsed_hours"]) >= 8.0,
+                "platform_continuity.awake_elapsed_hours",
                 "must be at least 8",
             ),
             (
-                current_evidence.get("source_configuration_process_identity_unchanged") is True,
-                "source_configuration_process_identity_unchanged",
+                _normalize(current_build.get("status")) == "QUALIFIED",
+                "current_build.status",
+                "must be QUALIFIED",
+            ),
+            (
+                current_build.get("startup_smoke_qualified") is True,
+                "current_build.startup_smoke_qualified",
+                "must be true",
+            ),
+            (
+                current_build.get("immediate_tests_qualified") is True,
+                "current_build.immediate_tests_qualified",
                 "must be true",
             ),
             (
@@ -713,6 +685,12 @@ def _validate_b04_observation_gates(
                 "unisolated_core_defect_status",
                 "must be NONE",
             ),
+            (
+                _normalize(current_evidence.get("current_build_process_continuity_8h"))
+                == "NOT_CLAIMED",
+                "current_build_process_continuity_8h",
+                "must explicitly remain NOT_CLAIMED",
+            ),
         )
         for passed, field, message in qualified_checks:
             if not passed:
@@ -723,6 +701,51 @@ def _validate_b04_observation_gates(
                         message,
                     )
                 )
+        for record, prefix, digest_fields in (
+            (platform, "platform_continuity", ("raw_evidence_digest",)),
+            (
+                current_build,
+                "current_build",
+                ("product_runtime_source_digest", "junit_digest"),
+            ),
+        ):
+            for field in digest_fields:
+                value = record.get(field)
+                if not isinstance(value, str) or not SHA256_DIGEST_PATTERN.fullmatch(
+                    value.strip()
+                ):
+                    violations.append(
+                        Violation(
+                            "GOV-CONTINUATION-EVIDENCE-001",
+                            f"{gate_path}.current_evidence.{prefix}.{field}",
+                            "must bind a lowercase sha256:<64 hex> digest",
+                        )
+                    )
+        for record, prefix, ref_fields in (
+            (platform, "platform_continuity", ("raw_evidence_ref",)),
+            (current_build, "current_build", ("junit_ref",)),
+        ):
+            for field in ref_fields:
+                value = record.get(field)
+                if not isinstance(value, str) or not value.strip():
+                    violations.append(
+                        Violation(
+                            "GOV-CONTINUATION-EVIDENCE-001",
+                            f"{gate_path}.current_evidence.{prefix}.{field}",
+                            "must bind an evidence reference",
+                        )
+                    )
+        current_commit = current_build.get("commit_sha")
+        if not isinstance(current_commit, str) or not GIT_COMMIT_PATTERN.fullmatch(
+            current_commit.strip()
+        ):
+            violations.append(
+                Violation(
+                    "GOV-CONTINUATION-EVIDENCE-001",
+                    f"{gate_path}.current_evidence.current_build.commit_sha",
+                    "must bind a full lowercase 40-hex Git commit",
+                )
+            )
         if target_at and evidence_observed_at and evidence_observed_at < target_at:
             violations.append(
                 Violation(
@@ -749,17 +772,66 @@ def _validate_b04_observation_gates(
                 f"must be one of {sorted(LONG_OBSERVATION_STATES)}",
             )
         )
-    expected_baseline_ref = (
-        "construction_packages.B04.construction_continuation_gate.frozen_baseline"
+    current_baseline = _mapping(
+        long_observation.get("current_baseline"),
+        f"{long_path}.current_baseline",
+        violations,
     )
-    if long_observation.get("frozen_baseline_ref") != expected_baseline_ref:
+    baseline_status = _normalize(current_baseline.get("identity_status"))
+    if long_status == "PENDING":
+        if baseline_status != "PENDING_COMMITTED_BASELINE":
+            violations.append(
+                Violation(
+                    "GOV-LONG-OBSERVATION-BASELINE-001",
+                    f"{long_path}.current_baseline.identity_status",
+                    "must be PENDING_COMMITTED_BASELINE while long observation is pending",
+                )
+            )
+        for field in ("commit_sha", "source_sha256_digest"):
+            if current_baseline.get(field) is not None:
+                violations.append(
+                    Violation(
+                        "GOV-LONG-OBSERVATION-BASELINE-001",
+                        f"{long_path}.current_baseline.{field}",
+                        "must remain null until an exact committed baseline is frozen",
+                    )
+                )
+    elif baseline_status != "FROZEN":
         violations.append(
             Violation(
                 "GOV-LONG-OBSERVATION-BASELINE-001",
-                f"{long_path}.frozen_baseline_ref",
-                f"must remain {expected_baseline_ref!r}",
+                f"{long_path}.current_baseline.identity_status",
+                "must be FROZEN after the long observation starts",
             )
         )
+    else:
+        commit_sha = current_baseline.get("commit_sha")
+        if not isinstance(commit_sha, str) or not GIT_COMMIT_PATTERN.fullmatch(
+            commit_sha.strip()
+        ):
+            violations.append(
+                Violation(
+                    "GOV-LONG-OBSERVATION-BASELINE-001",
+                    f"{long_path}.current_baseline.commit_sha",
+                    "must bind a full lowercase 40-hex Git commit",
+                )
+            )
+        for field in (
+            "source_sha256_digest",
+            "nonsecret_configuration_digest",
+            "observation_tool_digest",
+        ):
+            value = current_baseline.get(field)
+            if not isinstance(value, str) or not SHA256_DIGEST_PATTERN.fullmatch(
+                value.strip()
+            ):
+                violations.append(
+                    Violation(
+                        "GOV-LONG-OBSERVATION-BASELINE-001",
+                        f"{long_path}.current_baseline.{field}",
+                        "must bind a lowercase sha256:<64 hex> digest",
+                    )
+                )
     windows = _mapping(
         long_observation.get("windows_awake_runtime"),
         f"{long_path}.windows_awake_runtime",
@@ -796,6 +868,15 @@ def _validate_b04_observation_gates(
 
     windows_status = _normalize(windows.get("status"))
     live_read_only_status = _normalize(live_read_only.get("status"))
+    expected_current_baseline_ref = "construction_packages.B04.long_observation.current_baseline"
+    if windows.get("baseline_ref") != expected_current_baseline_ref:
+        violations.append(
+            Violation(
+                "GOV-LONG-OBSERVATION-BASELINE-001",
+                f"{long_path}.windows_awake_runtime.baseline_ref",
+                f"must remain {expected_current_baseline_ref!r}",
+            )
+        )
     for record, prefix in (
         (windows, "windows_awake_runtime"),
         (live_read_only, "live_read_only_market"),

@@ -30,6 +30,8 @@ def b04_observation_records(
             "purpose": "SUCCESSOR_CONSTRUCTION_ONLY",
             "target_blocking_hours": 8,
             "hard_max_blocking_hours": 24,
+            "decision_semantics": "POINT_IN_TIME_IMPACT_SCOPED_CONSTRUCTION_PERMISSION",
+            "evidence_composition": "PLATFORM_CONTINUITY_PLUS_CURRENT_BUILD_IMMEDIATE_QUALIFICATION",
             "status": continuation_status,
             "started_at": "2099-01-01T00:00:00Z",
             "target_decision_at": "2099-01-01T08:00:00Z",
@@ -43,8 +45,9 @@ def b04_observation_records(
                 "owner_decision_ref": None,
             },
             "required": [
-                "CURRENT_SOURCE_IMMEDIATE_AUTOMATED_INTEGRATION_DEMO_FAULT_AND_ROLLBACK_CHECKS_QUALIFIED",
-                "EXACT_SOURCE_CONFIG_PROCESS_IDENTITY_8_WINDOWS_AWAKE_HOURS",
+                "PLATFORM_CONTINUITY_AT_LEAST_8_WINDOWS_AWAKE_HOURS_QUALIFIED",
+                "CURRENT_BUILD_IMMEDIATE_AUTOMATED_INTEGRATION_DEMO_FAULT_AND_ROLLBACK_CHECKS_QUALIFIED",
+                "CURRENT_BUILD_STARTUP_SMOKE_QUALIFIED",
                 "RUNTIME_REAL_WRITE_GATE_CLOSED_AT_DECISION",
                 "NO_UNISOLATED_CORE_DEFECT",
             ],
@@ -55,38 +58,44 @@ def b04_observation_records(
                 "B05_REAL_CAPITAL_ACTIVATION",
                 "RUNTIME_REAL_WRITE_GATE_OPEN",
             ],
-            "frozen_baseline": {
-                "identity_status": "FROZEN",
-                "commit_sha": "a" * 40,
-                "source_sha256_digest": digest,
-                "dependency_locks": {"runtime": digest, "frontend": digest},
-                "migration_head": "20990101_0001",
-                "build_artifacts": {"backend": digest, "frontend": digest},
-                "nonsecret_configuration_digest": digest,
-                "observation_tool_digest": digest,
-                "process_identity_ref": "process://test/b04-observer",
-                "dependency_closure": "EXACT_BOUND_CLOSURE",
-                "read_only_rule": "BASELINE_AND_OBSERVER_READ_ONLY",
-            },
             "current_evidence": {
                 "observed_at": "2099-01-01T00:00:00Z",
-                "immediate_qualification": "PENDING",
-                "windows_awake_identity_hours": 0.0,
-                "source_configuration_process_identity_unchanged": True,
+                "platform_continuity": {
+                    "status": "PENDING",
+                    "claim": "SAME_BOOT_WINDOWS_AWAKE_PLATFORM_CONTINUITY_AT_LEAST_8H",
+                    "awake_elapsed_hours": 0.0,
+                    "raw_evidence_ref": "evidence://b04/windows-platform",
+                    "raw_evidence_digest": digest,
+                },
+                "current_build": {
+                    "status": "PENDING",
+                    "commit_sha": "a" * 40,
+                    "product_runtime_source_digest": digest,
+                    "junit_ref": "evidence://b04/current-junit",
+                    "junit_digest": digest,
+                    "immediate_tests_qualified": False,
+                    "startup_smoke_qualified": False,
+                },
                 "runtime_real_write_gate": "CLOSED",
                 "unisolated_core_defect_status": "UNKNOWN",
+                "current_build_process_continuity_8h": "NOT_CLAIMED",
                 "evidence_ref": "evidence://b04/continuation-gate",
                 "evidence_digest": digest,
             },
         },
         "long_observation": {
             "status": long_status,
-            "frozen_baseline_ref": (
-                "construction_packages.B04.construction_continuation_gate.frozen_baseline"
-            ),
+            "current_baseline": {
+                "identity_status": "FROZEN",
+                "commit_sha": "a" * 40,
+                "source_sha256_digest": digest,
+                "nonsecret_configuration_digest": digest,
+                "observation_tool_digest": digest,
+            },
             "windows_awake_runtime": {
                 "required_hours": 72,
                 "status": "IN_PROGRESS",
+                "baseline_ref": "construction_packages.B04.long_observation.current_baseline",
                 "baseline_at": "2026-01-01T00:00:00Z",
                 "latest_checkpoint_at": "2026-01-01T01:00:00Z",
                 "awake_elapsed_hours": 1.0,
@@ -121,8 +130,43 @@ def set_long_observation_status(
     digest: str = "sha256:" + "1" * 64,
 ) -> None:
     observation["status"] = status
+    baseline = observation["current_baseline"]
     windows = observation["windows_awake_runtime"]
     live_read_only = observation["live_read_only_market"]
+    if status == "PENDING":
+        baseline.update(
+            {
+                "identity_status": "PENDING_COMMITTED_BASELINE",
+                "commit_sha": None,
+                "source_sha256_digest": None,
+                "nonsecret_configuration_digest": None,
+                "observation_tool_digest": None,
+            }
+        )
+        windows.update(
+            {
+                "status": "PENDING_BASELINE",
+                "baseline_at": None,
+                "latest_checkpoint_at": None,
+                "awake_elapsed_hours": 0.0,
+                "evidence_digest": None,
+            }
+        )
+        live_read_only.update(
+            {
+                "status": "PENDING_WINDOWS_72H",
+                "started_at": None,
+                "qualified_at": None,
+                "observed_natural_days": 0,
+                "evidence_digest": None,
+            }
+        )
+    else:
+        baseline["identity_status"] = "FROZEN"
+        baseline["commit_sha"] = "a" * 40
+        baseline["source_sha256_digest"] = digest
+        baseline["nonsecret_configuration_digest"] = digest
+        baseline["observation_tool_digest"] = digest
     if status == "QUALIFIED":
         windows.update(
             {
@@ -165,11 +209,19 @@ def qualify_b04_observations(
     gate["current_evidence"]["observed_at"] = "2026-01-01T08:00:00Z"
     gate["current_evidence"].update(
         {
-            "immediate_qualification": "QUALIFIED",
-            "windows_awake_identity_hours": 8.0,
-            "source_configuration_process_identity_unchanged": True,
             "runtime_real_write_gate": "CLOSED",
             "unisolated_core_defect_status": "NONE",
+            "current_build_process_continuity_8h": "NOT_CLAIMED",
+        }
+    )
+    gate["current_evidence"]["platform_continuity"].update(
+        {"status": "QUALIFIED", "awake_elapsed_hours": 8.0}
+    )
+    gate["current_evidence"]["current_build"].update(
+        {
+            "status": "QUALIFIED",
+            "immediate_tests_qualified": True,
+            "startup_smoke_qualified": True,
         }
     )
     set_long_observation_status(b04["long_observation"], long_status)
@@ -691,8 +743,23 @@ class ConstructionPlanGovernanceTests(unittest.TestCase):
         qualify_b04_observations(plan, long_status="IN_PROGRESS")
         plan["construction_packages"]["B04"]["construction_continuation_gate"][
             "current_evidence"
-        ]["windows_awake_identity_hours"] = 7.99
+        ]["platform_continuity"]["awake_elapsed_hours"] = 7.99
         self.assert_has_code(plan, "GOV-CONTINUATION-QUALIFICATION-001")
+
+    def test_rejects_current_build_eight_hour_claim_on_scoped_gate(self) -> None:
+        plan = aligned_b04_in_progress_plan()
+        qualify_b04_observations(plan, long_status="IN_PROGRESS")
+        plan["construction_packages"]["B04"]["construction_continuation_gate"][
+            "current_evidence"
+        ]["current_build_process_continuity_8h"] = "QUALIFIED"
+        self.assert_has_code(plan, "GOV-CONTINUATION-QUALIFICATION-001")
+
+    def test_rejects_exact_build_baseline_inside_construction_gate(self) -> None:
+        plan = aligned_b04_in_progress_plan()
+        plan["construction_packages"]["B04"]["construction_continuation_gate"][
+            "frozen_baseline"
+        ] = {"identity_status": "FROZEN"}
+        self.assert_has_code(plan, "GOV-CONTINUATION-EVIDENCE-002")
 
     def test_rejects_future_continuation_gate_evidence(self) -> None:
         plan = aligned_b04_in_progress_plan()
@@ -779,7 +846,9 @@ class ConstructionPlanGovernanceTests(unittest.TestCase):
     def test_rejects_long_observation_bound_to_another_baseline(self) -> None:
         plan = aligned_b00_to_b04_complete_plan()
         plan["construction_packages"]["B04"]["long_observation"][
-            "frozen_baseline_ref"
+            "windows_awake_runtime"
+        ][
+            "baseline_ref"
         ] = "unrelated://baseline"
         self.assert_has_code(plan, "GOV-LONG-OBSERVATION-BASELINE-001")
 
