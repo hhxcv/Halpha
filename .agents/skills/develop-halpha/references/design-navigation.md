@@ -1,84 +1,58 @@
-# Halpha Design Navigation for Development
+# Halpha 开发设计导航
 
-## Contents
+## 权威顺序
 
-- [Authority and Entry Points](#authority-and-entry-points)
-- [L4 Reading Scope](#l4-reading-scope)
-- [Task-Based Design Routing](#task-based-design-routing)
-- [Value and Tradeoff Sources](#value-and-tradeoff-sources)
-- [Index Boundaries](#index-boundaries)
-- [Readiness Check](#readiness-check)
-
-## Authority and Entry Points
-
-Follow this direction of authority. Never promote a lower layer, implementation, or index above its owner:
+按以下顺序理解语义：
 
 ```text
-L0 hard boundaries and highest tradeoffs
--> L1 documentation, product, workflow, and architecture direction
--> L2 unique domain ownership and stable semantics
--> L3 durable module contracts, interfaces, states, and component-use contracts
--> L4 current objective, scope, exact versions, configuration, progress, results, and known limits
--> implementation and tests
+L0 项目边界与最高取舍
+→ L1 产品、流程、架构和文档方向
+→ L2 领域责任与稳定原则
+→ L3 具体对象、接口、状态和失败语义
+→ L4 当前目标、范围、版本、配置、进度和结果
+→ 实现与测试
 ```
 
-Treat the files currently present in `docs/L0`–`docs/L4` as formal design; Git commits record their history.
+`docs/L0`–`docs/L4` 当前存在的中文文件就是设计正文，Git 保存历史。实现、测试、索引、登记或流程副本都不能取代正文。
 
-## L4 Reading Scope
+## 从 L4 开始，但只读需要的部分
 
-Start at `docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml`, but load only the complete blocks that can change the task:
+先查看 `docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml` 中与任务有关的当前目标、环境、精确选择、限制和事实。只有修改计划或无法安全定位当前事实时才读完整文件。
 
-1. Read document identity, the current design basis, the relevant objective and the exact component or product versions, configuration, constraints and results it references.
-2. Read complexity limits or recorded conflicts only when the task can affect them.
-3. Read the full plan only when modifying it or when the required current fact cannot be located safely from the relevant blocks.
+L4 记录当前选择，不能创造缺失的稳定规则。
 
-L4 records current support and exact choices; it cannot create missing stable L0-L3 rules.
+## 按问题定位
 
-## Task-Based Design Routing
-
-| Question | Primary entry | Continue with |
+| 问题 | 首要入口 | 继续读取 |
 |---|---|---|
-| Current objective, blockers, versions, configuration, or validation results | Current L4 plan | Direct references and actual results |
-| Unique owner of stable semantics | `docs/L2/l2-responsibility-map.registry.yaml` | Owning L2 and its scope anchors |
-| Module, API, schema, state, error, idempotency, or component-use contract | Owning L3 | Direct L3 dependencies, primary and vertical L2, necessary L1/L0 |
-| AI development, impact, tests, release, rollback, or dependency selection | `docs/L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md` | `docs/L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md` and L4 |
-| Whether product value justifies work | L0 and L1-VIS | L1-FLOW, L1-ARC, rationale index, and current L4 non-goals |
-| User journey, stop, takeover, recovery, or external-tool handoff | `docs/L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md` | Relevant horizontal L2/L3, CAP/DAT/UX/EXE constraints, and L4 |
-| Topology, authority state, dependency direction, or environment isolation | `docs/L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md` | SYS/ENG and business-owner L2/L3, then L4 |
-| Where a document change belongs | `docs/L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md` | `write-halpha-docs` |
+| 当前目标、版本、配置、进度或验证结果 | 当前 L4 计划 | 其直接引用和实际结果 |
+| 稳定语义由谁负责 | 在 L2 标题的“本文档负责”中定位 | 对应 L2、L3 与直接消费者 |
+| 对象、接口、状态、错误、幂等或组件使用 | 对应 L3 | 上位 L2、直接依赖和消费者 |
+| 开发、测试、依赖、构建或回退 | HALPHA-ENG-001 | HALPHA-ENG-002 与 L4 |
+| 工作是否值得做 | L0 与 HALPHA-VIS-001 | 必要的 FLOW、ARC 与当前 L4 非目标 |
+| 用户流程、停止、接管或恢复 | HALPHA-FLOW-001 | 对应领域 L2/L3 与 L4 |
+| 模块、依赖方向、运行角色或环境隔离 | HALPHA-ARC-001 | SYS、ENG 和相关领域文档 |
+| 文档内容应放在哪层 | HALPHA-DOC-001 | `write-halpha-docs` |
 
-Expand only along actual dependencies: read each target owner in full, its direct parent and applicable constraints, direct horizontal dependencies, and actual consumers. Do not load unrelated domains for completeness.
+使用 `rg` 直接搜索术语、对象和“本文档负责”。只沿实际依赖扩展阅读，不为完整感加载无关领域，也不建立导航索引或责任登记。
 
-## Value and Tradeoff Sources
+## 价值与复杂度判断
 
-Evaluate value in this order; never infer project value from an implementation preference:
+依次判断：
 
-1. **Hard boundaries:** Read `HALPHA-CON-001#CON-GOV-003`, `#CON-PRI-001`, and any directly affected L0 clauses. Cost, schedule, or L4 convenience cannot trade away mandatory constraints.
-2. **Product value:** Read `HALPHA-CON-001#CON-MIS-001`, `#CON-ECO-001`, `#CON-CMP-001`, plus `HALPHA-VIS-001#VIS-VAL-001`, `#VIS-LOOP-001`, `#VIS-NGL-001`, and `#VIS-FAL-001`. Favor decision, planning, execution, UX, reliable operation, and sustainable maintenance value rather than feature count.
-3. **Technical priority:** Read `HALPHA-ARC-001#ARC-QLT-001`, `#ARC-QLT-002`, `#ARC-TEC-001`, and `#ARC-CMP-001`. Among qualified choices, favor mature components, simple topology, few dependencies, one source of truth, and one runtime implementation.
-4. **Current value:** Read only the L4 objective, non-goals, complexity limit and actual results that affect the requested outcome. Planning labels do not expand or narrow user authorization by themselves.
-5. **Why a decision exists:** Use `docs/decision-rationale-index.zh-CN.md` to find the owning `-RAT` clause or L4 key, then read the authoritative text. An index summary does not create a decision.
+1. 是否违反 L0 的真实资金边界、用户控制、事实诚实或个人可维护性；
+2. 是否改善 L1 定义的用户决策、计划、执行、恢复或复盘价值；
+3. 是否符合简单拓扑、成熟组件、唯一事实源和少量运行角色；
+4. 是否服务当前 L4 目标，而不是假想的未来规模。
 
-When goals conflict, reject choices that violate hard boundaries, then use `CON-PRI-001` and `ARC-QLT-001` among qualified options. Count understanding, tests, dependencies, configuration, migration, operations, observability, upgrades, rollback, and personal maintenance—not only lines of code.
+把理解、测试、依赖、配置、迁移、运行、升级和回退成本都计入复杂度。前期优先直接实现和直接验证；只有出现不可逆外部影响、真实资金、有效并发、反复故障或明确消费者时才增加管控。
 
-## Index Boundaries
+## 开工前最小检查
 
-- Use `docs/requirement-constraint-index.zh-CN.md` to locate compliance requirements; read the linked `-REQ` owner.
-- Use `docs/decision-rationale-index.zh-CN.md` to locate alternatives and rationale; read the linked `-RAT` owner or L4 key.
-- Use `docs/concept-definition-index.zh-CN.md` to locate the unique `-DEF` owner for stable objects, roles, states, or classifications.
-- Use `docs/L2/l2-responsibility-map.registry.yaml` to locate unique L2 semantic ownership. L4 records current support scope and actual implementation.
+- 用户授权的结果和当前 L4 事实是什么？
+- 哪个现有文档拥有受影响语义？
+- 哪些成功、拒绝、未知、停止、恢复或接管行为会改变？
+- 哪些当前版本或配置会影响实现？
+- 本次增加什么价值，删除或引入什么维护成本？
 
-Indexes navigate; they are not duplicate specifications. If an index conflicts with its current owner document, follow the owner and handle the index defect through the design inconsistency protocol.
-
-## Readiness Check
-
-Before editing, answer only the questions that can change this task's implementation:
-
-- What user-authorized result and current L4 facts bound the work?
-- Who owns the affected semantics, and which direct contracts apply?
-- What must succeed, reject, remain unknown, stop, recover, or hand off?
-- Which currently documented component supplies generic behavior, if component work is in scope?
-- Which L4 values own exact versions, configuration and actual validation results?
-- What value is added, what complexity is removed, and what lifecycle cost is introduced?
-
-If an applicable answer is missing, read the owner or report the gap. Do not invent it.
+缺少会改变行为的稳定规则时，报告设计缺口；不要由代码自行发明。

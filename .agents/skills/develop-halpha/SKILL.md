@@ -18,7 +18,7 @@ Use the least process that preserves correctness. Early, local and reversible wo
 ### 1. Bound the Outcome
 
 1. Read `AGENTS.md`, inspect the worktree and preserve unrelated changes.
-2. Classify the highest actual impact under `HALPHA-ENG-001#ENG-IMP-001`.
+2. 按 HALPHA-ENG-001 的影响原则判断本次改动的最高实际影响。
 3. Read only the L4 blocks that identify the current objective, applicable environment, exact choices, constraints and known results. Read the full plan only when changing it or when the needed state cannot otherwise be found.
 4. Keep work inside the user-authorized outcome. Several directly related, independently testable slices may be completed together. Split only for a new external effect, a material scope expansion, a path conflict or evidence that must arrive later.
 5. Independent research may proceed in its own workspace when it does not touch product runtime, product databases, credentials or venue writes.

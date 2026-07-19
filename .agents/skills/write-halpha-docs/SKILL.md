@@ -1,115 +1,85 @@
 ---
 name: write-halpha-docs
-description: Guide the creation, modification, splitting, review, index synchronization, and validation of Halpha L0–L4 designs and their documentation. Use when working with docs/L0–L4, the L2 responsibility registry, the L4 current construction plan, or concept/requirement/rationale indexes, or when deciding design tradeoffs, third-party component reuse, document layering, the unique semantic owner, direct dependencies, document authority, or bilingual document completeness.
+description: Create, revise, review, and validate Halpha L0–L4 Chinese design documents with strict layering, one semantic owner, current-state separation, and personal-project complexity control.
 ---
 
-# Halpha Design and Documentation
+# Halpha 文档工作
 
-## Responsibilities and Rule Entry Points
+## 适用范围
 
-This skill provides only work routing and does not infer product semantics on its own. Use the authority and history model defined by `HALPHA-DOC-001`.
+本技能只负责 Halpha 的 L0–L4 文档及其直接引用。产品语义来自 `docs/L0`–`docs/L4` 当前存在的中文文件；Git 保存历史。不存在 proposal、accept、bundle、责任登记或导航索引等平行权威。
 
-Route the task before loading references. Read each selected reference in full, but do not load a reference merely because the skill triggered:
+按任务读取以下参考：
 
-| Reference | Read when |
-|---|---|
-| [Documentation Rules](references/documentation-rules.md) | Creating, changing, splitting, moving, or synchronizing L0–L4 content or supporting records, and reviewing layer, ownership, language, registry, index, history, or current-state placement. |
-| [Design Requirements](references/design-requirements.md) | Adding or changing product/system behavior, stable concepts, records, workflows, design tradeoffs, component reuse, custom implementation, support boundaries, or complexity; also for a substantive design review. |
-| [Validation and Review Checklist](references/validation.md) | Performing a review, or finalizing any task that changed documents, registries, indexes, or plans. Load it after the design is frozen if the task is authoring only. |
+- 修改、拆分、删除或评审文档：完整读取 [文档规则](references/documentation-rules.md)。
+- 改变产品或系统行为、所有权、失败结果、组件边界或复杂度：再完整读取 [设计要求](references/design-requirements.md)。
+- 完成修改或执行评审：完整读取 [验证清单](references/validation.md)。
 
-If scope expands, pause and read the newly applicable reference before acting. A wording, link, metadata, or mechanical synchronization task does not by itself require component research or the design reference.
+## 工作方法
 
-Treat `HALPHA-DOC-001`, especially `DOC-AIR-001`, as the source of documentation responsibilities and minimum reading direction. Apply the `HALPHA-ENG-001` impact and review rules, small-scoped changes, actual diffs, and graded validation. When a rule conflicts with the current specification, report the conflict and do not create a parallel source of authority.
+### 1. 简短预检
 
-## Workflow
+开始前说明：
 
-### 1. Run a Short Preflight
+- 本次是设计修改、L4 当前事实维护还是只读评审；
+- 用户授权的目标和明确排除项；
+- 最高影响层、唯一语义所有者和直接消费者；
+- 是否涉及真实外部写入、不可逆数据或真实凭据。
 
-Before research or edits, state one compact preflight:
+文档或当前事实缺失时写“未知”，不从代码、旧提交或其他文档推断补齐。
 
-- **Task mode and authorization:** current-document maintenance, L4 current-state record, or review-only; name the authorized targets and exclusions.
-- **Impact:** core, general, or lightweight according to semantic consequence; when uncertain, start one level higher and downgrade only after proving isolation.
-- **Layer and owner:** the meaning being changed, its highest appropriate layer, unique semantic owner, and directly affected consumers. For a semantic-free change, state that these remain unchanged.
+### 2. 最小阅读
 
-Remain consistent with the chosen mode:
+完整读取目标文档，再读取直接上位、相邻所有者和会因本次含义变化而失真的直接消费者。当前范围、版本、配置或结果相关时读取 L4。不要为了形式完整遍历无关文档。
 
-- **Specifications:** Follow the authority model in `HALPHA-DOC-001` and report any required source that is missing.
-- **Current-state records:** Start from the current L4 plan or fact record; if a record is missing, write “unknown” rather than inferring current state from design or code.
-- **Review:** Check both the text's internal consistency and whether the current normative specifications allow it, and report the two conclusions separately.
+涉及 L0/L1、总体复杂度、真实资金边界或跨域所有权时，读取相关上位全文。普通实现细节只读取直接拥有它的 L2/L3。
 
-Modify only the affected target documents and necessary direct responsibility-registry, current-plan, and navigation references. L0/L1 keep their paired languages synchronized; L2–L4 remain zh-CN only.
+### 3. 先删后写
 
-Do not bypass the manual semantic gate for L0–L2 meaning, layer, or ownership changes. Mechanical checks and independent AI review do not replace the project owner's decision on those meanings.
+写作前先删除：
 
-### 2. Establish the Minimum Complete Reading Set
+- 在多个层级重复的完整规则；
+- 当前没有消费者的对象、状态、流程、证据或治理概念；
+- 由代码、配置、锁文件或 Git 直接拥有的重复事实；
+- 只用于解释旧方案为何被删除的墓碑；
+- 阶段、进度、版本和当前实例在 L0–L3 中的叙事。
 
-Read each target file in full; do not substitute search snippets for a full reading. Expand only along actual dependencies:
+同一稳定语义只由一个文档拥有。其他文档只说明所需输入、消费结果和缺失时的本地行为。
 
-1. For current-state work, enter through `docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml` or the applicable current fact record. For other work, read the relevant L4 scope only when construction scope, current support, sequence, or component evidence affects the task.
-2. Read the target's declared parent documents or clauses. Read the full L0 in the current working language only for an L1 or core-impact boundary, overall complexity direction, real-capital scope, or project applicability changes; otherwise read the directly cited L0 clauses.
-3. For L2/L3, use `docs/L2/l2-responsibility-map.registry.yaml` to identify the unique owner, direct horizontal dependencies, applicable vertical constraints, and adjacent-owner boundaries; read only those actually involved.
-4. Read direct consumers only when the owned meaning may change them. Read concept, requirement, and rationale index entries only when the corresponding owned content is added, moved, renamed, or deleted.
-5. When the design route applies and a capability is proposed for custom implementation or component choice, search fixed-version official documentation, licenses, maintenance, platform support, and actual public capabilities. Do not perform this research for unrelated editorial, status, or validation-only tasks.
+### 4. 分层
 
-Read and edit the affected target documents. Read the responsibility registry or L4 plan only when ownership, dependencies, construction scope, support, or synchronization makes it relevant. Report any necessary source that is missing.
+- L0：使命、不可突破边界和最高取舍。
+- L1：长期总体产品、核心路径、技术方向和最少文档规则。
+- L2：一个领域的稳定职责、原则、交接和失败边界。
+- L3：有实际消费者并需要长期复用的详细契约与组件使用边界。
+- L4：当前目标、范围、精确选择、进度、事实、限制和直接结果。
 
-### 3. Complete Routed Design Decisions Before Drafting
+`P0`、`B04`、当前顺序、进度、证据、精确版本和实例只允许在 L4。L3 可以记录长期采用的组件及使用契约，但精确版本和当前可用性仍属 L4。
 
-When the design route applies, follow [Design Requirements](references/design-requirements.md) before drafting. Component research is required only for a custom capability or component choice in scope. Record the actual consumer and result, first-party evidence, gap type, total complexity, and one decision: `adopt component`, `compromise according to component capabilities`, `minimal supplementary custom implementation`, or `unsupported`. Keep insufficient evidence unknown or blocked, one runtime implementation and fact authority, and only Halpha's use contract when a component supplies the capability; do not restate component internals.
+### 5. 个人项目复杂度
 
-### 4. Confirm the Layer, Owner, and L3 Boundary
+默认采用普通 Git、直接测试、短说明和人工决定。只有真实外部写入、不可逆影响、实际并发、重复故障或已经出现的维护瓶颈，才增加相应控制；不得以文档完整度、状态数量或验证次数证明质量。
 
-Before writing, state each of the following in one sentence: the target meaning, the highest appropriate layer, the unique semantic owner, current consumers, and the decision or failure behavior being changed. If any cannot be answered, narrow the addition or stop adding it.
+动作唯一、防重复、事实核对、保护、停止和接管属于功能正确性，不因 Demo 或资金较小而取消；但 Demo、只读研究和无外部写建设不套用真实资金发布治理。
 
-Locate content according to [Documentation Rules](references/documentation-rules.md). Split cross-layer content: place the highest long-term tradeoffs in L0, long-term overall direction in L1, stable domain principles in L2, long-term detailed module design and adopted component implementation approaches in L3, and current scope, versions, configuration, progress, and direct results in L4.
+### 6. 修改与复核
 
-For every authored, modified, or reviewed L0–L3 document, explicitly check the full document for phase narratives, current scope or order, progress or evidence, current deployment or configuration, precise current versions or enablement, and other current-state claims. Move task-owned occurrences to L4; report pre-existing out-of-scope occurrences rather than treating them as stable authority. L3 may retain the long-term component choice and Halpha use contract, but L4 owns current values and direct results.
+先修改拥有语义的文件，再同步真正失真的直接引用和 L4 当前记录。不要创建配套登记、索引、翻译、proposal、accept 或 bundle。
 
-Treat any phase narrative or construction identifier such as `P0`, `B04`, or `R00` in L0–L3 as a hard layer failure. Move the current meaning to L4 before synchronization or review; do not merely remove the identifier while leaving progress, order, milestone, or current-scope content behind. L0–L2 also must not own precise build-artifact names or fields when ordinary language such as “可重复构建” and “相称验证” is sufficient.
+核心交易含义、真实写边界或跨域歧义需要一次从正常路径和关键反例重新推导的复核。普通文案和低影响结构调整由作者检查即可。复核不是审批状态，也不要求额外记录。
 
-### 5. Draft, Freeze, Then Synchronize
+### 7. 验证与交付
 
-Lead with the conclusion, then add only the minimum content needed to make that conclusion executable, able to fail explicitly, and verifiable:
-
-1. Draft only the semantic owner documents first. Give behavior a real actor, records real consumers, failures explicit outcomes, and delete duplicate or unconsumed complexity.
-2. Freeze the design only when meaning and scope, highest layer and owner, behavior/failure/unknown paths, compatibility or migration, and any component/custom boundary are stable, with no known upstream conflict requiring another design decision.
-3. After freeze, synchronize only direct references, responsibility-registry entries, indexes, L4 plan entries, and languages made inaccurate by the frozen delta. Do not edit downstream copies while the owned decision is still moving.
-4. For L0/L1, update both language bodies in the same change and verify their semantic alignment directly.
-
-Before adding a named concept, persistent record, state family, command, process, database, write path, or governance check, compare it with deletion, ordinary language, direct tests, and a manual step. Keep the new item only when a current consumer changes behavior without it. This comparison is working reasoning, not a new required artifact.
-
-Do not add change-specific governance validators while semantics are still moving. Mechanical validation may enforce stable repository-wide format or layer rules; it must not hard-code one change's parameters, package states, or workflow as a second specification.
-
-If synchronization or review reveals a design change, unfreeze, update the semantic owner first, reassess impact and routed references, then repeat only the invalidated review and synchronization work.
-
-What each layer may contain, and all format, relationship, language, and history rules are governed by [Documentation Rules](references/documentation-rules.md).
-
-### 6. Apply Bounded Independent Review
-
-Independent review derives expectations and counterexamples from the applicable specifications rather than replaying the drafting steps. Bound it by impact:
-
-| Impact | Independent review requirement and cap |
-|---|---|
-| Core | Require one full independent post-freeze review. Use at most one independent reviewer and let that reviewer perform at most one later targeted delta re-review: two passes total. Do not declare the change acceptable without the full pass. |
-| General | Use author review by default. When `HALPHA-ENG-001` triggers a second perspective because of ambiguity, cross-domain change, severe failure, or a repeated escape, use at most one independent reviewer with one full and, if required, one targeted delta pass. Reclassify to core if findings expose core impact. |
-| Lightweight | Use author review only; no independent pass unless the change is reclassified. |
-
-The cap limits duplicate reviewer passes, not the L0–L2 manual gate, project-owner decision, or final validation. After review, inspect the actual delta. Require the single targeted delta re-review only when a post-review change alters the impact, highest layer or owner, authority or scope, a core expectation or counterexample, failure/stop/recovery behavior, unique implementation or write authority, complexity ceiling, or the basis of the prior review. Otherwise author-review the delta and invalidated direct references and rerun the applicable mechanical checks.
-
-Stop review when blocking findings are closed, required manual and independent gates are satisfied, final validation passes, and remaining details do not change the core value loop, safety/recovery boundary, unique implementation or write path, or complexity ceiling. If a normative conflict or owner decision remains unresolved after the allowed targeted pass, stop editing and report it; do not add reviewers to manufacture agreement.
-
-### 7. Validate and Deliver
-
-Read [Validation and Review Checklist](references/validation.md) in full. Complete the applicable semantic, component-decision, layer/relationship, actual-diff, and mechanical checks. Reread every modified file in full and confirm that it contains no mechanical replacement artifacts, contradictions, implicit parallel implementations, or unsupported claims that something is “available.” This final gate is required even when earlier review found no issues.
-
-Run from the repository root:
+完整复读每个修改文件，检查层级、唯一所有者、失败结果、当前事实和重复。然后运行：
 
 ```powershell
-python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py <files-modified-in-this-change...>
+python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py <修改的文档路径...>
 ```
 
-The validator checks mechanical structure; it cannot replace semantic and design review.
+修改 L4 时再运行：
 
-When `HALPHA-PLAN-001` or real-write status changes, also run `python governance/validate_construction_plan.py`. This check validates only a few machine-readable current-state invariants and does not prove that design semantics are aligned.
+```powershell
+python governance/validate_construction_plan.py
+```
 
-When delivering, report the conclusion first, then describe the actual changes, validation results, anything that remains unknown or unauthorized, and, when applicable, the component/custom decision and complexity change. Do not use document count, length, number of checks, or agreement by multiple people as a proxy for quality.
+机械校验只检查编码、YAML、文件名、最小元数据、链接和少量层级禁词，不证明设计正确。交付时先给出“可接受 / 限范围可接受 / 需修复”，再说明实际修改、验证、未知和剩余工作。

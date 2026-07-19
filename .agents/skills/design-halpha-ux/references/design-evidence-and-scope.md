@@ -6,12 +6,12 @@ This skill refines how to design and review Halpha UX; it does not own Halpha be
 
 | Skill concern | Normative anchor |
 |---|---|
-| Page and task scope | `HALPHA-UX-001#UX-SCP-001`, `#UX-WRK-001`, and the current L4 construction plan |
-| Commands, acknowledgement, and result | `HALPHA-UX-001#UX-CMD-001` and `#UX-CTL-001` |
-| Progressive disclosure | `HALPHA-UX-001#UX-INF-001` conclusion, decision, evidence, and diagnosis layers |
-| Visual value and density | `HALPHA-UX-001#UX-VIS-001` and the applicable `HALPHA-UX-002` visual contract |
-| Consequence preview and risk controls | `HALPHA-UX-001#UX-COG-001`, `#UX-CTL-001`, and the applicable domain/L3 command contract |
-| Real rendering and interaction validation | `HALPHA-UX-001#UX-QLT-001`, `#UX-L3-001`, and `HALPHA-UX-002#UX-AUTO-TST-001` |
+| Page and task scope | HALPHA-UX-001、HALPHA-UX-002 与当前 L4 计划 |
+| Commands, acknowledgement, and result | HALPHA-UX-001 的命令反馈原则与相关领域 L3 |
+| Progressive disclosure | HALPHA-UX-001 的信息组织原则 |
+| Visual value and density | HALPHA-UX-001 与 HALPHA-UX-002 的视觉要求 |
+| Consequence preview and risk controls | HALPHA-UX-002 和相关领域 L3 的控制语义 |
+| Real rendering and interaction validation | HALPHA-UX-002 的浏览器验证要求 |
 
 Use the current documents and plan; do not hard-code an older Git revision from this skill. When an instruction here appears broader than current semantics, narrow it to the current scope or report a formal design gap. Benchmark evidence, design taste, and Playwright findings may reveal a gap, but none can resolve it by themselves.
 
