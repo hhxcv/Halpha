@@ -1,14 +1,9 @@
 # Halpha Project Constitution: Mission, Personal Risk Control, and Development Principles
 
 **Document ID:** HALPHA-CON-001  
-**Version:** v2.11.0  
-**Decision Status:** ACCEPTED  
 **Level:** L0  
 **Language Edition:** en-US  
-**Joint Normative Set ID:** HALPHA-CON-001@v2.11.0+20260718T070120+0800  
 **Paired Text:** HALPHA-CON-001-project-constitution.zh-CN.md (zh-CN)  
-**Joint Set Registry:** HALPHA-CON-001-project-constitution.bundle.yaml  
-**Effective Time:** 2026-07-18T07:01:20+08:00  
 **Scope:** Halpha's long-term mission, role and capital sovereignty, non-breakable boundaries, highest-order trade-offs, AI and technology trust boundaries, complexity boundaries, and change conditions  
 **Authority Scope:** This Constitution is the current highest normative source for every CON-* principle listed in Section 10.
 
@@ -29,34 +24,27 @@ This section only aids reading and creates no independent norm. Each requirement
 
 ---
 
-# 1. Effect, Authority, and Highest-order Trade-offs
+# 1. Normative Authority and Highest-order Trade-offs
 
 ## 1.1 Document Purpose
 
-This Constitution defines only the mission, role sovereignty, non-breakable boundaries, highest-order trade-offs, trust and complexity boundaries, and change conditions that MUST remain valid across product stages, implementations, and technologies. Product journeys, complete states, interfaces, fields, technical implementations, concrete configurations, test methods, operating steps, and current development status are owned by lower-level specifications or current records.
+This Constitution defines only the mission, role sovereignty, non-breakable boundaries, highest-order trade-offs, trust and complexity boundaries, and change conditions that MUST remain valid across product scopes, implementations, and technologies. Product journeys, complete states, interfaces, fields, technical implementations, concrete configurations, test methods, operating steps, and current development status are owned by lower-level specifications or current records.
 
-## 1.2 Document Status and Effect【CON-GOV-002】
+## 1.2 Current Specification and History【CON-GOV-002】
 
-### Normative Document Status Definition【CON-GOV-002-DEF】
+### Current Specification Definition【CON-GOV-002-DEF】
 
-This Constitution has the following statuses:
+The current body in the normal target path is the sole current carrier of the specification. Earlier content for the same stable document ID is identified and recovered only through Git commits; the documentation tree does not retain status copies, version copies, or a separate registry.
 
-- **PROPOSED:** available for review and revision, with no normative effect;
-- **ACCEPTED:** the sole current normative bilingual version package explicitly approved by the Project Owner;
-- **SUPERSEDED:** replaced by a later ACCEPTED version and retained only for traceability;
-- **WITHDRAWN:** withdrawn before ever taking normative effect.
+### Current Specification Use Requirements【CON-GOV-002-REQ】
 
-### Effect Requirements【CON-GOV-002-REQ】
-
-A version takes effect only after the Project Owner, acceptance time, both co-normative language texts, each text's content identifier, and the uniquely identifiable bilingual version package have been recorded. Unless a delayed effective time is recorded separately, the effective time equals the acceptance time. Only one current ACCEPTED bilingual version package may exist at a time.
-
-The Constitution taking effect does not prove that an implementation conforms to its principles and does not grant any real-capital operating authority.
+Normative use MUST read the current body in the normal target path. Traceability, comparison, and rollback use Git commits; another directory, duplicate file, status field, or registry MUST NOT be used to select a parallel authority. The current constitutional text does not prove implementation conformity and does not grant any real-capital operating authority.
 
 ## 1.3 Normative Authority, Lower-level Registration, and Evidence【CON-GOV-001】
 
 ### Authority and Responsibility Definition【CON-GOV-001-DEF】
 
-The current normative source is the body that owns a concept and determines its authoritative meaning. The co-normative language texts for the same document ID and version constitute one logical normative source, not competing sources.
+The current normative source is the body in the normal target path that owns a concept and determines its authoritative meaning. The co-normative language texts for one stable document ID constitute one logical normative source, not competing sources.
 
 | Level | Responsibility |
 |---|---|
@@ -84,7 +72,7 @@ Each constitutional principle MUST have a stable ID and MUST be fully defined in
 
 ### Deviation Handling Requirements【CON-GOV-003-REQ】
 
-A MUST or MUST NOT requirement cannot be waived by an architecture decision record, revision proposal, implementation, test, or operating practice. A deviation from SHOULD or SHOULD NOT MUST state its impact scope and rationale, and the conditions for restoring, replacing, or accepting the deviation. MAY does not create a prerequisite for development, release, or opening authority.
+A MUST or MUST NOT requirement cannot be waived by an architecture decision record, implementation, test, or operating practice. A deviation from SHOULD or SHOULD NOT MUST state its impact scope and rationale, and the conditions for restoring, replacing, or accepting the deviation. MAY does not create a prerequisite for development, release, or opening authority.
 
 A known violation of MUST or MUST NOT requires the affected release to be blocked. If the violation concerns real capital, or its impact cannot be shown to be isolated, increases to the funds-use caps and scope and any increase or restoration of Halpha real-capital operating authority MUST also be blocked until conformity is restored or the Constitution is formally amended.
 
@@ -104,19 +92,19 @@ When facts are unknown or Halpha behaves abnormally, new real actions in the aff
 
 ### Co-normative Language Text Definition【CON-GOV-006-DEF】
 
-The zh-CN and en-US bodies for the same document ID and version are the co-normative language texts of one logical normative document. They have equal, direct, and independent normative effect. Neither is the original, translation, summary, interpretation, or subordinate text of the other, and neither language has priority or final interpretive authority.
+The zh-CN and en-US bodies for stable document ID HALPHA-CON-001 in their normal target paths are the co-normative language texts of one logical normative document. They have equal, direct, and independent normative authority. Neither is the original, translation, summary, interpretation, or subordinate text of the other, and neither language has priority or final interpretive authority.
 
-### Alignment, Effect, and Conflict Handling Requirements【CON-GOV-006-REQ】
+### Alignment and Conflict Handling Requirements【CON-GOV-006-REQ】
 
-Each co-normative language text MUST be semantically complete, so that a person or AI can determine every principle, obligation, prohibition, authority, condition, and exception in that version without reading the other language text.
+Each co-normative language text MUST be semantically complete, so that a person or AI can determine every principle, obligation, prohibition, authority, condition, and exception without reading the other language text.
 
-The two texts MUST share the document ID, version, principle IDs, section structure, decision status, effective time, and Joint Normative Set ID. They MUST express the same normative strength, scope, priority, conditions, exceptions, responsibilities, and outcomes. Each language MAY use natural phrasing; word-for-word correspondence is not required.
+The two texts MUST share the document ID, principle IDs, and section structure. They MUST express the same normative strength, scope, priority, conditions, exceptions, responsibilities, and outcomes. Each language MAY use natural phrasing; word-for-word correspondence is not required.
 
-The Project Owner MUST approve a uniquely identifiable complete bilingual version package. Both texts MUST take effect, be revised, be superseded, or be withdrawn together. Any change affecting meaning or structure MUST update both texts and be approved as a new bilingual version package. Routine work MAY read only the working-language text; specification changes, bilingual alignment reviews, and actual language conflicts MUST examine both texts.
+Any change affecting meaning or structure MUST update both current texts in the same working change. Routine work MAY read only the working-language text; specification changes, bilingual consistency reviews, and actual language conflicts MUST examine both texts.
 
-If the two texts have a substantive ambiguity, omission, or inconsistency, neither language takes priority; a convenient interpretation MUST NOT be selected, and a third rule MUST NOT be synthesized. Affected normative use, design approval, release, authority increase or restoration, and expansion of funds-use caps and scope MUST stop. Within an affected real-capital scope, responses MUST be limited to stopping, isolation, reconciliation, or a constraining action explicitly directed by the User that does not increase or convert risk. Principles unaffected by the conflict remain effective.
+If the two texts have a substantive ambiguity, omission, or inconsistency, neither language takes priority; a convenient interpretation MUST NOT be selected, and a third rule MUST NOT be synthesized. Affected normative use, design modification, release, authority increase or restoration, and expansion of funds-use caps and scope MUST stop. Within an affected real-capital scope, responses MUST be limited to stopping, isolation, reconciliation, or a constraining action explicitly directed by the User that does not increase or convert risk. Principles unaffected by the conflict remain applicable.
 
-Only a new bilingual version package approved by the Project Owner MAY close a language conflict. An AI that detects or suspects a conflict MUST report the principle ID and both relevant passages and MUST NOT decide the conflict itself. Before either language text is used alone for an authority-sensitive decision, its header and Joint Set Registry MUST confirm valid identity, version, status, effective time, Joint Normative Set ID, equal bilingual authority, alignment status, and body content identifiers. If any condition is missing, the text MUST NOT be used to increase authority or expand real-capital use.
+A language conflict closes only through synchronized correction of both current texts in their normal target paths. An AI that detects or suspects a conflict MUST report the principle ID and both relevant passages and MUST NOT decide the conflict itself. Before either language text is used alone for an authority-sensitive decision, its stable document ID, paired-text path, and semantic anchors MUST be complete. If the paired text is missing, identity differs, or a known conflict exists, the text MUST NOT be used to increase authority or expand real-capital use.
 
 ---
 
@@ -241,18 +229,15 @@ Financial-risk control constrains inappropriate real actions even when Halpha op
 
 ### Real Action Boundary Requirements【CON-CAP-002-REQ】
 
-A real action that introduces, increases, or converts risk MAY be initiated only when a fixed basis for the decision, the current funds-use caps and scope, and valid authority all support it. An action that stops, cancels, protects, or reduces existing risk MAY be grounded in an explicit User decision, but MUST NOT be used as a route to expand risk. Lower-level specifications define concrete product paths. If conformity with the boundary cannot be determined reliably, automated action MUST stop and the decision MUST return to the User.
+A real action that introduces, increases, or converts risk MAY be initiated only when a fixed basis for the decision, the current funds-use caps and scope, and valid authority all support it. An action that stops, cancels, protects, or reduces existing risk MAY come from handling fixed in the activated plan or from a direct User instruction for an identified responsibility; neither source may be used as a route to expand risk. Lower-level specifications define concrete product paths. If conformity with the boundary cannot be determined reliably, automated action MUST stop and the decision MUST return to the User.
 
 ## 4.3 Constitutional Boundary of Halpha Real-capital Operating Authority【CON-CAP-003】
 
-This Constitution defines only the following authorization boundaries and does not define concrete authority levels, commands, or state machines:
+This Constitution defines only the following simple boundaries and does not define authority levels, approvals, a command platform, or a state machine:
 
-1. **Authorization is prior and proportionate to risk:** Before Halpha initiates a real action, it MUST have valid authorization proportionate to the risk, impact scope, reversibility, and time sensitivity. Low-intensity authorization MUST NOT substitute for the authorization required by an action that increases or converts risk.
-2. **There are only two authorization paths:**
-   - **Manual authorization:** The User decides on a current specific action or an explicitly controlled scope. Halpha, an interface, or AI MUST NOT fabricate authorization from a human decision that has not been made.
-   - **Machine authorization:** The User grants Halpha automated action capability in advance for an explicit scope and duration. Software and AI MAY act only within that scope and MUST NOT self-authorize or expand it.
-3. **The paths MUST NOT be conflated:** Manual and machine authorization identify the authorizing subject and path, not an action-risk category. Operations performed by the User outside Halpha are handled as external facts and do not become Halpha authorization.
-4. **Authorization is minimally necessary and traceable:** Every authorization MUST remain within the current funds-use caps and scope, limit its applicability and duration, and leave a traceable record. Efficiency MUST NOT bypass a hard boundary, and a single highest manual threshold MUST NOT block an authorized constraining action that can be shown not to increase or convert risk.
+1. **Added risk requires plan activation:** The User first fixes and explicitly activates a complete plan that includes the account, funds-use caps and scope, duration, and permitted actions. Halpha, an interface, software, or AI MUST NOT use ad hoc confirmation, an existing session, or its own output to complete, create, or expand that activation.
+2. **Contraction cannot become added risk:** Stopping, cancellation, protection, reduction, or exit fixed in the activated plan, and a direct User contraction instruction for an existing responsibility, MAY execute only when shown not to increase or transform risk and MUST NOT restore an old activation or create risk-adding capability.
+3. **The decision is current and traceable:** Before every real action, the action MUST comply with the current activation or an explicit contraction instruction and leave a simple record sufficient to reconcile subject, scope, time, and outcome. Operations independently completed by the User through an official venue interface are handled only as external facts.
 
 ## 4.4 Highest Boundary When Critical Facts Cannot Be Confirmed【CON-CAP-004】
 
@@ -262,17 +247,17 @@ A stop, cancellation, or constraining action explicitly initiated by the User an
 
 ## 4.5 Changes to Halpha Real-capital Operating Authority and Funds-use Caps and Scope【CON-CAP-005】
 
-Halpha real-capital operating authority prohibits real writes by default and is constrained by accounts and funds-use caps and scope. Increased authority, increased funds-use caps, or expanded scope MUST be completed explicitly by the User and leave a simple record. Profit, a model, a strategy, AI, or the system MUST NOT trigger such a change.
+Halpha MUST add no real risk by default and remains constrained by accounts and funds-use caps and scope. Increasing a funds-use cap, widening scope, or restoring risk-adding capability requires the User to change and reactivate a complete plan and leave a simple record. Profit, a model, a strategy, AI, or the system MUST NOT trigger such a change.
 
 Stopping new real actions, lowering authority, lowering funds-use caps, narrowing scope, and external manual takeover MUST take effect immediately and MUST NOT depend on approval, incident closure, or a complete evidence package. When trustworthy automated controls are unavailable, only an explicit manual or external safeguard MAY be used. If that safeguard is unavailable or cannot meet the required timing, the outcome MUST be to wait, stop, or make no trade.
 
-## 4.6 Contraction and Restoration of Halpha Real-capital Operating Authority【CON-CAP-006】
+## 4.6 Contraction and Restart Continuity【CON-CAP-006】
 
 When an anomaly, unknown material fact, business error, credential risk, or reconciliation difference occurs, the funds-use caps and scope MAY be narrowed, Halpha real-capital operating authority MAY be lowered, or new real actions MAY be stopped immediately.
 
-Restoring authority that has expired, been revoked, or been contracted, or expanding authority or scope, MUST be decided explicitly by the User and MUST occur only after the immediate issue has been handled, critical external facts have been reconciled, and the scope remains controlled. Halpha MUST support decreases as well as increases and MUST NOT automatically restore authority that has expired, been revoked, or been contracted.
+After the User stops new risk, exits, or takes over, or after activation expires, the affected automated ability to add risk MUST NOT restore itself. Existing risk continues to be protected or exited or is handed over to the User. After old responsibilities close, any renewed assumption of added risk requires the User to activate a complete plan again.
 
-When Machine authorization remains valid within its original plan, account, action, duration, and cap scope and has not been stopped, revoked, or handed over, re-establishing runtime eligibility after an interruption is not restoration of invalid authority. Continuation within the original scope is permitted only when accepted lower-level design explicitly allows automatic continuation for that phase and verifiable evidence proves a unique writer, continuity of persistent state and external facts, unchanged build/configuration/credentials/account identity, reconciliation of unknown and protection responsibilities, and no replay of missed actions. Otherwise the scope MUST remain stopped for an explicit User decision. This process MUST NOT create, expand, or extend authorization.
+A pure system restart MAY continue within the original scope only while the original authority remains valid, the User has not stopped or taken over, and runtime continuity, identity, and critical external facts can be shown to be unambiguous. Otherwise, new risk remains stopped. Restart MUST NOT create, expand, or extend authorization. Lower-level design owns the concrete continuity and reconciliation conditions.
 
 ---
 
@@ -370,13 +355,13 @@ When critical external facts, trading identity, execution, or persistence capabi
 
 Halpha MUST NOT be the sole irreplaceable path by which the User observes accounts, revokes Halpha authority, protects capital, or regains account control. The User MUST retain final control outside Halpha's runtime, credential, and deployment failure domains.
 
-After a restart, failure, human intervention, or identity anomaly, the affected scope MUST first remain stopped until critical external facts have been reconciled, old actions cannot repeat external effects, and runtime eligibility has been proved again. If the original Machine authorization remains valid and accepted lower-level design defines a strict evidence gate for the current phase, Halpha MAY restore runtime eligibility only within the original scope. In every other case, the User MUST explicitly restore applicable authority, continue the same task, or establish new authorization. Halpha MUST NOT continue automatically after a User stop, revocation, handover, or authorization expiry, or when the build, configuration, credentials, account identity, persistent-write continuity, or critical facts changed or cannot be proved. Credentials suspected of disclosure or loss of control MUST be revoked or invalidated. If facts or control remain unclear, the only permitted outcomes are to remain stopped or perform a constraining action demonstrably not increasing or converting risk.
+Resuming execution MUST comply with Section 4.6 and MUST NOT use a recovery command, operating mode, or qualification decision to bypass an already stopped ability to add risk. Credentials suspected of disclosure or loss of control MUST be revoked or invalidated. If facts or control remain unclear, the only permitted outcomes are to remain stopped or perform a constraining action demonstrably not increasing or converting risk. Lower-level design owns the concrete process, identity, reconciliation, and restart conditions.
 
 ## 7.4 Deactivation, Exit, and Record Retention【CON-LIF-001】
 
 The User MUST be able to stop Halpha new real actions, revoke Halpha authority and credentials, and manage remaining accounts, orders, and positions through an external path. Exit MUST NOT depend on a complex process. Necessary configuration and records MUST be exportable, and external accounts MUST remain independently controllable.
 
-Reuse MUST begin from a closed and controlled scope, reconcile external facts first, and then require explicit restoration by the User. The project does not require a successor identity, an institutional exit archive, or a dedicated exit platform.
+Trading again MUST begin from a closed and controlled scope, reconcile external facts first, and require the User to create a new activation after old responsibilities close. The project does not require a successor identity, an institutional exit archive, or a dedicated exit platform.
 
 ---
 
@@ -392,7 +377,7 @@ Design MUST account for full-lifecycle cost. Complexity MUST be invested first i
 
 Before expanding scope or building abstractions, the project MUST close and validate an end-to-end capability that provides actual User value in the smallest applicable scope. A shared abstraction, service, or platform SHOULD be created only after real duplication exists, semantics are stable, extraction produces a net reduction in complexity, and the boundary is verifiable.
 
-Development trade-offs MUST prioritize core trading capability and user experience and achieve reliable operation through mature technology, simple structure, and functional correctness. Other supporting capabilities deepen only after actual bottlenecks appear. Concrete development sequence and current scope do not belong in the Constitution.
+Development trade-offs MUST prioritize core trading capability and user experience and achieve reliable operation through mature technology, simple structure, and functional correctness. Other supporting capabilities expand only after actual bottlenecks appear. Concrete development sequence and current scope do not belong in the Constitution.
 
 ## 8.3 Minimum Correctness and Control Requirements for Real Actions【CON-CMP-003】
 
@@ -406,7 +391,7 @@ Development trade-offs MUST prioritize core trading capability and user experien
 
 ### Minimum Real Action Requirements【CON-CMP-003-REQ】
 
-All three categories MUST be effective and MUST NOT substitute for one another. Implementation depth MAY be proportionate to the actual impact of a personal project. A real-action path MUST have few dependencies, explicit boundaries, reconciliation, stopping, recovery, and external manual takeover.
+All three categories MUST be effective and MUST NOT substitute for one another. Implementation investment MAY be proportionate to the actual impact of a personal project. A real-action path MUST have few dependencies, explicit boundaries, reconciliation, stopping, recovery, and external manual takeover.
 
 By default, the project MUST NOT build multi-level capital approval, a production-admission committee, an institutional risk or security platform, a formal incident process for every failure, or one state machine covering every risk category. Functional correctness MUST NOT become optional because the project or capital size is small.
 
@@ -434,17 +419,17 @@ Development concurrency and feature count MUST remain within the Project Owner's
 
 ## 9.1 Review, Revision, and Issue Handling【CON-GOV-004】
 
-This Constitution MUST be reviewed at least every 12 months from its effective time or the last formal review. It MUST be reviewed earlier when the capital-responsibility holder, Project Owner model, single-User model, capital scale and risk, trading timescale, automation autonomy, commercial nature, Project Owner control capacity, or a major failure changes materially.
+This Constitution has no fixed calendar review. It MUST be reviewed when the capital-responsibility holder, Project Owner model, single-User model, capital scale and risk, trading timescale, automation autonomy, commercial nature, Project Owner control capacity, or a major failure changes materially. Without a triggering fact, review MUST NOT be repeated merely for formality.
 
-A revision MUST identify the affected principles, triggering facts, lower-level impact, migration, and authority-reduction arrangements, and the Project Owner MUST approve a uniquely identifiable complete bilingual version package. The two co-normative texts MUST be accepted, superseded, or withdrawn together. A single-language change, lower-level design, implementation, test, or operating practice MUST NOT amend the Constitution silently.
+A revision MUST identify the affected principles, triggering facts, lower-level impact, migration, and authority-reduction arrangements, directly update both co-normative texts in their normal target paths, and synchronize affected direct consumers. Git commits record the before-and-after history. A single-language change, lower-level design, implementation, test, or operating practice MUST NOT amend the Constitution silently.
 
 An operating problem MUST NOT be interpreted as a temporary waiver of a hard boundary. The affected capability MUST first stop, contract, or return to the User under this Constitution before the project decides that it remains valid, begins a revision, or suspends it.
 
-## 9.2 Constitutional Effect and Real-capital Use【CON-GOV-005】
+## 9.2 Current Constitution and Real-capital Use【CON-GOV-005】
 
-For a PROPOSED version to become ACCEPTED, the Project Owner MUST confirm that the two co-normative bodies have no known material contradiction, that principle IDs and normative bodies are unique, that normative strength and meaning are aligned, and that authority boundaries are clear, and MUST approve a uniquely identifiable complete bilingual version package.
+The current co-normative bodies MUST have no known material contradiction; principle IDs and normative bodies MUST be unique; normative strength and meaning MUST align; and authority boundaries MUST be clear. Any failure is handled under Section 1.6 and corrected in the current texts in their normal target paths.
 
-Incomplete lower-level specifications do not prevent this Constitution from taking effect, but ACCEPTED does not prove implementation correctness and does not authorize real-capital use. A real-capital capability MAY be used only after the User-configured funds-use caps and scope, Halpha real-capital operating authority, critical facts, functional correctness, stopping, and external-takeover constraints on which that capability actually depends have been implemented and validated.
+The current constitutional text does not prove implementation correctness and does not authorize real-capital use. A real-capital capability MAY be used only after the User-configured funds-use caps and scope, Halpha real-capital operating authority, critical facts, functional correctness, stopping, and external-takeover constraints on which that capability actually depends have been implemented and validated.
 
 The User decides outside Halpha whether to provide trading capital, how much to provide, and when to use it. Halpha accepts only an explicit User decision to increase funds-use caps, expand scope, or increase authority and does not establish a personal-allocation approval process or uniform institutional production admission.
 
@@ -457,10 +442,10 @@ This index only locates each principle's sole normative body and does not redefi
 | Principle ID | Sole Body | Short Title |
 |---|---|---|
 | CON-GOV-001 | 1.3 | Normative authority and lower-level registration |
-| CON-GOV-002 | 1.2 | Document status and effect |
+| CON-GOV-002 | 1.2 | Current specification and history |
 | CON-GOV-003 | 1.4 | Normative terms |
 | CON-GOV-004 | 9.1 | Review, revision, and issue handling |
-| CON-GOV-005 | 9.2 | Constitutional effect and real-capital use |
+| CON-GOV-005 | 9.2 | Current Constitution and real-capital use |
 | CON-GOV-006 | 1.6 | Co-normative language texts and language conflicts |
 | CON-PRI-001 | 1.5 | Highest conflict order |
 | CON-MIS-001 | 2.1 | Project mission |
@@ -477,7 +462,7 @@ This index only locates each principle's sole normative body and does not redefi
 | CON-CAP-003 | 4.3 | Constitutional boundary of Halpha real-capital operating authority |
 | CON-CAP-004 | 4.4 | Highest boundary when critical facts cannot be confirmed |
 | CON-CAP-005 | 4.5 | Changes to Halpha real-capital operating authority and funds-use caps and scope |
-| CON-CAP-006 | 4.6 | Contraction and restoration of Halpha real-capital operating authority |
+| CON-CAP-006 | 4.6 | Contraction and restart continuity |
 | CON-TRU-001 | 5.1 | Fact integrity |
 | CON-EVD-001 | 5.2 | Functional and implementation validation and economic evidence |
 | CON-EVD-002 | 5.3 | Evidence applicability and decay |

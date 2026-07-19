@@ -10,7 +10,7 @@ Use the `playwright` skill and a real browser. An available interactive browser 
 
 1. **Establish the target.** Read the current L4 route, viewport, browser, fixture, construction eligibility, and build state. Use an authorized deterministic profile; never create real writes merely to obtain UI evidence.
 2. **Start the actual surface.** Serve the exact build or executable prototype under review. Record the startup command, URL, build identity, data profile, and known unavailable dependencies. If the surface cannot run, report `BLOCKED` instead of substituting a mock screenshot.
-3. **Open accepted viewports.** Inspect the target desktop viewport and the accepted narrow-screen breakpoint. Add an intermediate width when layout behavior changes between them.
+3. **Open specified viewports.** Inspect the target desktop viewport and the current narrow-screen breakpoint. Add an intermediate width when layout behavior changes between them.
 4. **Capture the baseline.** Navigate to each in-scope route with Playwright, wait for stable rendering, and capture a full-page or region screenshot. Inspect the image at native size before interacting.
 5. **Exercise behavior.** Use accessible roles, labels, and keyboard input to walk the primary task. Capture the screen after disclosure, selection, validation, submission acknowledgement, processing, final result, rejection/failure, stale/unknown, risk confirmation, refresh, and navigation transitions as applicable.
 6. **Inspect layout.** Check clipping, overlap, unintended scroll, sticky-region collisions, drawer/dialog bounds, text truncation, numeric alignment, target size, density, breakpoint reflow, and whether critical state disappears below or behind another layer.

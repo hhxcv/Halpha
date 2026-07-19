@@ -1,4 +1,4 @@
-# P0 product runtime dependencies. Exact selections are owned by ACCEPTED L4.
+# P0 product runtime dependencies. Locks and executable tests qualify exact selections.
 # Compile only with the repository Python 3.13.14 venv and pip-tools.
 fastapi==0.139.0
 uvicorn==0.51.0

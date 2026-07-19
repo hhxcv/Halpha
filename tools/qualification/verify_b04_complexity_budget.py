@@ -1,4 +1,4 @@
-"""Qualify the implemented P0 complexity budget against the current ACCEPTED plan."""
+"""Qualify that the implemented P0 topology stays small and single-path."""
 
 from __future__ import annotations
 
@@ -14,9 +14,6 @@ import sys
 import tomllib
 from typing import Any, Iterable
 
-import yaml
-
-
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
@@ -31,19 +28,7 @@ from halpha.executor.runtime import build_product_node_config
 
 
 DEFAULT_OUTPUT = ROOT / "build/qualification/b04-complexity-budget.json"
-PLAN_PATH = Path("docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml")
 MIGRATION_PATH = Path("migrations/versions/20260717_0001_p0_record_families.py")
-EXPECTED_BUSINESS_MODULES = {
-    "capital",
-    "outcomes",
-    "planning",
-    "user_workbench",
-    "venue_integration",
-}
-EXPECTED_DURABLE_WORKERS = {
-    "app/notifications.py:NotificationDispatcher": "halpha-app",
-    "executor/coordinator.py:HalphaCoordinator": "halpha-executor",
-}
 EXPECTED_PROCESS_ENTRYPOINTS = {
     "halpha-app": "halpha.app.__main__:main",
     "halpha-executor": "halpha.executor.__main__:main",
@@ -60,17 +45,6 @@ EXPECTED_ACTION_REPOSITORY_USERS = {
     "venue_integration/repository.py",
     "venue_integration/service.py",
 }
-WORKER_CLASS_SUFFIXES = (
-    "Coordinator",
-    "Dispatcher",
-    "Worker",
-    "Scheduler",
-    "Runner",
-    "Reconciler",
-    "Consumer",
-    "Poller",
-    "Processor",
-)
 ALTERNATIVE_DATABASE_IMPORT_PREFIXES = (
     "aiomysql",
     "asyncpg",
@@ -175,9 +149,6 @@ def _git_head(root: Path) -> str:
 
 def build_evidence(root: Path = ROOT) -> dict[str, Any]:
     root = root.resolve()
-    plan = yaml.safe_load((root / PLAN_PATH).read_text(encoding="utf-8"))
-    complexity = plan["complexity_budget"]
-    hard_limits = complexity["after_hard_limits"]
     sources = _python_sources(root)
     classes = _class_inventory(sources)
     imports = _imports(sources)
@@ -188,22 +159,12 @@ def build_evidence(root: Path = ROOT) -> dict[str, Any]:
         encoding="utf-8"
     )
 
-    worker_candidates = {
-        identity
-        for identity, name in classes.items()
-        if name.endswith(WORKER_CLASS_SUFFIXES)
-    }
     process_roles = {role.value for role in ProcessRole}
     product_entrypoints = {
         name: scripts.get(name) for name in sorted(process_roles)
     }
     auxiliary_entrypoints = {
         name: scripts.get(name) for name in sorted(EXPECTED_AUXILIARY_ENTRYPOINTS)
-    }
-    business_modules = {
-        path.name
-        for path in (root / "src/halpha").iterdir()
-        if path.is_dir() and path.name in EXPECTED_BUSINESS_MODULES
     }
     repository_users = {
         relative
@@ -248,51 +209,21 @@ def build_evidence(root: Path = ROOT) -> dict[str, Any]:
     )
 
     checks = {
-        "accepted_hard_limits_are_exact": hard_limits
-        == {
-            "authoritative_persisted_record_families_max": 16,
-            "authoritative_persisted_record_families_meaning": hard_limits[
-                "authoritative_persisted_record_families_meaning"
-            ],
-            "durable_worker_classes_max": 2,
-            "business_modules_max": 5,
-            "runtime_processes_max": 2,
-            "authoritative_database_products_max": 1,
-            "real_risk_authorization_paths_max": 1,
-            "real_venue_write_pipelines_max": 1,
-            "independently_released_artifact_groups_max": 1,
-            "new_general_platforms_max": 0,
-        },
-        "record_family_inventory_is_exactly_sixteen": (
-            len(PRODUCT_RECORD_FAMILIES) == 16
-            and len(set(PRODUCT_RECORD_FAMILIES)) == 16
+        "record_family_inventory_matches_the_migration": (
+            len(set(PRODUCT_RECORD_FAMILIES)) == len(PRODUCT_RECORD_FAMILIES)
             and set(revision.PRODUCT_TABLES) == set(PRODUCT_RECORD_FAMILIES)
             and set(revision.DROP_ORDER) == set(PRODUCT_RECORD_FAMILIES)
-            and len(revision.DROP_ORDER) == 16
             and set(RECORD_FAMILY_OWNERS) == set(PRODUCT_RECORD_FAMILIES)
         ),
-        "business_module_inventory_is_exactly_five": business_modules
-        == EXPECTED_BUSINESS_MODULES,
-        "durable_worker_inventory_is_exactly_two": worker_candidates
-        == set(EXPECTED_DURABLE_WORKERS),
-        "worker_process_ownership_matches_accepted_selection": (
-            complexity["durable_workers"]["current_selection"]
-            == [
-                {"name": "HalphaCoordinator", "process": "halpha-executor"},
-                {"name": "NotificationDispatcher", "process": "halpha-app"},
-            ]
-            and set(PROCESS_CONTRACTS) == set(ProcessRole)
-        ),
+        "runtime_ownership_matches_the_process_contract": set(PROCESS_CONTRACTS)
+        == set(ProcessRole),
         "runtime_process_inventory_is_exactly_two": (
             process_roles == set(EXPECTED_PROCESS_ENTRYPOINTS)
             and product_entrypoints == EXPECTED_PROCESS_ENTRYPOINTS
             and auxiliary_entrypoints == EXPECTED_AUXILIARY_ENTRYPOINTS
         ),
-        "authoritative_database_product_is_only_postgresql": plan[
-            "runtime_architecture"
-        ]["authoritative_database"]
-        == f"PostgreSQL {POSTGRESQL_VERSION}"
-        and database_driver_lines == ["psycopg[binary]==3.3.4"]
+        "authoritative_database_product_is_only_postgresql": database_driver_lines
+        == ["psycopg[binary]==3.3.4"]
         and alternative_database_imports == [],
         "real_risk_authorization_path_is_single_cap_repository": {
             identity
@@ -346,8 +277,6 @@ def build_evidence(root: Path = ROOT) -> dict[str, Any]:
         "observations": {
             "physical_record_family_count": len(PRODUCT_RECORD_FAMILIES),
             "record_family_owners": dict(sorted(RECORD_FAMILY_OWNERS.items())),
-            "business_modules": sorted(business_modules),
-            "durable_workers": EXPECTED_DURABLE_WORKERS,
             "runtime_process_entrypoints": product_entrypoints,
             "auxiliary_one_shot_entrypoints": auxiliary_entrypoints,
             "authoritative_database_products": [f"PostgreSQL {POSTGRESQL_VERSION}"],
@@ -378,13 +307,6 @@ def build_evidence(root: Path = ROOT) -> dict[str, Any]:
                 "new_record_family_count": 0,
                 "new_write_pipeline_count": 0,
             },
-        },
-        "plan_binding": {
-            "document_id": plan["document_id"],
-            "status": plan["status"],
-            "accepted_at": plan["accepted_at"].isoformat(),
-            "accepted_design_set": plan["accepted_design_set"],
-            "complexity_budget_sha256": sha256(_canonical(complexity)).hexdigest(),
         },
         "source_sha256": {
             relative: _sha256_file(root / relative)

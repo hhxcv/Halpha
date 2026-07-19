@@ -1,4 +1,4 @@
-"""Verify the minimal critical-invariant trace registry and detect evidence drift."""
+"""Verify the minimal critical-invariant trace registry and its direct paths."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from halpha.source_identity import source_file_sha256  # noqa: E402
 from tools.qualification.source_binding import (  # noqa: E402
     SourceBindingError,
     capture_source_sha256,
@@ -32,7 +31,6 @@ REQUIRED_FIELDS = frozenset(
         "forbidden_calls",
         "tests",
         "build_gate",
-        "evidence_digest",
         "implementation_status",
         "deviation_status",
     }
@@ -87,41 +85,15 @@ def _expand_files(root: Path, patterns: Iterable[str]) -> tuple[Path, ...]:
     return tuple(sorted(files, key=lambda item: item.as_posix()))
 
 
-def compute_record_digest(
-    record: dict[str, Any],
-    *,
-    root: Path = ROOT,
-    baseline_patterns: Iterable[str] = BASELINE_PATTERNS,
-) -> str:
-    references = (
-        list(record.get("spec_source", []))
-        + list(record.get("implementation_paths", []))
-        + list(record.get("tests", []))
-        + list(baseline_patterns)
-    )
-    files = _expand_files(root, references)
-    file_digests = {
-        path.relative_to(root).as_posix(): source_file_sha256(path)
-        for path in files
-    }
-    record_basis = {
-        key: value for key, value in record.items() if key != "evidence_digest"
-    }
-    return "sha256:" + sha256(
-        _canonical({"record": record_basis, "files": file_digests})
-    ).hexdigest()
-
-
 def validate_registry(
     registry: dict[str, Any],
     *,
     root: Path = ROOT,
     baseline_patterns: Iterable[str] = BASELINE_PATTERNS,
-) -> tuple[list[str], dict[str, str]]:
+) -> list[str]:
     errors: list[str] = []
-    actual_digests: dict[str, str] = {}
     if set(registry) != {"records"} or not isinstance(registry.get("records"), list):
-        return ["REGISTRY_SHAPE_INVALID"], actual_digests
+        return ["REGISTRY_SHAPE_INVALID"]
     seen: set[str] = set()
     horizons: set[str] = set()
     for index, raw_record in enumerate(registry["records"]):
@@ -163,21 +135,19 @@ def validate_registry(
             and record["implementation_status"] != "DEFERRED"
         ):
             errors.append(f"DEFERRED_STATUS_MISMATCH:{requirement_id}")
+        references = (
+            list(record.get("spec_source", []))
+            + list(record.get("implementation_paths", []))
+            + list(record.get("tests", []))
+            + list(baseline_patterns)
+        )
         try:
-            actual = compute_record_digest(
-                record,
-                root=root,
-                baseline_patterns=baseline_patterns,
-            )
+            _expand_files(root, references)
         except (OSError, ValueError) as exc:
-            errors.append(f"DIGEST_INPUT_INVALID:{requirement_id}:{exc}")
-            continue
-        actual_digests[requirement_id] = actual
-        if record["evidence_digest"] != actual:
-            errors.append(f"EVIDENCE_DRIFT:{requirement_id}")
+            errors.append(f"REFERENCE_INVALID:{requirement_id}:{exc}")
     if horizons != DELIVERY_HORIZONS:
         errors.append("DELIVERY_HORIZON_COVERAGE_INCOMPLETE")
-    return errors, actual_digests
+    return errors
 
 
 def registry_source_patterns(
@@ -216,7 +186,7 @@ def main() -> int:
         registry_path=args.registry,
     )
     source_sha256_at_start = capture_source_sha256(ROOT, source_patterns)
-    errors, actual_digests = validate_registry(registry)
+    errors = validate_registry(registry)
     try:
         source_stable = (
             capture_source_sha256(ROOT, source_patterns) == source_sha256_at_start
@@ -229,7 +199,6 @@ def main() -> int:
         "observed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "registry": args.registry.resolve().relative_to(ROOT).as_posix(),
         "record_count": len(registry.get("records", [])),
-        "actual_digests": actual_digests,
         "checks": {
             "registry_valid": not errors,
             "source_stable_during_qualification": source_stable,

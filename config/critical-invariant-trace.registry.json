@@ -34,7 +34,6 @@
         ".venv/Scripts/python.exe -m pytest tests/planning tests/app/test_web_security.py -q",
         ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
       ],
-      "evidence_digest": "sha256:dd8203065837a84b9c0b01a7f4c8dde16e661ae3917bdbd247fb193f551d07d0",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -73,7 +72,6 @@
       "build_gate": [
         ".venv/Scripts/python.exe -m pytest tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
       ],
-      "evidence_digest": "sha256:26f7a4b9b175b1c99eb6f81a0b32a5fe299074fe91c9fe2cc0e3e8584f67a615",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -81,7 +79,7 @@
       "requirement_id": "CAP-AUTO-CHK-001/TWO_PHASE_LIMIT_AND_STOP_CHECK",
       "spec_source": [
         "docs/L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md",
-        "docs/L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md"
+        "docs/L3/HALPHA-CAP-002-activation-capital-and-action-checks.zh-CN.md"
       ],
       "delivery_horizon": "P0_REQUIRED",
       "implementation_paths": [
@@ -110,7 +108,6 @@
         ".venv/Scripts/python.exe -m pytest tests/capital -q",
         ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
       ],
-      "evidence_digest": "sha256:ea75247c2626a04ff8e3c542cdff348f4f88ee32419c4c092856392ef3039a73",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -149,7 +146,6 @@
       "build_gate": [
         ".venv/Scripts/python.exe -m pytest tests/runtime/test_windows_runtime.py tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
       ],
-      "evidence_digest": "sha256:19a0ae4a987001edd03d33f9f6f5e753463399662902115b063ff289981aec90",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -179,7 +175,6 @@
         ".venv/Scripts/python.exe -m pytest tests/app/test_web_security.py -q",
         "Playwright /operations static-dist-loss and shared-command qualification"
       ],
-      "evidence_digest": "sha256:57357620d3b807121880424bf46894b7417f6479b4d2cb38173fa2683558aa7c",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -200,7 +195,6 @@
       "build_gate": [
         "P0 construction validation keeps automatic continuation deferred"
       ],
-      "evidence_digest": "sha256:efe6db651a29b94a6f709128223dbf03cb26c1bb045735993e5bfbccbb7a7476",
       "implementation_status": "DEFERRED",
       "deviation_status": "NONE"
     }

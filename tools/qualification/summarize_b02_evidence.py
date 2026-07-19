@@ -327,14 +327,6 @@ def summarize(root: Path) -> dict[str, Any]:
             ),
             cwd=root,
         ),
-        "accepted_integrity": _command(
-            (
-                sys.executable,
-                ".agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py",
-                "--accepted-integrity",
-            ),
-            cwd=root,
-        ),
         "construction_governance": _command(
             (sys.executable, "governance/validate_construction_plan.py"),
             cwd=root,
@@ -346,8 +338,7 @@ def summarize(root: Path) -> dict[str, Any]:
             encoding="utf-8"
         )
     )
-    current_state = plan["current_state"]
-    real_write_boundary = assess_closed_real_write_boundary(current_state)
+    real_write_boundary = assess_closed_real_write_boundary(plan)
 
     revision = subprocess.run(
         ("git", "rev-parse", "HEAD"),

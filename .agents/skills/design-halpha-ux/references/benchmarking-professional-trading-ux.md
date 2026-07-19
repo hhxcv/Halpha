@@ -4,9 +4,9 @@
 
 Benchmark to understand professional interaction patterns, not to make Halpha look like another brand. Recheck current first-party material for every substantial redesign because product interfaces change.
 
-## Minimum Benchmark Set
+## Relevant Benchmark Set
 
-Select at least three relevant first-party products or standards:
+Select only the first-party products or standards needed to answer the current design question. A substantial redesign will often benefit from more than one; a local interaction question may need only one:
 
 - venue execution and position management, such as the current Binance Futures interface;
 - dense configurable workstation and activity monitoring, such as Interactive Brokers TWS/Mosaic;
@@ -31,7 +31,7 @@ Record observations with screenshots or links and compare these dimensions:
 | Dimension | Questions |
 |---|---|
 | User and task | Which expert job and time pressure does the pattern serve? |
-| Scan order | What is readable immediately? Treat 1-3 seconds as a prototype heuristic unless an accepted test owns the timing target. |
+| Scan order | What is readable immediately? Treat 1-3 seconds as a prototype heuristic unless a current test owns the timing target. |
 | Information density | How many useful comparable facts fit without becoming ambiguous? |
 | Spatial stability | Do positions, orders, risk, activity, and controls stay in predictable locations? |
 | Linked context | How does instrument or object selection update adjacent panels? |
@@ -42,15 +42,15 @@ Record observations with screenshots or links and compare these dimensions:
 | Risk guard | Preview, confirmation, consequence, reversibility, and emergency reachability |
 | Progressive disclosure | What remains visible; what moves to popovers, drawers, dialogs, tabs, or detail routes? |
 | Failure recovery | Whether errors are visible, explained, actionable, and persistent enough |
-| Customization | Whether expert efficiency depends on layouts; whether Halpha P0 can justify that complexity |
+| Customization | Whether expert efficiency depends on layouts and whether current Halpha use justifies that complexity |
 | Accessibility | Focus, contrast, non-color state, reduced motion, and readable density |
 
 For each borrowed pattern, record:
 
 1. the problem it solves;
-2. why the pattern fits Halpha's accepted semantics;
+2. why the pattern fits Halpha's current semantics;
 3. what must not be copied;
-4. the P0 complexity cost;
+4. the personal maintenance cost;
 5. the prototype state that will validate it.
 
 ## Halpha-Specific Interpretation
@@ -67,4 +67,4 @@ Borrow interaction qualities:
 - low-noise progressive disclosure;
 - explicit destructive or high-consequence confirmation.
 
-Reject copied capabilities that conflict with P0 non-goals or create another source of truth.
+Reject copied capabilities that conflict with current non-goals or create another source of truth.

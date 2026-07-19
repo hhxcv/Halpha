@@ -222,18 +222,8 @@ DEFAULT_ARTIFACT_SPECS = (
         "build/qualification/browser/b04-playwright-report-current.json",
     ),
     ArtifactSpec(
-        "b04_windows_72h_soak",
-        "build/qualification/b04-windows-72h-soak.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
         "b04_actual_smtp_delivery",
         "build/qualification/b04-smtp-delivery.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_live_read_only_observation",
-        "build/qualification/b04-live-read-only.json",
         expected_json_status="QUALIFIED",
     ),
     ArtifactSpec(

@@ -84,7 +84,6 @@ class CodeStrategyDefinition(BaseModel):
     display_name: str
     implementation_path: str
     implementation_digest: str
-    adapter_contract_version: str
     parameter_schema_version: str
     parameter_schema: dict[str, Any]
     native_indicators: tuple[str, ...]
@@ -158,7 +157,6 @@ def _definition() -> CodeStrategyDefinition:
         display_name="单次 Donchian 突破与 ATR 风险退出",
         implementation_path="halpha.planning.strategies.one_shot:OneShotDonchianAtrLogic",
         implementation_digest=_implementation_digest(),
-        adapter_contract_version="HALPHA-ALP-002@v0.5.0",
         parameter_schema_version=PARAMETER_SCHEMA_VERSION,
         parameter_schema=_parameter_schema(),
         native_indicators=(

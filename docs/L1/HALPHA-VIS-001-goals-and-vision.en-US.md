@@ -1,15 +1,10 @@
 # Halpha Goals and Vision
 
 **Document ID:** HALPHA-VIS-001  
-**Version:** v1.4.0  
-**Document Status:** ACCEPTED  
 **Level:** L1-B  
 **Language Edition:** en-US  
-**Joint Normative Set ID:** HALPHA-VIS-001@v1.4.0+20260715T190414+0800  
 **Paired Text:** HALPHA-VIS-001-goals-and-vision.zh-CN.md  
-**Joint Set Registry:** HALPHA-VIS-001-goals-and-vision.bundle.yaml  
-**Effective Time:** 2026-07-15T19:04:14+08:00  
-**Parent Documents:** HALPHA-CON-001 v2.9.0; HALPHA-DOC-001 v1.9.0  
+**Parent Documents:** HALPHA-CON-001 and HALPHA-DOC-001  
 **This Document Governs:** long-term product positioning, the target user (one User), problems and value, competitive boundaries, capability scope, macro capability dependencies, non-goals, and signals of directional failure  
 **This Document Does Not Govern:** redefinition of L0; specific workflows, runtime actors, interfaces, modules, states, technology, or current implementation
 ---
@@ -29,7 +24,7 @@ The long-term product positioning is based on this use context:
 - The User invests the User's own trading capital and bears the trading outcomes while using discretionary judgment, event analysis, and quantitative research.
 - Trading capital, construction resources, and the long-term maintenance burden are all at an individual scale and do not presume an institutional team, infrastructure, or organizational process.
 - Markets are intensely competitive and continually changing; obvious opportunities are exploited quickly, and historical effectiveness decays.
-- The User has no dedicated research, execution, risk, or operations team. Available time is limited and often fragmented; the User will observe cautiously and intervene frequently early on and MAY pay less attention as the product matures.
+- The User has no dedicated research, execution, risk, or operations team. Available time is limited and often fragmented; the User will observe cautiously and intervene frequently while confidence is low and MAY pay less attention when results are stable and boundaries are clear.
 - The User understands basic trading concepts, accepts necessary learning cost, and expects professional but not needlessly burdensome analysis, planning, and control.
 - The User is willing to state economic hypotheses, principal counterevidence, invalidation conditions, risk boundaries, plan conditions, and evaluation methods in advance and will also use exchanges, professional charts, news, data, research environments, and general-purpose AI tools.
 
@@ -37,7 +32,7 @@ The long-term product positioning is based on this use context:
 
 The product MUST use personal use as its design baseline and MUST NOT require the User to program, maintain data pipelines, handle internal state machines, or read system logs. Complexity MUST remain within what the User and Project Owner can understand, validate, operate, take over, recover, and exit. The product always serves the trading capital invested by one User; it does not target multiple users, multiple institutions, client-fund processes, or unattended operation that replaces User judgment.
 
-Product identity does not change with the project stage. L4 records actual markets, venues, accounts, instruments, time horizons, and the current stage. A capability adjustment that remains within the competitive boundary in section 5.3 and is not an expansion under `CON-NGL-001` does not require a change in product identity. An expansion that changes the party responsible for capital, the user model, operating model, trading time scale, commercial nature, or competitive structure MUST first be reviewed under the Constitution.
+Product identity does not change with current implementation scope, progress, or technology choices. L4 records actual markets, venues, accounts, instruments, time horizons, and current support scope. A capability adjustment that remains within the competitive boundary in section 5.3 and is not an expansion under `CON-NGL-001` does not require a change in product identity. An expansion that changes the party responsible for capital, the user model, operating model, trading time scale, commercial nature, or competitive structure MUST first be reviewed under the Constitution.
 
 # 2. Real Problems to Solve【VIS-PRB-001】
 
@@ -86,7 +81,7 @@ Data availability, fill assumptions, liquidity, and fees in research differ from
 
 ## 3.1 Definition of Product-Value Categories【VIS-VAL-001-DEF】
 
-Halpha has the following eight long-term product-value categories. They describe outcomes the product is to improve; they do not represent modules, runtime actors, or construction stages.
+Halpha has the following eight long-term product-value categories. They describe outcomes the product is to improve; they do not represent modules, runtime actors, implementation units, or sequence.
 
 | Value Source | Change the Product Is to Produce |
 |---|---|
@@ -99,7 +94,7 @@ Halpha has the following eight long-term product-value categories. They describe
 | Learning value | Use real plans, costs, and outcomes to determine whether evidence still supports an edge, eliminate poor practices, and improve the next judgment |
 | Financial-risk control value | Even when the system operates correctly, enforce the User-configured fund-use limit and scope and necessary pre-action checks so that Halpha does not exceed the allowed scope |
 
-“Execution,” “stability,” “system-risk mitigation,” and “financial-risk control” are distinct value categories. Unique real actions, duplicate prevention, correct state, and result reconciliation are basic functional correctness and MUST NOT be weakened because of a stage or capital size. Only L4 records the current implementation depth of each category.
+“Execution,” “stability,” “system-risk mitigation,” and “financial-risk control” are distinct value categories. Unique real actions, duplicate prevention, correct state, and result reconciliation are basic functional correctness and MUST NOT be weakened because of current implementation scope or capital size. Only L4 records each category's current support scope and actual investment.
 
 ## 3.2 Product-Value Requirements【VIS-VAL-001-REQ】
 
@@ -115,7 +110,7 @@ Planning, execution, UX, and stability MAY produce incremental product value bef
 
 ### Participant Boundary【VIS-OPS-001-DEF】
 
-Human roles and their capital, construction, and development responsibilities are inherited entirely from `CON-USR-001` and `CON-USR-002`; VIS does not redefine them. At the product level, only these relationships are fixed: the User makes product-use and capital-control decisions; the Project Owner decides project construction and bears maintenance cost; Halpha provides continuous analysis, planning, observation, execution, and learning within accepted rules and User decisions; and external systems and tools provide facts, computation, research, or venue capabilities. ARC, SYS, and subordinate design own runtime actors, processes, and module boundaries.
+Human roles and their capital, construction, and development responsibilities are inherited entirely from `CON-USR-001` and `CON-USR-002`; VIS does not redefine them. At the product level, only these relationships are fixed: the User makes product-use and capital-control decisions; the Project Owner decides project construction and bears maintenance cost; Halpha provides continuous analysis, planning, observation, execution, and learning within current applicable rules and User decisions; and external systems and tools provide facts, computation, research, or venue capabilities. ARC, SYS, and subordinate design own runtime actors, processes, and module boundaries.
 
 ### Participant Requirements【VIS-OPS-001-REQ】
 
@@ -125,13 +120,13 @@ Development activity and output from an external tool or AI MUST NOT be treated 
 
 ### Basis for Selecting the Semi-Automated Form【VIS-OPS-001-RAT】
 
-A User trading plan MAY originate in the User's own judgment or incorporate strategies and analysis generated or improved by Halpha. Machine watchkeeping, event triggers, and User confirmation can form a complete product. For highly uncertain or weakly evidenced opportunities, per-action human judgment MAY remain preferable to system-initiated action over the long term. FLOW, CAP, TRADEPLAN, and EXE define specific authorization paths, time limits, and action conditions.
+A User trading plan MAY originate in the User's own judgment or incorporate strategies and analysis generated or improved by Halpha. A complete product can consist of the User configuring and explicitly activating a bounded plan, followed by machine watchkeeping, triggering, checks, and execution. For highly uncertain or weakly evidenced opportunities, the User may decline activation, narrow the plan, or continue research; Halpha does not add a per-action authorization path for that purpose. FLOW, CAP, TRADEPLAN, and EXE define specific time limits and action conditions.
 
 ## 4.3 Halpha Real Actions Must Conform to the User-Configured Fund-Use Limit, Scope, and Authority
 
-Halpha MUST NOT raise the fund-use limit, expand its scope, increase real-capital operating authority, or restore a stopped capability merely because a strategy is stronger, profit is higher, operation is more automated, or a stage is more mature. Halpha does not decide the User's total investment outside the system; the fund-use limit and scope and real-capital operating authority inside the system retain their L0 and CAP meanings.
+Halpha MUST NOT raise the fund-use limit, expand its scope, increase real-capital operating authority, or restore a stopped capability merely because a strategy is stronger, profit is higher, operation is more automated, or it has been used longer. Halpha does not decide the User's total investment outside the system; the fund-use limit and scope and real-capital operating authority inside the system retain their L0 and CAP meanings.
 
-Halpha's long-term product form permits the User to confirm a current action and also to enable explicit and bounded in-plan action in advance. Contraction actions such as protection, cancellation, and risk reduction MUST NOT be broadened into a capability to add risk. Only FLOW and the applicable L2/L3 own action eligibility, authorization, states, checks, and reconciliation; VIS does not restate them.
+Halpha's long-term product form uses one explicit plan activation to enable bounded in-plan action, while the User may stop, exit, or take over through an official venue interface at any time. Contraction actions such as protection, cancellation, and risk reduction MUST NOT be broadened into a capability to add risk. Only FLOW and the applicable L2/L3 own action conditions, checks, and reconciliation; VIS does not restate them.
 
 ## 4.4 Product Boundary in a Multi-Tool Environment
 
@@ -180,7 +175,7 @@ Halpha gives priority to investigating opportunities with these structures:
 - The candidate edge MAY remain viable after realistic information availability, decision and execution constraints, cost, liquidity, and risk.
 - Research, operation, maintenance, takeover, and exit can be sustained by one User and the Project Owner.
 
-Within these conditions, Halpha SHOULD expand its verifiable capability scope and MUST NOT permanently exclude a holding horizon, trading frequency, or strategy family merely because early project capability is limited. Each specific opportunity still MUST be falsified and evaluated under ex ante definitions; it cannot be inferred directly from the project's personal nature or assumptions about institutional behavior.
+Within these conditions, Halpha SHOULD expand its verifiable capability scope and MUST NOT permanently exclude a holding horizon, trading frequency, or strategy family merely because current capability is limited. Each specific opportunity still MUST be falsified and evaluated under ex ante definitions; it cannot be inferred directly from the project's personal nature or assumptions about institutional behavior.
 
 ### Structurally Disadvantaged Competitive Directions
 
@@ -212,7 +207,7 @@ The following are long-term capabilities the product MUST be able to combine inc
 
 ## 6.2 Capability-Implementation Requirements【VIS-CAP-001-REQ】
 
-These capabilities need not all exist in the same stage and need not be built as separate modules. Capabilities required by a current consumer MUST form a usable loop; remaining capabilities MAY retain only a boundary, use an external tool, be handled manually, or be explicitly unsupported.
+These capabilities need not exist simultaneously and need not be built as separate modules. Capabilities required by a current consumer MUST form a usable loop; remaining capabilities MAY retain only a boundary, use an external tool, be handled manually, or be explicitly unsupported.
 
 Proportionate stability is a common quality constraint, not a separate User work domain or high-investment product line. Mature components, few dependencies, and simple deployment are preferred; core data and execution semantics MUST ensure correct real actions. AI MAY generate hypotheses, research implementations, and counterevidence, but it cannot be economic evidence, change an evaluation definition, delete failures, or strengthen its own conclusion on the basis of its own output.
 
@@ -237,28 +232,22 @@ Halpha SHOULD enable the User to:
 - Understand the accounts, funds, orders, positions, protection, differences, and unknowns relevant to a trading decision.
 - Act through a plan containing a thesis, counterevidence, invalidation conditions, risk, and the fund-use limit and scope.
 - Complete frequent analysis, decisions, review, stopping, and manual takeover in few steps.
-- Receive prioritized reminders and clear state both while observing cautiously early on and while paying less attention as the product matures.
+- Receive prioritized reminders and clear state both while observing cautiously and while paying less attention.
 - Experience reliable core operation, understandable recovery after failure, and no duplicated real action.
 - Explain real costs, outcomes, and product contribution and honestly eliminate invalid candidate edges and strategies.
 - Form Alpha for a bounded applicability scope when evidence supports it and down-weight, pause, and replace a decaying edge.
 
 The first six outcomes MAY create incremental product value before investment Alpha exists. No outcome automatically raises the fund-use limit, expands its scope, or increases Halpha real-capital operating authority.
 
-# 9. Long-Term Capability Dependencies【VIS-PHS-001】
+# 9. Long-Term Capability Coordination【VIS-DEP-001】
 
-## 9.1 Capability-Coordination Requirements【VIS-PHS-001-REQ】
+## 9.1 Capability-Coordination Requirements【VIS-DEP-001-REQ】
 
 The core trading and UX loop MAY be built in parallel with Alpha research and forward evidence; the two kinds of real use MAY expose problems in each other. Research MUST NOT treat complex infrastructure as a prerequisite. Execution and UX MUST be validated by real business scenarios. Halpha MUST NOT automatically initiate a profit-seeking real action that introduces, increases, or transforms risk before a complete plan, functional correctness, User capital control, and economic evidence proportionate to that action exist. Contraction actions that protect, cancel, or reduce existing risk remain governed by the permitted sources and unified action chain in FLOW; this requirement MUST NOT reinterpret them as risk-increasing actions. Proportionate stability is obtained with the core chain rather than through a parallel stability product line.
 
-# 10. Ownership of the Current Construction Order【VIS-EVO-001】
+# 10. Long-Term Non-Goals and Complexity Constraints【VIS-NGL-001】
 
-## 10.1 Construction-Order Requirements【VIS-EVO-001-REQ】
-
-Only the current L4 plan records the current stage, stage identifier, milestone content, completion state, and next step. In that plan, the Project Owner orders work by trading value, UX, actual failures, cost, dependencies, and maintenance capacity. Feature count MUST NOT represent progress, and a stage status MUST NOT raise the fund-use limit, expand its scope, or increase real-capital operating authority.
-
-# 11. Long-Term Non-Goals and Constraints Shared by All Stages【VIS-NGL-001】
-
-## 11.1 Long-Term Non-Goals
+## 10.1 Long-Term Non-Goals
 
 This document inherits all project-level non-goals in `CON-NGL-001` and does not redefine them. In addition, these product forms are not long-term Halpha objectives:
 
@@ -270,17 +259,17 @@ This document inherits all project-level non-goals in `CON-NGL-001` and does not
 - An institutional risk engine, multi-level production admission, heavyweight incident process, enterprise security platform, or governance system requiring a dedicated team.
 - Proving success by trade count, strategy count, backtest count, alert count, code volume, or feature count.
 
-## 11.2 Constraints Shared by All Stages
+## 10.2 Long-Term Complexity Constraints
 
-- Each stage closes real value only within bounded markets, accounts, strategies, and data. Halpha does not decide the User's total investment outside the system.
+- Halpha closes real value only within explicit and bounded markets, accounts, strategies, and data. Halpha does not decide the User's total investment outside the system.
 - Mature tools are preferred for horizontal professional capabilities. Halpha adds only product capabilities needed to preserve continuity among judgment, plans, actions, reconciliation, and evidence.
 - Account facts, actual costs, and reconciliation MUST NOT be deferred. A candidate edge MUST allow falsification, down-weighting, and exit.
-- L1 breadth describes the long-term value loop and prevents responsibility omissions; it does not promise equal deepening, automation, or investment across domains. L4 records current depth and support scope. Horizontal business responsibilities and vertical constraints need not become separate modules.
+- L1 breadth describes the long-term value loop and prevents responsibility omissions; it does not promise equal automation or investment across domains. L4 records current support scope and actual investment. Horizontal business responsibilities and vertical constraints need not become separate modules.
 - Complexity and maintenance attention go first to ALP, TRADEPLAN, DAT, EXE, and UX. The individual and combined burden of CAP, SYS, ENG, security, governance, documentation, and other supporting capabilities MUST NOT exceed their actual benefit to the core business or create a system thicker than the core trading chain.
 - A domain MAY control complexity by narrowing support scope, reducing variants and generalization, or using manual or external implementation. Functional correctness, stopping, reconciliation, and the User's final control on a supported path MUST NOT be weakened as a result.
 - An idealized loop MUST NOT justify prebuilding institutional processes, platforms, or infrastructure. A security claim that persistently crowds out trading capability, UX, and reliable operation is itself a directional failure.
 
-# 12. Signals of Directional Failure【VIS-FAL-001】
+# 11. Signals of Directional Failure【VIS-FAL-001】
 
 The direction or its claims SHOULD be reviewed or narrowed when any of these conditions persists:
 
@@ -296,8 +285,8 @@ The direction or its claims SHOULD be reviewed or narrowed when any of these con
 
 The last condition means that the Alpha claim remains unestablished; it does not negate other product value already created.
 
-# 13. Handoff to Subordinate Design【VIS-HOF-001】
+# 12. Handoff to Subordinate Design【VIS-HOF-001】
 
 HALPHA-FLOW-001 MUST turn this document's value dependencies into repeatable product-level paths covering action, no action or waiting, unknown facts, failure, stopping, manual takeover, recovery, and end, and MUST make handoffs among Halpha, the User, and external tools explicit. FLOW MUST NOT treat section 7 as fixed steps or an object state machine.
 
-HALPHA-ARC-001 MUST prioritize support for replaceable Alpha and competitiveness capabilities, smooth UX, reliable data and execution, and personally maintainable stable operation obtained through mature components, a simple topology, and few dependencies. The real-action path MUST implement financial-risk control, functional correctness, and system-risk mitigation separately. Evidence from the complete chain MUST demonstrate actual support scope; strategy name, holding period, document completion, or stage name MUST NOT be used to infer it.
+HALPHA-ARC-001 MUST prioritize support for replaceable Alpha and competitiveness capabilities, smooth UX, reliable data and execution, and personally maintainable stable operation obtained through mature components, a simple topology, and few dependencies. The real-action path MUST implement financial-risk control, functional correctness, and system-risk mitigation separately. Results from the complete chain MUST demonstrate actual support scope; strategy name, holding period, document completion, or a current implementation label MUST NOT be used to infer it.

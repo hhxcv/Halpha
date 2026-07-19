@@ -4,7 +4,7 @@
 
 Design a modern professional trading workbench, not a SaaS landing page, OA portal, generic admin dashboard, or decorative crypto product.
 
-Follow `HALPHA-UX-001#UX-VIS-001`: professionalism comes from accurate semantics, comparison, and traceable context, not from density, jargon, or action count. Compactness is a means only when it improves the accepted task outcome.
+Follow `HALPHA-UX-001#UX-VIS-001`: professionalism comes from accurate semantics, comparison, and traceable context, not from density, jargon, or action count. Compactness is a means only when it improves the current task outcome.
 
 Use Apple-like component discipline rather than consumer-product imitation:
 
@@ -15,7 +15,7 @@ Use Apple-like component discipline rather than consumer-product imitation:
 - clear typography and calm surfaces;
 - one primary emphasis per decision region.
 
-Do not add gradients, glass effects, large decorative illustrations, oversized cards, badge clouds, marketing copy, or excessive whitespace. Use the accepted theme and one coherent density; do not add multiple themes in P0 unless explicitly accepted.
+Do not add gradients, glass effects, large decorative illustrations, oversized cards, badge clouds, marketing copy, excessive whitespace or multiple themes without a current user need.
 
 ## Dense Without Crowded
 
@@ -32,11 +32,11 @@ Increase value per viewport through structure, not by shrinking everything indis
 
 Measure density with useful facts, comparisons, and reachable actions per viewport. A visually sparse screen that forces drawers for position, order, protection, or current command state is under-dense. A screen that presents many unrelated facts without alignment or priority is crowded.
 
-## Accepted Information Layers
+## Current Information Layers
 
 Map every item to the four semantic layers owned by `HALPHA-UX-001#UX-INF-001` before choosing a component:
 
-| Accepted layer | Default presentation |
+| Current layer | Default presentation |
 |---|---|
 | Conclusion | Show the current state, worthwhile or mandatory action, and time limit in the primary scan path. |
 | Decision | Show the change, capital consequence, strongest support and counterevidence, decision-changing unknowns, and available options when deciding. |
@@ -47,7 +47,7 @@ Quick viewing normally stays in conclusion and decision. Critical counterevidenc
 
 ## Visual Carrier Annotation
 
-After the accepted semantic mapping, annotate one visual carrier for each item. These carriers are layout decisions, not another information taxonomy, page type, or persisted state.
+After the current semantic mapping, annotate one visual carrier for each item. These carriers are layout decisions, not another information taxonomy, page type, or persisted state.
 
 ### Always Visible
 
@@ -90,7 +90,7 @@ Do not hide essential semantics merely to achieve a clean screenshot. Progressiv
 
 ## Component and Layout Heuristics
 
-Use these as prototype starting points, not acceptance requirements or replacements for accepted L4 theme variables:
+Use these as prototype starting points, not acceptance requirements or replacements for current L4 theme variables:
 
 - compact desktop controls and rows around 32-40 px where accessibility remains intact;
 - 8-16 px internal spacing for dense regions and larger separation only between task domains;

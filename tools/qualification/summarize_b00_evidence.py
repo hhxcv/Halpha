@@ -9,9 +9,6 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 
-import yaml
-
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
@@ -181,23 +178,6 @@ def _actual_account_check(funding: dict[str, object]) -> tuple[bool, dict[str, o
 
 
 def _evaluate() -> dict[str, object]:
-    plan_path = (
-        REPOSITORY_ROOT
-        / "docs"
-        / "L4"
-        / "HALPHA-PLAN-001-current-construction-plan.yaml"
-    )
-    plan = yaml.safe_load(
-        plan_path.read_text(encoding="utf-8"),
-    )
-    accepted_b00_status = plan.get("dependency_qualification_gate", {}).get(
-        "status",
-        "UNKNOWN",
-    )
-    accepted_d00_status = plan.get("design_formalization_gate", {}).get(
-        "status",
-        "UNKNOWN",
-    )
     offline = {
         "venv": _run_json_probe("tools/qualification/verify_venv.py"),
         "components": _run_json_probe("tools/qualification/verify_components.py"),
@@ -489,11 +469,6 @@ def _evaluate() -> dict[str, object]:
         "required_output_count": len(required_outputs),
         "required_outputs": required_outputs,
         "account_configuration_evaluation": account_evaluation,
-        "accepted_plan_state": {
-            "B00": accepted_b00_status,
-            "D00": accepted_d00_status,
-            "source": _file_evidence(plan_path),
-        },
         "source_evidence_statuses": source_statuses,
         "source_evidence_files": source_files,
         "qualified_artifact": {
@@ -515,25 +490,6 @@ def _evaluate() -> dict[str, object]:
             "close_position_used": False,
             "proxy_address_or_port_persisted": False,
         },
-        "construction_after_b00": (
-            "BLOCKED_BY_D00_UPSTREAM_CONFLICT"
-            if accepted_d00_status != "ALIGNED"
-            else "GOVERNED_BY_ACCEPTED_CONSTRUCTION_PLAN"
-        ),
-        "normative_plan_update_required": accepted_b00_status != "QUALIFIED",
-        "normative_handoff": {
-            "target": (
-                "docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml"
-            ),
-            "recommended_b00_status_from_local_evidence": "QUALIFIED",
-            "recommended_qualification_progress": (
-                "QUALIFIED_ALL_REQUIRED_OUTPUTS"
-            ),
-            "preserve_d00_status": accepted_d00_status,
-            "preserve_runtime_real_write_gate": "CLOSED",
-            "do_not_authorize_b01_until_d00_aligned": True,
-            "document_owner_review_required": True,
-        },
         "errors": failed_outputs,
         "status": "QUALIFIED" if not failed_outputs else "REJECTED",
     }
@@ -541,7 +497,7 @@ def _evaluate() -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Summarize all accepted L4 B00 qualification outputs.",
+        description="Summarize the recorded L4 B00 qualification outputs.",
     )
     parser.add_argument("--evidence-path", type=Path, default=DEFAULT_EVIDENCE_PATH)
     args = parser.parse_args()

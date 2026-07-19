@@ -1,10 +1,9 @@
 {
-  "registry_digest": "c2a831bc6fb656d6d83038fb671300016ff8cb8e09fa9f3124450a3f4404185b",
+  "registry_digest": "e5925c3901da1a80312b338f8fbcd017ee22b54618b2b63014d28704e8391852",
   "registry_kind": "STATIC_BUILD_ARTIFACT",
   "schema_version": 1,
   "strategies": [
     {
-      "adapter_contract_version": "HALPHA-ALP-002@v0.5.0",
       "allowed_action_profiles": [
         "ENTRY_MARKET",
         "PROTECTIVE_STOP_REDUCE_ONLY",
