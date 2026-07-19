@@ -48,7 +48,7 @@ For work that may outlive the current view and cannot be represented by the owni
 - show determinate progress only when backed by real units;
 - allow cancellation only when semantically safe;
 - explain consequences before cancelling work that has partial effects;
-- notify completion or failure in context and through the documented Task/notification path when required.
+- show completion or failure on the owning result surface and use the currently configured delivery channel only when required.
 
 Avoid indefinite unlabeled spinners. If progress stalls, transition to a visible waiting, delayed, failed, or unknown state rather than silently continuing animation.
 

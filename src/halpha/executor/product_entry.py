@@ -34,21 +34,24 @@ from pydantic import SecretStr
 
 from halpha.capital.checks import effective_leverage
 from halpha.capital.models import (
+    ActivationCapitalBoundary,
     ActionCheckInput,
     AuthorityClass,
     EnvironmentKind,
-    PlanAllocation,
     RiskClass,
     StopCategory,
 )
 from halpha.domain_values import canonical_decimal, content_digest
 from halpha.planning.bar_evaluation import EntrySizingSnapshot
+from halpha.planning.models import PlanActivation
 from halpha.planning.registry import Direction
 from halpha.planning.strategies.one_shot import (
     InstrumentQuantityRules,
     StrategyProposal,
 )
 from halpha.venue_integration.models import ExecutionActionState
+
+from .responsibilities import ProductRiskReductionFacts
 
 
 MAX_STREAM_FACT_AGE_NS = 3_000_000_000
@@ -110,7 +113,7 @@ class ProductAccountFacts:
             account_ref=account_ref,
             instrument_ref=_instrument_ref(proposal.instrument_id),
             action_profile=proposal.action_profile,
-            control_category=StopCategory.NEW_FUNDING,
+            control_category=StopCategory.NEW_RISK,
             risk_class=RiskClass.RISK_INCREASING,
             checked_at=self.checked_at,
             quantized_quantity=proposal.quantity,
@@ -271,7 +274,7 @@ def build_live_entry_sizing_snapshot(
     tracker: LiveEntryFactTracker,
     instrument: object,
     account: object,
-    allocation: PlanAllocation,
+    boundary: ActivationCapitalBoundary,
 ) -> EntrySizingSnapshot:
     try:
         leverage_value = getattr(account, "leverage")(
@@ -295,9 +298,9 @@ def build_live_entry_sizing_snapshot(
                 if direction is Direction.LONG
                 else "BINANCE_MARK_AND_TOP_OF_BOOK_BID"
             ),
-            max_allowed_loss=allocation.max_allowed_loss,
-            max_notional=allocation.max_notional,
-            max_margin=allocation.max_margin,
+            max_allowed_loss=boundary.max_allowed_loss,
+            max_notional=boundary.max_notional,
+            max_margin=boundary.max_margin,
             effective_leverage=canonical_decimal(leverage),
             taker_fee_rate=canonical_decimal(
                 Decimal(str(getattr(instrument, "taker_fee")))
@@ -337,6 +340,126 @@ class ProductPreSubmitFactProvider:
             raise ProductPreSubmitRejected(
                 f"ACCOUNT_FACT_INVALID_{type(exc).__name__.upper()}"
             ) from None
+
+    async def risk_reduction_facts(
+        self,
+        activation: PlanActivation,
+    ) -> ProductRiskReductionFacts:
+        """Refresh the smaller fact set required by reduce-only responsibilities."""
+
+        try:
+            return await self._load_risk_reduction_facts(activation)
+        except ProductPreSubmitRejected:
+            raise
+        except Exception as exc:
+            raise ProductPreSubmitRejected(
+                f"ACCOUNT_FACT_INVALID_{type(exc).__name__.upper()}"
+            ) from None
+
+    async def _load_risk_reduction_facts(
+        self,
+        activation: PlanActivation,
+    ) -> ProductRiskReductionFacts:
+        environment = (
+            BinanceEnvironment.DEMO
+            if self._profile == "BINANCE_DEMO"
+            else BinanceEnvironment.LIVE
+        )
+        client = get_cached_binance_http_client(
+            clock=self._node.kernel.clock,
+            account_type=BinanceAccountType.USDT_FUTURES,
+            api_key=self._api_key.get_secret_value(),
+            api_secret=self._api_secret.get_secret_value(),
+            key_type=BinanceKeyType.HMAC,
+            base_url=None,
+            environment=environment,
+            is_us=False,
+            proxy_url=self._proxy_url,
+        )
+        account_api = BinanceFuturesAccountHttpAPI(
+            client,
+            self._node.kernel.clock,
+            BinanceAccountType.USDT_FUTURES,
+        )
+        market_api = BinanceFuturesMarketHttpAPI(
+            client,
+            BinanceAccountType.USDT_FUTURES,
+        )
+        symbol = _binance_symbol(f"{activation.instrument_ref}.BINANCE")
+        started_at = datetime.now(UTC)
+        try:
+            account_info, symbol_configs, positions, book_tickers, mark_snapshot = (
+                await asyncio.wait_for(
+                    asyncio.gather(
+                        account_api.query_futures_account_info(recv_window="5000"),
+                        account_api.query_futures_symbol_config(
+                            symbol=symbol,
+                            recv_window="5000",
+                        ),
+                        account_api.query_futures_position_risk(recv_window="5000"),
+                        market_api.query_ticker_book(symbol=symbol),
+                        _query_current_mark_price(client, symbol),
+                    ),
+                    timeout=float(MAX_QUERY_WINDOW_SECONDS),
+                )
+            )
+        except ProductPreSubmitRejected:
+            raise
+        except Exception as exc:
+            raise ProductPreSubmitRejected(
+                f"ACCOUNT_FACT_QUERY_FAILED_{type(exc).__name__.upper()}"
+            ) from None
+        checked_at = datetime.now(UTC)
+        if Decimal(str((checked_at - started_at).total_seconds())) > MAX_QUERY_WINDOW_SECONDS:
+            raise ProductPreSubmitRejected("ACCOUNT_FACT_QUERY_STALE")
+        if not bool(account_info.canTrade):
+            raise ProductPreSubmitRejected("ACCOUNT_TRADING_DISABLED")
+        symbol_config = next(
+            (item for item in symbol_configs if item.symbol == symbol),
+            None,
+        )
+        if symbol_config is None:
+            raise ProductPreSubmitRejected("SYMBOL_CONFIGURATION_UNKNOWN")
+        margin_mode = str(symbol_config.marginType).upper()
+        leverage = canonical_decimal(Decimal(str(symbol_config.leverage)))
+        try:
+            current_effective = effective_leverage(margin_mode, leverage)
+        except ValueError:
+            raise ProductPreSubmitRejected("ACCOUNT_LEVERAGE_UNKNOWN") from None
+        book = next(
+            (item for item in book_tickers if item.symbol == symbol),
+            None,
+        )
+        if book is None:
+            raise ProductPreSubmitRejected("TOP_OF_BOOK_UNKNOWN")
+        bid = Decimal(str(book.bidPrice))
+        ask = Decimal(str(book.askPrice))
+        if bid <= 0 or ask <= 0 or bid > ask:
+            raise ProductPreSubmitRejected("TOP_OF_BOOK_INVALID")
+        mark, mark_time = mark_snapshot
+        mark_age = Decimal(str((checked_at - mark_time).total_seconds()))
+        if mark_age < Decimal("-2") or mark_age > MAX_QUERY_WINDOW_SECONDS:
+            raise ProductPreSubmitRejected("MARK_PRICE_STALE")
+        conservative_price = max(mark, bid, ask)
+        current_abs = _symbol_abs_position(symbol=symbol, positions=positions)
+        activation_notional = current_abs * conservative_price
+        account_notional = sum(
+            (_position_notional(item) for item in positions),
+            Decimal("0"),
+        )
+        return ProductRiskReductionFacts(
+            checked_at=checked_at,
+            conservative_price=canonical_decimal(conservative_price),
+            available_margin=canonical_decimal(_available_margin(account_info)),
+            actual_margin_mode=margin_mode,
+            actual_leverage=leverage,
+            activation_current_notional=canonical_decimal(activation_notional),
+            account_current_notional=canonical_decimal(account_notional),
+            activation_current_margin=canonical_decimal(
+                activation_notional / current_effective
+            ),
+            current_abs_position=canonical_decimal(current_abs),
+        )
 
     async def _load_facts(self, proposal: StrategyProposal) -> ProductAccountFacts:
         context = proposal.entry_risk_context
@@ -767,6 +890,20 @@ def _position_notional(position: object) -> Decimal:
     )
 
 
+def _symbol_abs_position(*, symbol: str, positions: object) -> Decimal:
+    try:
+        return sum(
+            (
+                abs(Decimal(str(getattr(item, "positionAmt"))))
+                for item in positions
+                if str(getattr(item, "symbol")) == symbol
+            ),
+            Decimal("0"),
+        )
+    except (AttributeError, InvalidOperation, TypeError, ValueError):
+        raise ProductPreSubmitRejected("POSITION_FACT_INVALID") from None
+
+
 def _require_flat_entry_scope(
     *,
     symbol: str,
@@ -777,16 +914,7 @@ def _require_flat_entry_scope(
     """Reject a first entry when the instrument already has external responsibility."""
 
     try:
-        symbol_positions = [
-            item for item in positions if str(getattr(item, "symbol")) == symbol
-        ]
-        current_abs = sum(
-            (
-                abs(Decimal(str(getattr(item, "positionAmt"))))
-                for item in symbol_positions
-            ),
-            Decimal("0"),
-        )
+        current_abs = _symbol_abs_position(symbol=symbol, positions=positions)
     except (AttributeError, InvalidOperation, TypeError, ValueError):
         raise ProductPreSubmitRejected("ENTRY_POSITION_FACT_INVALID") from None
     if current_abs != 0:

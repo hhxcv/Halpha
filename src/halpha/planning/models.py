@@ -200,8 +200,6 @@ class PlanActivation(PlanningModel):
     environment_kind: EnvironmentKind
     authority_class: AuthorityClass
     plan_version_ref: str
-    authorization_version_ref: str
-    allocation_ref: str
     account_ref: str
     instrument_ref: str
     direction: Direction

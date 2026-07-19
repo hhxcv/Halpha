@@ -1,4 +1,4 @@
-"""Authenticated App boundary for OUT review and handoff operations."""
+"""App boundary for OUT review operations."""
 
 from __future__ import annotations
 
@@ -23,10 +23,7 @@ class ReviewRefreshPayload(OutcomeApiModel):
 
 class ReviewCompletionPayload(OutcomeApiModel):
     expected_version: int = Field(gt=0)
-    owner_password: str
     evaluations: dict[str, dict[str, Any]]
-    issues: tuple[dict[str, Any], ...] = ()
-    no_improvement_reason: str | None = None
 
 
 class OutcomesApiUnavailable(RuntimeError):
@@ -97,25 +94,11 @@ class PostgreSQLOutcomesApi:
         self, review_id: str, payload: ReviewCompletionPayload
     ) -> dict[str, Any]:
         with self._connect() as connection, connection.transaction():
-            review, handoffs = OutcomeApplicationService(
+            review = OutcomeApplicationService(
                 connection, self._environment_id
             ).complete_activation_review(
                 review_id,
                 expected_version=payload.expected_version,
                 evaluations=payload.evaluations,
-                issues=payload.issues,
-                no_improvement_reason=payload.no_improvement_reason,
-                observed_at=datetime.now(UTC),
             )
-            return {
-                "review": review.model_dump(mode="json"),
-                "improvement_handoffs": [
-                    item.model_dump(mode="json") for item in handoffs
-                ],
-            }
-
-    def list_handoffs(self, target_owner: str | None) -> list[dict[str, Any]]:
-        with self._connect() as connection, connection.transaction():
-            return OutcomeApplicationService(
-                connection, self._environment_id
-            ).list_improvement_handoffs(target_owner)
+            return {"review": review.model_dump(mode="json")}

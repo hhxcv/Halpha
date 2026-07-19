@@ -1,5 +1,5 @@
 # Halpha
 
-Halpha is a single-owner trading decision, execution, and learning workbench. The current repository is under P0 construction; capability and environment status are governed by `docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml`.
+Halpha 是由单一所有者维护的交易决策、执行与学习工作台。开发采用连续、可验证的小步迭代；当前焦点和环境事实记录在 `docs/L4/HALPHA-PLAN-001-current-plan.yaml`。
 
-Use the repository `.venv` created from Python 3.13.14 for every dependency, test, build, and runtime command. Passing tests or producing a build does not enable real-money writes.
+依赖、测试、构建和运行命令统一使用由 Python 3.13.14 创建的仓库 `.venv`。测试通过或生成产品构建不允许系统自行发起真实账户交易动作。

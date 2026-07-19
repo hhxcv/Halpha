@@ -26,7 +26,7 @@ from tools.qualification.strategy_logic_fixture import OneShotQualificationLogic
 
 
 class QualificationController(Controller):
-    """Minimal public Controller used only by the B00 lifecycle fixture."""
+    """Minimal public Controller used only by the DIRECT lifecycle fixture."""
 
     def __init__(self, trader, config: ControllerConfig | None = None) -> None:
         super().__init__(trader=trader, config=config)
@@ -45,7 +45,7 @@ class LiveProposalQualificationStrategy(Strategy):
     def __init__(self, config: StrategyConfig | None = None) -> None:
         super().__init__(config=config)
         self.logic = OneShotQualificationLogic(
-            activation_id="B00-LIVE-HARNESS-ACTIVATION-001",
+            activation_id="DIRECT-LIVE-HARNESS-ACTIVATION-001",
             instrument_id="BTCUSDT-PERP.BINANCE",
         )
         self.proposals: list[dict[str, str]] = []
@@ -61,7 +61,7 @@ class LiveProposalQualificationStrategy(Strategy):
 
 
 class MarketDataQualificationStrategy(Strategy):
-    """B00-only fixture for public historical and live Binance data APIs."""
+    """DIRECT-only fixture for public historical and live Binance data APIs."""
 
     REQUEST_SAFE_SECOND = 30
 
@@ -122,7 +122,7 @@ class MarketDataQualificationStrategy(Strategy):
             self.request_deferred_seconds = self.REQUEST_SAFE_SECOND - now.second
             self.sequence.append("DEFER_HISTORY_TO_SAFE_SECOND")
             self.clock.set_time_alert(
-                name="B00_MARKET_HISTORY_SAFE_SECOND",
+                name="DIRECT_MARKET_HISTORY_SAFE_SECOND",
                 alert_time=request_at,
                 callback=self._begin_history_requests,
                 allow_past=False,
@@ -323,7 +323,7 @@ class MarketDataQualificationStrategy(Strategy):
 
 
 class BacktestQualificationStrategy(Strategy):
-    """B00-only adapter proving one-shot proposal, fill, fee, and close behavior."""
+    """DIRECT-only adapter proving one-shot proposal, fill, fee, and close behavior."""
 
     def __init__(
         self,
@@ -336,7 +336,7 @@ class BacktestQualificationStrategy(Strategy):
         self.instrument_id = instrument_id
         self.bar_type = bar_type
         self.logic = OneShotQualificationLogic(
-            activation_id="B00-BACKTEST-ACTIVATION-001",
+            activation_id="DIRECT-BACKTEST-ACTIVATION-001",
             instrument_id=str(instrument_id),
         )
         self.proposals: list[dict[str, str]] = []
@@ -393,7 +393,7 @@ class BacktestQualificationStrategy(Strategy):
 
 
 class DemoOrderCapabilityStrategy(Strategy):
-    """B00-only public-API probe for one ordinary and one algo order round trip."""
+    """DIRECT-only public-API probe for one ordinary and one algo order round trip."""
 
     CANCEL_DELAY_SECONDS = 2
     QUERY_DELAY_SECONDS = 0.5
@@ -458,7 +458,7 @@ class DemoOrderCapabilityStrategy(Strategy):
     def _schedule_query(self, profile: str) -> None:
         now = datetime.fromtimestamp(self.clock.timestamp_ns() / 1_000_000_000, tz=timezone.utc)
         self.clock.set_time_alert(
-            name=f"B00_QUERY_{profile}",
+            name=f"DIRECT_QUERY_{profile}",
             alert_time=now + timedelta(seconds=self.QUERY_DELAY_SECONDS),
             callback=lambda _event, used_profile=profile: self._query_profile(used_profile),
             allow_past=False,
@@ -476,7 +476,7 @@ class DemoOrderCapabilityStrategy(Strategy):
     def _schedule_cancel(self, profile: str) -> None:
         now = datetime.fromtimestamp(self.clock.timestamp_ns() / 1_000_000_000, tz=timezone.utc)
         self.clock.set_time_alert(
-            name=f"B00_CANCEL_{profile}",
+            name=f"DIRECT_CANCEL_{profile}",
             alert_time=now + timedelta(seconds=self.CANCEL_DELAY_SECONDS),
             callback=lambda _event, used_profile=profile: self._cancel_profile(used_profile),
             allow_past=False,
@@ -572,7 +572,7 @@ class DemoOrderCapabilityStrategy(Strategy):
 
 
 class DemoRestartSeedStrategy(Strategy):
-    """B00-only fixture which leaves exact far-away orders open across one restart."""
+    """DIRECT-only fixture which leaves exact far-away orders open across one restart."""
 
     def __init__(self, config: StrategyConfig | None = None) -> None:
         super().__init__(config=config)
@@ -657,7 +657,7 @@ class DemoRestartSeedStrategy(Strategy):
 
 
 class DemoExternalOrderRecoveryStrategy(Strategy):
-    """B00-only fixture for canceling one reconciled external order via Strategy API."""
+    """DIRECT-only fixture for canceling one reconciled external order via Strategy API."""
 
     def __init__(self, config: StrategyConfig | None = None) -> None:
         super().__init__(config=config)
@@ -676,7 +676,7 @@ class DemoExternalOrderRecoveryStrategy(Strategy):
 
 
 class DemoReduceOnlyTopologyStrategy(Strategy):
-    """B00-only fixture for explicit-quantity reduce-only topology probes."""
+    """DIRECT-only fixture for explicit-quantity reduce-only topology probes."""
 
     def __init__(self, config: StrategyConfig | None = None) -> None:
         super().__init__(config=config)

@@ -1,4 +1,4 @@
-"""Executor startup boundary for P0 manual activation resume."""
+"""Executor startup boundary for manual activation resume."""
 
 from __future__ import annotations
 

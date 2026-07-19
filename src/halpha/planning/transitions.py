@@ -28,7 +28,6 @@ from halpha.planning.strategies.one_shot import (
 
 class ControlIntent(StrEnum):
     STOP_NEW_RISK = "STOP_NEW_RISK"
-    RESUME_NEW_RISK = "RESUME_NEW_RISK"
     RESUME_ACTIVATION = "RESUME_ACTIVATION"
     EXIT_STRATEGY = "EXIT_STRATEGY"
     USER_TAKEOVER = "USER_TAKEOVER"
@@ -72,7 +71,7 @@ def proposed_action_from_strategy_proposal(
     activation: PlanActivation,
     proposal: StrategyProposal,
 ) -> ProposedAction:
-    """Normalize the one P0 strategy proposal without granting execution authority."""
+    """Normalize the one-shot strategy proposal without granting execution authority."""
 
     proposal_basis = proposal.model_dump(
         mode="python",
@@ -87,7 +86,7 @@ def proposed_action_from_strategy_proposal(
         or proposal.activation_id != activation.activation_id
         or proposal.direction is not activation.direction
     ):
-        raise ValueError("AUTHORIZATION_MISMATCH")
+        raise ValueError("PLAN_BOUNDARY_MISMATCH")
     if proposal.instrument_id != f"{activation.instrument_ref}.BINANCE":
         raise ValueError("ATTRIBUTION_AMBIGUOUS")
     if (
@@ -208,7 +207,7 @@ def resume_activation(
     reconciliation_digest: str,
     observed_at: datetime,
     active_stop_categories: Iterable[StopCategory],
-    authorization_current: bool,
+    plan_current: bool,
     facts_known: bool,
 ) -> PlanActivation:
     if activation.run_state is RunState.ACTIVE:
@@ -221,10 +220,10 @@ def resume_activation(
     }:
         raise ValueError("RESUME_BLOCKED_BY_LIFECYCLE")
     stops = frozenset(active_stop_categories)
-    if StopCategory.ALL_WRITES in stops:
-        raise ValueError("ALL_WRITES_STOPPED")
-    if not authorization_current:
-        raise ValueError("AUTHORIZATION_EXPIRED")
+    if StopCategory.ALL_EXCHANGE_CHANGES in stops:
+        raise ValueError("ALL_EXCHANGE_CHANGES_STOPPED")
+    if not plan_current:
+        raise ValueError("PLAN_EXPIRED")
     if not facts_known:
         raise ValueError("FACT_UNKNOWN")
     return activation.model_copy(
@@ -577,7 +576,7 @@ def proposed_reduce_or_close_position(
     causation_ref: str,
     position_fact_ref: str,
 ) -> ProposedAction:
-    """Form the P0 explicit-quantity reduce-only market exit responsibility."""
+    """Form the explicit-quantity reduce-only market exit responsibility."""
 
     quantity = decimal_from_string(
         position_quantity,

@@ -452,9 +452,9 @@ async def _emergency_cleanup(
 
 def _run(evidence_path: Path | None, proxy_url: str | None) -> int:
     evidence: dict[str, object] = {
-        "stage": "B00_ORDINARY_AND_ALGO_RESTART_RECOVERY",
+        "operation": "DIRECT_ORDINARY_AND_ALGO_RESTART_RECOVERY",
         "profile": "BINANCE_DEMO",
-        "scope": "B00_ISOLATED_QUALIFICATION_ONLY",
+        "scope": "DIRECT_ISOLATED_QUALIFICATION_ONLY",
         "actual_client_order_ids_persisted": False,
         "persistent_cache": False,
         "external_order_claims": None,
@@ -477,7 +477,7 @@ def _run(evidence_path: Path | None, proxy_url: str | None) -> int:
             evidence["credential_environment_had_values"] = environment_was_populated
             seed_strategy = DemoRestartSeedStrategy(
                 config=StrategyConfig(
-                    strategy_id="B00SEED",
+                    strategy_id="DIRECTSEED",
                     order_id_tag="001",
                     external_order_claims=None,
                     manage_contingent_orders=False,
@@ -507,7 +507,7 @@ def _run(evidence_path: Path | None, proxy_url: str | None) -> int:
             if set(identities) == EXPECTED_PROFILES:
                 recovery_strategy = DemoExternalOrderRecoveryStrategy(
                     config=StrategyConfig(
-                        strategy_id="B00RECOVER",
+                        strategy_id="DIRECTRECOVER",
                         order_id_tag="001",
                         external_order_claims=None,
                         manage_contingent_orders=False,

@@ -63,7 +63,7 @@ def _evaluate_reconnect_contract() -> dict[str, object]:
     }
     errors = [name for name, qualified in contracts.items() if not qualified]
     return {
-        "stage": "B00_FIXED_SOURCE_RECONNECT_CONTRACT",
+        "operation": "DIRECT_FIXED_SOURCE_RECONNECT_CONTRACT",
         "contracts": contracts,
         "natural_transport_faults_observed": {
             "rest_tls_handshake_or_connection_reset": True,

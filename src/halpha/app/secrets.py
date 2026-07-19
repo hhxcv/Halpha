@@ -13,8 +13,6 @@ from halpha.winvault import KeyringBackend, app_secret_resolver
 @dataclass(frozen=True, repr=False)
 class AppSecrets:
     database_password: SecretStr
-    owner_password_hash: SecretStr
-    session_signing_secret: SecretStr
     csrf_signing_secret: SecretStr
     smtp_password: SecretStr | None = None
 
@@ -27,8 +25,6 @@ def resolve_app_secrets(
     app = settings.app
     return AppSecrets(
         database_password=resolver.resolve(app.database_credential_reference),
-        owner_password_hash=resolver.resolve(app.owner_password_hash_reference),
-        session_signing_secret=resolver.resolve(app.session_signing_reference),
         csrf_signing_secret=resolver.resolve(app.csrf_signing_reference),
         smtp_password=(
             resolver.resolve(app.smtp_credential_reference)

@@ -1,1 +1,1 @@
-"""UX-owned persistent Task, Command, Receipt, and Notification boundaries."""
+"""UX-owned persistent Command and Receipt boundaries."""

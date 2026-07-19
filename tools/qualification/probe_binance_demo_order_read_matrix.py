@@ -233,7 +233,7 @@ def main() -> int:
     parser.add_argument("--evidence-path", type=Path)
     args = parser.parse_args()
     evidence: dict[str, object] = {
-        "stage": "B00_BINANCE_DEMO_ORDER_READ_MATRIX",
+        "operation": "DIRECT_BINANCE_DEMO_ORDER_READ_MATRIX",
         "profile": "BINANCE_USDM_DEMO",
         "read_only": True,
         "write_method_called": False,

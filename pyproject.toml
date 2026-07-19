@@ -17,7 +17,6 @@ authors = [{ name = "Halpha Project Owner" }]
 
 [project.scripts]
 halpha-app = "halpha.app.__main__:main"
-halpha-auth = "halpha.app.auth_cli:main"
 halpha-backup = "halpha.backup:main"
 halpha-control = "halpha.control:main"
 halpha-executor = "halpha.executor.__main__:main"

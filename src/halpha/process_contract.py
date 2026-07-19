@@ -32,8 +32,7 @@ PROCESS_CONTRACTS = {
         allowed_capabilities=(
             "postgresql_app_boundary",
             "local_web_api",
-            "owner_session_and_csrf",
-            "notification_dispatcher",
+            "local_origin_and_csrf",
         ),
         forbidden_capabilities=(
             "binance_credentials",
@@ -51,8 +50,8 @@ PROCESS_CONTRACTS = {
             "halpha_coordinator",
         ),
         forbidden_capabilities=(
-            "owner_password",
-            "owner_session_and_csrf",
+            "local_web_api",
+            "csrf_signing_secret",
             "smtp_credentials",
             "web_server",
         ),

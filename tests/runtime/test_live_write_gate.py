@@ -40,27 +40,16 @@ def _settings(tmp_path: Path):
 
 
 def _binding(settings, *, gate: str) -> LiveWriteGateBinding:
-    refs = {"account_capital_limit_version_ref": "limit-live-001"}
-    if gate == "OPEN":
-        refs.update(
-            {
-                "machine_authorization_version_ref": "authorization-live-001",
-                "plan_allocation_ref": "allocation-live-001",
-            }
-        )
     return LiveWriteGateBinding(
-        schema_version=1,
+        schema_version=2,
         environment_id=settings.release.environment_id,
         account_id=settings.release.account_id,
         profile="BINANCE_LIVE_WRITE",
         live_write_build_capability="QUALIFIED",
-        b05_real_capital_eligibility="AUTHORIZED",
         runtime_real_write_gate=gate,
         build_manifest_digest=MANIFEST_DIGEST,
-        user_authorization_ref="owner-decision:b05-live-001",
         effective_at=NOW - timedelta(minutes=1),
         expires_at=NOW + timedelta(hours=1),
-        **refs,
     )
 
 
@@ -91,57 +80,20 @@ class _Result:
 
 
 class _Connection:
-    def __init__(self, settings, *, acknowledgements: bool = True):
-        self._settings = settings
-        self._acknowledgements = acknowledgements
+    def __init__(self, *, activation_ids: tuple[str, ...] = ("activation-live-001",)):
+        self._activation_ids = activation_ids
 
     def execute(self, query: str, _parameters):
-        if "account_capital_limit_version" in query:
-            row = (
-                "LIVE",
-                "LIVE_REAL_CAPITAL",
-                self._settings.release.account_id,
-                {"instruments": ["BTCUSDT-PERP"]},
-            )
-        elif "machine_authorization_version" in query:
-            row = (
-                "activation-live-001",
-                "plan-version-live-001",
-                "LIVE",
-                "LIVE_REAL_CAPITAL",
-                self._settings.release.account_id,
-                "BTCUSDT-PERP",
-                NOW - timedelta(minutes=2),
-                NOW + timedelta(hours=2),
-                {
-                    "real_capital_acknowledged": self._acknowledgements,
-                    "evidence_limitations_acknowledged": self._acknowledgements,
-                    "online_monitoring_acknowledged": self._acknowledgements,
-                },
-            )
-        elif "plan_allocation" in query:
-            row = (
-                "activation-live-001",
-                "limit-live-001",
-                "LIVE",
-                "LIVE_REAL_CAPITAL",
-                "HELD",
-            )
-        elif "plan_activation" in query:
-            row = (
-                "plan-version-live-001",
-                "authorization-live-001",
-                "allocation-live-001",
-                "LIVE",
-                "LIVE_REAL_CAPITAL",
-                self._settings.release.account_id,
-                "BTCUSDT-PERP",
-                "RUNNING",
-                "ACTIVE",
-            )
-        else:
-            raise AssertionError(query)
-        return _Result(row)
+        assert "plan_activation" in query
+
+        class _Rows:
+            def __init__(self, activation_ids: tuple[str, ...]):
+                self._activation_ids = activation_ids
+
+            def fetchall(self):
+                return [(activation_id,) for activation_id in self._activation_ids]
+
+        return _Rows(self._activation_ids)
 
 
 @pytest.fixture
@@ -160,7 +112,7 @@ def qualified_manifest(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def test_closed_binding_separates_build_real_capital_and_runtime_gate(
+def test_closed_binding_separates_build_identity_and_runtime_switch(
     tmp_path: Path,
     qualified_manifest: None,
 ) -> None:
@@ -170,22 +122,18 @@ def test_closed_binding_separates_build_real_capital_and_runtime_gate(
     status = evaluate_live_write_gate(ROOT, settings, now=NOW)
 
     assert status.live_write_build_capability == "QUALIFIED"
-    assert status.b05_real_capital_eligibility == "AUTHORIZED"
-    assert status.account_capital_limit_version_ref == "limit-live-001"
     assert status.configured_runtime_real_write_gate == "CLOSED"
     assert status.runtime_real_write_gate == "CLOSED"
     assert status.authorized_activation_id is None
 
 
-def test_legacy_package_eligibility_binding_is_rejected_fail_closed(
+def test_legacy_authorization_field_is_rejected_fail_closed(
     tmp_path: Path,
     qualified_manifest: None,
 ) -> None:
     settings = _settings(tmp_path)
     payload = _binding(settings, gate="CLOSED").model_dump(mode="json")
-    payload["b05_package_eligibility"] = payload.pop(
-        "b05_real_capital_eligibility"
-    )
+    payload["user_authorization_ref"] = "legacy-owner-decision"
     Path(str(settings.release.live_write_gate_path)).write_text(
         json.dumps(payload),
         encoding="utf-8",
@@ -194,37 +142,11 @@ def test_legacy_package_eligibility_binding_is_rejected_fail_closed(
     status = evaluate_live_write_gate(ROOT, settings, now=NOW)
 
     assert status.live_write_build_capability == "QUALIFIED"
-    assert status.b05_real_capital_eligibility == "BLOCKED"
     assert status.configured_runtime_real_write_gate == "CLOSED"
     assert status.runtime_real_write_gate == "CLOSED"
     assert status.violations == (
         "LIVE_WRITE_GATE_BINDING_INVALID_VALIDATIONERROR",
     )
-
-
-def test_closed_binding_rejects_post_activation_references(tmp_path: Path) -> None:
-    payload = {
-        **_binding(_settings(tmp_path), gate="CLOSED").model_dump(mode="python"),
-        "machine_authorization_version_ref": "authorization-live-001",
-        "plan_allocation_ref": "allocation-live-001",
-    }
-
-    with pytest.raises(
-        ValueError,
-        match="LIVE_WRITE_GATE_CLOSED_ACTIVATION_REFS_FORBIDDEN",
-    ):
-        LiveWriteGateBinding.model_validate(payload)
-
-
-def test_open_binding_requires_post_activation_references(tmp_path: Path) -> None:
-    payload = _binding(_settings(tmp_path), gate="OPEN").model_dump(mode="python")
-    payload["machine_authorization_version_ref"] = None
-
-    with pytest.raises(
-        ValueError,
-        match="LIVE_WRITE_GATE_OPEN_ACTIVATION_REFS_REQUIRED",
-    ):
-        LiveWriteGateBinding.model_validate(payload)
 
 
 def test_open_binding_requires_database_verification_before_becoming_effective(
@@ -242,7 +164,7 @@ def test_open_binding_requires_database_verification_before_becoming_effective(
     effective = require_live_write_gate_open(
         ROOT,
         settings,
-        _Connection(settings),
+        _Connection(),
         now=NOW,
     )
     assert effective.runtime_real_write_gate == "OPEN"
@@ -250,9 +172,18 @@ def test_open_binding_requires_database_verification_before_becoming_effective(
     assert effective.violations == ()
 
 
-def test_owner_acknowledgements_are_rechecked_from_machine_authorization(
+@pytest.mark.parametrize(
+    ("activation_ids", "reason"),
+    (
+        ((), "LIVE_WRITE_CURRENT_ACTIVATION_MISSING"),
+        (("activation-live-001", "activation-live-002"), "LIVE_WRITE_CURRENT_ACTIVATION_AMBIGUOUS"),
+    ),
+)
+def test_open_gate_requires_exactly_one_current_plan_activation(
     tmp_path: Path,
     qualified_manifest: None,
+    activation_ids: tuple[str, ...],
+    reason: str,
 ) -> None:
     settings = _settings(tmp_path)
     _write_binding(settings, _binding(settings, gate="OPEN"))
@@ -260,18 +191,18 @@ def test_owner_acknowledgements_are_rechecked_from_machine_authorization(
     status = evaluate_live_write_gate(
         ROOT,
         settings,
-        connection=_Connection(settings, acknowledgements=False),
+        connection=_Connection(activation_ids=activation_ids),
         now=NOW,
     )
 
     assert status.runtime_real_write_gate == "CLOSED"
     assert status.authorized_activation_id is None
-    assert "LIVE_WRITE_OWNER_ACKNOWLEDGEMENTS_MISSING" in status.violations
+    assert reason in status.violations
     with pytest.raises(LiveWriteGateError, match="LIVE_WRITE_GATE_CLOSED"):
         require_live_write_gate_open(
             ROOT,
             settings,
-            _Connection(settings, acknowledgements=False),
+            _Connection(activation_ids=activation_ids),
             now=NOW,
         )
 
@@ -357,7 +288,6 @@ def test_provisioning_accepts_only_the_exact_closed_postcondition(
         "configured_runtime_real_write_gate": "CLOSED",
         "runtime_real_write_gate": "CLOSED",
         "live_write_build_capability": "QUALIFIED",
-        "b05_real_capital_eligibility": "AUTHORIZED",
         "violations": [],
     }
     assert LiveWriteGateBinding.model_validate_json(

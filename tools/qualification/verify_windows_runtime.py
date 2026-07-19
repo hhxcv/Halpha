@@ -326,8 +326,6 @@ def qualify(repository_root: Path, config_path: Path) -> dict[str, Any]:
         }
         app_required = (
             settings.app.database_credential_reference,
-            settings.app.owner_password_hash_reference,
-            settings.app.session_signing_reference,
             settings.app.csrf_signing_reference,
             settings.maintenance.demo.migration_credential_reference,
             settings.maintenance.demo.backup_credential_reference,
@@ -344,8 +342,6 @@ def qualify(repository_root: Path, config_path: Path) -> dict[str, Any]:
         executor_required = tuple(app_forbidden)
         executor_forbidden = (
             settings.app.database_credential_reference,
-            settings.app.owner_password_hash_reference,
-            settings.app.session_signing_reference,
             settings.app.csrf_signing_reference,
             settings.app.smtp_credential_reference,
             settings.maintenance.demo.migration_credential_reference,

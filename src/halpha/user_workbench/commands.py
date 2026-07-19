@@ -1,4 +1,4 @@
-"""Stable identities and immutable values for the five B02 control commands."""
+"""Stable identities and immutable values for the control commands."""
 
 from __future__ import annotations
 

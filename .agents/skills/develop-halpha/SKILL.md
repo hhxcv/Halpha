@@ -1,17 +1,19 @@
 ---
 name: develop-halpha
-description: Guide Halpha implementation, testing, refactoring, dependency checks, builds, runtime configuration, direct operational validation, and design-to-code traceability. Use when developing or modifying Halpha code, migrations, builds, configuration, tests, or runtime checks, or when implementation evidence exposes a suspected L0–L4 design error or conflict.
+description: Guide Halpha implementation, testing, refactoring, dependency checks, builds, runtime configuration, direct operational validation, product-closure audits, and design-to-code traceability. Use when developing or modifying Halpha code, migrations, builds, configuration, tests, or runtime checks; auditing actual business progress, runtime reachability, mechanism or dependency complexity, and the next smallest useful slice; or handling implementation evidence that exposes a suspected L0–L4 design error or conflict.
 ---
 
 # Halpha Development
 
 ## Authority
 
-Use the current files in `docs/L0`–`docs/L4` for product semantics and the current L4 plan for actual scope, component versions, configuration and results. Git commits record document history. A package name is a planning label, not task authorization or a mandatory work boundary. The user's requested outcome defines scope; real external writes, capital changes, commit, push and L4 advancement still require their own authority.
+Use the current files in `docs/L0`–`docs/L4` for product semantics and the current L4 plan for current focus, component versions, configuration and results. Git commits record document history. Development uses continuous small iterations rather than packages or stage completion. The user's requested outcome defines scope; real-account trading actions, capital changes, commit, push and L4 fact changes still require their own authority.
 
 Read [Design Navigation](references/design-navigation.md) in full for every development task. If implementation evidence conflicts with design, also read [Design Inconsistency Protocol](references/design-inconsistency.md). Use `write-halpha-docs` for formal document changes.
 
-Use the least process that preserves correctness. Early, local and reversible work defaults to ordinary Git, direct tests and a short handoff. Add process only for current irreversible effects, real external writes, meaningful concurrency, repeated failures or a decision that actually consumes extra evidence.
+For progress, readiness, next-step or mechanism-complexity audits, read [Product Closure Audit](references/product-closure-audit.md) in full. Do not count documentation, a class, a passing unit test or a qualification utility as a product capability until its actual runtime consumer and user-visible result are established.
+
+Use the least process that preserves correctness. Early, local and reversible work defaults to ordinary Git, direct tests and a short handoff. Add process only for current irreversible effects, real-account trading actions, meaningful concurrency, repeated failures or a decision that actually consumes extra evidence.
 
 ## Workflow
 
@@ -21,9 +23,9 @@ Use the least process that preserves correctness. Early, local and reversible wo
 2. 按 HALPHA-ENG-001 的影响原则判断本次改动的最高实际影响。
 3. Read only the L4 blocks that identify the current objective, applicable environment, exact choices, constraints and known results. Read the full plan only when changing it or when the needed state cannot otherwise be found.
 4. Keep work inside the user-authorized outcome. Several directly related, independently testable slices may be completed together. Split only for a new external effect, a material scope expansion, a path conflict or evidence that must arrive later.
-5. Independent research may proceed in its own workspace when it does not touch product runtime, product databases, credentials or venue writes.
+5. Independent research may proceed in its own workspace when it does not touch product runtime, product databases, credentials or exchange-changing endpoints.
 
-Missing state remains unknown. Code or passing tests never imply product availability, real-write permission or an L4 state change.
+Missing state remains unknown. Code or passing tests never imply product availability, permission to perform a real-account trading action or an L4 fact change.
 
 ### 2. Read by Impact
 
@@ -51,14 +53,14 @@ Check a component only when adding, replacing or materially changing it. Verify 
 2. Use small reversible edits; do not require a new user round-trip for each slice already included in the requested result.
 3. Add only tests, migrations, configuration and diagnostics that the changed behavior needs.
 4. Keep secrets out of code, documents, ordinary logs, browsers and test artifacts. Never cause a real account or capital change without explicit authorization.
-5. Do not bypass environment isolation, durable action identity, unique venue writing, fact reconciliation, protection, stop or takeover behavior.
+5. Do not bypass environment isolation, durable action identity, the unique exchange-changing execution role, fact reconciliation, protection, stop or takeover behavior.
 
 ### 6. Validate Proportionately
 
 - **Every change:** run the smallest targeted check that directly exercises the change and likely failure.
 - **Shared boundary or state change:** add relevant integration and direct-consumer checks.
 - **Executable UX:** inspect the affected route, states and viewports in a real browser when visual or interaction behavior changed.
-- **L4 or real-write-state change:** run the general documentation validator and the small governance validator.
+- **L4 or real-account-action-state change:** run the general documentation validator and the small governance validator.
 - **Core trading change:** exercise normal behavior, the critical counterexample, duplicate/retry and stop or rollback in the closest authorized environment.
 
 Use elapsed observation only when a current release, deployment or real-capital decision needs behavior that direct tests cannot establish. Waiting remains read-only and creates no permanent role or project state. When evidence arrives, verify its source, inputs, time and scope before using it.

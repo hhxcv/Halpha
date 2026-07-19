@@ -1,4 +1,4 @@
-"""Transactional handling of the five accepted B02 activation controls."""
+"""Transactional handling of the activation controls."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 
 from psycopg import Connection
 
-from halpha.capital.models import AllocationStatus, StopCategory, StopStateVersion
+from halpha.capital.models import StopCategory, StopStateVersion
 from halpha.capital.repository import PostgreSQLCapitalRepository
 from halpha.domain_values import content_digest
 from halpha.planning.models import PlanActivation
@@ -61,7 +61,6 @@ class ActivationControlService:
             "reason": reason,
             "source": "USER",
             "started_at": observed_at,
-            "authorization_version_ref": activation.authorization_version_ref,
             "release_rules": {"user_releasable": True},
         }
         state = StopStateVersion(**fields, content_digest=content_digest(fields))
@@ -75,7 +74,7 @@ class ActivationControlService:
         receipt_id: str,
         stop_state_version_id: str,
         reconciliation_digest: str | None = None,
-        authorization_current: bool = True,
+        plan_current: bool = True,
         facts_known: bool = True,
     ) -> Receipt:
         existing = self._commands.find_by_idempotency(
@@ -103,7 +102,6 @@ class ActivationControlService:
             )
             self._commands.update_receipt(updated, expected_version=receipt.state_version)
             return updated
-        allocation = self._capital.get_allocation(activation.activation_id, for_update=True)
         states = self._capital.lock_current_stop_states(
             account_ref=activation.account_ref,
             activation_id=activation.activation_id,
@@ -114,7 +112,6 @@ class ActivationControlService:
         reason = "CONTROL_EFFECTIVE"
         receipt_state = ReceiptState.EFFECTIVE
         original_activation_version = activation.state_version
-        original_allocation_version = allocation.state_version
 
         if intent is ControlIntent.STOP_NEW_RISK:
             current_activation = next(
@@ -123,7 +120,7 @@ class ActivationControlService:
             )
             categories = frozenset(
                 set(current_activation.stopped_categories if current_activation else ())
-                | {StopCategory.NEW_FUNDING}
+                | {StopCategory.NEW_RISK}
             )
             self._write_activation_stop_version(
                 stop_state_version_id=stop_state_version_id,
@@ -137,42 +134,6 @@ class ActivationControlService:
                 receipt_state = ReceiptState.PROCESSING
                 pending = ("OPEN_ENTRY_RESPONSIBILITIES_TERMINAL",)
                 reason = "NEW_RISK_STOPPED_LOCALLY"
-        elif intent is ControlIntent.RESUME_NEW_RISK:
-            if (
-                allocation.status is not AllocationStatus.HELD
-                or allocation.max_loss_reached
-                or activation.entry_opportunity_consumed
-                or activation.lifecycle.value != "RUNNING"
-            ):
-                receipt_state = ReceiptState.REJECTED
-                reason = "NEW_RISK_RESUME_NOT_ALLOWED"
-            else:
-                current_activation = next(
-                    (item for item in states if item.activation_id == activation.activation_id),
-                    None,
-                )
-                categories = frozenset(
-                    set(current_activation.stopped_categories if current_activation else ())
-                    - {StopCategory.NEW_FUNDING}
-                )
-                account_categories = frozenset(
-                    category
-                    for state in states
-                    if state.activation_id is None
-                    for category in state.stopped_categories
-                )
-                if StopCategory.NEW_FUNDING in account_categories or StopCategory.ALL_WRITES in active:
-                    receipt_state = ReceiptState.REJECTED
-                    reason = "ACTION_CATEGORY_STOPPED"
-                else:
-                    self._write_activation_stop_version(
-                        stop_state_version_id=stop_state_version_id,
-                        states=states,
-                        activation=activation,
-                        categories=categories,
-                        reason="USER_RESUME_NEW_RISK",
-                        observed_at=command.submitted_at,
-                    )
         elif intent is ControlIntent.RESUME_ACTIVATION:
             if reconciliation_digest is None:
                 receipt_state = ReceiptState.REJECTED
@@ -185,7 +146,7 @@ class ActivationControlService:
                         reconciliation_digest=reconciliation_digest,
                         observed_at=command.submitted_at,
                         active_stop_categories=active,
-                        authorization_current=authorization_current,
+                        plan_current=plan_current,
                         facts_known=facts_known,
                     )
                 except ValueError as exc:
@@ -199,7 +160,7 @@ class ActivationControlService:
             )
             categories = frozenset(
                 set(current_activation.stopped_categories if current_activation else ())
-                | {StopCategory.NEW_FUNDING}
+                | {StopCategory.NEW_RISK}
             )
             self._write_activation_stop_version(
                 stop_state_version_id=stop_state_version_id,
@@ -208,12 +169,6 @@ class ActivationControlService:
                 categories=categories,
                 reason="EXIT_STRATEGY_STOP_NEW_RISK",
                 observed_at=command.submitted_at,
-            )
-            allocation = allocation.model_copy(
-                update={
-                    "status": AllocationStatus.EXIT_ONLY,
-                    "state_version": allocation.state_version + 1,
-                }
             )
             receipt_state = ReceiptState.PROCESSING
             pending = ("EXIT_CLOSURE_DIGEST",)
@@ -224,12 +179,6 @@ class ActivationControlService:
                 takeover_scope=command.scope,
                 observed_at=command.submitted_at,
             )
-            allocation = allocation.model_copy(
-                update={
-                    "status": AllocationStatus.TAKEOVER_HELD,
-                    "state_version": allocation.state_version + 1,
-                }
-            )
             reason = "USER_TAKEOVER_PERSISTED"
         else:  # pragma: no cover - enum is closed
             raise ValueError("CONTROL_INTENT_UNSUPPORTED")
@@ -239,11 +188,6 @@ class ActivationControlService:
                 activation,
                 expected_version=original_activation_version,
             )
-        if allocation.state_version != original_allocation_version:
-            self._capital.update_allocation(
-                allocation,
-                expected_version=original_allocation_version,
-            )
         updated = advance_receipt(
             receipt,
             state=receipt_state,
@@ -251,7 +195,6 @@ class ActivationControlService:
             result={
                 "activation_id": activation.activation_id,
                 "activation_state_version": activation.state_version,
-                "allocation_state": allocation.status.value,
             },
             pending_responsibility_refs=pending,
             observed_at=command.submitted_at,

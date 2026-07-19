@@ -71,7 +71,7 @@ def strategy_config_for_activation(activation_id: str) -> StrategyConfig:
 class HalphaStrategyAdapter(Strategy):
     """Final-style proposal adapter shared by live and BacktestEngine paths.
 
-    B02 exposes no venue operation from this class. B03 may add only the private
+    The planning surface exposes no venue operation from this class. Execution may add only the private
     persisted-action gate allowed by ALP/EXE after its own qualification.
     """
 

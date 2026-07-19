@@ -63,7 +63,7 @@ def test_manifest_records_incomplete_without_inventing_artifacts(tmp_path: Path)
         "missing_required": ["missing"],
     }
     assert manifest["build_eligible"] is False
-    assert manifest["capability_claim"] == "BUILD_IDENTITY_ONLY_NOT_REAL_WRITE_AUTHORIZATION"
+    assert manifest["capability_claim"] == "BUILD_IDENTITY_ONLY_NOT_REAL_ACCOUNT_TRADING_PERMISSION"
 
 
 def test_manifest_detects_source_and_artifact_drift(tmp_path: Path) -> None:

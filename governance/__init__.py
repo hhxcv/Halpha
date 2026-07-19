@@ -1,1 +1,1 @@
-"""Repository-local governance checks for Halpha construction state."""
+"""Small repository-local checks for Halpha's current plan."""

@@ -90,23 +90,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/activations/{activation_id}/resume-new-risk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Resume New Risk */
-        post: operations["resume_new_risk_api_v1_activations__activation_id__resume_new_risk_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/activations/{activation_id}/stop-new-risk": {
         parameters: {
             query?: never;
@@ -150,75 +133,6 @@ export interface paths {
         };
         /** Activation Timeline */
         get: operations["activation_timeline_api_v1_activations__activation_id__timeline_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/allocations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Allocations */
-        get: operations["allocations_api_v1_allocations_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/capital": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Capital */
-        get: operations["capital_api_v1_capital_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/capital-limits": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Capital Limits */
-        get: operations["capital_limits_api_v1_capital_limits_get"];
-        put?: never;
-        /** Create Capital Limit */
-        post: operations["create_capital_limit_api_v1_capital_limits_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/improvement-handoffs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Improvement Handoffs */
-        get: operations["improvement_handoffs_api_v1_improvement_handoffs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -400,40 +314,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/session/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Login */
-        post: operations["login_api_v1_session_login_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/session/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Logout */
-        post: operations["logout_api_v1_session_logout_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/settings/status": {
         parameters: {
             query?: never;
@@ -502,102 +382,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Tasks */
-        get: operations["tasks_api_v1_tasks_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tasks/{task_id}/acknowledge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Acknowledge Task */
-        post: operations["acknowledge_task_api_v1_tasks__task_id__acknowledge_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** ActivationPayload */
         ActivationPayload: {
-            /** Capital Limit Version Id */
-            capital_limit_version_id: string;
-            /**
-             * Evidence Limitations Acknowledged
-             * @default false
-             */
-            evidence_limitations_acknowledged: boolean;
-            /**
-             * Online Monitoring Acknowledged
-             * @default false
-             */
-            online_monitoring_acknowledged: boolean;
-            /** Owner Password */
-            owner_password: string;
             /** Plan Version Id */
             plan_version_id: string;
-            /**
-             * Quote Asset
-             * @default USDT
-             */
-            quote_asset: string;
-            /**
-             * Real Capital Acknowledged
-             * @default false
-             */
-            real_capital_acknowledged: boolean;
-        };
-        /** CapitalLimitPayload */
-        CapitalLimitPayload: {
-            /** Instruments */
-            instruments: string[];
-            /** Max Action Notional */
-            max_action_notional: string;
-            /** Max Allowed Loss */
-            max_allowed_loss: string;
-            /** Max Margin */
-            max_margin: string;
-            /** Max Notional */
-            max_notional: string;
-            /**
-             * Quote Asset
-             * @default USDT
-             */
-            quote_asset: string;
         };
         /**
          * ControlIntent
          * @enum {string}
          */
-        ControlIntent: "STOP_NEW_RISK" | "RESUME_NEW_RISK" | "RESUME_ACTIVATION" | "EXIT_STRATEGY" | "USER_TAKEOVER";
+        ControlIntent: "STOP_NEW_RISK" | "RESUME_ACTIVATION" | "EXIT_STRATEGY" | "USER_TAKEOVER";
         /** ControlPayload */
         ControlPayload: {
             /** Expected Version */
             expected_version: number;
-            /** Owner Password */
-            owner_password: string;
             /** Takeover Scope */
             takeover_scope?: {
                 [key: string]: unknown;
@@ -614,10 +416,6 @@ export interface components {
             account_id: string;
             /** Authority Class */
             authority_class: string;
-            /** Construction Package */
-            construction_package: string;
-            /** Construction Status */
-            construction_status: string;
             /** Database Name */
             database_name: string;
             /** Environment Id */
@@ -626,8 +424,6 @@ export interface components {
             environment_kind: string;
             /** Open Activation Count */
             open_activation_count: number;
-            /** Open Task Count */
-            open_task_count: number;
             /** Profile */
             profile: string;
             /** Runtime Real Write Gate */
@@ -675,42 +471,20 @@ export interface components {
             };
             /** Expected Version */
             expected_version: number;
-            /**
-             * Issues
-             * @default []
-             */
-            issues: {
-                [key: string]: unknown;
-            }[];
-            /** No Improvement Reason */
-            no_improvement_reason?: string | null;
-            /** Owner Password */
-            owner_password: string;
         };
         /** ReviewRefreshPayload */
         ReviewRefreshPayload: {
             /** Expected Version */
             expected_version: number;
         };
-        /** SessionResponse */
-        SessionResponse: {
-            /** Absolute Expires In Seconds */
-            absolute_expires_in_seconds?: number | null;
-            /** Status */
-            status: string;
-        };
         /** SettingsStatusResponse */
         SettingsStatusResponse: {
-            /** Account Capital Limit Version Ref */
-            account_capital_limit_version_ref: string | null;
             /** Account Id */
             account_id: string;
             /** Authority Class */
             authority_class: string;
             /** Authorized Activation Id */
             authorized_activation_id: string | null;
-            /** B05 Real Capital Eligibility */
-            b05_real_capital_eligibility: string;
             /** Bind */
             bind: string;
             /** Build Manifest Digest */
@@ -723,10 +497,6 @@ export interface components {
             config_digest: string;
             /** Configured Runtime Real Write Gate */
             configured_runtime_real_write_gate: string;
-            /** Construction Package */
-            construction_package: string;
-            /** Construction Status */
-            construction_status: string;
             /** Database Available */
             database_available: boolean;
             /** Database Name */
@@ -745,10 +515,6 @@ export interface components {
             live_write_build_capability: string;
             /** Live Write Gate Violations */
             live_write_gate_violations: string[];
-            /** Machine Authorization Version Ref */
-            machine_authorization_version_ref: string | null;
-            /** Plan Allocation Ref */
-            plan_allocation_ref: string | null;
             /** Port */
             port: number;
             /** Profile */
@@ -757,20 +523,8 @@ export interface components {
             runtime_real_write_gate: string;
             /** Server Fact Cutoff */
             server_fact_cutoff: string | null;
-            /** User Authorization Ref */
-            user_authorization_ref: string | null;
             /** View Retrieved At */
             view_retrieved_at: string;
-        };
-        /** TaskAcknowledgePayload */
-        TaskAcknowledgePayload: {
-            /** Expected Version */
-            expected_version: number;
-        };
-        /** TestEmailPayload */
-        TestEmailPayload: {
-            /** Owner Password */
-            owner_password: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -999,45 +753,6 @@ export interface operations {
             };
         };
     };
-    resume_new_risk_api_v1_activations__activation_id__resume_new_risk_post: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path: {
-                activation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ControlPayload"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     stop_new_risk_api_v1_activations__activation_id__stop_new_risk_post: {
         parameters: {
             query?: never;
@@ -1123,142 +838,6 @@ export interface operations {
             path: {
                 activation_id: string;
             };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    allocations_api_v1_allocations_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-        };
-    };
-    capital_api_v1_capital_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    capital_limits_api_v1_capital_limits_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-        };
-    };
-    create_capital_limit_api_v1_capital_limits_post: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CapitalLimitPayload"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    improvement_handoffs_api_v1_improvement_handoffs_get: {
-        parameters: {
-            query?: {
-                target_owner?: string | null;
-            };
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1700,53 +1279,6 @@ export interface operations {
             };
         };
     };
-    login_api_v1_session_login_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: password */
-                    password: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionResponse"];
-                };
-            };
-        };
-    };
-    logout_api_v1_session_logout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionResponse"];
-                };
-            };
-        };
-    };
     settings_status_api_v1_settings_status_get: {
         parameters: {
             query?: never;
@@ -1774,11 +1306,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TestEmailPayload"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -1789,15 +1317,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1834,65 +1353,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tasks_api_v1_tasks_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-        };
-    };
-    acknowledge_task_api_v1_tasks__task_id__acknowledge_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TaskAcknowledgePayload"];
-            };
-        };
         responses: {
             /** @description Successful Response */
             200: {

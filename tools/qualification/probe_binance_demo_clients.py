@@ -400,7 +400,7 @@ def _build_configuration(
     )
     node = TradingNodeConfig(
         environment=Environment.LIVE,
-        trader_id=TraderId("B00-DEMO-001"),
+        trader_id=TraderId("DIRECT-DEMO-001"),
         cache=None,
         message_bus=None,
         emulator=None,
@@ -414,7 +414,7 @@ def _build_configuration(
             log_level="INFO",
             log_level_file="INFO",
             log_directory=str(LOG_DIRECTORY),
-            log_file_name="b00-binance-demo",
+            log_file_name="direct-binance-demo",
             log_file_format="JSON",
             log_file_max_size=104857600,
             log_file_max_backup_count=5,
@@ -750,12 +750,12 @@ def _config_only_evidence() -> dict[str, object]:
                 and profile_exec.environment == environment
             ),
             "base_url_override": False,
-            "write_authorization": (
-                "B00_DEMO_FIXTURE_ONLY"
+            "exchange_change_mode": (
+                "DEMO_CHECK_ENABLED"
                 if profile == "BINANCE_DEMO"
-                else "DISABLED_READ_ONLY_PROFILE"
+                else "PUBLIC_DATA_ONLY"
                 if profile == "BINANCE_LIVE_READ_ONLY"
-                else "DISABLED_UNTIL_B05"
+                else "RUNTIME_GATE_REQUIRED"
             ),
         }
         if profile_provider.load_ids != expected_ids:
@@ -971,7 +971,7 @@ async def _observe_running_node(
                 "OUTSIDE_BINANCE_USDM_DEMO_PROFILE"
             ),
             "demo_http_base_url_matches_fixed_adapter": demo_base_url_matches,
-            "b00_get_whitelist_exposes_withdrawal_route": False,
+            "direct_get_whitelist_exposes_withdrawal_route": False,
             "live_write_gate": "MANUAL_BINANCE_UI_PERMISSION_EVIDENCE_REQUIRED",
             "documentation": BINANCE_USDM_ACCOUNT_DOCUMENTATION,
         }
@@ -1318,7 +1318,7 @@ def _online_probe(
 ) -> int:
     configuration = _nonsecret_configuration(proxy_enabled=proxy_url is not None)
     evidence: dict[str, object] = {
-        "stage": "INITIALIZING",
+        "operation": "INITIALIZING",
         "profile": "BINANCE_DEMO",
         "config_digest_sha256": _configuration_digest(configuration),
         "configuration": configuration,
@@ -1343,18 +1343,18 @@ def _online_probe(
 
     try:
         proxy_url = _validate_proxy_url(proxy_url)
-        evidence["stage"] = "ACQUIRING_MUTEX"
+        evidence["operation"] = "ACQUIRING_MUTEX"
         mutex = _acquire_executor_mutex()
         evidence["executor_mutex"] = "ACQUIRED_CURRENT_USER_PROTECTED_DACL"
 
-        evidence["stage"] = "LOADING_WINVAULT"
+        evidence["operation"] = "LOADING_WINVAULT"
         api_key, api_secret, backend_name = _load_credentials()
         evidence["credential_backend"] = backend_name
 
         with _without_binance_credential_environment() as environment_was_populated:
             evidence["credential_environment_sanitized"] = True
             evidence["credential_environment_had_values"] = environment_was_populated
-            evidence["stage"] = "CONFIGURING_NODE"
+            evidence["operation"] = "CONFIGURING_NODE"
             node_config, provider_config, data_config, exec_config = _build_configuration(
                 api_key,
                 api_secret,
@@ -1370,7 +1370,7 @@ def _online_probe(
             LOG_DIRECTORY.mkdir(parents=True, exist_ok=True)
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            evidence["stage"] = "BUILDING_NODE"
+            evidence["operation"] = "BUILDING_NODE"
             node = TradingNode(config=node_config, loop=loop)
             node.add_data_client_factory(BINANCE, BinanceLiveDataClientFactory)
             node.add_exec_client_factory(BINANCE, BinanceLiveExecClientFactory)
@@ -1379,7 +1379,7 @@ def _online_probe(
             if run_market_data:
                 market_strategy = MarketDataQualificationStrategy(
                     config=StrategyConfig(
-                        strategy_id="B00MARKET",
+                        strategy_id="DIRECTMARKET",
                         order_id_tag="001",
                         external_order_claims=None,
                         manage_contingent_orders=False,
@@ -1389,7 +1389,7 @@ def _online_probe(
                 )
                 node.trader.add_strategy(market_strategy)
 
-            evidence["stage"] = "RUNNING_READ_ONLY_NODE"
+            evidence["operation"] = "RUNNING_READ_ONLY_NODE"
             observer_task = loop.create_task(
                 _observe_running_node(
                     node,
@@ -1419,7 +1419,7 @@ def _online_probe(
             evidence["node_stopped"] = not node.is_running()
             node.dispose()
             evidence["node_disposed"] = True
-            evidence["stage"] = "COMPLETED"
+            evidence["operation"] = "COMPLETED"
     except Exception as exc:
         if isinstance(exc, QualificationError):
             errors.append(f"BINANCE_DEMO_PROBE_FAILED:{exc}")

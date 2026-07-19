@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from types import SimpleNamespace
-
 import pytest
 from pydantic import SecretStr
 
@@ -16,27 +14,13 @@ NOW = datetime(2026, 7, 18, 12, tzinfo=UTC)
 def _status(
     *,
     capability: str = "QUALIFIED",
-    real_capital: str = "AUTHORIZED",
     configured: str = "CLOSED",
-    account_limit: str = "limit-live-001",
 ) -> LiveWriteGateStatus:
-    authorized = real_capital == "AUTHORIZED"
     return LiveWriteGateStatus(
         live_write_build_capability=capability,
-        b05_real_capital_eligibility=real_capital,
         configured_runtime_real_write_gate=configured,
         runtime_real_write_gate="CLOSED",
-        build_manifest_digest="a" * 64 if authorized else None,
-        user_authorization_ref=(
-            "owner-decision:b05-live-001" if authorized else None
-        ),
-        account_capital_limit_version_ref=account_limit if authorized else None,
-        machine_authorization_version_ref=(
-            "authorization-live-001" if configured == "OPEN" else None
-        ),
-        plan_allocation_ref=(
-            "allocation-live-001" if configured == "OPEN" else None
-        ),
+        build_manifest_digest="a" * 64 if capability == "QUALIFIED" else None,
     )
 
 
@@ -54,30 +38,16 @@ def _api(status: LiveWriteGateStatus) -> PostgreSQLPlanningApi:
     )
 
 
-def _payload(**updates: bool) -> ActivationPayload:
-    values = {
-        "plan_version_id": "plan-version-live-001",
-        "capital_limit_version_id": "limit-live-001",
-        "quote_asset": "USDT",
-        "owner_password": "owner-password",
-        "real_capital_acknowledged": True,
-        "evidence_limitations_acknowledged": True,
-        "online_monitoring_acknowledged": True,
-    }
-    values.update(updates)
-    return ActivationPayload(**values)
+def _payload() -> ActivationPayload:
+    return ActivationPayload(plan_version_id="plan-version-live-001")
 
 
 @pytest.mark.parametrize(
     ("status", "reason"),
     (
         (
-            _status(capability="NOT_QUALIFIED", real_capital="BLOCKED"),
+            _status(capability="NOT_QUALIFIED"),
             "LIVE_WRITE_BUILD_CAPABILITY_NOT_QUALIFIED",
-        ),
-        (
-            _status(real_capital="BLOCKED"),
-            "B05_REAL_CAPITAL_ELIGIBILITY_BLOCKED",
         ),
         (
             _status(configured="OPEN"),
@@ -100,35 +70,12 @@ def test_live_activation_rejects_before_database_mutation(
         api.activate(_payload(), idempotency_key="live-001", observed_at=NOW)
 
 
-def test_live_activation_requires_each_explicit_owner_acknowledgement(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    api = _api(_status())
-    monkeypatch.setattr(
-        api,
-        "_connect",
-        lambda: pytest.fail("database must not be reached"),
-    )
-    with pytest.raises(ValueError, match="LIVE_OWNER_ACKNOWLEDGEMENTS_REQUIRED"):
-        api.activate(
-            _payload(online_monitoring_acknowledged=False),
-            idempotency_key="live-001",
-            observed_at=NOW,
+def test_activation_payload_rejects_legacy_capital_authorization_fields() -> None:
+    with pytest.raises(ValueError):
+        ActivationPayload(
+            plan_version_id="plan-version-live-001",
+            capital_limit_version_id="legacy-limit",  # type: ignore[call-arg]
         )
-
-
-def test_live_activation_rejects_unbound_capital_scope_before_database_mutation(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    api = _api(_status(account_limit="limit-live-authorized"))
-    monkeypatch.setattr(
-        api,
-        "_connect",
-        lambda: pytest.fail("database must not be reached"),
-    )
-
-    with pytest.raises(ValueError, match="B05_REAL_CAPITAL_SCOPE_MISMATCH"):
-        api.activate(_payload(), idempotency_key="live-001", observed_at=NOW)
 
 
 class _Context:
@@ -151,7 +98,7 @@ class _Document:
         return dict(self._values)
 
 
-def test_live_activation_persists_acknowledgements_without_opening_the_gate(
+def test_live_activation_uses_the_plan_amount_without_opening_the_gate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, object] = {}
@@ -162,11 +109,7 @@ def test_live_activation_persists_acknowledgements_without_opening_the_gate(
 
         def activate_version(self, **values):
             captured.update(values)
-            return (
-                _Document(activation_id="activation-live-001"),
-                SimpleNamespace(authorization_version_id="authorization-live-001"),
-                _Document(allocation_id="allocation-live-001"),
-            )
+            return _Document(activation_id="activation-live-001")
 
     api = _api(_status())
     monkeypatch.setattr(api, "_connect", lambda: _Context())
@@ -181,10 +124,8 @@ def test_live_activation_persists_acknowledgements_without_opening_the_gate(
         observed_at=NOW,
     )
 
-    assert captured["activation_terms"] == {
-        "real_capital_acknowledged": True,
-        "evidence_limitations_acknowledged": True,
-        "online_monitoring_acknowledged": True,
-    }
+    assert "activation_terms" not in captured
+    assert captured["environment_kind"].value == "LIVE"
+    assert captured["authority_class"].value == "LIVE_REAL_CAPITAL"
     assert result["venue_write_created"] is False
     assert result["runtime_real_write_gate"] == "CLOSED"

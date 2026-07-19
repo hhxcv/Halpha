@@ -816,13 +816,13 @@ def _online_probe(
     episode_scope: str,
 ) -> int:
     evidence: dict[str, object] = {
-        "stage": (
-            "B00_REDUCE_ONLY_PARTIAL_TP"
+        "operation": (
+            "DIRECT_REDUCE_ONLY_PARTIAL_TP"
             if episode_scope == "PARTIAL_ONLY"
-            else "B00_REDUCE_ONLY_FULL_TOPOLOGY"
+            else "DIRECT_REDUCE_ONLY_FULL_TOPOLOGY"
         ),
         "profile": "BINANCE_DEMO",
-        "scope": "B00_ISOLATED_QUALIFICATION_ONLY",
+        "scope": "DIRECT_ISOLATED_QUALIFICATION_ONLY",
         "actual_client_order_ids_persisted": False,
         "proxy": "RUNTIME_LOOPBACK_ARGUMENT" if proxy_url is not None else "DISABLED",
         "node_built": False,
@@ -865,7 +865,7 @@ def _online_probe(
             evidence["node_built"] = node.is_built()
             strategy = DemoReduceOnlyTopologyStrategy(
                 config=StrategyConfig(
-                    strategy_id="B00REDUCE",
+                    strategy_id="DIRECTREDUCE",
                     order_id_tag="001",
                     external_order_claims=None,
                     manage_contingent_orders=False,

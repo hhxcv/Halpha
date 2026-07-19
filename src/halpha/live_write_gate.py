@@ -1,9 +1,10 @@
-"""Detached, fail-closed LIVE_WRITE deployment gate verification.
+"""Detached, fail-closed LIVE_WRITE deployment switch verification.
 
-The binding is deliberately outside the repository and BuildManifest so it can
-refer to the final manifest digest without creating a self-referential build.
-It is non-secret, profile-specific deployment state; CAP records remain the
-business authority and are rechecked before the effective gate can be OPEN.
+The switch binds a build to one environment and account.  The user's fixed
+plan and explicit activation are the only trading authority; the switch does
+not reproduce capital limits, allocations, acknowledgements, or authorization
+records.  Before it becomes effective, the database must contain exactly one
+current Halpha-owned real-account activation.
 """
 
 from __future__ import annotations
@@ -32,77 +33,44 @@ class _FrozenModel(BaseModel):
 
 
 class LiveWriteGateBinding(_FrozenModel):
-    schema_version: Literal[1]
+    schema_version: Literal[2]
     environment_id: str
     account_id: str
     profile: Literal["BINANCE_LIVE_WRITE"]
     live_write_build_capability: Literal["QUALIFIED"]
-    b05_real_capital_eligibility: Literal["AUTHORIZED"]
     runtime_real_write_gate: Literal["CLOSED", "OPEN"]
     build_manifest_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
-    user_authorization_ref: str = Field(min_length=3, max_length=200)
-    account_capital_limit_version_ref: str = Field(min_length=3)
-    machine_authorization_version_ref: str | None = Field(default=None, min_length=3)
-    plan_allocation_ref: str | None = Field(default=None, min_length=3)
     effective_at: datetime
     expires_at: datetime
 
     @model_validator(mode="after")
-    def validate_window_and_open_refs(self) -> "LiveWriteGateBinding":
+    def validate_window(self) -> "LiveWriteGateBinding":
         if self.effective_at.tzinfo is None or self.expires_at.tzinfo is None:
             raise ValueError("LIVE_WRITE_GATE_TIMEZONE_REQUIRED")
         if self.expires_at <= self.effective_at:
             raise ValueError("LIVE_WRITE_GATE_WINDOW_INVALID")
-        activation_references = (
-            self.machine_authorization_version_ref,
-            self.plan_allocation_ref,
-        )
-        if self.runtime_real_write_gate == "OPEN" and any(
-            ref is None for ref in activation_references
-        ):
-            raise ValueError("LIVE_WRITE_GATE_OPEN_ACTIVATION_REFS_REQUIRED")
-        if self.runtime_real_write_gate == "CLOSED" and any(
-            ref is not None for ref in activation_references
-        ):
-            raise ValueError("LIVE_WRITE_GATE_CLOSED_ACTIVATION_REFS_FORBIDDEN")
         return self
 
 
 class LiveWriteGateStatus(_FrozenModel):
     live_write_build_capability: Literal["NOT_QUALIFIED", "QUALIFIED"]
-    b05_real_capital_eligibility: Literal["BLOCKED", "AUTHORIZED"]
     configured_runtime_real_write_gate: Literal["CLOSED", "OPEN"]
     runtime_real_write_gate: Literal["CLOSED", "OPEN"]
     build_manifest_digest: str | None = None
-    user_authorization_ref: str | None = None
-    account_capital_limit_version_ref: str | None = None
-    machine_authorization_version_ref: str | None = None
-    plan_allocation_ref: str | None = None
     authorized_activation_id: str | None = None
     binding_effective_at: datetime | None = None
     binding_expires_at: datetime | None = None
     violations: tuple[str, ...] = ()
 
     @model_validator(mode="after")
-    def validate_authorization_phases(self) -> "LiveWriteGateStatus":
-        if self.b05_real_capital_eligibility == "AUTHORIZED" and (
-            self.live_write_build_capability != "QUALIFIED"
-            or self.build_manifest_digest is None
-            or self.user_authorization_ref is None
-            or self.account_capital_limit_version_ref is None
-        ):
-            raise ValueError("LIVE_WRITE_REAL_CAPITAL_STATUS_BINDING_REQUIRED")
-        if self.configured_runtime_real_write_gate == "OPEN" and (
-            self.b05_real_capital_eligibility != "AUTHORIZED"
-            or self.machine_authorization_version_ref is None
-            or self.plan_allocation_ref is None
-        ):
-            raise ValueError("LIVE_WRITE_OPEN_STATUS_ACTIVATION_REFS_REQUIRED")
+    def validate_effective_state(self) -> "LiveWriteGateStatus":
         if (
             self.runtime_real_write_gate == "OPEN"
             and self.configured_runtime_real_write_gate != "OPEN"
         ):
             raise ValueError("LIVE_WRITE_EFFECTIVE_GATE_CONFIGURATION_MISMATCH")
+        if self.runtime_real_write_gate == "OPEN" and self.authorized_activation_id is None:
+            raise ValueError("LIVE_WRITE_EFFECTIVE_ACTIVATION_REQUIRED")
         return self
 
 
@@ -291,111 +259,26 @@ def _read_binding(
 def _database_assessment(
     connection: Any,
     settings: HalphaSettings,
-    binding: LiveWriteGateBinding,
-    now: datetime,
 ) -> tuple[list[str], str | None]:
-    violations: list[str] = []
-    limit_id = binding.account_capital_limit_version_ref
-    authorization_id = binding.machine_authorization_version_ref
-    allocation_id = binding.plan_allocation_ref
-    if limit_id is None or authorization_id is None or allocation_id is None:
-        return ["LIVE_WRITE_GATE_OPEN_ACTIVATION_REFS_REQUIRED"], None
-
-    limit = connection.execute(
+    rows = connection.execute(
         """
-        SELECT environment_kind, authority_class, account_ref, scope
-        FROM halpha.account_capital_limit_version
-        WHERE environment_id = %s AND capital_limit_version_id = %s
-        """,
-        (settings.release.environment_id, limit_id),
-    ).fetchone()
-    authorization = connection.execute(
-        """
-        SELECT activation_id, plan_version_ref, environment_kind, authority_class,
-               account_ref, instrument_ref, valid_from, valid_until, terms
-        FROM halpha.machine_authorization_version
-        WHERE environment_id = %s AND authorization_version_id = %s
-        """,
-        (settings.release.environment_id, authorization_id),
-    ).fetchone()
-    allocation = connection.execute(
-        """
-        SELECT activation_id, capital_limit_version_ref, environment_kind,
-               authority_class, status
-        FROM halpha.plan_allocation
-        WHERE environment_id = %s AND allocation_id = %s
-        """,
-        (settings.release.environment_id, allocation_id),
-    ).fetchone()
-    if limit is None:
-        violations.append("LIVE_WRITE_CAPITAL_LIMIT_NOT_FOUND")
-    if authorization is None:
-        violations.append("LIVE_WRITE_MACHINE_AUTHORIZATION_NOT_FOUND")
-    if allocation is None:
-        violations.append("LIVE_WRITE_PLAN_ALLOCATION_NOT_FOUND")
-    if violations:
-        return violations, None
-
-    activation_id = str(authorization[0])
-    activation = connection.execute(
-        """
-        SELECT plan_version_ref, authorization_version_ref, allocation_ref,
-               environment_kind, authority_class, account_ref, instrument_ref,
-               lifecycle, run_state
+        SELECT activation_id
         FROM halpha.plan_activation
-        WHERE environment_id = %s AND activation_id = %s
+        WHERE environment_id = %s
+          AND environment_kind = 'LIVE'
+          AND authority_class = 'LIVE_REAL_CAPITAL'
+          AND account_ref = %s
+          AND lifecycle IN ('RUNNING', 'EXITING')
+          AND responsibility_owner = 'HALPHA'
+        ORDER BY created_at, activation_id
         """,
-        (settings.release.environment_id, activation_id),
-    ).fetchone()
-    if activation is None:
-        return ["LIVE_WRITE_PLAN_ACTIVATION_NOT_FOUND"], None
-
-    if (str(limit[0]), str(limit[1]), str(limit[2])) != (
-        "LIVE",
-        "LIVE_REAL_CAPITAL",
-        settings.release.account_id,
-    ):
-        violations.append("LIVE_WRITE_CAPITAL_LIMIT_SCOPE_MISMATCH")
-    if (str(authorization[2]), str(authorization[3]), str(authorization[4])) != (
-        "LIVE",
-        "LIVE_REAL_CAPITAL",
-        settings.release.account_id,
-    ):
-        violations.append("LIVE_WRITE_MACHINE_AUTHORIZATION_SCOPE_MISMATCH")
-    if (str(allocation[2]), str(allocation[3]), str(allocation[4])) != (
-        "LIVE",
-        "LIVE_REAL_CAPITAL",
-        "HELD",
-    ):
-        violations.append("LIVE_WRITE_PLAN_ALLOCATION_SCOPE_MISMATCH")
-    if str(allocation[0]) != activation_id or str(allocation[1]) != limit_id:
-        violations.append("LIVE_WRITE_PLAN_ALLOCATION_REFERENCE_MISMATCH")
-    if (
-        str(activation[0]) != str(authorization[1])
-        or str(activation[1]) != authorization_id
-        or str(activation[2]) != allocation_id
-        or str(activation[3]) != "LIVE"
-        or str(activation[4]) != "LIVE_REAL_CAPITAL"
-        or str(activation[5]) != settings.release.account_id
-        or str(activation[6]) != str(authorization[5])
-        or str(activation[7]) in {"COMPLETED", "USER_TAKEOVER"}
-    ):
-        violations.append("LIVE_WRITE_PLAN_ACTIVATION_SCOPE_MISMATCH")
-
-    valid_from, valid_until = authorization[6], authorization[7]
-    if not (valid_from <= now < valid_until):
-        violations.append("LIVE_WRITE_MACHINE_AUTHORIZATION_EXPIRED")
-    if binding.expires_at > valid_until:
-        violations.append("LIVE_WRITE_GATE_EXCEEDS_MACHINE_AUTHORIZATION")
-    terms = dict(authorization[8])
-    required_acknowledgements = (
-        "real_capital_acknowledged",
-        "evidence_limitations_acknowledged",
-        "online_monitoring_acknowledged",
-    )
-    if any(terms.get(name) is not True for name in required_acknowledgements):
-        violations.append("LIVE_WRITE_OWNER_ACKNOWLEDGEMENTS_MISSING")
-    return violations, activation_id
+        (settings.release.environment_id, settings.release.account_id),
+    ).fetchall()
+    if not rows:
+        return ["LIVE_WRITE_CURRENT_ACTIVATION_MISSING"], None
+    if len(rows) != 1:
+        return ["LIVE_WRITE_CURRENT_ACTIVATION_AMBIGUOUS"], None
+    return [], str(rows[0][0])
 
 
 def closed_live_write_gate_status() -> LiveWriteGateStatus:
@@ -403,7 +286,6 @@ def closed_live_write_gate_status() -> LiveWriteGateStatus:
 
     return LiveWriteGateStatus(
         live_write_build_capability="NOT_QUALIFIED",
-        b05_real_capital_eligibility="BLOCKED",
         configured_runtime_real_write_gate="CLOSED",
         runtime_real_write_gate="CLOSED",
     )
@@ -428,7 +310,6 @@ def evaluate_live_write_gate(
     if binding is None:
         return LiveWriteGateStatus(
             live_write_build_capability="QUALIFIED" if capability else "NOT_QUALIFIED",
-            b05_real_capital_eligibility="BLOCKED",
             configured_runtime_real_write_gate="CLOSED",
             runtime_real_write_gate="CLOSED",
             build_manifest_digest=manifest_digest,
@@ -444,8 +325,7 @@ def evaluate_live_write_gate(
     if not (binding.effective_at <= observed_at < binding.expires_at):
         violations.append("LIVE_WRITE_GATE_BINDING_EXPIRED_OR_NOT_EFFECTIVE")
 
-    real_capital_authorized = capability and not violations
-    configured_gate = binding.runtime_real_write_gate if real_capital_authorized else "CLOSED"
+    configured_gate = binding.runtime_real_write_gate if capability and not violations else "CLOSED"
     authorized_activation_id: str | None = None
     if configured_gate == "OPEN":
         if connection is None:
@@ -455,8 +335,6 @@ def evaluate_live_write_gate(
                 database_violations, authorized_activation_id = _database_assessment(
                     connection,
                     settings,
-                    binding,
-                    observed_at,
                 )
                 violations.extend(database_violations)
             except Exception as exc:
@@ -464,16 +342,9 @@ def evaluate_live_write_gate(
     effective_gate = "OPEN" if configured_gate == "OPEN" and not violations else "CLOSED"
     return LiveWriteGateStatus(
         live_write_build_capability="QUALIFIED" if capability else "NOT_QUALIFIED",
-        b05_real_capital_eligibility=(
-            "AUTHORIZED" if real_capital_authorized else "BLOCKED"
-        ),
         configured_runtime_real_write_gate=configured_gate,
         runtime_real_write_gate=effective_gate,
         build_manifest_digest=manifest_digest,
-        user_authorization_ref=binding.user_authorization_ref,
-        account_capital_limit_version_ref=binding.account_capital_limit_version_ref,
-        machine_authorization_version_ref=binding.machine_authorization_version_ref,
-        plan_allocation_ref=binding.plan_allocation_ref,
         authorized_activation_id=(
             authorized_activation_id if effective_gate == "OPEN" else None
         ),

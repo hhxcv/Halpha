@@ -392,9 +392,9 @@ async def _emergency_cleanup(
 
 def _run(evidence_path: Path | None, proxy_url: str | None) -> int:
     evidence: dict[str, object] = {
-        "stage": "B00_GENERATE_MISSING_ORDERS_POSITION_RECOVERY",
+        "operation": "DIRECT_GENERATE_MISSING_ORDERS_POSITION_RECOVERY",
         "profile": "BINANCE_DEMO",
-        "scope": "B00_ISOLATED_QUALIFICATION_ONLY",
+        "scope": "DIRECT_ISOLATED_QUALIFICATION_ONLY",
         "generate_missing_orders": True,
         "persistent_cache": False,
         "actual_client_order_ids_persisted": False,
@@ -417,7 +417,7 @@ def _run(evidence_path: Path | None, proxy_url: str | None) -> int:
             evidence["credential_environment_had_values"] = environment_was_populated
             seed_strategy = DemoReduceOnlyTopologyStrategy(
                 config=StrategyConfig(
-                    strategy_id="B00MISSSEED",
+                    strategy_id="DIRECTMISSSEED",
                     order_id_tag="001",
                     external_order_claims=None,
                     manage_contingent_orders=False,
@@ -453,7 +453,7 @@ def _run(evidence_path: Path | None, proxy_url: str | None) -> int:
             if seed_succeeded:
                 recovery_strategy = DemoReduceOnlyTopologyStrategy(
                     config=StrategyConfig(
-                        strategy_id="B00MISSREC",
+                        strategy_id="DIRECTMISSREC",
                         order_id_tag="001",
                         external_order_claims=None,
                         manage_contingent_orders=False,

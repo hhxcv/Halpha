@@ -1,4 +1,4 @@
-"""Generate a full-lock license inventory and direct-dependency lifecycle gate."""
+"""Generate a license inventory directly from the locked dependencies."""
 
 from __future__ import annotations
 
@@ -200,15 +200,7 @@ def generate(root: Path) -> tuple[dict[str, Any], str]:
         raise LicenseGateError("RUNTIME_LOCK_NOT_SUBSET_OF_DEV_LOCK")
     package = json.loads((root / "frontend" / "package.json").read_text(encoding="utf-8"))
     npm_lock = json.loads((root / "frontend" / "package-lock.json").read_text(encoding="utf-8"))
-    ledger = json.loads(
-        (root / "config" / "dependency-lifecycle-ledger.json").read_text(encoding="utf-8")
-    )
     expected_direct = _direct_python(root) | _direct_npm(package)
-    ledger_members = {
-        member.casefold()
-        for group in ledger["groups"]
-        for member in group["members"]
-    }
     python_inventory = _python_inventory(python_locks)
     npm_inventory = _npm_inventory(npm_lock)
     unknown_or_incompatible = sorted(
@@ -220,9 +212,7 @@ def generate(root: Path) -> tuple[dict[str, Any], str]:
         for item in npm_inventory
         if _license_violation(item["license"])
     )
-    missing_ledger = sorted(expected_direct - ledger_members)
-    unexpected_ledger = sorted(ledger_members - expected_direct)
-    qualified = not unknown_or_incompatible and not missing_ledger and not unexpected_ledger
+    qualified = not unknown_or_incompatible
     report: dict[str, Any] = {
         "schema_version": 1,
         "observed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
@@ -237,15 +227,12 @@ def generate(root: Path) -> tuple[dict[str, Any], str]:
             "inventory": python_inventory,
         },
         "npm": {"full_lock_count": len(npm_inventory), "inventory": npm_inventory},
-        "direct_dependency_ledger": {
-            "expected_count": len(expected_direct),
-            "covered_count": len(ledger_members & expected_direct),
-            "missing": missing_ledger,
-            "unexpected": unexpected_ledger,
-            "complexity_result": ledger["complexity_result"],
+        "direct_dependencies": {
+            "count": len(expected_direct),
+            "members": sorted(expected_direct),
         },
         "unknown_or_incompatible": unknown_or_incompatible,
-        "gate_rule": "UNKNOWN_OR_STRONG_COPYLEFT_OR_UNLEDGERED_DIRECT_DEPENDENCY_REJECTS",
+        "gate_rule": "UNKNOWN_OR_STRONG_COPYLEFT_LICENSE_REJECTS",
     }
     canonical = json.dumps(report, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     report["evidence_digest"] = sha256(canonical.encode("utf-8")).hexdigest()
@@ -277,7 +264,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "status": report["status"],
                 "python_count": report["python"]["full_dev_lock_count"],
                 "npm_count": report["npm"]["full_lock_count"],
-                "direct_dependency_count": report["direct_dependency_ledger"]["expected_count"],
+                "direct_dependency_count": report["direct_dependencies"]["count"],
                 "evidence_digest": report["evidence_digest"],
             },
             sort_keys=True,

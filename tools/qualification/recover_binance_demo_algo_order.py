@@ -119,7 +119,7 @@ def _run_direct_emergency(
     proxy_url: str | None,
 ) -> int:
     evidence: dict[str, object] = {
-        "stage": "B00_ALGO_EMERGENCY_RESPONSIBILITY_CLEANUP",
+        "operation": "DIRECT_ALGO_EMERGENCY_RESPONSIBILITY_CLEANUP",
         "profile": "BINANCE_DEMO",
         "original_identity_format_valid": True,
         "actual_identity_persisted": False,
@@ -313,7 +313,7 @@ def _run(
     if UUID32_PATTERN.fullmatch(client_order_id) is None:
         raise SystemExit("client-order-id must be UUID32 lowercase hexadecimal")
     evidence: dict[str, object] = {
-        "stage": "B00_ALGO_RESPONSIBILITY_RECOVERY",
+        "operation": "DIRECT_ALGO_RESPONSIBILITY_RECOVERY",
         "profile": "BINANCE_DEMO",
         "original_identity_format_valid": True,
         "actual_identity_persisted": False,
@@ -355,7 +355,7 @@ def _run(
             evidence["node_built"] = node.is_built()
             strategy = DemoExternalOrderRecoveryStrategy(
                 config=StrategyConfig(
-                    strategy_id="B00RECOVER",
+                    strategy_id="DIRECTRECOVER",
                     order_id_tag="001",
                     external_order_claims=None,
                     manage_contingent_orders=False,

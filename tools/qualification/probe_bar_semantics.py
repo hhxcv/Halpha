@@ -220,7 +220,7 @@ def main() -> int:
             "missing_one": missing.__dict__,
             "identical_replay": identical.__dict__,
             "conflicting_duplicate": conflicting.__dict__,
-            "note": "B00 qualification fixture only; not product runtime code",
+            "note": "DIRECT qualification fixture only; not product runtime code",
         },
         "indicators": indicators,
     }

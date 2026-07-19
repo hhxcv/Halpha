@@ -16,7 +16,7 @@ import subprocess
 from typing import Iterable, Sequence
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 ALLOWED_PROFILE_DIFFERENCES = (
     "account_id",
     "authority_class",
@@ -38,12 +38,10 @@ class ArtifactSpec:
     name: str
     relative_path: str
     required: bool = True
-    expected_json_status: str | None = None
 
 
 DEFAULT_ARTIFACT_SPECS = (
     ArtifactSpec("python_runtime_lock", "requirements/runtime.txt"),
-    ArtifactSpec("python_dev_lock", "requirements/dev.txt"),
     ArtifactSpec("npm_lock", "frontend/package-lock.json"),
     ArtifactSpec("halpha_wheel", "build/release/artifacts"),
     ArtifactSpec("database_migrations", "migrations"),
@@ -58,179 +56,7 @@ DEFAULT_ARTIFACT_SPECS = (
         "nonsecret_live_write_config",
         "config/halpha.live-write.toml",
     ),
-    ArtifactSpec("evidence_storage_policy", "config/evidence-storage-policy.json"),
-    ArtifactSpec(
-        "dependency_lifecycle_ledger",
-        "config/dependency-lifecycle-ledger.json",
-    ),
     ArtifactSpec("windows_task_definitions", "build/runtime/tasks"),
-    ArtifactSpec(
-        "b00_qualification",
-        "build/qualification/b00-qualification-latest.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b01_database_boundary",
-        "build/qualification/b01-database-boundary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b01_windows_runtime",
-        "build/qualification/b01-windows-runtime.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b01_backup_boundary",
-        "build/qualification/b01-backup-boundary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b01_browser_qualification",
-        "build/qualification/browser/playwright-report.json",
-    ),
-    ArtifactSpec(
-        "b01_clean_venv",
-        "build/qualification/b01-clean-venv.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b01_pytest_junit",
-        "build/qualification/b01-pytest.xml",
-    ),
-    ArtifactSpec(
-        "b01_frontend_unit_tests",
-        "build/qualification/browser/vitest-report.json",
-    ),
-    ArtifactSpec(
-        "b01_summary",
-        "build/qualification/b01-summary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b01_license_inventory",
-        "build/qualification/b01-license-inventory.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "third_party_notices",
-        "build/qualification/THIRD_PARTY_NOTICES.txt",
-    ),
-    ArtifactSpec(
-        "b02_database_boundary",
-        "build/qualification/b02-database-boundary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b02_strategy_adapter_parity",
-        "build/qualification/b02-strategy-adapter-parity.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b02_critical_invariant_trace",
-        "build/qualification/b02-critical-invariant-trace.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b02_license_inventory",
-        "build/qualification/b02-license-inventory.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec("b02_pytest_junit", "build/qualification/b02-pytest.xml"),
-    ArtifactSpec(
-        "b02_browser_qualification",
-        "build/qualification/browser/b02-playwright-report.json",
-    ),
-    ArtifactSpec(
-        "b02_summary",
-        "build/qualification/b02-summary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b03_execution_boundary",
-        "build/qualification/b03-execution-boundary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b03_product_demo_roundtrip",
-        "build/qualification/b03-product-demo-roundtrip.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec("b03_pytest_junit", "build/qualification/b03-pytest.xml"),
-    ArtifactSpec(
-        "b03_summary",
-        "build/qualification/b03-summary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_historical_data",
-        "build/qualification/b04-historical-data.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_historical_catalog",
-        "build/qualification/b04-historical-catalog.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_historical_backtest",
-        "build/qualification/b04-historical-backtest.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_product_demo_cycle",
-        "build/qualification/b04-product-demo-cycle.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_notification_boundary",
-        "build/qualification/b04-notification-boundary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_outcome_boundary",
-        "build/qualification/b04-outcome-boundary.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_empty_database_restore",
-        "build/qualification/b04-empty-restore.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_windows_fault_drills",
-        "build/qualification/b04-windows-fault-drills.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_browser_workbench",
-        "build/qualification/b04-browser.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_implemented_complexity_budget",
-        "build/qualification/b04-complexity-budget.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_critical_invariant_trace",
-        "build/qualification/b04-critical-invariant-trace.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec("b04_pytest_junit", "build/qualification/b04-pytest.xml"),
-    ArtifactSpec(
-        "b04_playwright_report",
-        "build/qualification/browser/b04-playwright-report-current.json",
-    ),
-    ArtifactSpec(
-        "b04_actual_smtp_delivery",
-        "build/qualification/b04-smtp-delivery.json",
-        expected_json_status="QUALIFIED",
-    ),
-    ArtifactSpec(
-        "b04_summary",
-        "build/qualification/b04-summary.json",
-        expected_json_status="QUALIFIED",
-    ),
 )
 
 
@@ -332,8 +158,6 @@ def _artifact_bindings(
                     "name": spec.name,
                     "path": spec.relative_path,
                     "required": spec.required,
-                    "expected_json_status": spec.expected_json_status,
-                    "qualification_status": None,
                     "status": "MISSING",
                     "sha256": None,
                     "file_count": 0,
@@ -341,32 +165,12 @@ def _artifact_bindings(
             )
             continue
         digest, count = digest_path(path)
-        qualification_status: str | None = None
-        binding_status = "BOUND"
-        if spec.expected_json_status is not None:
-            if path.suffix.lower() != ".json" or not path.is_file():
-                qualification_status = "INVALID_ARTIFACT_TYPE"
-            else:
-                try:
-                    parsed = json.loads(path.read_text(encoding="utf-8"))
-                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                    qualification_status = "INVALID_JSON"
-                else:
-                    qualification_status = (
-                        str(parsed.get("status"))
-                        if isinstance(parsed, dict) and parsed.get("status") is not None
-                        else "STATUS_MISSING"
-                    )
-            if qualification_status != spec.expected_json_status:
-                binding_status = "STATUS_MISMATCH"
         bindings.append(
             {
                 "name": spec.name,
                 "path": spec.relative_path,
                 "required": spec.required,
-                "expected_json_status": spec.expected_json_status,
-                "qualification_status": qualification_status,
-                "status": binding_status,
+                "status": "BOUND",
                 "sha256": digest,
                 "file_count": count,
             }
@@ -403,7 +207,7 @@ def create_manifest(
             "missing_required": missing_required,
         },
         "build_eligible": not missing_required and bool(source["clean"]),
-        "capability_claim": "BUILD_IDENTITY_ONLY_NOT_REAL_WRITE_AUTHORIZATION",
+        "capability_claim": "BUILD_IDENTITY_ONLY_NOT_REAL_ACCOUNT_TRADING_PERMISSION",
     }
 
 
@@ -477,8 +281,6 @@ def verify_manifest(
             for key in (
                 "path",
                 "required",
-                "expected_json_status",
-                "qualification_status",
                 "status",
                 "sha256",
                 "file_count",
@@ -505,7 +307,7 @@ def verify_manifest(
     expected_eligibility = not missing_required and bool(current_source["clean"])
     if manifest.get("build_eligible") is not expected_eligibility:
         violations.append("BUILD_ELIGIBILITY_DRIFT")
-    if manifest.get("capability_claim") != "BUILD_IDENTITY_ONLY_NOT_REAL_WRITE_AUTHORIZATION":
+    if manifest.get("capability_claim") != "BUILD_IDENTITY_ONLY_NOT_REAL_ACCOUNT_TRADING_PERMISSION":
         violations.append("CAPABILITY_CLAIM_DRIFT")
     return sorted(set(violations))
 

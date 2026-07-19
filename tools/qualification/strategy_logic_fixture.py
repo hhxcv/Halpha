@@ -8,7 +8,7 @@ from decimal import InvalidOperation
 
 @dataclass(frozen=True)
 class QualificationProposal:
-    """Immutable B00-only proposal value; never a venue command or product record."""
+    """Immutable DIRECT-only proposal value; never a venue command or product record."""
 
     strategy_id: str
     activation_id: str
@@ -50,7 +50,7 @@ class OneShotQualificationLogic:
 
         self._entry_consumed = True
         return QualificationProposal(
-            strategy_id="B00_ONE_SHOT_FIXTURE_V1",
+            strategy_id="DIRECT_ONE_SHOT_FIXTURE_V1",
             activation_id=self._activation_id,
             trigger_id=trigger_id,
             instrument_id=self._instrument_id,

@@ -70,8 +70,8 @@ def main() -> int:
         errors.append("DACL_NOT_EXACT")
 
     suffix = uuid.uuid4().hex
-    mutex_name = f"Global\\Halpha.B00.Mutex.{suffix}"
-    event_name = f"Global\\Halpha.B00.Stop.{suffix}"
+    mutex_name = f"Global\\Halpha.DIRECT.Mutex.{suffix}"
+    event_name = f"Global\\Halpha.DIRECT.Stop.{suffix}"
     mutex_first = mutex_second = stop_event = opened_event = None
     try:
         mutex_first = win32event.CreateMutex(security_attributes, False, mutex_name)

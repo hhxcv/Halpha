@@ -1,4 +1,4 @@
 interface:
   display_name: "Halpha Development"
-  short_description: "Handle one Halpha scope with staged validation"
-  default_prompt: "Use $develop-halpha to implement the authorized Halpha outcome with the least process appropriate to its actual impact, while preserving trading correctness and explicit external-write boundaries."
+  short_description: "Build and audit Halpha with impact-sized validation"
+  default_prompt: "Use $develop-halpha to implement or audit one authorized Halpha result with the least process appropriate to its actual impact, while preserving trading correctness and explicit real-account-action boundaries."

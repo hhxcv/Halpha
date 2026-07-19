@@ -1,4 +1,4 @@
-"""Stable values for the two accepted OUT record families."""
+"""Stable values for activation reviews."""
 
 from __future__ import annotations
 
@@ -90,29 +90,4 @@ class Review(OutcomeModel):
         basis = self.model_dump(mode="python", exclude={"content_digest"})
         if self.content_digest != content_digest(basis):
             raise ValueError("REVIEW_CONTENT_DIGEST_MISMATCH")
-        return self
-
-
-class ImprovementHandoff(OutcomeModel):
-    improvement_handoff_id: str
-    environment_id: str
-    review_id: str
-    review_version: int
-    handoff_version: int
-    target_owner: str
-    observable_problem: str
-    evidence_refs: dict[str, Any]
-    impact_scope: dict[str, Any]
-    expected_change: str
-    problem_digest: str
-    content_digest: str
-    created_at: datetime
-
-    @model_validator(mode="after")
-    def validate_handoff(self) -> ImprovementHandoff:
-        if self.handoff_version <= 0 or not self.observable_problem or not self.expected_change:
-            raise ValueError("IMPROVEMENT_HANDOFF_INVALID")
-        basis = self.model_dump(mode="python", exclude={"content_digest"})
-        if self.content_digest != content_digest(basis):
-            raise ValueError("IMPROVEMENT_HANDOFF_CONTENT_DIGEST_MISMATCH")
         return self

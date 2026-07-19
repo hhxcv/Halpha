@@ -50,7 +50,8 @@ def test_process_secret_capabilities_are_not_shared() -> None:
     app = PROCESS_CONTRACTS[ProcessRole.APP]
     executor = PROCESS_CONTRACTS[ProcessRole.EXECUTOR]
     assert "binance_credentials" in app.forbidden_capabilities
-    assert "owner_password" in executor.forbidden_capabilities
+    assert "csrf_signing_secret" in executor.forbidden_capabilities
+    assert "local_web_api" in executor.forbidden_capabilities
     assert "smtp_credentials" in executor.forbidden_capabilities
     assert "nautilus_trading_node" in app.forbidden_capabilities
 

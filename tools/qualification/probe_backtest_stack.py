@@ -225,7 +225,7 @@ def main() -> int:
                 instrument_id=instrument.id,
                 bar_type=BAR_TYPE,
                 config=StrategyConfig(
-                    strategy_id="B00BACKTEST",
+                    strategy_id="DIRECTBACKTEST",
                     order_id_tag="001",
                     manage_contingent_orders=False,
                     manage_gtd_expiry=False,

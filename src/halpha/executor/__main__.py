@@ -72,9 +72,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             report.update(
                 {
                     "live_write_build_capability": gate_status.live_write_build_capability,
-                    "b05_real_capital_eligibility": (
-                        gate_status.b05_real_capital_eligibility
-                    ),
                     "configured_runtime_real_write_gate": (
                         gate_status.configured_runtime_real_write_gate
                     ),
@@ -268,9 +265,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 def report_ready(runtime_evidence: dict[str, object]) -> None:
                     report = {
                         "status": (
-                            "B04_READ_ONLY_RUNTIME_READY"
+                            "READ_ONLY_RUNTIME_READY"
                             if read_only
-                            else "B03_RUNTIME_READY"
+                            else "DEMO_RUNTIME_READY"
                         ),
                         "role": ProcessRole.EXECUTOR.value,
                         "paused_open_activations": paused_activations,

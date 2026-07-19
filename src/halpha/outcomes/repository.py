@@ -1,4 +1,4 @@
-"""Private PostgreSQL persistence for Review and ImprovementHandoff."""
+"""Private PostgreSQL persistence for Review."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from psycopg.types.json import Jsonb
 
 from halpha.outcomes.models import (
     EvidencePurpose,
-    ImprovementHandoff,
     PrimaryResult,
     Review,
     ReviewStatus,
@@ -144,73 +143,6 @@ class PostgreSQLOutcomeRepository:
         if result.rowcount != 1:
             raise OutcomeConflict("REVIEW_VERSION_CONFLICT")
 
-    def insert_handoff(self, handoff: ImprovementHandoff) -> None:
-        result = self._connection.execute(
-            """
-            INSERT INTO halpha.improvement_handoff (
-              improvement_handoff_id, environment_id, review_id, review_version,
-              handoff_version, target_owner, observable_problem, evidence_refs,
-              impact_scope, expected_change, problem_digest, content_digest, created_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (environment_id, review_id, review_version, target_owner, problem_digest)
-            DO NOTHING
-            """,
-            (
-                handoff.improvement_handoff_id,
-                handoff.environment_id,
-                handoff.review_id,
-                handoff.review_version,
-                handoff.handoff_version,
-                handoff.target_owner,
-                handoff.observable_problem,
-                Jsonb(handoff.evidence_refs),
-                Jsonb(handoff.impact_scope),
-                handoff.expected_change,
-                handoff.problem_digest,
-                handoff.content_digest,
-                handoff.created_at,
-            ),
-        )
-        if result.rowcount == 1:
-            return
-        existing = self._connection.execute(
-            """
-            SELECT content_digest
-            FROM halpha.improvement_handoff
-            WHERE environment_id = %s AND review_id = %s AND review_version = %s
-              AND target_owner = %s AND problem_digest = %s
-            """,
-            (
-                self._environment_id,
-                handoff.review_id,
-                handoff.review_version,
-                handoff.target_owner,
-                handoff.problem_digest,
-            ),
-        ).fetchone()
-        if existing is None or str(existing[0]) != handoff.content_digest:
-            raise OutcomeConflict("IMPROVEMENT_HANDOFF_CONFLICT")
-
-    def list_handoffs(self, *, target_owner: str | None = None) -> tuple[ImprovementHandoff, ...]:
-        owner_filter = "AND target_owner = %s" if target_owner else ""
-        parameters = (
-            (self._environment_id, target_owner)
-            if target_owner
-            else (self._environment_id,)
-        )
-        rows = self._connection.execute(
-            f"""
-            SELECT improvement_handoff_id, environment_id, review_id, review_version,
-                   handoff_version, target_owner, observable_problem, evidence_refs,
-                   impact_scope, expected_change, problem_digest, content_digest, created_at
-            FROM halpha.improvement_handoff
-            WHERE environment_id = %s {owner_filter}
-            ORDER BY created_at, improvement_handoff_id
-            """,
-            parameters,
-        ).fetchall()
-        return tuple(_handoff_from_row(row) for row in rows)
-
 
 def _review_from_row(row: tuple[Any, ...]) -> Review:
     return Review(
@@ -230,22 +162,4 @@ def _review_from_row(row: tuple[Any, ...]) -> Review:
         evidence_purpose=EvidencePurpose(str(row[13])),
         content_digest=str(row[14]),
         created_at=row[15],
-    )
-
-
-def _handoff_from_row(row: tuple[Any, ...]) -> ImprovementHandoff:
-    return ImprovementHandoff(
-        improvement_handoff_id=str(row[0]),
-        environment_id=str(row[1]),
-        review_id=str(row[2]),
-        review_version=int(row[3]),
-        handoff_version=int(row[4]),
-        target_owner=str(row[5]),
-        observable_problem=str(row[6]),
-        evidence_refs=dict(row[7]),
-        impact_scope=dict(row[8]),
-        expected_change=str(row[9]),
-        problem_digest=str(row[10]),
-        content_digest=str(row[11]),
-        created_at=row[12],
     )

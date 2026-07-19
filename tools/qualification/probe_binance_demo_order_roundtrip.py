@@ -377,9 +377,9 @@ async def _observe_round_trip(
 
 def _online_probe(evidence_path: Path | None, proxy_url: str | None) -> int:
     evidence: dict[str, object] = {
-        "stage": "INITIALIZING",
+        "operation": "INITIALIZING",
         "profile": "BINANCE_DEMO",
-        "scope": "B00_MINIMUM_ORDINARY_AND_ALGO_WRITE_CAPABILITY",
+        "scope": "DIRECT_MINIMUM_ORDINARY_AND_ALGO_WRITE_CAPABILITY",
         "actual_client_order_ids_persisted": False,
         "proxy": "RUNTIME_LOOPBACK_ARGUMENT" if proxy_url is not None else "DISABLED",
         "node_built": False,
@@ -422,7 +422,7 @@ def _online_probe(evidence_path: Path | None, proxy_url: str | None) -> int:
             evidence["node_built"] = node.is_built()
             strategy = DemoOrderCapabilityStrategy(
                 config=StrategyConfig(
-                    strategy_id="B00ORDER",
+                    strategy_id="DIRECTORDER",
                     order_id_tag="001",
                     external_order_claims=None,
                     manage_contingent_orders=False,

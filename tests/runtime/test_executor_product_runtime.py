@@ -474,6 +474,33 @@ def test_runtime_strategy_proposal_boundary_requires_the_activation_processor() 
         runtime.submit_strategy_proposal(proposal)
 
 
+def test_runtime_stops_the_node_when_startup_times_out(monkeypatch) -> None:
+    stopped = False
+
+    class FakeNode:
+        trader = SimpleNamespace(is_running=False)
+
+        @staticmethod
+        def is_running() -> bool:
+            return False
+
+        async def stop_async(self) -> None:
+            nonlocal stopped
+            stopped = True
+
+    async def no_wait(_seconds: float) -> None:
+        return None
+
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._node = FakeNode()
+    monkeypatch.setattr("halpha.executor.runtime.asyncio.sleep", no_wait)
+
+    with pytest.raises(ExecutorRuntimeError, match="TRADING_NODE_START_TIMEOUT"):
+        asyncio.run(runtime._startup_and_stop(lambda: None, None))
+
+    assert stopped is True
+
+
 def test_product_runtime_waits_for_every_strategy_history_warmup() -> None:
     adapters = {
         "activation-a": SimpleNamespace(live_history_ready=True),
@@ -588,6 +615,7 @@ def test_product_open_activation_wires_warmup_proposal_and_event_path(
     )
     runtime._coordinator = FakeCoordinator()
     runtime._proposal_processors = {}
+    runtime._responsibility_processors = {}
     try:
         runtime._restore_paused_adapters(object())
         adapter = lifecycle.adapter
@@ -600,7 +628,12 @@ def test_product_open_activation_wires_warmup_proposal_and_event_path(
         assert tuple(runtime._proposal_processors) == (
             "activation-product-wiring",
         )
+        assert tuple(runtime._responsibility_processors) == (
+            "activation-product-wiring",
+        )
     finally:
         for processor in runtime._proposal_processors.values():
+            processor.close()
+        for processor in runtime._responsibility_processors.values():
             processor.close()
         loop.close()
