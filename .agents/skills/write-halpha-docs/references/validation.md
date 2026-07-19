@@ -13,9 +13,9 @@
 - L0 只有使命、最高边界和取舍。
 - L1 没有字段、完整状态机、供应商、当前实施或建设顺序。
 - L2 没有精确字段、当前组件和相邻领域完整流程。
-- L3 没有阶段、进度、精确版本、当前实例和实际结果。
+- L3 没有当前工作、精确版本、当前实例和实际结果。
 - L4 有时间、范围和来源，不创造稳定规则。
-- L0–L3 没有 `P0`、`B04`、`R00` 等阶段标识或同义阶段叙事。
+- L0–L4 没有开发阶段、建设包、阶段顺序或阶段完成状态；L4 只记录当前焦点和事实。
 
 ## 复杂度检查
 
@@ -31,7 +31,7 @@
 
 ```powershell
 python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py <修改路径...>
-python governance/validate_construction_plan.py  # 修改 L4 时
+python governance/validate_current_plan.py  # 修改 L4 时
 ```
 
 机械校验只检查 UTF-8、YAML、文件名、最小元数据、相对链接和少量层级禁词。通过不表示语义正确。

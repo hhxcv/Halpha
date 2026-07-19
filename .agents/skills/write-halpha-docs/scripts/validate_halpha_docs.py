@@ -334,14 +334,14 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
         if level and level.startswith("L3"):
             issues.extend(validate_l3_header(path, metadata))
 
-        if level and any(level.startswith(item) for item in ("L0", "L1", "L2", "L3")):
+        if level and any(level.startswith(item) for item in ("L0", "L1", "L2", "L3", "L4")):
             identifiers = sorted(set(CONSTRUCTION_IDENTIFIER_RE.findall(text)))
             if identifiers:
                 issues.append(
                     Issue(
                         "ERROR",
                         path,
-                        "L0–L3 不得包含当前阶段或建设包代号："
+                        "L0–L4 不得包含开发阶段或建设包代号："
                         + "、".join(identifiers),
                     )
                 )
@@ -351,7 +351,7 @@ def validate_markdown(repo: Path, path: Path, text: str) -> list[Issue]:
                     Issue(
                         "ERROR",
                         path,
-                        "L0–L3 不得承载建设阶段叙事；当前实施标识、范围、顺序和进度只属于 L4："
+                        "L0–L4 不得用开发阶段或建设包组织工作；L4 只记录当前焦点和事实："
                         + phase_language.group(0),
                     )
                 )
@@ -487,7 +487,6 @@ def validate_yaml(path: Path, text: str) -> tuple[object | None, list[Issue]]:
 
     if data.get("document_id") == "HALPHA-PLAN-001":
         required_plan_keys = {
-            "schema_version",
             "document_id",
             "level",
             "as_of",
@@ -495,11 +494,55 @@ def validate_yaml(path: Path, text: str) -> tuple[object | None, list[Issue]]:
         }
         for key in required_plan_keys:
             if key not in data:
-                issues.append(Issue("ERROR", path, f"当前建设计划缺少键：{key}"))
-        if data.get("schema_version") != 3:
-            issues.append(Issue("ERROR", path, "当前建设计划 schema_version 必须为 3"))
+                issues.append(Issue("ERROR", path, f"当前计划缺少键：{key}"))
         if data.get("level") != "L4":
             issues.append(Issue("ERROR", path, "HALPHA-PLAN-001 的 level 必须为 L4"))
+
+        identifiers = sorted(set(CONSTRUCTION_IDENTIFIER_RE.findall(text)))
+        if identifiers:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    path,
+                    "L0–L4 不得包含开发阶段或建设包代号："
+                    + "、".join(identifiers),
+                )
+            )
+        phase_language = STABLE_LAYER_CONSTRUCTION_PHASE_RE.search(text)
+        if phase_language:
+            issues.append(
+                Issue(
+                    "ERROR",
+                    path,
+                    "L0–L4 不得用开发阶段或建设包组织工作；L4 只记录当前焦点和事实："
+                    + phase_language.group(0),
+                )
+            )
+
+        forbidden_keys = {"stage", "phase", "package", "package_status", "completion"}
+
+        def visit_keys(value: object, prefix: str = "") -> list[str]:
+            found: list[str] = []
+            if isinstance(value, dict):
+                for raw_key, child in value.items():
+                    key = str(raw_key)
+                    child_path = f"{prefix}.{key}" if prefix else key
+                    if key in forbidden_keys:
+                        found.append(child_path)
+                    found.extend(visit_keys(child, child_path))
+            elif isinstance(value, list):
+                for index, child in enumerate(value):
+                    found.extend(visit_keys(child, f"{prefix}[{index}]"))
+            return found
+
+        for key_path in visit_keys(data):
+            issues.append(
+                Issue(
+                    "ERROR",
+                    path,
+                    f"当前计划不得建立阶段、建设包或完成门字段：{key_path}",
+                )
+            )
     return data, issues
 
 

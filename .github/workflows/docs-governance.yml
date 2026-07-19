@@ -34,7 +34,7 @@ jobs:
         run: python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py docs
 
       - name: Validate current plan safety
-        run: python governance/validate_construction_plan.py
+        run: python governance/validate_current_plan.py
 
       - name: Run plan safety unit tests
         run: python -m unittest discover -s governance/tests -p "test_*.py"

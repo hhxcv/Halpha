@@ -7,7 +7,7 @@ from halpha.database.record_families import PRODUCT_RECORD_FAMILIES, RECORD_FAMI
 
 
 ROOT = Path(__file__).resolve().parents[2]
-REVISION = ROOT / "migrations" / "versions" / "20260717_0001_p0_record_families.py"
+REVISION = ROOT / "migrations" / "versions" / "20260717_0001_initial_product_schema.py"
 
 
 def _revision_module():
@@ -18,18 +18,18 @@ def _revision_module():
     return module
 
 
-def test_exactly_sixteen_accepted_product_record_families() -> None:
+def test_migration_inventory_matches_product_record_families() -> None:
     revision = _revision_module()
-    assert len(PRODUCT_RECORD_FAMILIES) == 16
     assert set(revision.PRODUCT_TABLES) == set(PRODUCT_RECORD_FAMILIES)
     assert set(revision.DROP_ORDER) == set(PRODUCT_RECORD_FAMILIES)
-    assert len(revision.DROP_ORDER) == 16
-    assert list(RECORD_FAMILY_OWNERS.values()).count("TRADEPLAN") == 4
-    assert list(RECORD_FAMILY_OWNERS.values()).count("DAT") == 1
-    assert list(RECORD_FAMILY_OWNERS.values()).count("CAP") == 4
-    assert list(RECORD_FAMILY_OWNERS.values()).count("EXE") == 1
-    assert list(RECORD_FAMILY_OWNERS.values()).count("OUT") == 2
-    assert list(RECORD_FAMILY_OWNERS.values()).count("UX") == 4
+    assert set(RECORD_FAMILY_OWNERS.values()) == {
+        "TRADEPLAN",
+        "DAT",
+        "CAP",
+        "EXE",
+        "OUT",
+        "UX",
+    }
 
 
 def test_deleted_record_families_are_not_reintroduced() -> None:
@@ -41,6 +41,9 @@ def test_deleted_record_families_are_not_reintroduced() -> None:
         "fact_correction",
         "ingestion_checkpoint",
         "capital_authorization_check",
+        "account_capital_limit_version",
+        "machine_authorization_version",
+        "plan_allocation",
         "write_control",
         "submission_attempt",
         "protection_task",
@@ -68,7 +71,7 @@ def test_app_is_not_granted_execution_or_venue_fact_writes() -> None:
     assert '"venue_fact"' not in app_block
     assert '"execution_action"' in executor_block
     assert '"venue_fact"' in executor_block
-    assert len(revision.PRODUCT_TABLES) == 16
+    assert set(revision.PRODUCT_TABLES) == set(PRODUCT_RECORD_FAMILIES)
 
 
 def test_migration_requires_an_in_memory_connection() -> None:

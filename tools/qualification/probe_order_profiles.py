@@ -63,8 +63,8 @@ def _profile(
 def main() -> int:
     errors: list[str] = []
     factory = OrderFactory(
-        trader_id=TraderId("B00-QUAL-001"),
-        strategy_id=StrategyId("B00PROBE-001"),
+        trader_id=TraderId("DIRECT-QUAL-001"),
+        strategy_id=StrategyId("DIRECTPROBE-001"),
         clock=TestClock(),
     )
     instrument_id = InstrumentId.from_str("BTCUSDT-PERP.BINANCE")
@@ -270,7 +270,7 @@ def main() -> int:
         errors.append("BINANCE_ORDER_TYPE_MAPPING_MISMATCH")
 
     evidence = {
-        "stage": "B00_ORDER_PROFILE_CAPABILITY",
+        "operation": "DIRECT_ORDER_PROFILE_CAPABILITY",
         "profiles": profiles,
         "profile_count": len(profiles),
         "identity": {

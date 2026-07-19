@@ -1,8 +1,8 @@
-"""B02 application coordination across TRADEPLAN and CAP public boundaries.
+"""Application coordination across TRADEPLAN and stateless CAP checks.
 
 The service accepts an existing PostgreSQL connection so the caller owns one
-local transaction. It never imports EXE or any venue client; B02 commits only
-plans, authorization, allocation, activation, and UX command state.
+local transaction. It never imports EXE or any venue client; planning commits only
+plans, activations, and UX command state.
 """
 
 from __future__ import annotations
@@ -13,13 +13,12 @@ from typing import Any
 
 from psycopg import Connection
 
-from halpha.capital.checks import allocate_plan, check_action, latch_max_loss
+from halpha.capital.checks import check_action, update_activation_capital_state
 from halpha.capital.models import (
+    ActivationCapitalBoundary,
     ActionCheckInput,
-    AllocationRequest,
     AuthorityClass,
-    MachineAuthorizationVersion,
-    PlanAllocation,
+    EnvironmentKind,
     RiskClass,
     StopCategory,
     StopStateVersion,
@@ -149,105 +148,19 @@ class PlanningApplicationService:
         *,
         plan_version_id: str,
         activation_id: str,
-        authorization_version_id: str,
-        allocation_id: str,
-        capital_limit_version_id: str,
-        quote_asset: str,
+        environment_kind: EnvironmentKind,
+        authority_class: AuthorityClass,
         observed_at: datetime,
-        activation_terms: dict[str, bool] | None = None,
-    ) -> tuple[PlanActivation, MachineAuthorizationVersion, PlanAllocation]:
-        supplied_terms = activation_terms or {}
-        allowed_activation_terms = {
-            "real_capital_acknowledged",
-            "evidence_limitations_acknowledged",
-            "online_monitoring_acknowledged",
-        }
-        if (
-            set(supplied_terms) - allowed_activation_terms
-            or any(value is not True for value in supplied_terms.values())
-        ):
-            raise ValueError("ACTIVATION_TERMS_INVALID")
+    ) -> PlanActivation:
         version = self._planning.get_version(plan_version_id, for_update=True)
         if not (version.valid_from <= observed_at < version.valid_until):
-            raise ValueError("AUTHORIZATION_EXPIRED")
-        account = self._capital.get_account_limit(capital_limit_version_id)
-        if account.authority_class is AuthorityClass.LIVE_REAL_CAPITAL:
-            if set(supplied_terms) != allowed_activation_terms:
-                raise ValueError("LIVE_OWNER_ACKNOWLEDGEMENTS_REQUIRED")
-        elif supplied_terms:
-            raise ValueError("ACTIVATION_TERMS_ENVIRONMENT_MISMATCH")
-        if account.account_ref != version.account_ref:
-            raise ValueError("AUTHORIZATION_MISMATCH")
-        if account.quote_asset != quote_asset:
-            raise ValueError("ALLOCATION_CONFLICT")
-        allowed_instruments = account.scope.get("instruments")
-        if isinstance(allowed_instruments, list) and version.instrument_ref not in allowed_instruments:
-            raise ValueError("AUTHORIZATION_MISMATCH")
-        self._capital.lock_account_scope(
-            account_ref=account.account_ref,
-            quote_asset=quote_asset,
-        )
-        account = self._capital.get_account_limit(
-            capital_limit_version_id,
-            for_update=True,
-        )
-        existing = self._capital.lock_open_allocations(
-            authority_class=account.authority_class.value,
-            quote_asset=quote_asset,
-        )
-        allocation = allocate_plan(
-            account,
-            existing,
-            AllocationRequest(
-                allocation_id=allocation_id,
-                activation_id=activation_id,
-                capital_limit_version_ref=capital_limit_version_id,
-                environment_id=account.environment_id,
-                environment_kind=account.environment_kind,
-                authority_class=account.authority_class,
-                quote_asset=quote_asset,
-                max_margin=version.requested_limits.max_margin,
-                max_notional=version.requested_limits.max_notional,
-                max_allowed_loss=version.requested_limits.max_allowed_loss,
-            ),
-        )
-        authorization_fields = {
-            "authorization_version_id": authorization_version_id,
-            "environment_id": account.environment_id,
-            "environment_kind": account.environment_kind,
-            "authority_class": account.authority_class,
-            "activation_id": activation_id,
-            "plan_version_ref": plan_version_id,
-            "account_ref": version.account_ref,
-            "instrument_ref": version.instrument_ref,
-            "direction": version.direction.value,
-            "version": 1,
-            "valid_from": max(version.valid_from, observed_at),
-            "valid_until": version.valid_until,
-            "allowed_actions": version.allowed_actions,
-            "terms": {
-                **version.terms,
-                "strategy_definition_ref": (
-                    f"{version.strategy_basis.strategy_id}@"
-                    f"{version.strategy_basis.strategy_version}"
-                ),
-                "parameter_digest": version.strategy_basis.parameter_digest,
-                "allocation_terms_digest": content_digest(version.requested_limits),
-                **supplied_terms,
-            },
-        }
-        authorization = MachineAuthorizationVersion(
-            **authorization_fields,
-            content_digest=content_digest(authorization_fields),
-        )
+            raise ValueError("PLAN_EXPIRED")
         activation = PlanActivation(
             activation_id=activation_id,
-            environment_id=account.environment_id,
-            environment_kind=account.environment_kind,
-            authority_class=account.authority_class,
+            environment_id=self._environment_id,
+            environment_kind=environment_kind,
+            authority_class=authority_class,
             plan_version_ref=plan_version_id,
-            authorization_version_ref=authorization_version_id,
-            allocation_ref=allocation_id,
             account_ref=version.account_ref,
             instrument_ref=version.instrument_ref,
             direction=version.direction,
@@ -258,15 +171,17 @@ class PlanningApplicationService:
                 "deadlines": {"entry_valid_until": version.valid_until.isoformat()},
                 "condition_judgements": {},
                 "last_bar_cursors": {},
+                "capital": {
+                    "activation_loss": "0",
+                    "max_loss_reached": False,
+                },
             },
             protection_state=ProtectionState.NONE,
             created_at=observed_at,
             updated_at=observed_at,
         )
-        self._capital.insert_authorization(authorization)
         self._planning.insert_activation(activation)
-        self._capital.insert_allocation(allocation)
-        return activation, authorization, allocation
+        return activation
 
     def record_plan_event(
         self,
@@ -406,15 +321,26 @@ class PlanningApplicationService:
             action=action_check,
             created_at=created_at,
         )
-        allocation = self._capital.get_allocation(
-            activation.activation_id,
-            for_update=True,
-        )
-        authorization = self._capital.get_authorization(
-            activation.authorization_version_ref,
-        )
-        account = self._capital.get_account_limit(
-            allocation.capital_limit_version_ref,
+        version = self._planning.get_version(activation.plan_version_ref)
+        capital_state = activation.rule_state.get("capital", {})
+        if not isinstance(capital_state, dict):
+            capital_state = {}
+        boundary = ActivationCapitalBoundary(
+            activation_id=activation.activation_id,
+            environment_id=activation.environment_id,
+            environment_kind=activation.environment_kind,
+            authority_class=activation.authority_class,
+            account_ref=activation.account_ref,
+            instrument_ref=activation.instrument_ref,
+            valid_from=version.valid_from,
+            valid_until=version.valid_until,
+            allowed_actions=version.allowed_actions,
+            max_margin=version.requested_limits.max_margin,
+            max_notional=version.requested_limits.max_notional,
+            max_allowed_loss=version.requested_limits.max_allowed_loss,
+            activation_loss=str(capital_state.get("activation_loss", "0")),
+            lifecycle=activation.lifecycle.value,
+            responsibility_owner=activation.responsibility_owner,
         )
         stop_states = self._capital.lock_current_stop_states(
             account_ref=activation.account_ref,
@@ -422,9 +348,7 @@ class PlanningApplicationService:
         )
         decision = check_action(
             action_check,
-            account=account,
-            authorization=authorization,
-            allocation=allocation,
+            boundary=boundary,
             stop_states=stop_states,
         )
         condition = ConditionJudgement(
@@ -473,15 +397,15 @@ class PlanningApplicationService:
             or action.account_ref != activation.account_ref
             or action.instrument_ref != activation.instrument_ref
             or action.action_profile != proposal.action_profile
-            or action.control_category is not StopCategory.NEW_FUNDING
+            or action.control_category is not StopCategory.NEW_RISK
             or action.risk_class is not RiskClass.RISK_INCREASING
             or action.quantized_quantity != proposal.quantity
             or action.checked_at != created_at
         ):
-            raise ValueError("AUTHORIZATION_MISMATCH")
+            raise ValueError("PLAN_BOUNDARY_MISMATCH")
 
     def pause_for_writer_continuity_loss(self, observed_at: datetime) -> int:
-        """Fail closed before a replacement Executor can form any new write."""
+        """Stop new actions before a replacement Executor resumes responsibility."""
 
         return self._planning.pause_all_open_for_writer_continuity_loss(observed_at)
 
@@ -643,29 +567,43 @@ class PlanningApplicationService:
         fact_digest: str,
         stop_state_version_id: str,
         observed_at: datetime,
-    ) -> tuple[PlanActivation, PlanAllocation, StopStateVersion | None]:
-        """Persist one loss revision and atomically enter exit on first threshold hit."""
+    ) -> tuple[PlanActivation, dict[str, object], StopStateVersion | None]:
+        """Persist one loss revision in the activation and exit at the threshold."""
 
         activation = self._planning.get_activation(activation_id, for_update=True)
-        allocation = self._capital.get_allocation(activation_id, for_update=True)
+        original_version = activation.state_version
+        version = self._planning.get_version(activation.plan_version_ref)
         states = self._capital.lock_current_stop_states(
             account_ref=activation.account_ref,
             activation_id=activation.activation_id,
         )
-        updated_allocation = latch_max_loss(
-            allocation,
+        current_state = activation.rule_state.get("capital", {})
+        if not isinstance(current_state, dict):
+            current_state = {}
+        updated_state = update_activation_capital_state(
+            current_state,
+            activation_id=activation.activation_id,
+            max_allowed_loss=version.requested_limits.max_allowed_loss,
             activation_loss=activation_loss,
             fact_cutoff=loss_fact_cutoff,
             funding_query_cutoff=funding_query_cutoff,
             fact_digest=fact_digest,
         )
-        if updated_allocation.state_version != allocation.state_version:
-            self._capital.update_allocation(
-                updated_allocation,
-                expected_version=allocation.state_version,
+        if updated_state != current_state:
+            activation = activation.model_copy(
+                update={
+                    "rule_state": {**activation.rule_state, "capital": updated_state},
+                    "state_version": activation.state_version + 1,
+                    "updated_at": observed_at,
+                }
             )
-        if not updated_allocation.max_loss_reached:
-            return activation, updated_allocation, None
+        if not bool(updated_state.get("max_loss_reached")):
+            if activation.state_version != original_version:
+                self._planning.update_activation(
+                    activation,
+                    expected_version=original_version,
+                )
+            return activation, updated_state, None
 
         current_activation_stop = next(
             (state for state in states if state.activation_id == activation.activation_id),
@@ -673,9 +611,9 @@ class PlanningApplicationService:
         )
         stop_is_current = (
             current_activation_stop is not None
-            and StopCategory.NEW_FUNDING in current_activation_stop.stopped_categories
+            and StopCategory.NEW_RISK in current_activation_stop.stopped_categories
             and current_activation_stop.loss_latch_digest
-            == updated_allocation.loss_latch_digest
+            == updated_state.get("loss_latch_digest")
         )
         if stop_is_current:
             max_loss_stop = current_activation_stop
@@ -696,15 +634,14 @@ class PlanningApplicationService:
                         if current_activation_stop is not None
                         else ()
                     )
-                    | {StopCategory.NEW_FUNDING}
+                    | {StopCategory.NEW_RISK}
                 ),
                 "reason": "MAX_LOSS_REACHED",
                 "source": "SYSTEM_MAX_LOSS",
                 "started_at": observed_at,
-                "authorization_version_ref": activation.authorization_version_ref,
-                "loss_latch_digest": updated_allocation.loss_latch_digest,
+                "loss_latch_digest": updated_state.get("loss_latch_digest"),
                 "release_rules": {
-                    "NEW_FUNDING": {
+                    "NEW_RISK": {
                         "user_releasable": False,
                         "requires": "ACTIVATION_CLOSURE",
                     },
@@ -722,12 +659,12 @@ class PlanningApplicationService:
             self._capital.insert_stop_state(max_loss_stop)
 
         exiting = enter_exit(activation, observed_at=observed_at)
-        if exiting.state_version != activation.state_version:
+        if exiting.state_version != original_version:
             self._planning.update_activation(
                 exiting,
-                expected_version=activation.state_version,
+                expected_version=original_version,
             )
-        return exiting, updated_allocation, max_loss_stop
+        return exiting, updated_state, max_loss_stop
 
     def fix_and_activate(
         self,
@@ -736,20 +673,13 @@ class PlanningApplicationService:
         expected_draft_version: int,
         plan_version_id: str,
         activation_id: str,
-        authorization_version_id: str,
-        allocation_id: str,
-        capital_limit_version_id: str,
-        quote_asset: str,
+        environment_kind: EnvironmentKind,
+        authority_class: AuthorityClass,
         build_digest: str,
         evidence_digest: str,
         evidence_scope: dict[str, object],
         observed_at: datetime,
-    ) -> tuple[
-        TradePlanVersion,
-        PlanActivation,
-        MachineAuthorizationVersion,
-        PlanAllocation,
-    ]:
+    ) -> tuple[TradePlanVersion, PlanActivation]:
         """Perform draft -> fixed -> activation inside the caller's transaction."""
 
         version = self.fix_draft(
@@ -761,13 +691,11 @@ class PlanningApplicationService:
             evidence_scope=evidence_scope,
             fixed_at=observed_at,
         )
-        activation, authorization, allocation = self.activate_version(
+        activation = self.activate_version(
             plan_version_id=plan_version_id,
             activation_id=activation_id,
-            authorization_version_id=authorization_version_id,
-            allocation_id=allocation_id,
-            capital_limit_version_id=capital_limit_version_id,
-            quote_asset=quote_asset,
+            environment_kind=environment_kind,
+            authority_class=authority_class,
             observed_at=observed_at,
         )
-        return version, activation, authorization, allocation
+        return version, activation

@@ -120,7 +120,7 @@ def main() -> int:
         raise SystemExit("algo-id must be positive")
 
     evidence: dict[str, object] = {
-        "stage": "B00_ALGO_QUERY_IDENTITY_MATRIX",
+        "operation": "DIRECT_ALGO_QUERY_IDENTITY_MATRIX",
         "profile": "BINANCE_DEMO",
         "read_only": True,
         "actual_identities_persisted": False,

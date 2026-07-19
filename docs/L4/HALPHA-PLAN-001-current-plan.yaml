@@ -1,0 +1,130 @@
+document_id: HALPHA-PLAN-001
+level: L4
+language: zh-CN
+as_of: 2026-07-20
+
+current_summary: >-
+  Halpha 在现有 Windows 10 单机上持续完善最小交易闭环。开发每次选择一个可验证的小结果，
+  只补足必要设计，随后实现、验证、修复并集成；不设置小时门、多轴资格或默认长期观察。
+  独立策略研究可与产品工作并行。
+
+current_product_boundary:
+  outcome: >-
+    支持计划配置与固定、一次激活、持续监控、交易所动作执行、保护、退出、核对、复盘和用户接管。
+  includes:
+    - DEMO 完整闭环
+    - LIVE_READ_ONLY 公开行情观察
+    - LIVE_WRITE（真实账户交易）的无凭据实现、安全反例和一次受限真实激活能力
+    - 本地交易工作台、Windows 运行、邮件通知、备份恢复和官方入口接管
+  excludes:
+    - 第二个正式策略
+    - 多账户、多场所和组合优化
+    - 自动扩大资金范围
+    - 高可用、微服务、机构审批或治理平台
+
+current_decisions:
+  target_host: Windows 10 Pro 22H2 x64
+  host_rule: 不迁移、不缩减目标；如实记录依赖支持限制，并以本机直接验证判断当前可用性
+  development_flow: CONTINUOUS_SMALL_ITERATIONS
+  iteration_rule: 每次围绕一个可验证的小结果完成必要设计、实现、验证和修复，验证通过后直接集成
+  capital_authority: 半自动计划中用户配置并固定的交易金额就是本次资金边界；激活只让计划开始运行
+  build_identity: 每组产品输入只使用一个 product_build_id
+  observation: 只有当前发布、部署或真实资金决定提出直接测试无法回答的问题时才增加观察
+  research: >-
+    AI 可在独立研究边界内，基于项目当前问题、既有证据和外部调研自主选择一个有价值的可证伪问题；
+    问题与取舍理由由对应研究材料记录，结果仍须由项目所有者决定是否进入产品。
+
+current_facts:
+  source:
+    repository: 当前 Git 工作区
+    identity_rule: 构建或验证时直接读取提交、分支和工作树；本计划不抄写易失真的 SHA
+    checked_at: 2026-07-20
+  evidence_limit: >-
+    历史测试和观察只说明当时输入；当前实现仍在连续修改，因此不把历史结果表述为当前产品闭环或真实账户交易能力。
+  persistence:
+    migration_head: 20260720_0008
+    demo_database_at_head: true
+    live_database_at_head: true
+    product_record_family_count: 10
+
+target_runtime:
+  host:
+    operating_system: Windows 10 Pro 22H2
+    build: 10.0.19045
+    architecture: x64
+    dependency_caveat: >-
+      当前 NautilusTrader 版本的常规 Windows 支持边界不包含该主机；项目记录此限制，
+      通过本机安装、启停、重启和联合链路验证判断当前可用性，不表述为供应商保证。
+  trading:
+    venue: Binance USDⓈ-M
+    demo_instruments: [BTCUSDT-PERP, ETHUSDT-PERP]
+    first_live_instrument: BTCUSDT-PERP
+    strategy: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
+    account_configuration_mutation: DISABLED
+  topology:
+    database: PostgreSQL
+    processes: [halpha-app, halpha-executor]
+    exchange_change_paths_per_environment: 1
+    web: 127.0.0.1 本地 Web
+    notification: EMAIL_ONLY
+
+component_sources:
+  python_locks:
+    - requirements/runtime.txt
+    - requirements/dev.txt
+  frontend_lock: frontend/package-lock.json
+  project_metadata: pyproject.toml
+  runtime_configuration: config/*.toml
+  key_current_versions:
+    python: 3.13.14
+    nautilus_trader: 1.230.0
+    postgresql: 17.10
+    node: 24.18.0
+  rule: 精确依赖以锁文件为准；运行时不下载依赖
+
+current_strategy:
+  owner: HALPHA-ALP-002
+  strategy_id: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
+  strategy_version: 1.0.0
+  registry: src/halpha/planning/strategy_registry.json
+  instrument: BTCUSDT-PERP
+  supported_directions: [LONG, SHORT]
+  historical_limit: 历史模型未包含 funding，只支持机制检查，不证明实时净收益或 Alpha
+
+product_build:
+  target: ONE_PRODUCT_BUILD_ID
+  current_product_build_id: null
+  implementation: src/halpha/build_manifest.py
+  current_status: NOT_CREATED_FOR_CURRENT_PRODUCT_INPUTS
+  rule: 由实现读取实际产品输入；历史构建记录不代表当前构建
+
+current_iteration:
+  focus: 完成交易工作台剩余交互和真实账户路径的无凭据实现，保持交易所变更请求关闭
+  validation:
+    - 受影响文档和当前计划机械校验
+    - 直接相关后端与前端测试
+    - 工作台实际浏览器检查
+  next_candidates:
+    - 完成交易工作台剩余交互
+    - 完成真实账户交易路径的无凭据实现、秘密最后加载和禁止请求反例
+    - 按每次改动影响重跑策略、Demo、数据库、Windows、SMTP、前端和故障检查
+    - 生成 product_build_id，并检查部署、停止、备份、恢复和接管
+    - 由用户在产品中配置并激活一次受限真实计划
+
+real_account_trading:
+  design_owner: HALPHA-TRADEPLAN-002、HALPHA-CAP-002、HALPHA-EXE-002、HALPHA-SYS-002
+  exchange_change_requests_allowed: false
+  credentials_loaded: false
+  current_activation_id: null
+  execution_actions_created: false
+  exchange_changes_observed: false
+  database_current: true
+  unique_executor_confirmed: false
+  facts_current: false
+
+independent_research:
+  product_work_dependency: NONE
+  owned_path: research/**
+  selection_mode: AI_AUTONOMOUS_WITHIN_RESEARCH_BOUNDARY
+  question_record: 对应 research/** 研究材料
+  product_effects: NONE_UNTIL_OWNER_SELECTS_RESULT

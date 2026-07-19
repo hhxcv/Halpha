@@ -51,7 +51,7 @@ def _live_harness_proposal() -> tuple[dict[str, object], list[str]]:
     node: TradingNode | None = None
     strategy = LiveProposalQualificationStrategy(
         config=StrategyConfig(
-            strategy_id="B00LIVEPROPOSAL",
+            strategy_id="DIRECTLIVEPROPOSAL",
             order_id_tag="001",
             external_order_claims=None,
             manage_contingent_orders=False,
@@ -63,7 +63,7 @@ def _live_harness_proposal() -> tuple[dict[str, object], list[str]]:
         node = TradingNode(
             config=TradingNodeConfig(
                 environment=Environment.LIVE,
-                trader_id=TraderId("B00-PARITY-001"),
+                trader_id=TraderId("DIRECT-PARITY-001"),
                 cache=None,
                 message_bus=None,
                 emulator=None,
@@ -202,7 +202,7 @@ def main() -> int:
     }
     errors.extend(name for name, passed in checks.items() if not passed)
     evidence = {
-        "stage": "B00_STRATEGY_PROPOSAL_PARITY",
+        "operation": "DIRECT_STRATEGY_PROPOSAL_PARITY",
         "scope": "QUALIFICATION_FIXTURE_ONLY",
         "live_harness": live,
         "backtest_harness": backtest,

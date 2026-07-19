@@ -1,1 +1,1 @@
-"""Reproducible B00 qualification probes."""
+"""Reproducible DIRECT qualification probes."""

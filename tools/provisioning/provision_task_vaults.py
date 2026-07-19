@@ -7,7 +7,6 @@ enter command arguments, environment variables, temporary files, XML, or JSON.
 from __future__ import annotations
 
 import argparse
-from getpass import getpass
 import json
 from pathlib import Path
 import secrets
@@ -15,7 +14,6 @@ from typing import Iterable, Sequence
 
 import keyring
 from keyring.backends.Windows import WinVaultKeyring
-from pwdlib import PasswordHash
 import pywintypes
 import win32con
 import win32profile
@@ -116,8 +114,6 @@ def _task_password(backend: WinVaultKeyring, username: str) -> str:
 def _app_values(
     settings: HalphaSettings,
     source: WinVaultKeyring,
-    *,
-    owner_password: str | None,
 ) -> tuple[tuple[WinVaultReference, str], ...]:
     app = settings.app
     maintenance_references = tuple(
@@ -149,15 +145,8 @@ def _app_values(
         ),
         *smtp_values,
     )
-    if owner_password is None:
-        return database_values
     return (
         *database_values,
-        (
-            app.owner_password_hash_reference,
-            PasswordHash.recommended().hash(owner_password),
-        ),
-        (app.session_signing_reference, secrets.token_urlsafe(64)),
         (app.csrf_signing_reference, secrets.token_urlsafe(64)),
     )
 
@@ -186,18 +175,12 @@ def _executor_values(
 
 def provision_task_vaults(
     settings: HalphaSettings,
-    *,
-    owner_password: str | None,
 ) -> dict[str, object]:
-    if owner_password is not None and (
-        not owner_password or "\x00" in owner_password or len(owner_password) > 1024
-    ):
-        raise TaskVaultProvisioningError("OWNER_PASSWORD_INPUT_INVALID")
     source = keyring.get_keyring()
     require_win_vault_backend(source)
     app_password = _task_password(source, APP_USER)
     executor_password = _task_password(source, EXECUTOR_USER)
-    app_values = _app_values(settings, source, owner_password=owner_password)
+    app_values = _app_values(settings, source)
     executor_values = _executor_values(settings, source)
     app_forbidden = [
         reference
@@ -212,8 +195,6 @@ def provision_task_vaults(
         app_forbidden.append(settings.executor.runtime_proxy_reference)
     executor_forbidden = (
         settings.app.database_credential_reference,
-        settings.app.owner_password_hash_reference,
-        settings.app.session_signing_reference,
         settings.app.csrf_signing_reference,
         settings.app.smtp_credential_reference,
         settings.maintenance.demo.migration_credential_reference,
@@ -226,15 +207,6 @@ def provision_task_vaults(
         account_password=app_password,
         values=app_values,
         forbidden=tuple(app_forbidden),
-        required_existing=(
-            (
-                settings.app.owner_password_hash_reference,
-                settings.app.session_signing_reference,
-                settings.app.csrf_signing_reference,
-            )
-            if owner_password is None
-            else ()
-        ),
     )
     executor_count = _write_as_task_identity(
         username=EXECUTOR_USER,
@@ -248,48 +220,19 @@ def provision_task_vaults(
         "executor_reference_count": executor_count,
         "cross_role_visibility": "REJECTED",
         "secret_transport": "IN_PROCESS_IMPERSONATION_ONLY",
-        "owner_secret_mode": "PRESERVED" if owner_password is None else "ROTATED",
     }
-
-
-def _read_owner_password(*, bootstrap: bool, preserve: bool) -> str | None:
-    if preserve:
-        return None
-    if bootstrap:
-        return secrets.token_urlsafe(48)
-    first = getpass("New local owner password: ")
-    second = getpass("Repeat local owner password: ")
-    if first != second:
-        raise TaskVaultProvisioningError("OWNER_PASSWORD_CONFIRMATION_MISMATCH")
-    return first
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="provision-task-vaults")
     parser.add_argument("--repository-root", type=Path, required=True)
     parser.add_argument("--config", type=Path, required=True)
-    parser.add_argument(
-        "--bootstrap-owner-password",
-        action="store_true",
-        help="Generate an unknown bootstrap password; rotate interactively before owner use.",
-    )
-    parser.add_argument(
-        "--preserve-owner-secrets",
-        action="store_true",
-        help="Update database references while requiring existing owner/session/CSRF values.",
-    )
     args = parser.parse_args(argv)
     try:
         root = args.repository_root.resolve()
         require_repository_runtime(root)
         settings = load_settings(args.config)
-        if args.bootstrap_owner_password and args.preserve_owner_secrets:
-            raise TaskVaultProvisioningError("OWNER_SECRET_MODE_CONFLICT")
-        owner_password = _read_owner_password(
-            bootstrap=args.bootstrap_owner_password,
-            preserve=args.preserve_owner_secrets,
-        )
-        report = provision_task_vaults(settings, owner_password=owner_password)
+        report = provision_task_vaults(settings)
     except Exception as exc:
         if isinstance(exc, TaskVaultProvisioningError):
             reason = str(exc)
@@ -297,9 +240,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             reason = f"TASK_WINVAULT_PROVISIONING_FAILED type={type(exc).__name__}"
         print(json.dumps({"status": "REJECTED", "reason": reason}, sort_keys=True))
         return 2
-    finally:
-        if "owner_password" in locals():
-            owner_password = ""
     print(json.dumps(report, sort_keys=True))
     return 0
 

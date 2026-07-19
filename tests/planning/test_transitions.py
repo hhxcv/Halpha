@@ -39,8 +39,6 @@ def _activation(**updates: object) -> PlanActivation:
         "environment_kind": EnvironmentKind.DEMO,
         "authority_class": AuthorityClass.DEMO_VALIDATION,
         "plan_version_ref": "plan-version-1",
-        "authorization_version_ref": "authorization-1",
-        "allocation_ref": "allocation-1",
         "account_ref": "account-1",
         "instrument_ref": "BTCUSDT-PERP",
         "direction": "LONG",
@@ -147,20 +145,20 @@ def test_writer_continuity_loss_pauses_before_callback_and_resume_is_narrow() ->
         command_id="command-1",
         reconciliation_digest="a" * 64,
         observed_at=NOW,
-        active_stop_categories=(StopCategory.NEW_FUNDING,),
-        authorization_current=True,
+        active_stop_categories=(StopCategory.NEW_RISK,),
+        plan_current=True,
         facts_known=True,
     )
     assert resumed.run_state is RunState.ACTIVE
     assert callback_allowed(resumed) is True
-    with pytest.raises(ValueError, match="ALL_WRITES_STOPPED"):
+    with pytest.raises(ValueError, match="ALL_EXCHANGE_CHANGES_STOPPED"):
         resume_activation(
             paused,
             command_id="command-2",
             reconciliation_digest="b" * 64,
             observed_at=NOW,
-            active_stop_categories=(StopCategory.ALL_WRITES,),
-            authorization_current=True,
+            active_stop_categories=(StopCategory.ALL_EXCHANGE_CHANGES,),
+            plan_current=True,
             facts_known=True,
         )
 

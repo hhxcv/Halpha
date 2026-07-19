@@ -230,10 +230,10 @@ def _run_child_task(root: Path, config_path: Path, output: Path) -> dict[str, An
     service = win32com.client.Dispatch("Schedule.Service")
     service.Connect()
     folder = service.GetFolder(TASK_FOLDER)
-    task_name = f"B01BackupQualification-{os.getpid()}"
+    task_name = f"DIRECTBackupQualification-{os.getpid()}"
     definition = service.NewTask(0)
     definition.RegistrationInfo.Author = "Halpha Project Owner"
-    definition.RegistrationInfo.Description = "Ephemeral B01 backup-boundary qualification"
+    definition.RegistrationInfo.Description = "Ephemeral DIRECT backup-boundary qualification"
     settings = definition.Settings
     settings.AllowDemandStart = True
     settings.DisallowStartIfOnBatteries = False

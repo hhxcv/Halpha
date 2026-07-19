@@ -1,4 +1,4 @@
-"""Authenticated B02 App boundary for plans, limits, and activation transactions."""
+"""App boundary for plans and activation transactions."""
 
 from __future__ import annotations
 
@@ -10,11 +10,9 @@ import psycopg
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from halpha.capital.models import (
-    AccountCapitalLimitVersion,
     AuthorityClass,
     EnvironmentKind,
 )
-from halpha.capital.repository import PostgreSQLCapitalRepository
 from halpha.domain_values import canonical_decimal, content_digest, decimal_from_string
 from halpha.live_write_gate import (
     GateStatusProvider,
@@ -63,45 +61,13 @@ class PlanDraftPayload(ApiModel):
         )
 
 
-class CapitalLimitPayload(ApiModel):
-    quote_asset: str = "USDT"
-    max_margin: str
-    max_notional: str
-    max_allowed_loss: str
-    max_action_notional: str
-    instruments: list[str]
-
-    @field_validator(
-        "max_margin",
-        "max_notional",
-        "max_allowed_loss",
-        "max_action_notional",
-    )
-    @classmethod
-    def exact_positive_decimal(cls, value: str) -> str:
-        return canonical_decimal(
-            decimal_from_string(value, code="CAPITAL_LIMIT_INVALID", positive=True)
-        )
-
-
 class ActivationPayload(ApiModel):
     plan_version_id: str
-    capital_limit_version_id: str
-    quote_asset: str = "USDT"
-    owner_password: str
-    real_capital_acknowledged: bool = False
-    evidence_limitations_acknowledged: bool = False
-    online_monitoring_acknowledged: bool = False
 
 
 class ControlPayload(ApiModel):
     expected_version: int = Field(gt=0)
-    owner_password: str
     takeover_scope: dict[str, Any] = Field(default_factory=dict)
-
-
-class TaskAcknowledgePayload(ApiModel):
-    expected_version: int = Field(gt=0)
 
 
 class PlanningApiUnavailable(RuntimeError):
@@ -348,10 +314,8 @@ class PostgreSQLPlanningApi:
                         build_digest=self._build_digest,
                         evidence_digest=self._build_digest,
                         evidence_scope={
-                            "construction_package": "B04",
-                            "live_eligibility": (
-                                gate_status.b05_real_capital_eligibility
-                                == "AUTHORIZED"
+                            "live_write_build_capability": (
+                                gate_status.live_write_build_capability
                             ),
                             "runtime_real_write_gate": gate_status.runtime_real_write_gate,
                         },
@@ -364,151 +328,6 @@ class PostgreSQLPlanningApi:
                 if version.plan_id != plan_id:
                     raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
         return version.model_dump(mode="json")
-
-    def create_capital_limit(
-        self,
-        payload: CapitalLimitPayload,
-        *,
-        idempotency_key: str,
-        observed_at: datetime,
-    ) -> dict[str, Any]:
-        limit_id = _stable_id(self._environment_id, "capital-limit", idempotency_key)
-        fields = {
-            "capital_limit_version_id": limit_id,
-            "environment_id": self._environment_id,
-            "environment_kind": self._environment_kind,
-            "authority_class": self._authority_class,
-            "account_ref": self._account_ref,
-            "quote_asset": payload.quote_asset,
-            "version": 1,
-            "effective_at": observed_at,
-            "max_margin": payload.max_margin,
-            "max_notional": payload.max_notional,
-            "max_allowed_loss": payload.max_allowed_loss,
-            "max_action_notional": payload.max_action_notional,
-            "scope": {"instruments": payload.instruments},
-        }
-        limit = AccountCapitalLimitVersion(**fields, content_digest=content_digest(fields))
-        with self._connect() as connection:
-            repository = PostgreSQLCapitalRepository(connection, self._environment_id)
-            try:
-                with connection.transaction():
-                    repository.insert_account_limit(limit)
-            except psycopg.errors.UniqueViolation:
-                connection.rollback()
-                with connection.transaction():
-                    existing = repository.get_account_limit(limit_id)
-                if existing.content_digest != limit.content_digest:
-                    raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
-                limit = existing
-        return limit.model_dump(mode="json")
-
-    def capital_snapshot(self) -> dict[str, Any]:
-        with self._connect() as connection:
-            limits = connection.execute(
-                """
-                SELECT capital_limit_version_id, quote_asset, version, effective_at,
-                       max_margin, max_notional, max_allowed_loss, max_action_notional,
-                       scope, content_digest
-                FROM halpha.account_capital_limit_version
-                WHERE environment_id = %s AND account_ref = %s
-                ORDER BY effective_at DESC
-                """,
-                (self._environment_id, self._account_ref),
-            ).fetchall()
-            allocations = connection.execute(
-                """
-                SELECT allocation_id, activation_id, quote_asset, max_margin,
-                       max_notional, max_allowed_loss, status, state_version
-                FROM halpha.plan_allocation
-                WHERE environment_id = %s
-                ORDER BY allocation_id
-                """,
-                (self._environment_id,),
-            ).fetchall()
-            authorizations = connection.execute(
-                """
-                SELECT authorization_version_id, activation_id, version,
-                       valid_from, valid_until, action_profiles, content_digest
-                FROM halpha.machine_authorization_version
-                WHERE environment_id = %s
-                ORDER BY valid_until DESC, authorization_version_id
-                """,
-                (self._environment_id,),
-            ).fetchall()
-            stops = connection.execute(
-                """
-                SELECT DISTINCT ON (
-                    CASE WHEN activation_id IS NULL THEN 'ACCOUNT'
-                         ELSE activation_id::text END
-                ) stop_state_version_id, activation_id, version,
-                  stopped_categories, reason, source, started_at, content_digest
-                FROM halpha.stop_state_version
-                WHERE environment_id = %s AND account_ref = %s
-                ORDER BY CASE WHEN activation_id IS NULL THEN 'ACCOUNT'
-                              ELSE activation_id::text END,
-                         version DESC
-                """,
-                (self._environment_id, self._account_ref),
-            ).fetchall()
-        return {
-            "environment_id": self._environment_id,
-            "authority_class": self._authority_class.value,
-            "account_ref": self._account_ref,
-            "limits": [
-                {
-                    "capital_limit_version_id": str(row[0]),
-                    "quote_asset": str(row[1]),
-                    "version": int(row[2]),
-                    "effective_at": row[3].isoformat(),
-                    "max_margin": str(row[4]),
-                    "max_notional": str(row[5]),
-                    "max_allowed_loss": str(row[6]),
-                    "max_action_notional": str(row[7]),
-                    "scope": dict(row[8]),
-                    "content_digest": str(row[9]),
-                }
-                for row in limits
-            ],
-            "allocations": [
-                {
-                    "allocation_id": str(row[0]),
-                    "activation_id": str(row[1]),
-                    "quote_asset": str(row[2]),
-                    "max_margin": str(row[3]),
-                    "max_notional": str(row[4]),
-                    "max_allowed_loss": str(row[5]),
-                    "status": str(row[6]),
-                    "state_version": int(row[7]),
-                }
-                for row in allocations
-            ],
-            "authorizations": [
-                {
-                    "authorization_version_id": str(row[0]),
-                    "activation_id": str(row[1]),
-                    "version": int(row[2]),
-                    "valid_from": row[3].isoformat(),
-                    "valid_until": row[4].isoformat(),
-                    "action_profiles": list(row[5]),
-                    "content_digest": str(row[6]),
-                }
-                for row in authorizations
-            ],
-            "stops": [
-                {
-                    "stop_state_version_id": str(row[0]),
-                    "activation_id": str(row[1]) if row[1] is not None else None,
-                    "version": int(row[2]),
-                    "stopped_categories": list(row[3]),
-                    "reason": str(row[4]),
-                    "source": str(row[5]),
-                    "started_at": row[6].isoformat(),
-                    "content_digest": str(row[7]),
-                }
-                for row in stops
-            ],
-        }
 
     def activation_preview(self, plan_version_id: str) -> dict[str, Any]:
         with self._connect() as connection, connection.transaction():
@@ -528,18 +347,13 @@ class PostgreSQLPlanningApi:
                 f"{version.strategy_basis.strategy_id}@{version.strategy_basis.strategy_version}"
             ),
             "parameter_digest": version.strategy_basis.parameter_digest,
+            "trade_amount": version.requested_limits.max_notional,
             "limits": version.requested_limits.model_dump(mode="json"),
             "valid_until": version.valid_until.isoformat(),
             "allowed_actions": sorted(version.allowed_actions),
-            "actual_account_configuration": "B03_PRE_SUBMIT_FACT_NOT_REQUIRED_FOR_P0_ACTIVATION",
+            "actual_account_configuration": "PRE_SUBMIT_FACT_NOT_REQUIRED_FOR_PLAN_ACTIVATION",
             "account_mode_policy": "USE_ACTUAL_CONFIGURATION_WITH_EFFECTIVE_LEVERAGE_MIN_ACTUAL_5",
             "live_write_build_capability": gate_status.live_write_build_capability,
-            "b05_real_capital_eligibility": (
-                gate_status.b05_real_capital_eligibility
-            ),
-            "account_capital_limit_version_ref": (
-                gate_status.account_capital_limit_version_ref
-            ),
             "configured_runtime_real_write_gate": (
                 gate_status.configured_runtime_real_write_gate
             ),
@@ -547,10 +361,9 @@ class PostgreSQLPlanningApi:
             "live_activation_eligible": (
                 self._profile == "BINANCE_LIVE_WRITE"
                 and gate_status.live_write_build_capability == "QUALIFIED"
-                and gate_status.b05_real_capital_eligibility == "AUTHORIZED"
                 and gate_status.configured_runtime_real_write_gate == "CLOSED"
             ),
-            "capital_notice": "Halpha 内部互斥额度，不是 Binance 资金冻结或损失保证。",
+            "capital_notice": "策略计划中的交易金额就是本次边界；激活不再要求独立资金授权，也不会立即向 Binance 下单。",
         }
 
     def activate(
@@ -561,50 +374,26 @@ class PostgreSQLPlanningApi:
         observed_at: datetime,
     ) -> dict[str, Any]:
         gate_status = self._gate_status()
-        activation_terms: dict[str, bool] = {}
         if self._profile == "BINANCE_LIVE_READ_ONLY":
             raise ValueError("LIVE_READ_ONLY_ACTIVATION_FORBIDDEN")
         if self._profile == "BINANCE_LIVE_WRITE":
             if gate_status.live_write_build_capability != "QUALIFIED":
                 raise ValueError("LIVE_WRITE_BUILD_CAPABILITY_NOT_QUALIFIED")
-            if gate_status.b05_real_capital_eligibility != "AUTHORIZED":
-                raise ValueError("B05_REAL_CAPITAL_ELIGIBILITY_BLOCKED")
             if gate_status.configured_runtime_real_write_gate != "CLOSED":
                 raise ValueError("LIVE_WRITE_GATE_MUST_BE_CLOSED_FOR_ACTIVATION")
-            if (
-                gate_status.account_capital_limit_version_ref
-                != payload.capital_limit_version_id
-            ):
-                raise ValueError("B05_REAL_CAPITAL_SCOPE_MISMATCH")
-            activation_terms = {
-                "real_capital_acknowledged": payload.real_capital_acknowledged,
-                "evidence_limitations_acknowledged": (
-                    payload.evidence_limitations_acknowledged
-                ),
-                "online_monitoring_acknowledged": (
-                    payload.online_monitoring_acknowledged
-                ),
-            }
-            if any(value is not True for value in activation_terms.values()):
-                raise ValueError("LIVE_OWNER_ACKNOWLEDGEMENTS_REQUIRED")
         activation_id = _stable_id(self._environment_id, "activation", idempotency_key)
-        authorization_id = _stable_id(self._environment_id, "authorization", idempotency_key)
-        allocation_id = _stable_id(self._environment_id, "allocation", idempotency_key)
         with self._connect() as connection:
             planning = PostgreSQLPlanningRepository(connection, self._environment_id)
             try:
                 with connection.transaction():
-                    activation, authorization, allocation = PlanningApplicationService(
+                    activation = PlanningApplicationService(
                         connection, self._environment_id
                     ).activate_version(
                         plan_version_id=payload.plan_version_id,
                         activation_id=activation_id,
-                        authorization_version_id=authorization_id,
-                        allocation_id=allocation_id,
-                        capital_limit_version_id=payload.capital_limit_version_id,
-                        quote_asset=payload.quote_asset,
+                        environment_kind=self._environment_kind,
+                        authority_class=self._authority_class,
                         observed_at=observed_at,
-                        activation_terms=activation_terms,
                     )
             except psycopg.errors.UniqueViolation as exc:
                 constraint_name = exc.diag.constraint_name
@@ -616,26 +405,12 @@ class PostgreSQLPlanningApi:
                         if constraint_name == "uq_plan_activation_open_scope":
                             raise ValueError("ATTRIBUTION_AMBIGUOUS") from None
                         raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
-                    allocation = PostgreSQLCapitalRepository(
-                        connection, self._environment_id
-                    ).get_allocation(activation_id)
                 if (
                     activation.plan_version_ref != payload.plan_version_id
-                    or activation.authorization_version_ref != authorization_id
-                    or activation.allocation_ref != allocation_id
-                    or allocation.allocation_id != allocation_id
-                    or allocation.capital_limit_version_ref
-                    != payload.capital_limit_version_id
-                    or allocation.quote_asset != payload.quote_asset
                 ):
                     raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
-                authorization = None
         return {
             "activation": activation.model_dump(mode="json"),
-            "authorization_version_id": (
-                authorization.authorization_version_id if authorization else authorization_id
-            ),
-            "allocation": allocation.model_dump(mode="json"),
             "venue_write_created": False,
             "runtime_real_write_gate": self._gate_status().runtime_real_write_gate,
         }
@@ -660,9 +435,9 @@ class PostgreSQLPlanningApi:
             activation = PostgreSQLPlanningRepository(
                 connection, self._environment_id
             ).get_activation(activation_id)
-            allocation = PostgreSQLCapitalRepository(
+            version = PostgreSQLPlanningRepository(
                 connection, self._environment_id
-            ).get_allocation(activation_id)
+            ).get_version(activation.plan_version_ref)
             actions = connection.execute(
                 """
                 SELECT execution_action_id, action_kind, action_class, action_terms,
@@ -720,17 +495,22 @@ class PostgreSQLPlanningApi:
         stopped_categories = {
             str(category) for row in stops for category in row[0]
         }
-        if "ALL_WRITES" in stopped_categories:
+        if "ALL_EXCHANGE_CHANGES" in stopped_categories:
             stopped_categories.update(
                 {
-                    "NEW_FUNDING",
+                    "NEW_RISK",
                     "PROTECTION",
                     "RISK_REDUCTION_OR_ORDER_MANAGEMENT",
                 }
             )
         return {
             "activation": activation.model_dump(mode="json"),
-            "allocation": allocation.model_dump(mode="json"),
+            "capital": {
+                "max_margin": version.requested_limits.max_margin,
+                "max_notional": version.requested_limits.max_notional,
+                "max_allowed_loss": version.requested_limits.max_allowed_loss,
+                **dict(activation.rule_state.get("capital", {})),
+            },
             "execution_actions": [
                 {
                     "execution_action_id": str(row[0]),
@@ -890,13 +670,12 @@ class PostgreSQLPlanningApi:
         current = self.activation_detail(activation_id)
         consequences = {
             ControlIntent.STOP_NEW_RISK: "立即阻止新风险；已有查询、保护、撤单和减险责任继续。",
-            ControlIntent.RESUME_NEW_RISK: "仅解除可恢复的用户停增险；不解除最大损失、退出、接管或 ALL_WRITES。",
-            ControlIntent.RESUME_ACTIVATION: "仅解除 WRITER_CONTINUITY_LOST 暂停；当前授权、事实和安全停止仍需通过。",
-            ControlIntent.EXIT_STRATEGY: "进入 EXITING，停止增险并等待 B03 执行与闭合责任。",
-            ControlIntent.USER_TAKEOVER: "先持久化责任转移，再停止自动写；不会自动撤单或平仓。",
+            ControlIntent.RESUME_ACTIVATION: "仅解除执行者连续性暂停；当前计划、事实和安全停止仍需通过。",
+            ControlIntent.EXIT_STRATEGY: "进入 EXITING，停止增险并等待执行与闭合责任。",
+            ControlIntent.USER_TAKEOVER: "先持久化责任转移，再停止自动发起交易所变更请求；不会自动撤单或平仓。",
         }
         activation = current["activation"]
-        allocation = current["allocation"]
+        capital = current["capital"]
         preview_basis = {
             "activation_id": activation_id,
             "intent": intent.value,
@@ -905,9 +684,7 @@ class PostgreSQLPlanningApi:
             "run_state": activation["run_state"],
             "pause_reason": activation["pause_reason"],
             "protection_state": activation["protection_state"],
-            "allocation_state_version": allocation["state_version"],
-            "allocation_status": allocation["status"],
-            "max_loss_reached": allocation["max_loss_reached"],
+            "max_loss_reached": bool(capital.get("max_loss_reached")),
         }
         return {
             **current,
@@ -917,7 +694,7 @@ class PostgreSQLPlanningApi:
             "previewed_at": datetime.now(UTC).isoformat(),
             "resume_eligible": False if intent is ControlIntent.RESUME_ACTIVATION else None,
             "resume_denial_reasons": (
-                ["B03_AUTHORITATIVE_RECONCILIATION_NOT_AVAILABLE"]
+                ["AUTHORITATIVE_RECONCILIATION_NOT_AVAILABLE"]
                 if intent is ControlIntent.RESUME_ACTIVATION
                 else []
             ),
@@ -959,8 +736,8 @@ class PostgreSQLPlanningApi:
                 command,
                 receipt_id=receipt_id,
                 stop_state_version_id=stop_id,
-                # User input is never trusted as reconciliation evidence. B03 will
-                # inject evidence produced by the unique Executor/EXE path.
+                # User input is never trusted as reconciliation evidence. Only the
+                # unique Executor/EXE path can inject authoritative evidence.
                 reconciliation_digest=None,
             )
         return receipt.model_dump(mode="json")
@@ -991,112 +768,4 @@ class PostgreSQLPlanningApi:
             "content_digest": str(row[8]),
             "created_at": row[9].isoformat(),
             "updated_at": row[10].isoformat(),
-        }
-
-    def list_tasks(self) -> list[dict[str, Any]]:
-        with self._connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT task_id, responsibility_key, priority, due_at, source_kind,
-                       source_ref, source_version, source_digest, state, state_version,
-                       resolution_ref, content_digest, created_at, updated_at
-                FROM halpha.task
-                WHERE environment_id = %s
-                ORDER BY
-                  CASE priority WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2
-                                WHEN 'NORMAL' THEN 3 ELSE 4 END,
-                  due_at NULLS LAST, created_at, task_id
-                """,
-                (self._environment_id,),
-            ).fetchall()
-        return [
-            {
-                "task_id": str(row[0]),
-                "responsibility_key": str(row[1]),
-                "priority": str(row[2]),
-                "due_at": row[3].isoformat() if row[3] is not None else None,
-                "source_kind": str(row[4]),
-                "source_ref": str(row[5]),
-                "source_version": int(row[6]),
-                "source_digest": str(row[7]),
-                "state": str(row[8]),
-                "state_version": int(row[9]),
-                "resolution_ref": str(row[10]) if row[10] is not None else None,
-                "content_digest": str(row[11]),
-                "created_at": row[12].isoformat(),
-                "updated_at": row[13].isoformat(),
-            }
-            for row in rows
-        ]
-
-    def acknowledge_task(
-        self,
-        task_id: str,
-        *,
-        expected_version: int,
-        observed_at: datetime,
-    ) -> dict[str, Any]:
-        with self._connect() as connection, connection.transaction():
-            row = connection.execute(
-                """
-                SELECT task_id, environment_id, owner_scope, responsibility_key,
-                       priority, due_at, source_kind, source_ref, source_version,
-                       source_digest, state, state_version, resolution_ref,
-                       created_at, updated_at
-                FROM halpha.task
-                WHERE environment_id = %s AND task_id = %s
-                FOR UPDATE
-                """,
-                (self._environment_id, task_id),
-            ).fetchone()
-            if row is None:
-                raise ValueError("TASK_NOT_FOUND")
-            if int(row[11]) != expected_version:
-                raise ValueError("VERSION_CONFLICT")
-            if str(row[10]) == "RESOLVED":
-                raise ValueError("TASK_ALREADY_RESOLVED")
-            next_version = expected_version + 1
-            fields = {
-                "task_id": str(row[0]),
-                "environment_id": str(row[1]),
-                "owner_scope": str(row[2]),
-                "responsibility_key": str(row[3]),
-                "priority": str(row[4]),
-                "due_at": row[5],
-                "source_kind": str(row[6]),
-                "source_ref": str(row[7]),
-                "source_version": int(row[8]),
-                "source_digest": str(row[9]),
-                "state": "ACKNOWLEDGED",
-                "state_version": next_version,
-                "resolution_ref": str(row[12]) if row[12] is not None else None,
-                "created_at": row[14],
-                "updated_at": observed_at,
-            }
-            digest = content_digest(fields)
-            cursor = connection.execute(
-                """
-                UPDATE halpha.task
-                SET state = 'ACKNOWLEDGED', state_version = %s,
-                    content_digest = %s, updated_at = %s
-                WHERE environment_id = %s AND task_id = %s AND state_version = %s
-                """,
-                (
-                    next_version,
-                    digest,
-                    observed_at,
-                    self._environment_id,
-                    task_id,
-                    expected_version,
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise ValueError("VERSION_CONFLICT")
-        return {
-            "task_id": task_id,
-            "state": "ACKNOWLEDGED",
-            "state_version": next_version,
-            "content_digest": digest,
-            "source_responsibility_changed": False,
-            "updated_at": observed_at.isoformat(),
         }

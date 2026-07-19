@@ -1,0 +1,4 @@
+interface:
+  display_name: "Halpha Strategy Research"
+  short_description: "Choose valuable Halpha research from current gaps and prior art"
+  default_prompt: "Use $research-halpha to survey current prior art, choose one valuable falsifiable question from Halpha's current gaps, and run the smallest reproducible study with honest evidence."

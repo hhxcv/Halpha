@@ -200,13 +200,13 @@ class DocumentationValidatorTests(unittest.TestCase):
         self.assertIn("L3 文档头缺少直接依赖", messages)
         self.assertIn("L3 文档头缺少适用纵向约束", messages)
 
-    def test_rejects_construction_identifier_in_l0_through_l3(self) -> None:
+    def test_rejects_construction_identifier_in_l0_through_l4(self) -> None:
         path, text = self.l3_document("HALPHA-DAT-002")
         text += "\n当前先完成 P0，并等待 B04。\n"
 
         messages = [issue.message for issue in self.validate(path, text)]
 
-        self.assertIn("L0–L3 不得包含当前阶段或建设包代号：B04、P0", messages)
+        self.assertIn("L0–L4 不得包含开发阶段或建设包代号：B04、P0", messages)
 
     def test_rejects_generic_p_stage_label_in_l0_through_l3(self) -> None:
         path, text = self.l3_document("HALPHA-DAT-002")
@@ -215,7 +215,7 @@ class DocumentationValidatorTests(unittest.TestCase):
         messages = [issue.message for issue in self.validate(path, text)]
 
         self.assertTrue(
-            any("L0–L3 不得包含当前阶段或建设包代号：P 阶段" in item for item in messages)
+            any("L0–L4 不得包含开发阶段或建设包代号：P 阶段" in item for item in messages)
         )
 
     def test_rejects_spaced_or_punctuated_construction_identifier(self) -> None:
@@ -226,7 +226,7 @@ class DocumentationValidatorTests(unittest.TestCase):
 
         self.assertTrue(
             any(
-                "L0–L3 不得包含当前阶段或建设包代号：B-04、P 0、R_00"
+                "L0–L4 不得包含开发阶段或建设包代号：B-04、P 0、R_00"
                 in item
                 for item in messages
             )
@@ -239,7 +239,7 @@ class DocumentationValidatorTests(unittest.TestCase):
         messages = [issue.message for issue in self.validate(path, text)]
 
         self.assertTrue(
-            any("L0–L3 不得承载建设阶段叙事" in item for item in messages)
+            any("L0–L4 不得用开发阶段或建设包组织工作" in item for item in messages)
         )
 
     def test_allows_domain_lifecycle_stage_language(self) -> None:
@@ -248,7 +248,7 @@ class DocumentationValidatorTests(unittest.TestCase):
 
         messages = [issue.message for issue in self.validate(path, text)]
 
-        self.assertFalse(any("建设阶段叙事" in message for message in messages))
+        self.assertFalse(any("开发阶段或建设包组织工作" in message for message in messages))
 
     def test_rejects_precise_build_artifact_in_l0_through_l2(self) -> None:
         text = """# Validator fixture
@@ -283,8 +283,26 @@ class DocumentationValidatorTests(unittest.TestCase):
         messages = [issue.message for issue in self.validate(path, text)]
 
         self.assertTrue(
-            any("L0–L3 不得承载建设阶段叙事" in message for message in messages)
+            any("L0–L4 不得用开发阶段或建设包组织工作" in message for message in messages)
         )
+
+    def test_rejects_stage_fields_in_current_plan_yaml(self) -> None:
+        path = self.write(
+            "docs/L4/HALPHA-PLAN-001-current-plan.yaml",
+            """document_id: HALPHA-PLAN-001
+level: L4
+language: zh-CN
+as_of: 2026-07-20
+current_scope:
+  stage: P0
+""",
+        )
+
+        _, issues = validator.validate_yaml(path, path.read_text(encoding="utf-8"))
+        messages = [issue.message for issue in issues]
+
+        self.assertTrue(any("开发阶段或建设包代号" in message for message in messages))
+        self.assertTrue(any("不得建立阶段、建设包或完成门字段" in message for message in messages))
 
     def test_rejects_l3_object_name_in_l1(self) -> None:
         text = """# Validator fixture

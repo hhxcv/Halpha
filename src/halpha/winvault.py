@@ -74,8 +74,6 @@ def app_secret_resolver(
         backend,
         (
             app.database_credential_reference,
-            app.owner_password_hash_reference,
-            app.session_signing_reference,
             app.csrf_signing_reference,
             app.smtp_credential_reference,
         ),

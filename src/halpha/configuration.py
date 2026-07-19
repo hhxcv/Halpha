@@ -77,8 +77,6 @@ class AppConfig(FrozenModel):
     workers: Literal[1] = 1
     reload: Literal[False] = False
     database_credential_reference: WinVaultReference
-    owner_password_hash_reference: WinVaultReference
-    session_signing_reference: WinVaultReference
     csrf_signing_reference: WinVaultReference
     smtp_credential_reference: WinVaultReference
 
@@ -155,11 +153,8 @@ class EmailConfig(FrozenModel):
     smtp_username: str | None = Field(default=None, min_length=1, max_length=320)
     sender: str | None = Field(default=None, min_length=3, max_length=320)
     owner_recipient: str | None = Field(default=None, min_length=3, max_length=320)
-    owner_route_ref: Literal["owner-primary-email"] = "owner-primary-email"
     require_starttls: Literal[True] = True
     timeout_seconds: int = Field(default=10, ge=1, le=60)
-    max_attempts: Literal[3] = 3
-    retry_delays_seconds: tuple[Literal[60], Literal[300], Literal[900]] = (60, 300, 900)
 
     @model_validator(mode="after")
     def validate_enabled_route(self) -> "EmailConfig":
@@ -216,7 +211,7 @@ class HalphaSettings(BaseSettings):
         dotenv_settings: Any,
         file_secret_settings: Any,
     ) -> tuple[Any, ...]:
-        # Direct construction may use explicit values only. The public loader below
+        # Direct tests may use explicit values only. The public loader below
         # adds exactly one explicit TomlConfigSettingsSource.
         return (init_settings,)
 
@@ -264,8 +259,6 @@ class HalphaSettings(BaseSettings):
 
         app_references = {
             self.app.database_credential_reference,
-            self.app.owner_password_hash_reference,
-            self.app.session_signing_reference,
             self.app.csrf_signing_reference,
             self.app.smtp_credential_reference,
             self.maintenance.demo.backup_credential_reference,

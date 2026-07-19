@@ -27,7 +27,7 @@ def run_preflight_entrypoint(role: ProcessRole, argv: Sequence[str] | None = Non
     )
     args = parser.parse_args(argv)
     if not args.preflight_only:
-        parser.error("B01 skeleton currently supports only --preflight-only")
+        parser.error("This entry point currently supports only --preflight-only")
 
     try:
         settings = load_settings(args.config)

@@ -56,7 +56,7 @@ Keep decision-critical trading context visible without hover or navigation:
 - environment and account;
 - instrument and direction when scoped;
 - current position, open order, and protection state when exposure exists;
-- machine authorization or takeover state;
+- plan activation, machine-execution scope, or takeover state;
 - new-risk, exit, or stop state;
 - pending, rejected, failed, stale, or unknown outcome;
 - fact cutoff and next time-sensitive judgment;

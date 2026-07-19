@@ -12,7 +12,6 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from pydantic import SecretStr
-from pwdlib import PasswordHash
 
 from halpha.app.secrets import AppSecrets
 from halpha.app.web import create_app
@@ -36,8 +35,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         settings,
         AppSecrets(
             database_password=SecretStr("schema-only-database-value"),
-            owner_password_hash=SecretStr(PasswordHash.recommended().hash("schema-only")),
-            session_signing_secret=SecretStr("schema-only-session-signing-value"),
             csrf_signing_secret=SecretStr("schema-only-csrf-signing-value"),
         ),
         repo_root=ROOT,

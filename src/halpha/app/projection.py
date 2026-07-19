@@ -57,14 +57,12 @@ class PostgreSQLWorkbenchProjection:
                     """
                     SELECT
                         clock_timestamp() AT TIME ZONE 'UTC',
-                        (SELECT count(*) FROM halpha.task
-                         WHERE environment_id = %s AND state IN ('OPEN', 'ACKNOWLEDGED')),
                         (SELECT count(*) FROM halpha.plan_activation
                          WHERE environment_id = %s AND lifecycle <> 'COMPLETED'),
                         current_database(),
                         current_user
                     """,
-                    (self.environment_id, self.environment_id),
+                    (self.environment_id,),
                 )
                 row = cursor.fetchone()
         except ProjectionUnavailable:
@@ -81,10 +79,9 @@ class PostgreSQLWorkbenchProjection:
         return {
             "database_available": True,
             "server_fact_cutoff": str(cutoff),
-            "open_task_count": int(row[1]),
-            "open_activation_count": int(row[2]),
-            "database_name": str(row[3]),
-            "database_role": str(row[4]),
+            "open_activation_count": int(row[1]),
+            "database_name": str(row[2]),
+            "database_role": str(row[3]),
         }
 
     def availability(self) -> dict[str, Any]:
@@ -115,16 +112,12 @@ class PostgreSQLWorkbenchProjection:
                     SELECT a.activation_id, a.account_ref, a.instrument_ref, a.direction,
                            a.lifecycle, a.run_state, a.pause_reason, a.state_version,
                            a.protection_state, a.latest_venue_cutoff, a.updated_at,
-                           p.status, p.max_margin, p.max_notional, p.max_allowed_loss,
-                           p.exposure_summary, p.max_loss_reached,
-                           m.valid_until, m.authorization_version_id, p.quote_asset
+                           v.max_margin, v.max_notional, v.max_allowed_loss,
+                           v.terms, a.rule_state
                     FROM halpha.plan_activation AS a
-                    JOIN halpha.plan_allocation AS p
-                      ON p.environment_id = a.environment_id
-                     AND p.activation_id = a.activation_id
-                    JOIN halpha.machine_authorization_version AS m
-                      ON m.environment_id = a.environment_id
-                     AND m.authorization_version_id = a.authorization_version_ref
+                    JOIN halpha.trade_plan_version AS v
+                      ON v.environment_id = a.environment_id
+                     AND v.plan_version_id = a.plan_version_ref
                     WHERE a.environment_id = %s AND a.lifecycle <> 'COMPLETED'
                     ORDER BY a.updated_at DESC, a.activation_id
                     """,
@@ -202,15 +195,19 @@ class PostgreSQLWorkbenchProjection:
                         for stop_row in stop_rows
                         for category in stop_row[0]
                     }
-                    if "ALL_WRITES" in stopped_categories:
+                    if "ALL_EXCHANGE_CHANGES" in stopped_categories:
                         stopped_categories.update(
                             {
-                                "NEW_FUNDING",
+                                "NEW_RISK",
                                 "PROTECTION",
                                 "RISK_REDUCTION_OR_ORDER_MANAGEMENT",
                             }
                         )
-                    exposure = dict(row[15])
+                    terms = dict(row[14])
+                    rule_state = dict(row[15])
+                    capital = rule_state.get("capital", {})
+                    if not isinstance(capital, dict):
+                        capital = {}
                     activations.append(
                         {
                             "activation_id": activation_id,
@@ -226,17 +223,13 @@ class PostgreSQLWorkbenchProjection:
                                 row[9].isoformat() if row[9] is not None else None
                             ),
                             "updated_at": row[10].isoformat(),
-                            "allocation_status": str(row[11]),
-                            "max_margin": str(row[12]),
-                            "max_notional": str(row[13]),
-                            "max_allowed_loss": str(row[14]),
-                            "current_margin": str(exposure.get("current_margin", "0")),
-                            "current_notional": str(exposure.get("current_notional", "0")),
-                            "activation_loss": str(exposure.get("activation_loss", "0")),
-                            "max_loss_reached": bool(row[16]),
-                            "authorization_valid_until": row[17].isoformat(),
-                            "authorization_version_id": str(row[18]),
-                            "quote_asset": str(row[19]),
+                            "max_margin": str(row[11]),
+                            "max_notional": str(row[12]),
+                            "max_allowed_loss": str(row[13]),
+                            "activation_loss": str(capital.get("activation_loss", "0")),
+                            "max_loss_reached": bool(capital.get("max_loss_reached")),
+                            "plan_valid_until": str(terms.get("valid_until", "UNKNOWN")),
+                            "quote_asset": "USDT",
                             "stopped_categories": sorted(stopped_categories),
                             "stop_evidence": [
                                 {

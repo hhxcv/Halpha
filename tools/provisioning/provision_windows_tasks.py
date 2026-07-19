@@ -1,4 +1,4 @@
-"""Provision dedicated non-admin Windows identities and the two P0 scheduled tasks.
+"""Provision dedicated non-admin Windows identities and the two product tasks.
 
 Task-account passwords are generated in process memory, stored only in the
 maintenance identity's Windows Credential Manager, and passed to the Task

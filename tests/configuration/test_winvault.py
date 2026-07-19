@@ -60,7 +60,7 @@ def test_executor_can_resolve_only_executor_reference() -> None:
     assert material.get_secret_value() == secret
 
     with pytest.raises(SecretResolutionError, match="OUTSIDE_PROCESS_BOUNDARY"):
-        resolver.resolve(settings.app.session_signing_reference)
+        resolver.resolve(settings.app.csrf_signing_reference)
 
 
 def test_executor_can_resolve_configured_runtime_proxy_reference() -> None:
@@ -146,4 +146,4 @@ def test_maintenance_resolver_is_limited_to_database_maintenance_references() ->
     resolver = maintenance_secret_resolver(backend, maintenance_settings(settings))
     assert resolver.resolve(reference).get_secret_value() == "backup-secret"
     with pytest.raises(SecretResolutionError, match="OUTSIDE_PROCESS_BOUNDARY"):
-        resolver.resolve(settings.app.session_signing_reference)
+        resolver.resolve(settings.app.csrf_signing_reference)

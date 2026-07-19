@@ -64,7 +64,7 @@ async def _order_status_read_black_box() -> dict[str, object]:
         venue_order_id=None,
         instrument_id=instrument_id,
     )
-    open_order = SimpleNamespace(is_closed=False, strategy_id="B00-STRATEGY")
+    open_order = SimpleNamespace(is_closed=False, strategy_id="DIRECT-STRATEGY")
 
     async def run_case(responses: list[object], calls: int) -> dict[str, object]:
         account = _SequencedOrderAccount(responses)
@@ -128,7 +128,7 @@ async def _zero_write_retry_black_box() -> dict[str, object]:
         delay_initial_ms=1,
         delay_max_ms=1,
         backoff_factor=2,
-        logger=Logger("B00ZeroWriteRetry"),
+        logger=Logger("DIRECTZeroWriteRetry"),
         exc_types=(BinanceServerError,),
         retry_check=lambda _exc: True,
     )
@@ -209,7 +209,7 @@ def main() -> int:
         errors.append("ORDER_STATUS_READ_BLACK_BOX_MISMATCH")
     errors.extend(name for name, matched in source_contract.items() if not matched)
     evidence = {
-        "stage": "B00_ORDER_FAILURE_SEMANTICS",
+        "operation": "DIRECT_ORDER_FAILURE_SEMANTICS",
         "zero_write_retry_black_box": black_box,
         "order_status_read_black_box": read_black_box,
         "fixed_source_contract": source_contract,

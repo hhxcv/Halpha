@@ -1,25 +1,14 @@
-"""Local-owner web security primitives for the App process."""
+"""Local-request web security primitives for the App process."""
 
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
-import time
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
 from asgi_csrf import asgi_csrf
-from limits import parse
-from limits.storage import MemoryStorage
-from limits.strategies import FixedWindowRateLimiter
 from pydantic import SecretStr
-from starlette.requests import Request
 from starlette.responses import JSONResponse
-
-
-SESSION_ABSOLUTE_LIFETIME_SECONDS = 1800
-LOGIN_LIMIT = parse("5 per 5 minute")
-OWNER_SESSION_MARKER = "halpha-local-owner"
 
 
 class ASGIApp(Protocol):
@@ -40,7 +29,7 @@ class CsrfMiddleware:
             cookie_name="halpha_csrf",
             http_header="x-csrftoken",
             signing_secret=signing_secret.get_secret_value(),
-            always_protect=["/api/v1/session/login"],
+            always_protect=[],
             always_set_cookie=True,
             skip_if_scope=None,
             cookie_path="/",
@@ -123,43 +112,3 @@ class LocalRequestBoundaryMiddleware:
             await send(message)
 
         await self._app(scope, receive, send_with_headers)
-
-
-@dataclass
-class LoginRateLimiter:
-    """Non-authoritative, in-memory failed-login limiter selected by L4."""
-
-    def __post_init__(self) -> None:
-        self._limiter = FixedWindowRateLimiter(MemoryStorage())
-
-    @staticmethod
-    def key(request: Request) -> tuple[str, str]:
-        host = request.client.host.lower() if request.client else "unknown"
-        return ("owner", host)
-
-    def permits_attempt(self, request: Request) -> bool:
-        return self._limiter.test(LOGIN_LIMIT, *self.key(request))
-
-    def record_failure(self, request: Request) -> bool:
-        return self._limiter.hit(LOGIN_LIMIT, *self.key(request))
-
-    def clear(self, request: Request) -> None:
-        self._limiter.clear(LOGIN_LIMIT, *self.key(request))
-
-    def retry_after_seconds(self, request: Request) -> int:
-        stats = self._limiter.get_window_stats(LOGIN_LIMIT, *self.key(request))
-        return max(1, int(stats.reset_time - time.time()))
-
-
-def session_is_current(request: Request, *, now: Callable[[], float]) -> bool:
-    session = request.session
-    if session.get("owner") != OWNER_SESSION_MARKER:
-        return False
-    issued_at = session.get("issued_at")
-    if not isinstance(issued_at, int | float):
-        session.clear()
-        return False
-    if now() - float(issued_at) >= SESSION_ABSOLUTE_LIFETIME_SECONDS:
-        session.clear()
-        return False
-    return True

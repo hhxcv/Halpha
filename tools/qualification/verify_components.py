@@ -8,7 +8,6 @@ from verify_venv import collect_environment
 
 
 EXPECTED_DISTRIBUTIONS = {
-    "hypothesis": "6.156.6",
     "keyring": "25.7.0",
     "nautilus-trader": "1.230.0",
     "pandas": "2.3.3",

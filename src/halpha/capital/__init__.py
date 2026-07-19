@@ -1,17 +1,9 @@
-"""CAP authority, allocation, Decimal checking, and loss ownership."""
+"""Stateless capital checks over current plan and venue facts."""
 
-from halpha.capital.checks import (
-    allocate_plan,
-    check_action,
-    compute_activation_loss,
-    effective_leverage,
-    latch_max_loss,
-)
+from halpha.capital.checks import check_action, compute_activation_loss, effective_leverage
 
 __all__ = [
-    "allocate_plan",
     "check_action",
     "compute_activation_loss",
     "effective_leverage",
-    "latch_max_loss",
 ]

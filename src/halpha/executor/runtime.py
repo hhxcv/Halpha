@@ -68,6 +68,7 @@ from .product_entry import (
     ProductProposalBoundary,
     build_live_entry_sizing_snapshot,
 )
+from .responsibilities import ProductResponsibilityBoundary
 
 
 _PROFILE_SPEC = {
@@ -337,6 +338,9 @@ class ProductExecutorRuntime:
         self._coordinator: HalphaCoordinator | None = None
         self._capability: object | None = None
         self._proposal_processors: dict[str, ProductProposalBoundary] = {}
+        self._responsibility_processors: dict[
+            str, ProductResponsibilityBoundary
+        ] = {}
         self._recovery_complete = False
         self._recovered_action_count = 0
 
@@ -634,6 +638,13 @@ class ProductExecutorRuntime:
                 account_ref=self._settings.release.account_id,
             )
             self._proposal_processors[activation.activation_id] = processor
+            responsibility = ProductResponsibilityBoundary(
+                loop=self._loop,
+                coordinator=self.coordinator,
+                fact_provider=fact_provider.risk_reduction_facts,
+                environment_id=self._settings.release.environment_id,
+            )
+            self._responsibility_processors[activation.activation_id] = responsibility
 
             def state_provider(
                 activation_id: str = activation.activation_id,
@@ -670,7 +681,7 @@ class ProductExecutorRuntime:
                 if instrument is None or account is None:
                     return None
                 try:
-                    allocation = self.coordinator.get_entry_sizing_allocation(
+                    boundary = self.coordinator.get_entry_sizing_boundary(
                         activation_id
                     )
                     return build_live_entry_sizing_snapshot(
@@ -680,7 +691,7 @@ class ProductExecutorRuntime:
                         tracker=used_tracker,
                         instrument=instrument,
                         account=account,
-                        allocation=allocation,
+                        boundary=boundary,
                     )
                 except ProductPreSubmitRejected:
                     return None
@@ -701,12 +712,17 @@ class ProductExecutorRuntime:
                 ),
             )
 
-            def event_sink(event: object, used_normalizer=normalizer) -> None:
-                self.coordinator.handle_nautilus_order_event(
+            def event_sink(
+                event: object,
+                used_normalizer=normalizer,
+                used_responsibility: ProductResponsibilityBoundary = responsibility,
+            ) -> None:
+                normalized = self.coordinator.handle_nautilus_order_event(
                     used_normalizer,
                     event,
                     observed_at=datetime.now(UTC),
                 )
+                used_responsibility.submit_event(normalized)
 
             def adapter_factory(
                 activation_id: str = activation.activation_id,
@@ -751,7 +767,10 @@ class ProductExecutorRuntime:
                 break
             await asyncio.sleep(0.01)
         else:
-            raise ExecutorRuntimeError("TRADING_NODE_START_TIMEOUT")
+            try:
+                await self.node.stop_async()
+            finally:
+                raise ExecutorRuntimeError("TRADING_NODE_START_TIMEOUT")
         read_only = self._settings.release.profile == "BINANCE_LIVE_READ_ONLY"
         if read_only:
             self._start_read_only_adapter()
@@ -787,6 +806,10 @@ class ProductExecutorRuntime:
         )
         self._recovered_action_count = len(recovered)
         self._recovery_complete = True
+        for activation_id, processor in self._responsibility_processors.items():
+            processor.resume(activation_id)
+        for processor in self._responsibility_processors.values():
+            await processor.wait_idle()
         await self._wait_for_strategy_history_warmup()
         if on_ready is not None:
             on_ready(
@@ -824,6 +847,9 @@ class ProductExecutorRuntime:
         for processor in self._proposal_processors.values():
             processor.close()
         self._proposal_processors.clear()
+        for processor in self._responsibility_processors.values():
+            processor.close()
+        self._responsibility_processors.clear()
         if self._lifecycle is not None:
             try:
                 self._lifecycle.stop_all()

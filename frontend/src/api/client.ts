@@ -4,9 +4,7 @@ import type { components, paths } from "./schema";
 
 export type Overview = components["schemas"]["OverviewResponse"];
 export type SettingsStatus = components["schemas"]["SettingsStatusResponse"];
-export type SessionResult = components["schemas"]["SessionResponse"];
 export type PlanDraftPayload = components["schemas"]["PlanDraftPayload"];
-export type CapitalLimitPayload = components["schemas"]["CapitalLimitPayload"];
 export type ActivationPayload = components["schemas"]["ActivationPayload"];
 export type ControlPayload = components["schemas"]["ControlPayload"];
 export type ReviewCompletionPayload = components["schemas"]["ReviewCompletionPayload"];
@@ -33,14 +31,39 @@ export type PlanSummary = {
   fixed_content_digest: string | null;
 };
 
-export type CapitalSnapshot = {
+export type PlanDraft = {
+  plan_id: string;
   environment_id: string;
-  authority_class: string;
-  account_ref: string;
-  limits: Array<Record<string, unknown>>;
-  allocations: Array<Record<string, unknown>>;
-  authorizations: Array<Record<string, unknown>>;
-  stops: Array<Record<string, unknown>>;
+  draft_version: number;
+  content: {
+    strategy_id: string;
+    parameters: Record<string, unknown>;
+    venue_ref: string;
+    instrument_ref: string;
+    direction: string;
+    target_exposure: string;
+    requested_limits: {
+      max_margin: string;
+      max_notional: string;
+      max_allowed_loss: string;
+    };
+    valid_from: string;
+    valid_until: string;
+  };
+  content_digest: string;
+  updated_at: string;
+};
+
+export type ActivationSummary = {
+  activation_id: string;
+  instrument_ref: string;
+  direction: string;
+  lifecycle: string;
+  run_state: string;
+  pause_reason: string | null;
+  protection_state: string;
+  state_version: number;
+  updated_at: string;
 };
 
 export class ApiFailure extends Error {
@@ -103,33 +126,11 @@ export async function getOverview(): Promise<Overview> {
   return data;
 }
 
-export async function sendTestEmail(ownerPassword: string): Promise<Record<string, unknown>> {
+export async function sendTestEmail(): Promise<Record<string, unknown>> {
   const { data, error, response } = await api.POST("/api/v1/settings/test-email", {
-    body: { owner_password: ownerPassword },
     headers: csrfHeader(),
   });
   if (!data) throw new ApiFailure(response.status, errorCode(error, "TEST_EMAIL_FAILED"));
-  return data;
-}
-
-export async function login(password: string): Promise<SessionResult> {
-  const { data, error, response } = await api.POST("/api/v1/session/login", {
-    body: { password },
-    headers: csrfHeader(),
-  });
-  if (!data) {
-    throw new ApiFailure(response.status, errorCode(error, "LOGIN_FAILED"));
-  }
-  return data;
-}
-
-export async function logout(): Promise<SessionResult> {
-  const { data, error, response } = await api.POST("/api/v1/session/logout", {
-    headers: csrfHeader(),
-  });
-  if (!data) {
-    throw new ApiFailure(response.status, errorCode(error, "LOGOUT_FAILED"));
-  }
   return data;
 }
 
@@ -139,18 +140,18 @@ export async function getStrategies(): Promise<StrategySummary[]> {
   return data as StrategySummary[];
 }
 
-export async function getStrategySchema(strategyId: string): Promise<Record<string, unknown>> {
-  const { data, error, response } = await api.GET("/api/v1/strategies/{strategy_id}/schema", {
-    params: { path: { strategy_id: strategyId } },
-  });
-  if (!data) throw new ApiFailure(response.status, errorCode(error, "STRATEGY_SCHEMA_FAILED"));
-  return data;
-}
-
 export async function getPlans(): Promise<PlanSummary[]> {
   const { data, error, response } = await api.GET("/api/v1/plans");
   if (!data) throw new ApiFailure(response.status, errorCode(error, "PLANS_FAILED"));
   return data as PlanSummary[];
+}
+
+export async function getPlan(planId: string): Promise<PlanDraft> {
+  const { data, error, response } = await api.GET("/api/v1/plans/{plan_id}", {
+    params: { path: { plan_id: planId } },
+  });
+  if (!data) throw new ApiFailure(response.status, errorCode(error, "PLAN_FAILED"));
+  return data as PlanDraft;
 }
 
 export async function createPlan(payload: PlanDraftPayload): Promise<Record<string, unknown>> {
@@ -163,28 +164,29 @@ export async function createPlan(payload: PlanDraftPayload): Promise<Record<stri
   return data;
 }
 
+export async function updatePlan(
+  planId: string,
+  draftVersion: number,
+  payload: PlanDraftPayload,
+): Promise<Record<string, unknown>> {
+  const { data, error, response } = await api.PUT("/api/v1/plans/{plan_id}", {
+    body: payload,
+    params: {
+      path: { plan_id: planId },
+      header: { "If-Match": String(draftVersion) },
+    },
+    headers: csrfHeader(),
+  });
+  if (!data) throw new ApiFailure(response.status, errorCode(error, "PLAN_UPDATE_FAILED"));
+  return data;
+}
+
 export async function fixPlan(planId: string, draftVersion: number): Promise<Record<string, unknown>> {
   const { data, error, response } = await api.POST("/api/v1/plans/{plan_id}/fix", {
     params: { path: { plan_id: planId }, header: { "Idempotency-Key": crypto.randomUUID(), "If-Match": String(draftVersion) } },
     headers: csrfHeader(),
   });
   if (!data) throw new ApiFailure(response.status, errorCode(error, "PLAN_FIX_FAILED"));
-  return data;
-}
-
-export async function getCapital(): Promise<CapitalSnapshot> {
-  const { data, error, response } = await api.GET("/api/v1/capital");
-  if (!data) throw new ApiFailure(response.status, errorCode(error, "CAPITAL_FAILED"));
-  return data as CapitalSnapshot;
-}
-
-export async function createCapitalLimit(payload: CapitalLimitPayload): Promise<Record<string, unknown>> {
-  const { data, error, response } = await api.POST("/api/v1/capital-limits", {
-    body: payload,
-    params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-    headers: csrfHeader(),
-  });
-  if (!data) throw new ApiFailure(response.status, errorCode(error, "CAPITAL_LIMIT_CREATE_FAILED"));
   return data;
 }
 
@@ -207,6 +209,12 @@ export async function createActivation(payload: ActivationPayload): Promise<Reco
   return data;
 }
 
+export async function getActivations(): Promise<ActivationSummary[]> {
+  const { data, error, response } = await api.GET("/api/v1/activations");
+  if (!data) throw new ApiFailure(response.status, errorCode(error, "ACTIVATIONS_FAILED"));
+  return data as ActivationSummary[];
+}
+
 export async function getActivation(activationId: string): Promise<Record<string, unknown>> {
   const { data, error, response } = await api.GET("/api/v1/activations/{activation_id}", {
     params: { path: { activation_id: activationId } },
@@ -227,22 +235,6 @@ export async function getReviews(): Promise<Array<Record<string, unknown>>> {
   const { data, error, response } = await api.GET("/api/v1/reviews");
   if (!data) throw new ApiFailure(response.status, errorCode(error, "REVIEWS_FAILED"));
   return data as Array<Record<string, unknown>>;
-}
-
-export async function getTasks(): Promise<Array<Record<string, unknown>>> {
-  const { data, error, response } = await api.GET("/api/v1/tasks");
-  if (!data) throw new ApiFailure(response.status, errorCode(error, "TASKS_FAILED"));
-  return data as Array<Record<string, unknown>>;
-}
-
-export async function acknowledgeTask(taskId: string, expectedVersion: number): Promise<Record<string, unknown>> {
-  const { data, error, response } = await api.POST("/api/v1/tasks/{task_id}/acknowledge", {
-    params: { path: { task_id: taskId } },
-    body: { expected_version: expectedVersion },
-    headers: csrfHeader(),
-  });
-  if (!data) throw new ApiFailure(response.status, errorCode(error, "TASK_ACKNOWLEDGE_FAILED"));
-  return data;
 }
 
 export async function getReview(reviewId: string): Promise<Record<string, unknown>> {
@@ -296,7 +288,6 @@ export async function submitActivationControl(
   const options = { params: { path: { activation_id: activationId }, header: { "Idempotency-Key": idempotencyKey } }, body: payload, headers: csrfHeader() };
   const result =
     intent === "STOP_NEW_RISK" ? await api.POST("/api/v1/activations/{activation_id}/stop-new-risk", options) :
-    intent === "RESUME_NEW_RISK" ? await api.POST("/api/v1/activations/{activation_id}/resume-new-risk", options) :
     intent === "RESUME_ACTIVATION" ? await api.POST("/api/v1/activations/{activation_id}/resume", options) :
     intent === "EXIT_STRATEGY" ? await api.POST("/api/v1/activations/{activation_id}/exit", options) :
     await api.POST("/api/v1/activations/{activation_id}/takeover", options);

@@ -39,7 +39,7 @@ async def _exercise_controller(
 
         strategy = QualificationStrategy(
             config=StrategyConfig(
-                strategy_id="B00QUAL",
+                strategy_id="DIRECTQUAL",
                 order_id_tag="001",
                 external_order_claims=None,
                 manage_contingent_orders=False,
@@ -61,7 +61,7 @@ async def _exercise_controller(
 
 def main() -> int:
     evidence: dict[str, object] = {
-        "stage": "INITIALIZING",
+        "operation": "INITIALIZING",
         "controller_add": False,
         "controller_start": False,
         "controller_stop": False,
@@ -76,10 +76,10 @@ def main() -> int:
     asyncio.set_event_loop(loop)
     node: TradingNode | None = None
     try:
-        evidence["stage"] = "CONFIGURING"
+        evidence["operation"] = "CONFIGURING"
         config = TradingNodeConfig(
             environment=Environment.LIVE,
-            trader_id=TraderId("B00-QUAL-001"),
+            trader_id=TraderId("DIRECT-QUAL-001"),
             cache=None,
             message_bus=None,
             emulator=None,
@@ -116,15 +116,15 @@ def main() -> int:
             timeout_post_stop=0.1,
             timeout_shutdown=2.0,
         )
-        evidence["stage"] = "CONSTRUCTING_NODE"
+        evidence["operation"] = "CONSTRUCTING_NODE"
         node = TradingNode(config=config, loop=loop)
-        evidence["stage"] = "BUILDING_NODE"
+        evidence["operation"] = "BUILDING_NODE"
         node.build()
         evidence["node_built"] = node.is_built()
         controllers = [actor for actor in node.trader.actors() if isinstance(actor, QualificationController)]
         if len(controllers) != 1:
             raise RuntimeError("CONTROLLER_COUNT_MISMATCH")
-        evidence["stage"] = "RUNNING_NODE"
+        evidence["operation"] = "RUNNING_NODE"
         controller_task = loop.create_task(_exercise_controller(node, controllers[0], evidence))
         node.run(raise_exception=True)
         if controller_task.done():
@@ -138,7 +138,7 @@ def main() -> int:
         evidence["node_stopped"] = not node.is_running()
         node.dispose()
         evidence["node_disposed"] = True
-        evidence["stage"] = "COMPLETED"
+        evidence["operation"] = "COMPLETED"
     except Exception as exc:  # pragma: no cover - evidence contains type only
         errors.append(f"NAUTILUS_LIFECYCLE_FAILED:{type(exc).__name__}")
         if node is not None:

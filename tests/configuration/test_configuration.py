@@ -38,8 +38,6 @@ def test_process_views_do_not_cross_secret_reference_boundaries() -> None:
     executor_view = executor_settings(settings).model_dump(mode="json")
     assert "binance_api_key_reference" not in app_view["app"]
     assert "binance_api_secret_reference" not in app_view["app"]
-    assert "owner_password_hash_reference" not in executor_view["executor"]
-    assert "session_signing_reference" not in executor_view["executor"]
     assert "csrf_signing_reference" not in executor_view["executor"]
     assert "smtp_credential_reference" not in executor_view["executor"]
 

@@ -141,7 +141,7 @@ async def _run(proxy_url: str | None) -> dict[str, object]:
         }
 
     return {
-        "stage": "B00_BINANCE_DEMO_OFFICIAL_15M_CROSSCHECK",
+        "operation": "DIRECT_BINANCE_DEMO_OFFICIAL_15M_CROSSCHECK",
         "scope": "PUBLIC_MARKET_DATA_READ_ONLY",
         "profile": "BINANCE_USDM_DEMO",
         "transport": {
@@ -176,7 +176,7 @@ def main() -> int:
         evidence = asyncio.run(_run(args.proxy_url))
     except Exception as exc:
         evidence = {
-            "stage": "B00_BINANCE_DEMO_OFFICIAL_15M_CROSSCHECK",
+            "operation": "DIRECT_BINANCE_DEMO_OFFICIAL_15M_CROSSCHECK",
             "errors": [f"PROBE_FAILED:{type(exc).__name__}"],
             "status": "REJECTED",
         }

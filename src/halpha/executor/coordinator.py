@@ -11,10 +11,10 @@ from uuid import uuid4
 from psycopg import Connection
 
 from halpha.capital.models import (
+    ActivationCapitalBoundary,
     ActionCheckInput,
     AuthorityClass,
     EnvironmentKind,
-    PlanAllocation,
     RiskClass,
 )
 from halpha.capital.service import CapitalApplicationService
@@ -179,9 +179,21 @@ class HalphaCoordinator:
     def get_execution_action(self, execution_action_id: str) -> ExecutionAction:
         return self._action_repository.get(execution_action_id)
 
-    def get_entry_sizing_allocation(self, activation_id: str) -> PlanAllocation:
+    def list_execution_actions(
+        self,
+        activation_id: str,
+    ) -> tuple[ExecutionAction, ...]:
+        return self._action_repository.list_for_activation(activation_id)
+
+    def list_venue_facts_for_action(
+        self,
+        execution_action_id: str,
+    ) -> tuple[VenueFact, ...]:
+        return self._fact_repository.list_for_action(execution_action_id)
+
+    def get_entry_sizing_boundary(self, activation_id: str) -> ActivationCapitalBoundary:
         with self._connection.transaction():
-            return self._capital.get_allocation_snapshot(activation_id)
+            return self._capital.get_plan_boundary(activation_id)
 
     def record_strategy_proposal_rejection(
         self,
@@ -881,11 +893,6 @@ class HalphaCoordinator:
                 result_ref=review_id_for_activation(self._environment_id, activation_id),
                 observed_at=observed_at,
             )
-            self._capital.release_allocation_with_closure(
-                activation_id=activation_id,
-                closure_digest=closure_digest,
-                observed_at=observed_at,
-            )
         # OUT failure is deliberately outside the closure/release transaction.
         # Restart recovery discovers the same completed activation and retries
         # this idempotent review identity without replaying a venue action.
@@ -998,7 +1005,7 @@ class HalphaCoordinator:
             or check.risk_class is not action.action_class
             or check.quantized_quantity != (terms.get("quantity") or "0")
         ):
-            raise ValueError("AUTHORIZATION_MISMATCH")
+            raise ValueError("ACTION_SCOPE_MISMATCH")
 
     def _validate_proposed_action_check(
         self,
@@ -1017,7 +1024,7 @@ class HalphaCoordinator:
             )
         )
         expected_category = (
-            "NEW_FUNDING"
+            "NEW_RISK"
             if proposed.action_kind.value == "ENTRY"
             else (
                 "PROTECTION"
@@ -1037,4 +1044,4 @@ class HalphaCoordinator:
             or check.control_category.value != expected_category
             or check.quantized_quantity != (proposed.quantity or "0")
         ):
-            raise ValueError("AUTHORIZATION_MISMATCH")
+            raise ValueError("PLAN_BOUNDARY_MISMATCH")

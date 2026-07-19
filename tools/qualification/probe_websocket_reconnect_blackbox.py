@@ -218,7 +218,7 @@ async def _evaluate_black_box() -> dict[str, object]:
         if black_box["private_client_runtime_fields_accessed"]:
             errors.append("PRIVATE_RUNTIME_FIELDS_ACCESSED")
     return {
-        "stage": "B00_CONTROLLED_WEBSOCKET_RECONNECT_BLACK_BOX",
+        "operation": "DIRECT_CONTROLLED_WEBSOCKET_RECONNECT_BLACK_BOX",
         "black_box": black_box,
         "errors": errors,
         "status": "QUALIFIED" if not errors else "REJECTED",

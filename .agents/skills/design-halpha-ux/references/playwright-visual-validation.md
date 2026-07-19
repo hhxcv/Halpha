@@ -8,7 +8,7 @@ Use the `playwright` skill and a real browser. An available interactive browser 
 
 ## Mandatory Debug Loop
 
-1. **Establish the target.** Read the current L4 route, viewport, browser, fixture, construction eligibility, and build state. Use an authorized deterministic profile; never create real writes merely to obtain UI evidence.
+1. **Establish the target.** Read the current L4 route, viewport, browser, deterministic fixture or data profile, and build state. Use an authorized profile; never perform a real-account trading action merely to obtain UI evidence.
 2. **Start the actual surface.** Serve the exact build or executable prototype under review. Record the startup command, URL, build identity, data profile, and known unavailable dependencies. If the surface cannot run, report `BLOCKED` instead of substituting a mock screenshot.
 3. **Open specified viewports.** Inspect the target desktop viewport and the current narrow-screen breakpoint. Add an intermediate width when layout behavior changes between them.
 4. **Capture the baseline.** Navigate to each in-scope route with Playwright, wait for stable rendering, and capture a full-page or region screenshot. Inspect the image at native size before interacting.

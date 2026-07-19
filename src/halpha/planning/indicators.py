@@ -1,4 +1,4 @@
-"""NautilusTrader-native indicator boundary for the first P0 strategy."""
+"""NautilusTrader-native indicator boundary for the one-shot strategy."""
 
 from __future__ import annotations
 

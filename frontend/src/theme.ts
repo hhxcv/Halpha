@@ -32,7 +32,22 @@ export const theme = createTheme({
       },
     },
     MuiPaper: { defaultProps: { elevation: 0 } },
-    MuiButton: { styleOverrides: { root: { minHeight: 40, boxShadow: "none" } } },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          minHeight: 40,
+          boxShadow: "none",
+          "&.MuiButton-contained.MuiButton-colorPrimary": {
+            color: "#061018",
+            backgroundColor: "#58a8d8",
+            "&:hover, &:active": {
+              color: "#061018",
+              backgroundColor: "#83c7ef",
+            },
+          },
+        },
+      },
+    },
     MuiChip: { styleOverrides: { root: { borderRadius: 3, fontWeight: 750 } } },
     MuiAlert: { styleOverrides: { root: { borderRadius: 3, borderLeftWidth: 3, borderLeftStyle: "solid" } } },
     MuiDrawer: { styleOverrides: { paper: { backgroundImage: "none", borderColor: "#263140" } } },

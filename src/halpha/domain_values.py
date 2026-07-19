@@ -2,7 +2,7 @@
 
 The helpers in this module have no database, framework, clock, or venue access.
 They exist so identity and Decimal comparisons remain byte-for-byte stable at
-every B02 boundary.
+every planning boundary.
 """
 
 from __future__ import annotations

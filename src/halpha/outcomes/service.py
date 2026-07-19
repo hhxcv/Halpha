@@ -13,7 +13,6 @@ from halpha.outcomes.models import (
     EVALUATION_KEYS,
     EvaluationResult,
     EvidencePurpose,
-    ImprovementHandoff,
     PrimaryResult,
     Review,
     ReviewStatus,
@@ -89,77 +88,37 @@ class OutcomeApplicationService:
         *,
         expected_version: int,
         evaluations: dict[str, dict[str, Any]],
-        issues: tuple[dict[str, Any], ...],
-        no_improvement_reason: str | None,
-        observed_at: datetime,
-    ) -> tuple[Review, tuple[ImprovementHandoff, ...]]:
+    ) -> Review:
         current = self._repository.get_review(review_id, expected_version)
         if current.status is ReviewStatus.SUPERSEDED:
             raise OutcomeConflict("REVIEW_VERSION_CONFLICT")
         normalized = _validate_evaluations(evaluations)
-        issue_found = any(
-            item["result"] == EvaluationResult.ISSUE_FOUND.value
-            for item in normalized.values()
-        )
-        if issue_found and not issues:
-            raise OutcomeConflict("REVIEW_COMPLETION_INCOMPLETE")
-        if not issues and not no_improvement_reason:
-            raise OutcomeConflict("REVIEW_COMPLETION_INCOMPLETE")
         completed = _replace_review(
             current,
             status=ReviewStatus.COMPLETE,
             evaluations=normalized,
-            account_result={
-                **current.account_result,
-                "improvement_disposition": (
-                    {"handoff_count": len(issues)}
-                    if issues
-                    else {"no_action_reason": no_improvement_reason}
-                ),
-            },
         )
         self._repository.replace_review(
             completed,
             expected_content_digest=current.content_digest,
         )
-        handoffs = tuple(
-            self._build_handoff(completed, issue, observed_at=observed_at)
-            for issue in issues
-        )
-        for handoff in handoffs:
-            self._repository.insert_handoff(handoff)
-        return completed, handoffs
+        return completed
 
     def read_review(self, review_id: str) -> dict[str, Any]:
         review = self._repository.get_review(review_id)
-        handoffs = tuple(
-            item
-            for item in self._repository.list_handoffs()
-            if item.review_id == review.review_id
-            and item.review_version == review.review_version
-        )
-        return {
-            "review": review.model_dump(mode="json"),
-            "improvement_handoffs": [item.model_dump(mode="json") for item in handoffs],
-        }
+        return {"review": review.model_dump(mode="json")}
 
     def list_reviews(self) -> list[dict[str, Any]]:
         return [item.model_dump(mode="json") for item in self._repository.list_reviews()]
-
-    def list_improvement_handoffs(self, target_owner: str | None = None) -> list[dict[str, Any]]:
-        return [
-            item.model_dump(mode="json")
-            for item in self._repository.list_handoffs(target_owner=target_owner)
-        ]
 
     def _collect_basis(
         self, activation_id: str, *, fact_cutoff: datetime
     ) -> dict[str, Any]:
         activation = self._connection.execute(
             """
-            SELECT activation_id, plan_version_ref, authorization_version_ref,
-                   allocation_ref, environment_kind, authority_class, account_ref,
-                   instrument_ref, strategy_id, lifecycle, run_state, protection_state,
+            SELECT activation_id, plan_version_ref, environment_kind, authority_class,
+                   account_ref, instrument_ref, strategy_id, lifecycle, run_state,
+                   protection_state,
                    responsibility_owner, takeover_scope, closure_digest, result_ref,
                    created_at, updated_at, state_version
             FROM halpha.plan_activation
@@ -169,7 +128,7 @@ class OutcomeApplicationService:
         ).fetchone()
         if activation is None:
             raise OutcomeConflict("ACTIVATION_NOT_FOUND")
-        if str(activation[9]) != "COMPLETED":
+        if str(activation[7]) != "COMPLETED":
             raise OutcomeConflict("REVIEW_ACTIVATION_NOT_COMPLETE")
         plan = self._connection.execute(
             """
@@ -178,23 +137,6 @@ class OutcomeApplicationService:
             WHERE environment_id = %s AND plan_version_id = %s
             """,
             (self._environment_id, activation[1]),
-        ).fetchone()
-        allocation = self._connection.execute(
-            """
-            SELECT allocation_id, state_version, status, reservation_digest,
-                   closure_digest, released_at
-            FROM halpha.plan_allocation
-            WHERE environment_id = %s AND activation_id = %s
-            """,
-            (self._environment_id, activation_id),
-        ).fetchone()
-        authorization = self._connection.execute(
-            """
-            SELECT authorization_version_id, version, content_digest, valid_until
-            FROM halpha.machine_authorization_version
-            WHERE environment_id = %s AND authorization_version_id = %s
-            """,
-            (self._environment_id, activation[2]),
         ).fetchone()
         events = self._connection.execute(
             """
@@ -240,8 +182,8 @@ class OutcomeApplicationService:
         input_refs = {
             "activation": {
                 "activation_id": str(activation[0]),
-                "state_version": int(activation[18]),
-                "closure_digest": str(activation[14]),
+                "state_version": int(activation[16]),
+                "closure_digest": str(activation[12]),
             },
             "plan_version": (
                 {
@@ -251,28 +193,6 @@ class OutcomeApplicationService:
                 }
                 if plan is not None
                 else {"plan_version_id": str(activation[1]), "missing": True}
-            ),
-            "authorization": (
-                {
-                    "authorization_version_id": str(authorization[0]),
-                    "version": int(authorization[1]),
-                    "content_digest": str(authorization[2]),
-                    "valid_until": authorization[3].isoformat(),
-                }
-                if authorization is not None
-                else {"authorization_version_id": str(activation[2]), "missing": True}
-            ),
-            "allocation": (
-                {
-                    "allocation_id": str(allocation[0]),
-                    "state_version": int(allocation[1]),
-                    "status": str(allocation[2]),
-                    "reservation_digest": str(allocation[3]),
-                    "closure_digest": str(allocation[4]),
-                    "released_at": allocation[5].isoformat() if allocation[5] else None,
-                }
-                if allocation is not None
-                else {"allocation_id": str(activation[3]), "missing": True}
             ),
             "plan_events": [
                 {"plan_event_id": str(row[0]), "content_digest": str(row[1]), "at": row[2].isoformat()}
@@ -317,7 +237,7 @@ class OutcomeApplicationService:
         unknown_action_refs = [
             str(row[0]) for row in actions if str(row[2]) in UNKNOWN_ACTION_STATES
         ]
-        takeover = str(activation[12]) == "USER" or activation[13] is not None
+        takeover = str(activation[10]) == "USER" or activation[11] is not None
         has_fill = any(str(row[2]) == "FILL" for row in facts)
         if takeover:
             primary_result = PrimaryResult.HANDED_OVER
@@ -329,19 +249,11 @@ class OutcomeApplicationService:
             primary_result = PrimaryResult.NO_ACTION
         else:
             primary_result = PrimaryResult.COMPLETED
-        missing_refs = [
-            name
-            for name, value in (
-                ("plan_version", plan),
-                ("authorization", authorization),
-                ("allocation", allocation),
-            )
-            if value is None
-        ]
+        missing_refs = ["plan_version"] if plan is None else []
         evaluations = _draft_evaluations(
             primary_result=primary_result,
             missing_refs=missing_refs,
-            closure_digest=str(activation[14]),
+            closure_digest=str(activation[12]),
             event_count=len(events),
             action_count=len(actions),
             fact_count=len(facts),
@@ -361,65 +273,16 @@ class OutcomeApplicationService:
             "open_responsibilities": {
                 "execution_action_refs": open_action_refs,
                 "unknown_action_refs": unknown_action_refs,
-                "responsibility_owner": str(activation[12]),
-                "takeover_scope": dict(activation[13]) if activation[13] else None,
+                "responsibility_owner": str(activation[10]),
+                "takeover_scope": dict(activation[11]) if activation[11] else None,
             },
             "evaluations": evaluations,
             "evidence_purpose": (
                 EvidencePurpose.SYSTEM_MECHANISM_EVIDENCE
-                if str(activation[4]) == "DEMO"
+                if str(activation[2]) == "DEMO"
                 else EvidencePurpose.LIVE_ACTIVATION_REVIEW
             ),
         }
-
-    def _build_handoff(
-        self,
-        review: Review,
-        issue: dict[str, Any],
-        *,
-        observed_at: datetime,
-    ) -> ImprovementHandoff:
-        required = {
-            "target_owner",
-            "observable_problem",
-            "evidence_refs",
-            "impact_scope",
-            "expected_change",
-        }
-        if set(issue) != required:
-            raise OutcomeConflict("IMPROVEMENT_HANDOFF_INVALID")
-        problem_basis = {
-            "review_id": review.review_id,
-            "review_version": review.review_version,
-            "target_owner": issue["target_owner"],
-            "observable_problem": issue["observable_problem"],
-        }
-        problem_digest = content_digest(problem_basis)
-        handoff_id = str(
-            uuid5(
-                NAMESPACE_URL,
-                f"urn:halpha:{self._environment_id}:handoff:{review.review_id}:{review.review_version}:{issue['target_owner']}:{problem_digest}",
-            )
-        )
-        fields = {
-            "improvement_handoff_id": handoff_id,
-            "environment_id": self._environment_id,
-            "review_id": review.review_id,
-            "review_version": review.review_version,
-            "handoff_version": 1,
-            "target_owner": str(issue["target_owner"]),
-            "observable_problem": str(issue["observable_problem"]),
-            "evidence_refs": dict(issue["evidence_refs"]),
-            "impact_scope": dict(issue["impact_scope"]),
-            "expected_change": str(issue["expected_change"]),
-            "problem_digest": problem_digest,
-            "created_at": observed_at,
-        }
-        return ImprovementHandoff(
-            **fields,
-            content_digest=content_digest(fields),
-        )
-
 
 def _draft_evaluations(
     *,
@@ -449,7 +312,7 @@ def _draft_evaluations(
         },
         "capital_authority": {
             "result": base_result,
-            "reason": "Authorization and allocation are referenced without copying their lifecycle.",
+            "reason": "计划、动作和事实引用保持原身份，不复制生命周期。",
             "evidence_refs": [f"missing:{','.join(missing_refs)}" if missing_refs else "references:complete"],
         },
         "execution_facts": {

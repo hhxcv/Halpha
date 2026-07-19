@@ -36,14 +36,14 @@ def test_role_reference_sets_are_disjoint() -> None:
     source = _MemorySource(
         {(reference.service, reference.account): "not-a-real-secret" for reference in references}
     )
-    app_refs = {reference for reference, _ in _app_values(settings, source, owner_password="test")}
+    app_refs = {reference for reference, _ in _app_values(settings, source)}
     executor_refs = {reference for reference, _ in _executor_values(settings, source)}
     assert not app_refs & executor_refs
-    assert settings.app.owner_password_hash_reference in app_refs
+    assert settings.app.csrf_signing_reference in app_refs
     assert settings.executor.binance_api_secret_reference in executor_refs
 
 
-def test_preserve_mode_only_refreshes_database_references() -> None:
+def test_app_values_include_database_and_fresh_csrf_references() -> None:
     settings = load_settings(ROOT / "config" / "halpha.example.toml")
     references = (
         settings.app.database_credential_reference,
@@ -55,9 +55,8 @@ def test_preserve_mode_only_refreshes_database_references() -> None:
     source = _MemorySource(
         {(reference.service, reference.account): "not-a-real-secret" for reference in references}
     )
-    app_refs = {reference for reference, _ in _app_values(settings, source, owner_password=None)}
-    assert app_refs == set(references)
-    assert settings.app.owner_password_hash_reference not in app_refs
+    app_refs = {reference for reference, _ in _app_values(settings, source)}
+    assert app_refs == {*references, settings.app.csrf_signing_reference}
 
 
 def test_live_read_only_executor_values_omit_absent_binance_references() -> None:
@@ -109,7 +108,7 @@ def test_enabled_smtp_credential_is_projected_only_to_app_task_vault() -> None:
         {(reference.service, reference.account): "not-a-real-secret" for reference in references}
     )
 
-    app_refs = {reference for reference, _ in _app_values(settings, source, owner_password=None)}
+    app_refs = {reference for reference, _ in _app_values(settings, source)}
 
     assert settings.app.smtp_credential_reference in app_refs
 
@@ -119,4 +118,5 @@ def test_task_vault_provisioner_has_no_external_secret_transport() -> None:
     assert "subprocess" not in source
     assert "pgpassword" not in source
     assert "secret_transport\": \"in_process_impersonation_only" in source
-    assert "print(owner_password" not in source
+    assert "getpass" not in source
+    assert "owner_password" not in source

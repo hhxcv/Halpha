@@ -38,7 +38,7 @@ Fail the gate when the surface is justified only by convention, a framework rout
 
 A documented capability may require only a small interaction. Do not promote it into a branded page, dashboard, wizard or navigation area without a current user job.
 
-For example, a required login justifies the smallest clear owner-password interaction and applicable error feedback. It does not by itself justify a marketing panel, brand story, onboarding flow or elaborate second column.
+For example, a required runtime status may justify one compact row with an on-demand error detail. It does not by itself justify a settings dashboard, onboarding flow, branded page or new navigation area.
 
 Apply the same reasoning to settings, notifications, evidence views, and maintenance tools. A necessary backend capability does not automatically deserve a first-level product page.
 
