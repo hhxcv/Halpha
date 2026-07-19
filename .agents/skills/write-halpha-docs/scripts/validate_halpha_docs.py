@@ -51,7 +51,7 @@ STABLE_LAYER_CONSTRUCTION_PHASE_RE = re.compile(
     re.IGNORECASE,
 )
 STABLE_LAYER_BUILD_ARTIFACT_RE = re.compile(
-    r"(?:BuildManifest|Release[ -]Candidate|build_digest|qualification_digest|"
+    r"(?:Release[ -]Candidate|build_digest|qualification_digest|"
     r"source_tree_sha256)",
     re.IGNORECASE,
 )

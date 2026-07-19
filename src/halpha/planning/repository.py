@@ -98,7 +98,7 @@ class PostgreSQLPlanningRepository:
             """
             INSERT INTO halpha.trade_plan_version (
                 plan_version_id, environment_id, plan_id, fixed_at,
-                strategy_definition_ref, build_digest, parameter_schema_version,
+                strategy_definition_ref, product_build_id, parameter_schema_version,
                 parameters, parameter_digest, account_ref, venue_ref, instrument_ref,
                 direction, max_margin, max_notional, max_allowed_loss, terms,
                 content_digest, fixed_strategy_basis
@@ -113,7 +113,7 @@ class PostgreSQLPlanningRepository:
                 version.plan_id,
                 version.fixed_at,
                 f"{basis.strategy_id}@{basis.strategy_version}",
-                basis.build_digest,
+                basis.product_build_id,
                 basis.parameter_schema_version,
                 Jsonb(basis.normalized_parameters),
                 basis.parameter_digest,

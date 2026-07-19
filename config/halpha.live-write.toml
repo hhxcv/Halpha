@@ -1,6 +1,6 @@
 # Target-host, non-secret BINANCE_LIVE_WRITE runtime configuration.
-# The detached gate is outside Git and remains CLOSED until an exact build and
-# owner-authorized CAP activation are bound. Secret values stay only in WinVault.
+# The detached gate is outside Git and remains CLOSED until the current product
+# build and one active plan are bound. Secret values stay only in WinVault.
 schema_version = 1
 
 [release]
@@ -9,7 +9,6 @@ account_id = "binance-usdm-live-owner-primary"
 profile = "BINANCE_LIVE_WRITE"
 authority_class = "LIVE_REAL_CAPITAL"
 database_name = "halpha_live"
-build_manifest_path = "build/release/build-manifest.json"
 live_write_gate_path = "D:/projects/Codex/Halpha.runtime/live-write-gate.json"
 
 [app]

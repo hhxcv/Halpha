@@ -264,7 +264,7 @@ class DocumentationValidatorTests(unittest.TestCase):
 
 # 0. Scope
 
-稳定规则要求 BuildManifest 和 qualification_digest。
+稳定规则要求 release_bundle.json 和 qualification_digest。
 """
         path = self.write(
             "docs/L2/HALPHA-TST-003-layer-fixture.zh-CN.md", text

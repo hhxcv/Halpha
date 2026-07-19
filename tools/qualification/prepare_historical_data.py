@@ -223,7 +223,6 @@ def _preregistration_payload(
         max_hold_bars_15m=96,
         entry_valid_minutes=1440,
     ).model_dump(mode="json")
-    build_manifest = ROOT / "build" / "release" / "build-manifest.json"
     return {
         "schema_version": 1,
         "operation": "HISTORICAL_RESEARCH_QUESTION",
@@ -279,10 +278,6 @@ def _preregistration_payload(
             "reporter": "ReportProvider",
         },
         "source_digests": _source_digests(),
-        "build_manifest_sha256": (
-            _file_digest(build_manifest) if build_manifest.is_file() else None
-        ),
-        "build_manifest_release_eligible": False,
         "source_state": "WORKTREE_UNCOMMITTED_INTERMEDIATE",
         "proxy_supplied": proxy_supplied,
         "proxy_value_persisted": False,

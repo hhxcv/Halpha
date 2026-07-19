@@ -54,7 +54,6 @@ class ReleaseConfig(FrozenModel):
         "NO_TRADING_AUTHORITY",
     ]
     database_name: str = Field(pattern=r"^halpha_(?:demo|live)$")
-    build_manifest_path: str = Field(pattern=r"^build/[a-z0-9_./-]+\.json$")
     live_write_gate_path: str | None = None
 
     @model_validator(mode="after")

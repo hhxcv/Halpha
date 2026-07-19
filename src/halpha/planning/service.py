@@ -106,9 +106,7 @@ class PlanningApplicationService:
         plan_id: str,
         expected_draft_version: int,
         plan_version_id: str,
-        build_digest: str,
-        evidence_digest: str,
-        evidence_scope: dict[str, object],
+        product_build_id: str,
         fixed_at: datetime,
     ) -> TradePlanVersion:
         draft = self._planning.get_draft(plan_id, for_update=True)
@@ -118,9 +116,7 @@ class PlanningApplicationService:
         basis = build_fixed_plan_basis(
             content.strategy_id,
             content.parameters,
-            build_digest=build_digest,
-            evidence_digest=evidence_digest,
-            evidence_scope=evidence_scope,
+            product_build_id=product_build_id,
         )
         fields = {
             "plan_version_id": plan_version_id,
@@ -150,9 +146,12 @@ class PlanningApplicationService:
         activation_id: str,
         environment_kind: EnvironmentKind,
         authority_class: AuthorityClass,
+        product_build_id: str,
         observed_at: datetime,
     ) -> PlanActivation:
         version = self._planning.get_version(plan_version_id, for_update=True)
+        if version.strategy_basis.product_build_id != product_build_id:
+            raise ValueError("PRODUCT_BUILD_MISMATCH")
         if not (version.valid_from <= observed_at < version.valid_until):
             raise ValueError("PLAN_EXPIRED")
         activation = PlanActivation(
@@ -675,9 +674,7 @@ class PlanningApplicationService:
         activation_id: str,
         environment_kind: EnvironmentKind,
         authority_class: AuthorityClass,
-        build_digest: str,
-        evidence_digest: str,
-        evidence_scope: dict[str, object],
+        product_build_id: str,
         observed_at: datetime,
     ) -> tuple[TradePlanVersion, PlanActivation]:
         """Perform draft -> fixed -> activation inside the caller's transaction."""
@@ -686,9 +683,7 @@ class PlanningApplicationService:
             plan_id=plan_id,
             expected_draft_version=expected_draft_version,
             plan_version_id=plan_version_id,
-            build_digest=build_digest,
-            evidence_digest=evidence_digest,
-            evidence_scope=evidence_scope,
+            product_build_id=product_build_id,
             fixed_at=observed_at,
         )
         activation = self.activate_version(
@@ -696,6 +691,7 @@ class PlanningApplicationService:
             activation_id=activation_id,
             environment_kind=environment_kind,
             authority_class=authority_class,
+            product_build_id=product_build_id,
             observed_at=observed_at,
         )
         return version, activation

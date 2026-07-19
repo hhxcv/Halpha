@@ -88,7 +88,7 @@ class PostgreSQLPlanningApi:
         environment_kind: str,
         authority_class: str,
         account_ref: str,
-        build_digest: str | None,
+        product_build_id: str,
         profile: str | None = None,
         gate_status_provider: GateStatusProvider | None = None,
     ) -> None:
@@ -98,7 +98,7 @@ class PostgreSQLPlanningApi:
         self._environment_kind = EnvironmentKind(environment_kind)
         self._authority_class = AuthorityClass(authority_class)
         self._account_ref = account_ref
-        self._build_digest = build_digest
+        self._product_build_id = product_build_id
         self._profile = profile or (
             "BINANCE_DEMO"
             if self._environment_kind is EnvironmentKind.DEMO
@@ -297,10 +297,7 @@ class PostgreSQLPlanningApi:
         expected_version: int,
         observed_at: datetime,
     ) -> dict[str, Any]:
-        if self._build_digest is None:
-            raise ValueError("BUILD_MANIFEST_UNAVAILABLE")
         plan_version_id = _stable_id(self._environment_id, "plan-version", idempotency_key)
-        gate_status = self._gate_status()
         with self._connect() as connection:
             repository = PostgreSQLPlanningRepository(connection, self._environment_id)
             try:
@@ -311,14 +308,7 @@ class PostgreSQLPlanningApi:
                         plan_id=plan_id,
                         expected_draft_version=expected_version,
                         plan_version_id=plan_version_id,
-                        build_digest=self._build_digest,
-                        evidence_digest=self._build_digest,
-                        evidence_scope={
-                            "live_write_build_capability": (
-                                gate_status.live_write_build_capability
-                            ),
-                            "runtime_real_write_gate": gate_status.runtime_real_write_gate,
-                        },
+                        product_build_id=self._product_build_id,
                         fixed_at=observed_at,
                     )
             except psycopg.errors.UniqueViolation:
@@ -335,6 +325,13 @@ class PostgreSQLPlanningApi:
                 connection, self._environment_id
             ).get_version(plan_version_id)
         gate_status = self._gate_status()
+        product_build_consistent = (
+            version.strategy_basis.product_build_id == self._product_build_id
+            and (
+                self._profile != "BINANCE_LIVE_WRITE"
+                or gate_status.product_build_consistent is True
+            )
+        )
         return {
             "plan_version_id": version.plan_version_id,
             "environment_id": self._environment_id,
@@ -353,14 +350,15 @@ class PostgreSQLPlanningApi:
             "allowed_actions": sorted(version.allowed_actions),
             "actual_account_configuration": "PRE_SUBMIT_FACT_NOT_REQUIRED_FOR_PLAN_ACTIVATION",
             "account_mode_policy": "USE_ACTUAL_CONFIGURATION_WITH_EFFECTIVE_LEVERAGE_MIN_ACTUAL_5",
-            "live_write_build_capability": gate_status.live_write_build_capability,
+            "product_build_id": version.strategy_basis.product_build_id,
+            "product_build_consistent": product_build_consistent,
             "configured_runtime_real_write_gate": (
                 gate_status.configured_runtime_real_write_gate
             ),
             "runtime_real_write_gate": gate_status.runtime_real_write_gate,
             "live_activation_eligible": (
                 self._profile == "BINANCE_LIVE_WRITE"
-                and gate_status.live_write_build_capability == "QUALIFIED"
+                and product_build_consistent
                 and gate_status.configured_runtime_real_write_gate == "CLOSED"
             ),
             "capital_notice": "策略计划中的交易金额就是本次边界；激活不再要求独立资金授权，也不会立即向 Binance 下单。",
@@ -377,8 +375,8 @@ class PostgreSQLPlanningApi:
         if self._profile == "BINANCE_LIVE_READ_ONLY":
             raise ValueError("LIVE_READ_ONLY_ACTIVATION_FORBIDDEN")
         if self._profile == "BINANCE_LIVE_WRITE":
-            if gate_status.live_write_build_capability != "QUALIFIED":
-                raise ValueError("LIVE_WRITE_BUILD_CAPABILITY_NOT_QUALIFIED")
+            if gate_status.product_build_consistent is not True:
+                raise ValueError("LIVE_WRITE_PRODUCT_BUILD_MISMATCH")
             if gate_status.configured_runtime_real_write_gate != "CLOSED":
                 raise ValueError("LIVE_WRITE_GATE_MUST_BE_CLOSED_FOR_ACTIVATION")
         activation_id = _stable_id(self._environment_id, "activation", idempotency_key)
@@ -393,6 +391,7 @@ class PostgreSQLPlanningApi:
                         activation_id=activation_id,
                         environment_kind=self._environment_kind,
                         authority_class=self._authority_class,
+                        product_build_id=self._product_build_id,
                         observed_at=observed_at,
                     )
             except psycopg.errors.UniqueViolation as exc:

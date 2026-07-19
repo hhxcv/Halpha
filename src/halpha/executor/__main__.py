@@ -41,11 +41,10 @@ from halpha.live_write_gate import (
 )
 from halpha.operational_logging import configure_halpha_logging
 from halpha.process_contract import ProcessRole, preflight
+from halpha.product_build import calculate_product_build_id
 from halpha.runtime_identity import RuntimeIdentityError, repository_root
 from halpha.source_identity import (
     SourceIdentityError,
-    capture_product_runtime_source_identity,
-    source_sha256_digest,
 )
 from halpha.winvault import SecretResolutionError, executor_secret_resolver
 from halpha.windows_runtime import (
@@ -68,10 +67,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         repo_root = repository_root()
         report = preflight(ProcessRole.EXECUTOR, settings)
         if args.preflight_only:
-            gate_status = evaluate_live_write_gate(repo_root, settings)
+            product_build_id = calculate_product_build_id(repo_root, settings)
+            gate_status = evaluate_live_write_gate(
+                repo_root,
+                settings,
+                current_product_build_id=product_build_id,
+            )
             report.update(
                 {
-                    "live_write_build_capability": gate_status.live_write_build_capability,
+                    "product_build_id": gate_status.product_build_id,
                     "configured_runtime_real_write_gate": (
                         gate_status.configured_runtime_real_write_gate
                     ),
@@ -82,11 +86,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps(report, sort_keys=True))
             return 0
         role_settings = executor_settings(settings)
-        runtime_source_sha256 = capture_product_runtime_source_identity(
-            repo_root,
-            config_path=args.config,
-        )
-        runtime_source_digest = source_sha256_digest(runtime_source_sha256)
+        product_build_id = calculate_product_build_id(repo_root, settings)
         read_only = settings.release.profile == "BINANCE_LIVE_READ_ONLY"
         observation = None
         observation_spec = None
@@ -126,9 +126,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         require_process_identity(role_settings.executor_task_sid)
         live_write = settings.release.profile == "BINANCE_LIVE_WRITE"
         gate_status = (
-            require_live_write_gate_precheck(repo_root, settings)
+            require_live_write_gate_precheck(
+                repo_root,
+                settings,
+                current_product_build_id=product_build_id,
+            )
             if live_write
-            else evaluate_live_write_gate(repo_root, settings)
+            else evaluate_live_write_gate(
+                repo_root,
+                settings,
+                current_product_build_id=product_build_id,
+            )
         )
         with acquire_executor_mutex(
             name=role_settings.executor.mutex_name,
@@ -160,6 +168,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         repo_root,
                         settings,
                         gate_connection,
+                        current_product_build_id=product_build_id,
                     )
                 finally:
                     gate_connection.close()
@@ -175,6 +184,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             repo_root,
                             settings,
                             current_connection,
+                            current_product_build_id=product_build_id,
                         )
                     finally:
                         current_connection.close()
@@ -271,8 +281,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         ),
                         "role": ProcessRole.EXECUTOR.value,
                         "paused_open_activations": paused_activations,
-                        "source_sha256_digest": runtime_source_digest,
-                        "source_file_count": len(runtime_source_sha256),
+                        "product_build_id": product_build_id,
                         **runtime_evidence,
                     }
                     if observation is not None:
@@ -284,8 +293,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         environment_id=settings.release.environment_id,
                         paused_open_activations=paused_activations,
                         proxy_supplied=proxy_url is not None,
-                        source_sha256_digest=runtime_source_digest,
-                        source_file_count=len(runtime_source_sha256),
+                        product_build_id=product_build_id,
                         **runtime_evidence,
                     )
 
