@@ -31,15 +31,6 @@ FORWARD_OBSERVATION_SOURCE_PATTERNS = (
     "requirements/runtime.txt",
     "config/halpha.live-read-only.toml",
     "src/halpha/**/*.py",
-    "tools/provisioning/*.py",
-    "tools/qualification/source_binding.py",
-    "tools/qualification/observe_b04_windows_soak.py",
-    "tools/qualification/prepare_b04_live_read_only_observation.py",
-    "tools/qualification/transition_b04_live_read_only.py",
-    "tools/qualification/restart_b04_live_read_only_observation.py",
-    "tools/qualification/finalize_b04_live_read_only_observation.py",
-    "tools/qualification/verify_b04_live_read_only.py",
-    "tools/qualification/summarize_b04_evidence.py",
 )
 
 
@@ -48,20 +39,18 @@ class ForwardObservationError(RuntimeError):
 
 
 class ForwardObservationSpec(BaseModel):
-    """Frozen non-secret inputs for one 7-to-14-day read-only observation."""
+    """Non-secret inputs for one explicitly started read-only observation."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[3] = 3
+    schema_version: Literal[4] = 4
     observation_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,95}$")
     profile: Literal["BINANCE_LIVE_READ_ONLY"] = "BINANCE_LIVE_READ_ONLY"
     activation_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,95}$")
     instrument_ref: Literal["BTCUSDT-PERP"] = "BTCUSDT-PERP"
     strategy_id: Literal["ONE_SHOT_DONCHIAN_ATR_BREAKOUT"] = ONE_SHOT_STRATEGY_ID
     strategy_version: Literal["1.0.0"] = ONE_SHOT_STRATEGY_VERSION
-    strategy_evidence_ref: Literal[
-        "build/evidence/reports/b04-historical-preregistration.json"
-    ] = "build/evidence/reports/b04-historical-preregistration.json"
+    strategy_evidence_ref: str = Field(min_length=1, max_length=512)
     strategy_evidence_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     configuration_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_sha256: dict[str, str] = Field(min_length=1)
@@ -69,8 +58,6 @@ class ForwardObservationSpec(BaseModel):
     parameters: OneShotParameters
     parameter_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     starts_at: datetime
-    minimum_end_at: datetime
-    maximum_end_at: datetime
     max_allowed_loss: str
     max_notional: str
     max_margin: str
@@ -92,17 +79,9 @@ class ForwardObservationSpec(BaseModel):
         )
 
     @model_validator(mode="after")
-    def validate_window_and_digest(self) -> "ForwardObservationSpec":
-        timestamps = (self.starts_at, self.minimum_end_at, self.maximum_end_at)
-        if any(value.tzinfo is None for value in timestamps):
+    def validate_inputs_and_digest(self) -> "ForwardObservationSpec":
+        if self.starts_at.tzinfo is None:
             raise ValueError("FORWARD_OBSERVATION_TIMEZONE_REQUIRED")
-        starts_at, minimum_end_at, maximum_end_at = (
-            value.astimezone(UTC) for value in timestamps
-        )
-        if minimum_end_at - starts_at != timedelta(days=7):
-            raise ValueError("FORWARD_OBSERVATION_MINIMUM_DURATION_INVALID")
-        if maximum_end_at - starts_at != timedelta(days=14):
-            raise ValueError("FORWARD_OBSERVATION_MAXIMUM_DURATION_INVALID")
         actual_digest = content_digest(self.parameters.model_dump(mode="json"))
         if actual_digest != self.parameter_digest:
             raise ValueError("FORWARD_OBSERVATION_PARAMETER_DIGEST_MISMATCH")
@@ -213,8 +192,6 @@ class ForwardObservationEvidence:
                 "configuration_digest": self.spec.configuration_digest,
                 "source_sha256_digest": self.spec.source_sha256_digest,
                 "entry_valid_until": self.spec.entry_valid_until,
-                "minimum_end_at": self.spec.minimum_end_at,
-                "maximum_end_at": self.spec.maximum_end_at,
                 "capital_input_source": self.spec.capital_input_source,
             }
         )

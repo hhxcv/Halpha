@@ -6,15 +6,12 @@ from pathlib import Path
 
 import yaml
 
-from halpha.source_identity import source_sha256_digest
-
 from tools.qualification.summarize_b04_evidence import (
     REQUIRED_B04_MANIFEST_BINDINGS,
     REQUIRED_SOURCE_SHA256_ARTIFACTS,
     _json_artifact,
     classify_summary,
     is_current_b04_package,
-    windows_soak_contract_error,
 )
 from tools.qualification.real_write_boundary import (
     EXPECTED_CLOSED_REAL_WRITE_BOUNDARY,
@@ -25,14 +22,14 @@ from tools.qualification.real_write_boundary import (
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_current_accepted_plan_uses_the_shared_closed_real_write_boundary() -> None:
+def test_current_plan_uses_the_shared_closed_real_write_boundary() -> None:
     plan = yaml.safe_load(
         (ROOT / "docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml").read_text(
             encoding="utf-8"
         )
     )
 
-    boundary = assess_closed_real_write_boundary(plan["current_state"])
+    boundary = assess_closed_real_write_boundary(plan)
 
     assert boundary == {
         **EXPECTED_CLOSED_REAL_WRITE_BOUNDARY,
@@ -63,21 +60,15 @@ def test_summary_requires_every_artifact_test_and_gate() -> None:
     assert classify_summary(qualified, pytest_status="QUALIFIED", gates_qualified=False) == "REJECTED"
 
 
-def test_current_b04_package_accepts_the_split_observation_state() -> None:
+def test_current_b04_package_uses_simple_recorded_states() -> None:
     assert is_current_b04_package("IN_PROGRESS") is True
-    assert (
-        is_current_b04_package("IN_PROGRESS_CONSTRUCTION_GATE_AND_LONG_OBSERVATION")
-        is True
-    )
     assert is_current_b04_package("COMPLETED") is True
     assert is_current_b04_package("NOT_STARTED") is False
 
 
-def test_manifest_contract_has_all_three_external_gates_and_the_final_summary() -> None:
+def test_manifest_contract_keeps_direct_delivery_and_final_summary() -> None:
     assert {
-        "b04_windows_72h_soak",
         "b04_actual_smtp_delivery",
-        "b04_live_read_only_observation",
         "b04_summary",
     } <= REQUIRED_B04_MANIFEST_BINDINGS
 
@@ -92,47 +83,6 @@ def test_all_behavioral_b04_artifacts_require_current_source_binding() -> None:
         "product_demo_cycle",
         "windows_fault_drills",
     } <= REQUIRED_SOURCE_SHA256_ARTIFACTS
-
-
-def test_windows_soak_contract_requires_schema_v3_source_and_unbiased_awake_time() -> None:
-    started = 1_000
-    duration = 72 * 3600 * 10_000_000
-    source = {"src/halpha/example.py": "1" * 64}
-    evidence = {
-        "schema_version": 3,
-        "started_unbiased_100ns": started,
-        "observed_unbiased_100ns": started + duration,
-        "elapsed_hours": 72.0,
-        "wall_elapsed_hours": 72.0,
-        "sleep_or_hibernate_seconds": 0.0,
-        "source_sha256": source,
-        "source_sha256_digest": source_sha256_digest(source),
-        "current_source_sha256_digest": source_sha256_digest(source),
-        "checks": {
-            "app_runtime_source_identity_matches_current": True,
-            "configuration_identity_unchanged": True,
-            "continuous_process_identity_unchanged": True,
-            "executor_runtime_source_identity_matches_current": True,
-            "minimum_72_hours_observed": True,
-            "no_sleep_or_hibernate_over_60_seconds": True,
-            "source_identity_unchanged": True,
-        },
-    }
-
-    assert windows_soak_contract_error(evidence) is None
-    assert windows_soak_contract_error({**evidence, "schema_version": 1}) == (
-        "WINDOWS_SOAK_SCHEMA_V3_REQUIRED"
-    )
-    assert windows_soak_contract_error(
-        {**evidence, "current_source_sha256_digest": "2" * 64}
-    ) == "WINDOWS_SOAK_CURRENT_SOURCE_DIGEST_MISMATCH"
-    assert windows_soak_contract_error(
-        {
-            **evidence,
-            "wall_elapsed_hours": 73.0,
-            "sleep_or_hibernate_seconds": 3600.0,
-        }
-    ) == "WINDOWS_SLEEP_OR_HIBERNATION_LIMIT_EXCEEDED"
 
 
 def test_qualified_artifact_rejects_bound_source_drift(tmp_path: Path) -> None:

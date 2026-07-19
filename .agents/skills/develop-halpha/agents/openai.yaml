@@ -1,4 +1,4 @@
 interface:
   display_name: "Halpha Development"
   short_description: "Handle one Halpha scope with staged validation"
-  default_prompt: "Use $develop-halpha to handle one authorized Halpha construction-package slice or explicit isolated non-package scope, choose the builder, observer, or finalizer work mode, and escalate validation only as required."
+  default_prompt: "Use $develop-halpha to implement the authorized Halpha outcome with the least process appropriate to its actual impact, while preserving trading correctness and explicit external-write boundaries."

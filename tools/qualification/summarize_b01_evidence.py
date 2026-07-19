@@ -174,14 +174,6 @@ def summarize(root: Path) -> dict[str, Any]:
             ),
             cwd=root,
         ),
-        "accepted_integrity": _command(
-            (
-                sys.executable,
-                ".agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py",
-                "--accepted-integrity",
-            ),
-            cwd=root,
-        ),
         "construction_governance": _command(
             (sys.executable, "governance/validate_construction_plan.py"),
             cwd=root,

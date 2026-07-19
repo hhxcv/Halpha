@@ -1,4 +1,4 @@
 interface:
   display_name: "Design Halpha UX"
   short_description: "Design Halpha UX with risk-scaled evidence"
-  default_prompt: "Use $design-halpha-ux to choose the lightweight or full workflow for this Halpha UX task while keeping prototype, formal semantics, and implementation boundaries explicit."
+  default_prompt: "Use $design-halpha-ux with the least design and browser evidence needed for this Halpha UX change while preserving current documented semantics and consequential-action safety."

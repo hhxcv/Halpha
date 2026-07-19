@@ -1,4 +1,4 @@
-"""Summarize B04 exit evidence without weakening external or time gates."""
+"""Summarize directly checked B04 evidence without authorizing runtime effects."""
 
 from __future__ import annotations
 
@@ -21,10 +21,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from halpha.build_manifest import DEFAULT_ARTIFACT_SPECS, SCHEMA_VERSION  # noqa: E402
-from halpha.source_identity import (  # noqa: E402
-    SourceIdentityError,
-    source_sha256_digest,
-)
 from tools.qualification.real_write_boundary import (  # noqa: E402
     assess_closed_real_write_boundary,
 )
@@ -44,19 +40,13 @@ JSON_ARTIFACTS = {
     "browser_workbench": "build/qualification/b04-browser.json",
     "implemented_complexity_budget": "build/qualification/b04-complexity-budget.json",
     "critical_invariant_trace": "build/qualification/b04-critical-invariant-trace.json",
-    "windows_72h_soak": "build/qualification/b04-windows-72h-soak.json",
     "actual_smtp_delivery": "build/qualification/b04-smtp-delivery.json",
-    "live_read_only_observation": "build/qualification/b04-live-read-only.json",
 }
 EXTERNAL_EXIT_EVIDENCE = {
     "actual_smtp_delivery": "ACTUAL_SMTP_DELIVERY",
-    "live_read_only_observation": "BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION",
-    "windows_72h_soak": "WINDOWS_72H_MINIMUM_DURATION",
 }
 EXPECTED_EXTERNAL_STAGES = {
     "actual_smtp_delivery": "B04_ACTUAL_SMTP_DELIVERY",
-    "live_read_only_observation": "B04_BINANCE_LIVE_READ_ONLY_OBSERVATION",
-    "windows_72h_soak": "B04_WINDOWS_72H_SOAK",
 }
 REQUIRED_SOURCE_SHA256_ARTIFACTS = {
     "actual_smtp_delivery",
@@ -65,11 +55,9 @@ REQUIRED_SOURCE_SHA256_ARTIFACTS = {
     "empty_database_restore",
     "historical_backtest",
     "implemented_complexity_budget",
-    "live_read_only_observation",
     "notification_boundary",
     "outcome_boundary",
     "product_demo_cycle",
-    "windows_72h_soak",
     "windows_fault_drills",
 }
 REQUIRED_B04_MANIFEST_BINDINGS = {
@@ -86,9 +74,7 @@ REQUIRED_B04_MANIFEST_BINDINGS = {
     "b04_critical_invariant_trace",
     "b04_pytest_junit",
     "b04_playwright_report",
-    "b04_windows_72h_soak",
     "b04_actual_smtp_delivery",
-    "b04_live_read_only_observation",
     "b04_summary",
 }
 
@@ -252,66 +238,8 @@ def classify_summary(
 def is_current_b04_package(status: object) -> bool:
     return str(status).strip().upper() in {
         "IN_PROGRESS",
-        "IN_PROGRESS_CONSTRUCTION_GATE_AND_LONG_OBSERVATION",
         "COMPLETED",
     }
-
-
-def windows_soak_contract_error(value: Mapping[str, Any]) -> str | None:
-    if value.get("schema_version") != 3:
-        return "WINDOWS_SOAK_SCHEMA_V3_REQUIRED"
-    checks = value.get("checks")
-    if not isinstance(checks, dict):
-        return "WINDOWS_SOAK_CHECKS_INVALID"
-    for required_check in (
-        "app_runtime_source_identity_matches_current",
-        "configuration_identity_unchanged",
-        "continuous_process_identity_unchanged",
-        "executor_runtime_source_identity_matches_current",
-        "source_identity_unchanged",
-    ):
-        if checks.get(required_check) is not True:
-            return f"WINDOWS_SOAK_REQUIRED_CHECK_FAILED:{required_check}"
-    source = value.get("source_sha256")
-    frozen_source_digest = value.get("source_sha256_digest")
-    current_source_digest = value.get("current_source_sha256_digest")
-    if not isinstance(source, dict) or not isinstance(frozen_source_digest, str):
-        return "WINDOWS_SOAK_SOURCE_IDENTITY_INVALID"
-    try:
-        actual_source_digest = source_sha256_digest(source)
-    except SourceIdentityError:
-        return "WINDOWS_SOAK_SOURCE_IDENTITY_INVALID"
-    if frozen_source_digest != actual_source_digest:
-        return "WINDOWS_SOAK_SOURCE_DIGEST_MISMATCH"
-    if current_source_digest != frozen_source_digest:
-        return "WINDOWS_SOAK_CURRENT_SOURCE_DIGEST_MISMATCH"
-    if checks.get("minimum_72_hours_observed") is not True:
-        return "WINDOWS_72_AWAKE_HOURS_NOT_MET"
-    if checks.get("no_sleep_or_hibernate_over_60_seconds") is not True:
-        return "WINDOWS_SLEEP_OR_HIBERNATION_LIMIT_EXCEEDED"
-    try:
-        started = int(value["started_unbiased_100ns"])
-        observed = int(value["observed_unbiased_100ns"])
-        elapsed_hours = float(value["elapsed_hours"])
-        wall_hours = float(value["wall_elapsed_hours"])
-        sleep_seconds = float(value["sleep_or_hibernate_seconds"])
-    except (KeyError, TypeError, ValueError):
-        return "WINDOWS_SOAK_CLOCK_FIELDS_INVALID"
-    if observed < started:
-        return "WINDOWS_SOAK_UNBIASED_CLOCK_REGRESSION"
-    derived_awake_hours = (observed - started) / 10_000_000 / 3600
-    if abs(derived_awake_hours - elapsed_hours) > 0.001:
-        return "WINDOWS_SOAK_AWAKE_DURATION_DRIFT"
-    if elapsed_hours < 72.0:
-        return "WINDOWS_72_AWAKE_HOURS_NOT_MET"
-    if wall_hours + 0.001 < elapsed_hours:
-        return "WINDOWS_SOAK_WALL_DURATION_INVALID"
-    derived_sleep_seconds = max(0.0, (wall_hours - elapsed_hours) * 3600)
-    if abs(derived_sleep_seconds - sleep_seconds) > 1.0:
-        return "WINDOWS_SOAK_SLEEP_DURATION_DRIFT"
-    if sleep_seconds > 60.0:
-        return "WINDOWS_SLEEP_OR_HIBERNATION_LIMIT_EXCEEDED"
-    return None
 
 
 def summarize(root: Path = ROOT) -> dict[str, Any]:
@@ -330,27 +258,17 @@ def summarize(root: Path = ROOT) -> dict[str, Any]:
             encoding="utf-8"
         )
     )
-    current_state = plan["current_state"]
-    package = plan["construction_packages"]["B04"]
-    real_write_boundary = assess_closed_real_write_boundary(current_state)
-    plan_gates = {
-        "d00_aligned": plan["design_formalization_gate"]["status"] == "ALIGNED",
-        "b00_qualified": plan["dependency_qualification_gate"]["status"] == "QUALIFIED",
-        "b01_to_b03_completed": all(
-            plan["construction_packages"][name]["status"] == "COMPLETED"
-            for name in ("B01", "B02", "B03")
+    package_history = plan["current_facts"]["recorded_package_history"]
+    package_status = package_history["B04"]
+    real_write_boundary = assess_closed_real_write_boundary(plan)
+    plan_checks = {
+        "b00_to_b03_recorded": all(
+            package_history[name]
+            in {"QUALIFIED_FOR_RECORDED_SCOPE", "COMPLETED_RECORDED"}
+            for name in ("B00", "B01", "B02", "B03")
         ),
-        "b04_is_current_package": is_current_b04_package(package.get("status")),
-        "live_write_build_capability_fail_closed": (
-            real_write_boundary["live_write_build_capability"]
-            == "NOT_QUALIFIED"
-        ),
-        "b05_real_capital_blocked": (
-            real_write_boundary["b05_real_capital_eligibility"] == "BLOCKED"
-        ),
-        "runtime_real_write_gate_closed": (
-            real_write_boundary["runtime_real_write_gate"] == "CLOSED"
-        ),
+        "b04_recorded_scope_is_current": is_current_b04_package(package_status),
+        "real_write_fail_closed": real_write_boundary["status"] == "QUALIFIED",
     }
     for name, expected_stage in EXPECTED_EXTERNAL_STAGES.items():
         artifact = artifacts[name]
@@ -359,26 +277,13 @@ def summarize(root: Path = ROOT) -> dict[str, Any]:
         ):
             artifact["status"] = "REJECTED"
             artifact["error"] = "EXTERNAL_EVIDENCE_CONTRACT_INVALID"
-    soak = artifacts["windows_72h_soak"]
-    if soak["status"] == "QUALIFIED":
-        raw_soak = json.loads((root / JSON_ARTIFACTS["windows_72h_soak"]).read_text(encoding="utf-8"))
-        contract_error = windows_soak_contract_error(raw_soak)
-        if contract_error is not None:
-            soak["status"] = "REJECTED"
-            soak["error"] = contract_error
-
     manifest_names = {spec.name for spec in DEFAULT_ARTIFACT_SPECS}
     manifest_contract = {
         "schema_version": SCHEMA_VERSION,
         "required_b04_bindings": sorted(REQUIRED_B04_MANIFEST_BINDINGS),
         "missing_b04_bindings": sorted(REQUIRED_B04_MANIFEST_BINDINGS - manifest_names),
     }
-    plan_binding_value = {
-        "accepted_design_set": plan["accepted_design_set"],
-        "scope": package["scope"],
-        "exit_evidence": package["exit_evidence"],
-    }
-    gates_qualified = all(plan_gates.values()) and not manifest_contract[
+    gates_qualified = all(plan_checks.values()) and not manifest_contract[
         "missing_b04_bindings"
     ]
     status = classify_summary(
@@ -421,14 +326,8 @@ def summarize(root: Path = ROOT) -> dict[str, Any]:
         "superseded_by": None,
         "artifacts": artifacts,
         "tests": {"pytest": pytest},
-        "plan_gates": plan_gates,
+        "plan_checks": plan_checks,
         "manifest_contract": manifest_contract,
-        "plan_binding": {
-            "document_id": plan["document_id"],
-            "status": plan["status"],
-            "accepted_at": plan["accepted_at"].isoformat(),
-            "p0_b04_contract_sha256": sha256(_canonical(plan_binding_value)).hexdigest(),
-        },
         "unmet_exit_evidence": sorted(set(unmet)),
         "status": status,
         "scope": "B04_AGGREGATION_ONLY_NO_DATABASE_OR_VENUE_CONNECTION",

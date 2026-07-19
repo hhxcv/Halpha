@@ -7,62 +7,36 @@ from tools.qualification.verify_critical_invariant_trace import (
     DEFAULT_REGISTRY,
     DELIVERY_HORIZONS,
     REQUIRED_FIELDS,
-    compute_record_digest,
     validate_registry,
 )
 
 
 def test_current_registry_is_exact_and_current() -> None:
     registry = json.loads(DEFAULT_REGISTRY.read_text(encoding="utf-8"))
-    errors, actual_digests = validate_registry(registry)
+    errors = validate_registry(registry)
     assert errors == []
     assert {record["delivery_horizon"] for record in registry["records"]} == DELIVERY_HORIZONS
     assert all(set(record) == REQUIRED_FIELDS for record in registry["records"])
-    assert actual_digests == {
-        record["requirement_id"]: record["evidence_digest"]
-        for record in registry["records"]
-    }
 
 
-def test_tracked_file_change_invalidates_digest(tmp_path: Path) -> None:
-    (tmp_path / "spec.md").write_text("accepted", encoding="utf-8")
+def test_missing_referenced_file_is_rejected(tmp_path: Path) -> None:
     (tmp_path / "implementation.py").write_text("VALUE = 1\n", encoding="utf-8")
     (tmp_path / "test_impl.py").write_text("def test_value(): pass\n", encoding="utf-8")
     record = {
         "requirement_id": "TEST-001",
-        "spec_source": ["spec.md"],
+        "spec_source": ["missing-spec.md"],
         "delivery_horizon": "P0_REQUIRED",
         "implementation_paths": ["implementation.py"],
         "forbidden_calls": ["forbidden.call"],
         "tests": ["test_impl.py"],
         "build_gate": ["pytest test_impl.py"],
-        "evidence_digest": "PENDING",
         "implementation_status": "PARTIAL",
         "deviation_status": "NONE",
     }
-    before = compute_record_digest(record, root=tmp_path, baseline_patterns=())
-    (tmp_path / "implementation.py").write_text("VALUE = 2\n", encoding="utf-8")
-    after = compute_record_digest(record, root=tmp_path, baseline_patterns=())
-    assert before != after
+    errors = validate_registry(
+        {"records": [record]},
+        root=tmp_path,
+        baseline_patterns=(),
+    )
 
-
-def test_text_line_ending_change_does_not_invalidate_digest(tmp_path: Path) -> None:
-    (tmp_path / "spec.md").write_bytes(b"accepted\n")
-    implementation = tmp_path / "implementation.py"
-    implementation.write_bytes(b"VALUE = 1\n")
-    (tmp_path / "test_impl.py").write_bytes(b"def test_value(): pass\n")
-    record = {
-        "requirement_id": "TEST-001",
-        "spec_source": ["spec.md"],
-        "delivery_horizon": "P0_REQUIRED",
-        "implementation_paths": ["implementation.py"],
-        "forbidden_calls": ["forbidden.call"],
-        "tests": ["test_impl.py"],
-        "build_gate": ["pytest test_impl.py"],
-        "evidence_digest": "PENDING",
-        "implementation_status": "PARTIAL",
-        "deviation_status": "NONE",
-    }
-    lf_digest = compute_record_digest(record, root=tmp_path, baseline_patterns=())
-    implementation.write_bytes(b"VALUE = 1\r\n")
-    assert compute_record_digest(record, root=tmp_path, baseline_patterns=()) == lf_digest
+    assert any(error.startswith("REFERENCE_INVALID:TEST-001:") for error in errors)

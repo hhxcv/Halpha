@@ -4,17 +4,17 @@ Fail the review when a critical item is missing. Do not average safety or semant
 
 ## Authority and Scope
 
-- [ ] Every page and major surface has an accepted owner, current-phase justification, user job, and minimal carrier decision.
-- [ ] Every UX rule used by the artifact maps to the current accepted UX/domain clause; the skill, benchmark, and prototype have not become parallel authorities.
+- [ ] Every changed page or major surface has a current owner, current user job and minimal carrier decision.
+- [ ] Every UX rule used by the artifact maps to the current UX/domain clause; the skill, benchmark, and prototype have not become parallel authorities.
 - [ ] Prototype assumptions and target-state data are marked; proposals are not described as current behavior.
-- [ ] P0 non-goals and complexity budget are respected.
+- [ ] Current non-goals, actual project scale and personal maintenance limits are respected.
 - [ ] A necessary capability has not been inflated into marketing, onboarding, navigation, or page complexity without evidence.
 - [ ] Missing or conflicting semantics are reported instead of invented.
 
 ## Professional Trading Value
 
 - [ ] Environment, account, instrument, direction, fact cutoff, exposure, protection, open responsibility, and unknown state are visible whenever applicable.
-- [ ] The primary scan path meets the accepted scenario goal without reading paragraphs; any 1-3 second target is identified as a prototype heuristic unless an accepted test owns it.
+- [ ] The primary scan path meets the current scenario goal without reading paragraphs; any 1-3 second target is identified as a prototype heuristic unless a current test owns it.
 - [ ] Comparable numbers align and retain units, precision, sign, and timestamp meaning.
 - [ ] Repeated expert actions are compact, predictable, and keyboard reachable.
 - [ ] The workbench does not resemble a generic SaaS/OA card dashboard.
@@ -39,7 +39,7 @@ Fail the review when a critical item is missing. Do not average safety or semant
 
 - [ ] Every interaction has immediate visible response.
 - [ ] Submission acknowledgement is distinct from effective business result.
-- [ ] Long-running work has stable identity, current phase, truthful progress, and completion/failure feedback.
+- [ ] Work that outlives the request has the identity, latest meaningful step, and completion/failure feedback actually needed to find the same responsibility.
 - [ ] Rejection, failure, timeout, stale, and unknown states show reason, scope, cutoff, and safe next action.
 - [ ] No exception, background failure, notification failure, or external uncertainty can occur silently.
 - [ ] Duplicate click, refresh, retry, navigation-away, and interruption behaviors are specified.
@@ -47,9 +47,9 @@ Fail the review when a critical item is missing. Do not average safety or semant
 ## Risk and Error Prevention
 
 - [ ] Every risk-increasing, destructive, protection-reducing, authority-changing, irreversible, or system-stopping action appears in the risk inventory.
-- [ ] Each in-scope risk action maps to an accepted command and effective second gate with explicit target, scope, consequence, uncertainty, and action label; unowned actions are blocked as design gaps.
+- [ ] Each changed risk control maps to its current owner and interaction. Machine actions that add risk enter only through explicit plan activation with visible target, scope, consequence, uncertainty and action label; no per-action authorization, second approval or receipt platform was invented.
 - [ ] Disabled controls explain why and how the condition can change.
-- [ ] Emergency stop, exit, and takeover remain reachable under accepted constraints.
+- [ ] Emergency stop, exit, and takeover remain reachable under current constraints.
 - [ ] Success is not claimed before authoritative evidence; unknown is never rendered as safe or complete.
 
 ## Accessibility and Responsive Behavior
@@ -61,7 +61,7 @@ Fail the review when a critical item is missing. Do not average safety or semant
 
 ## Real-Browser Visual Debugging
 
-- [ ] An executable prototype or product frontend, when the full real-browser gate applies, was inspected through the required Playwright loop at the accepted desktop and narrow-screen viewports.
+- [ ] An executable prototype or product frontend, when the full real-browser gate applies, was inspected through the required Playwright loop at the current desktop and narrow-screen viewports.
 - [ ] Screenshots or snapshots were inspected before and after critical state transitions for clipping, overflow, overlap, alignment, density, focus, and state legibility.
 - [ ] Primary flows exercised loading, success, rejection/failure, stale/unknown, disclosure, confirmation, duplicate prevention, refresh, and navigation behavior as applicable.
 - [ ] Page errors, console errors, failed requests, and broken assets were reviewed; no layout or interaction failure was silently ignored.
@@ -70,11 +70,11 @@ Fail the review when a critical item is missing. Do not average safety or semant
 
 ## Owner Decision Handoff
 
-Do not ask the owner to reconfirm decisions already fixed by the accepted design, current L4 scope, or explicit task authorization. Within those boundaries, the designer may choose and justify information density, scan order, visual character, component polish, progressive disclosure, and feedback presentation, then expose the choices in the handoff for review.
+Do not ask the owner to reconfirm decisions already fixed by current design, current L4 scope, or explicit task authorization. Within those boundaries, the designer may choose and justify information density, scan order, visual character, component polish, progressive disclosure, and feedback presentation, then expose the choices in the handoff for review.
 
 Request one grouped owner decision only when at least one unresolved choice:
 
-1. adds or removes a page, route, user job, command, authoritative object, or support boundary not derivable from the accepted set;
+1. adds or removes a page, route, user job, command, authoritative object, or support boundary not derivable from current documents;
 2. changes a risk gate, emergency-action reachability, authority, failure/unknown behavior, or other product semantics;
 3. is a materially different long-lived visual direction with no evidence-backed default and would substantially change the delivered result; or
 4. depends on a design conflict, scope expansion, or assumption that requires owner authority.

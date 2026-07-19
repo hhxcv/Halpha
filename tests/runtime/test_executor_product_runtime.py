@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -141,8 +141,9 @@ def _forward_spec() -> ForwardObservationSpec:
     )
     source_sha256 = {"src/halpha/example.py": "3" * 64}
     return ForwardObservationSpec(
-        observation_id="b04-live-read-only-20260718",
-        activation_id="b04-live-read-only-btcusdt",
+        observation_id="read-only-check-20260718",
+        activation_id="read-only-check-btcusdt",
+        strategy_evidence_ref="build/evidence/reports/strategy-evidence.json",
         strategy_evidence_digest="1" * 64,
         configuration_digest="2" * 64,
         source_sha256=source_sha256,
@@ -150,8 +151,6 @@ def _forward_spec() -> ForwardObservationSpec:
         parameters=parameters,
         parameter_digest=content_digest(parameters.model_dump(mode="json")),
         starts_at=starts_at,
-        minimum_end_at=starts_at + timedelta(days=7),
-        maximum_end_at=starts_at + timedelta(days=14),
         max_allowed_loss="50",
         max_notional="500",
         max_margin="100",

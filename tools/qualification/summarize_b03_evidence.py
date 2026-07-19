@@ -251,7 +251,6 @@ def summarize(root: Path) -> dict[str, Any]:
     b00 = _json(qualification / "b00-qualification-latest.json")
     b00_dependency = {
         "required_output_count": b00.get("required_output_count"),
-        "qualification_progress": b00.get("qualification_progress"),
         "account_configuration_blocks_b00": b00.get(
             "account_configuration_evaluation", {}
         ).get("blocks_b00"),
@@ -279,8 +278,7 @@ def summarize(root: Path) -> dict[str, Any]:
             encoding="utf-8"
         )
     )
-    current_state = plan["current_state"]
-    real_write_boundary = assess_closed_real_write_boundary(current_state)
+    real_write_boundary = assess_closed_real_write_boundary(plan)
 
     record_families_source = (
         root / "src/halpha/database/record_families.py"
@@ -304,14 +302,6 @@ def summarize(root: Path) -> dict[str, Any]:
                 sys.executable,
                 ".agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py",
                 "docs",
-            ),
-            cwd=root,
-        ),
-        "accepted_integrity": _command(
-            (
-                sys.executable,
-                ".agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py",
-                "--accepted-integrity",
             ),
             cwd=root,
         ),

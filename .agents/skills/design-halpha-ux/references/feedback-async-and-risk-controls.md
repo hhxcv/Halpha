@@ -5,9 +5,9 @@
 Specify feedback at four distinct layers:
 
 1. **Local response:** within perceptual immediacy, show pressed state, focus, field validation, or button-local activity and prevent accidental duplicate submission.
-2. **Submission acknowledgement:** show that the message, event, command, or task reached the responsible boundary; include stable identity and submission time when available.
-3. **Ongoing work:** show queued, processing, waiting for an external system, retrying, reconciling, or blocked state using only terms supported by the authoritative model. Display determinate progress when truthful; otherwise show active indeterminate progress plus the current phase.
-4. **Authoritative result:** show effective, rejected, failed, cancelled, abandoned, timed out, stale, or unknown as supported by accepted semantics, with evidence cutoff and next action.
+2. **Request acknowledgement:** show that the request reached the responsible boundary; include a stable identity only when it is needed for retry, refresh or external-effect tracking.
+3. **Ongoing work:** when work outlives the request, show the supported waiting, retrying, reconciling or blocked result. Display determinate progress only when truthful; otherwise show the latest meaningful step.
+4. **Authoritative result:** show effective, rejected, failed, cancelled, abandoned, timed out, stale, or unknown as supported by current semantics, with evidence cutoff and next action.
 
 Submission acknowledgement is not business effect. `PROCESSING`, a spinner, an HTTP response, or a toast must never masquerade as order placement, cancellation, exit, protection, or capital release.
 
@@ -22,7 +22,7 @@ Use the least intrusive surface that preserves the consequence:
 - a dialog only when the user must decide before proceeding;
 - a detail drawer or route for evidence and diagnosis.
 
-Success messages may disappear after the durable state is visible. Failure, rejection, unknown, and required follow-up must persist until resolved, superseded, or explicitly acknowledged according to accepted semantics.
+Success messages may disappear after the durable state is visible. Failure, rejection, unknown, and required follow-up must persist until resolved, superseded, or explicitly acknowledged according to current semantics.
 
 ## No Silent Failure
 
@@ -40,15 +40,15 @@ Do not expose secrets, raw stack traces, or provider errors as the primary messa
 
 ## Long-Running Work
 
-For work that may outlive the current view:
+For work that may outlive the current view and cannot be represented by the owning domain result alone:
 
-- give it a stable visible identity;
+- give it a stable visible identity when refresh or retry must find the same responsibility;
 - keep status available after navigation or refresh;
-- show current phase and latest meaningful change;
+- show the latest meaningful change;
 - show determinate progress only when backed by real units;
 - allow cancellation only when semantically safe;
 - explain consequences before cancelling work that has partial effects;
-- notify completion or failure in context and through the accepted Task/notification path when required.
+- notify completion or failure in context and through the documented Task/notification path when required.
 
 Avoid indefinite unlabeled spinners. If progress stalls, transition to a visible waiting, delayed, failed, or unknown state rather than silently continuing animation.
 
@@ -65,13 +65,13 @@ Inventory proposed or existing actions by consequence, not by button color. Trea
 - stopping a strategy, executor, application, or protective process;
 - exiting, taking over, releasing capital, or changing recovery authority.
 
-Add any action with comparable irreversibility, uncertainty, privilege, exposure, or blast radius even when it is not listed above. For every item, record the accepted semantic owner, command, preview, current phase, and permitted carrier. If any of those are missing, mark the affected interaction `DESIGN_GAP`; do not create a generic settings, deletion, system-control, or trading command from this list.
+Review only the actions changed by the task, plus any directly coupled action with comparable irreversibility, uncertainty, privilege or exposure. Record the current owner, action, consequence preview and visual carrier. If the action has no current owner or result, report a design gap rather than inventing a generic command.
 
-## Effective Second Gate
+## Consequence Preview and Explicit Action
 
-Every in-scope risk action must either map to the effective second gate required by accepted design or remain blocked as a design gap. A current consequence preview followed by an explicit command in a confirmation dialog is the default presentation. An equivalent guard may be used only when the accepted contract permits it and it is at least as resistant to accidental activation, such as a typed confirmation phrase, press-and-hold, reauthentication, or a separate preview-and-commit step.
+Use the confirmation required by current design. For risk-increasing activation, show current target, scope, limits and consequence, then require one explicit user action. This is the product action itself, not a second authorization object or approval workflow. Add stronger friction only when accidental activation cost or current design requires it.
 
-The gate must show:
+The confirmation shows, as applicable:
 
 - exact action name, never generic “确定” as the primary label;
 - target object, environment, account, instrument, and scope;
@@ -80,16 +80,16 @@ The gate must show:
 - what the action does not do;
 - uncertainty, partial-effect, and external-system behavior;
 - reversibility and recovery path;
-- preview identity, digest, expected version, and expiry when required by accepted design;
+- expected version or expiry only when the owning contract uses it;
 - a safe cancel path and keyboard focus behavior.
 
-Use stronger friction for rare, irreversible, protection-reducing, or broad-scope actions. Do not repeat the same warning so often that the owner learns to dismiss it automatically.
+Do not repeat warnings so often that the owner learns to dismiss them automatically.
 
-Emergency stop, exit, and takeover are high consequence but time sensitive. Apply the accepted current preview and explicit command while keeping the first legitimate request reachable. Do not add arbitrary approvals, long wizards, generic rate limits, or dependencies on an unavailable full interface. A visual warning does not authorize a command that accepted design has not defined.
+Stop, exit and takeover are time sensitive. Keep the first legitimate request directly reachable; do not add arbitrary approvals, long wizards, generic rate limits or dependencies on another interface. A visual warning does not authorize an action absent from current design.
 
 ## Control-State Requirements
 
-For every consequential control, define:
+For each changed consequential control, define the applicable items:
 
 - enabled conditions;
 - disabled reason shown adjacent or on focus/hover;

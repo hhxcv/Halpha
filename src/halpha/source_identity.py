@@ -41,7 +41,6 @@ PRODUCT_RUNTIME_SOURCE_PATTERNS = (
     "migrations/**/*.py",
     "frontend/dist/**/*",
     "tools/provisioning/*.py",
-    "tools/qualification/observe_b04_windows_soak.py",
 )
 
 

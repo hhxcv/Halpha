@@ -1,17 +1,12 @@
 # Halpha Core Business Workflows and User Journeys
 
 **Document ID:** HALPHA-FLOW-001  
-**Version:** v1.9.0  
-**Document Status:** ACCEPTED  
 **Level:** L1-C  
 **Language Edition:** en-US  
-**Joint Normative Set ID:** HALPHA-FLOW-001@v1.9.0+20260718T095900+0800  
 **Paired Text:** HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md  
-**Joint Set Registry:** HALPHA-FLOW-001-core-workflows-and-user-journeys.bundle.yaml  
-**Effective Time:** 2026-07-18T09:59:00+08:00  
-**Parent Documents:** HALPHA-CON-001 v2.11.0; HALPHA-DOC-001 v1.11.0; HALPHA-VIS-001 v1.4.0  
-**This Document Governs:** how the user repeatedly uses Halpha for trading research, judgment, planning, simulated and real trading actions, inspection, intervention, recovery, and learning; the product-level handoff for AI-led research and final human selection; the six horizontal business responsibilities and their main handoffs  
-**This Document Does Not Govern:** specific pages, fields, algorithms, databases, venue protocols, numerical limits, current construction scope, implementation state, or equal deepening across the responsibility map
+**Parent Documents:** HALPHA-CON-001, HALPHA-DOC-001, and HALPHA-VIS-001  
+**This Document Governs:** how the user researches, forms judgments, plans, trades in simulation or with real funds, reconciles, intervenes, and reviews in Halpha, and the product-level handoffs among the core business responsibilities  
+**This Document Does Not Govern:** pages, fields, internal records, technical transactions, deployment, validation orchestration, numerical limits, or current construction state
 
 ---
 
@@ -19,54 +14,42 @@
 
 ## 0.1 Rationale for the Workflow 【FLOW-SUM-001-RAT】
 
-Halpha's day-to-day path helps the user form judgments, compare alternatives, make plans, act correctly, understand results, and improve continuously. It does not make the user complete a separate control or governance process first.
+Halpha serves a direct personal-trading path: understand the facts, form a judgment, make a plan, act correctly, reconcile the outcome, and improve. Research, controls, and engineering measures should support this path rather than become a separate governance process that the user must complete first.
 
-The user may observe cautiously, intervene frequently, and stop the system at any time. Even after strong long-term operating results, the workflow must not depend on unattended operation or take away the user's ability to stop and take over externally.
+The user may choose not to trade, stop Halpha, or take over through an official venue interface. Longer system operation does not change the user's final authority.
 
 ## 0.2 Core Workflow Requirements 【FLOW-SUM-001-REQ】
 
-The user decides outside Halpha which accounts and how much capital may be made available to it. FLOW governs only how the user configures and uses funds-use caps and scope, authorization, plans, stopping, and recovery inside Halpha; it does not turn the user's total-capital decision into a product workflow. Real-action paths apply the three classes of control requirements in CON-CMP-003 separately. Supporting mechanisms must not be more complex than the core trading tasks.
-
-The workflow must ensure that:
-
-- on entry, the user can first see what happened, whether anything is worth doing, and whether Halpha is usable;
-- frequent tasks take few steps, with specialist detail available on demand;
-- a real action normally originates from a fixed, enabled, complete Trading Plan; an explicit user decision, fixed in advance, to protect or reduce an existing exposure, or an explicit user instruction to cancel, protect, transfer, or reduce risk that can be shown not to increase or transform risk, may proceed without a Trading Plan, but must fix its subject, scope, and reason and enter the same funds-use caps-and-scope, Halpha real-capital operating authority, execution, and reconciliation path;
-- an action that requires post-trigger human judgment proceeds only while the user is online and the complete manual-authorization path is feasible within the applicable time window; a machine-authorization path requires explicit, bounded authorization before the trigger;
-- a venue or account change initiated by Halpha passes only through the single isolated external-write boundary; an action the user performs independently through an official venue interface enters as external activity;
-- exchange simulation and real-funds environments use the same Trading Plan, CAP check, EXE execution, DAT reconciliation, and OUT review flow; differences are expressed only through explicit environment configuration and account and authorization effect, not through a separate simplified simulation flow;
-- when facts are unknown, the path is infeasible, or permission is insufficient, the result is waiting, no trade, or stopping rather than an assumed success; only a contraction action explicitly directed by the user and shown not to increase or transform risk may continue; and
-- stopping and external human takeover remain reachable.
+- On entry, the user can see accounts, positions, orders, active plans, material anomalies, and whether action is needed. With nothing to do, the user may exit or enter research, planning, or review directly.
+- A real action normally comes from a fixed, complete Trading Plan. Protection, exit, or risk reduction for an existing exposure may also come from a direct User instruction with a clear subject and scope.
+- One explicit plan activation may also grant a bounded machine-execution scope belonging only to that activation. The scope must fix the environment, account, plan, instrument, funds limits, term, and permitted actions. It does not change the plan or apply to later activations.
+- Every external action uses current facts, passes the applicable capital and authority checks, is submitted through one execution path, and is followed by venue reconciliation. Repeated requests must not produce duplicate actions.
+- When facts are unknown, authority is insufficient, or the path is infeasible, Halpha adds no new risk. Only a contraction explicitly requested by the User and shown not to increase or transform risk may continue.
+- Exchange simulation and real-funds environments use the same business chain, while environment, account, authority, action, and outcome identities remain separate. Simulated decisions and results must not migrate into real-funds facts.
+- Stopping, exit, and external human takeover through an official venue interface remain reachable.
 
 ---
 
 # 1. Path Continuity Under Limited Attention 【FLOW-TIM-001】
 
-FLOW defines only the product-level path: the user can quickly handle current state and time-bound decisions, and can also continue through research, planning, and review. On failure, the path first limits impact, reconciles external state, and enables human takeover. Lower-level design defines exact task ordering and interaction timing; L4 records actual performance.
+The user should be able to enter the highest-value task from current state. Anomalies and time-bound matters take priority, but the normal entry must not become a technical status page.
 
-When nothing is wrong, the user can enter the most valuable research, planning, or review task directly. An anomaly, a time-bound decision, or an action that may change a venue or account must be directly reachable, without turning the normal product entry into a technical status page.
-
-## 1.1 Interruption and Recovery
-
-Candidates, research, and plan drafts may be saved and resumed. Resumption must highlight intervening changes, expired inputs, and decisions that must be made again. A real action that has occurred or may have occurred must never be replayed by resuming a draft; Halpha must first read and reconcile external state.
+Research and plan drafts may be resumed after interruption. Resumption highlights intervening changes, expired inputs, and decisions that must be made again. An external action that occurred or may have occurred must never be replayed because of resumption, restart, or a repeated click; Halpha first reconciles external facts.
 
 ---
 
 # 2. Recurring Usage Scenarios 【FLOW-MAP-001】
 
-| Scenario | Main path | Permitted ending |
+| User purpose | Main path | Normal ending |
 |---|---|---|
-| Quick status check | Accounts and positions → active plans and unresolved actions → Halpha availability → high-value tasks | Exit with nothing to do, or enter one clear task |
-| Candidate capture | Save source and time → add necessary context → deduplicate and screen | Wait, end, enter research, or enter planning |
-| Alpha research | Fix the research task and evaluation boundaries → AI generates, runs, falsifies, screens, and reviews → final-candidate material → final human review | No qualified candidate, reject, return to new research, continue observing, or select entry into formal strategy implementation and qualification |
-| Plan creation | Basis for judgment → entry, exit, adjustment, and protection → quantity, cost, timing, and failure handling | Keep a draft, fix and enable, or abandon |
-| Manually authorized action | Current preview → current user confirmation → funds-use caps-and-scope and Halpha real-capital operating-authority check → real action → reconciliation | Wait, reject, no trade, partial or complete result, or unresolved result |
-| Fixed-strategy operation | Strategy input → complete plan → condition evaluation → current facts and authorization review → action and reconciliation | Take no action, pause, narrow scope, continue, or stop |
-| Protection or risk reduction | Fixed protection/risk-reduction decision or explicit user instruction → current facts → funds-use caps-and-scope and Halpha real-capital operating-authority check → action and reconciliation | Complete, reject, remain unknown, hand over externally, or remain stopped |
-| Return from an external manual action | Read venue facts → mark the external source → associate with an existing plan or later decision | Facts are available to later judgments |
-| Short review | Original decision → actual outcome and cost → differences in judgment, plan, data, execution, and interaction | Make no change, or create an actionable improvement |
-| Failure and recovery | Stop new real actions in the affected scope → reconcile externally → repair or roll back → verify recovery conditions | Remain stopped, or have the user explicitly restore the applicable Halpha real-capital operating authority |
-| Disable and exit | Stop new real actions → expose residual responsibilities → revoke write permission and credentials → export necessary material | External accounts remain independently controllable |
+| Quick inspection | Current facts and pending work → relevant plan, order, position, or anomaly | Handle one item, or exit with nothing to do |
+| Strategy research | Fix the question and boundaries → explore, falsify, and compare → human selection | Abandon, continue researching, or adopt a result |
+| Plan creation | Basis → entry, exit, protection, scale, term, and failure handling → preview | Save a draft, fix the plan, or abandon it |
+| Plan operation | Activate → observe conditions → check current facts and proposed action → execute and reconcile | Take no action, continue, stop new risk, exit, or hand over |
+| Existing-risk handling | Current order or position → protection, risk-reduction, or exit decision → execute and reconcile | Complete, remain stopped, or hand over externally |
+| Review and improvement | Original judgment and plan → actual outcome and cost → actionable differences | Make no change, or form new research, a plan, or an improvement |
+
+These paths are not a mandatory funnel. The user may enter research, fact lookup, position handling, or review directly. With no suitable opportunity, the path ends by waiting, holding cash, or making no trade.
 
 ---
 
@@ -74,237 +57,95 @@ Candidates, research, and plan drafts may be saved and resumed. Resumption must 
 
 ## 3.1 Rationale for External-Tool Responsibilities 【FLOW-TOOL-001-RAT】
 
-Mature external tools should do what they already do well: venues provide official account operations, specialist charting tools provide deep visual analysis, news and data sources provide source material, and research environments support exploration. Within research and evaluation boundaries already fixed by ALP, general-purpose AI may perform non-authoritative task formation, hypothesis generation, research implementation, run orchestration, comparison, screening, falsification, review, and material organization; this does not give it authority over facts, economic-evidence judgments, formal strategy promotion, Trading Plans, or real actions.
+Venues provide official account operations, specialist charting and research environments provide their strongest forms of analysis, and news and data sources provide source material. Halpha does not duplicate a sufficient external capability.
+
+AI may begin exploring, implementing, running, comparing, falsifying, and organizing material from the User's research question and the currently available data and tool boundaries. Resource and stopping limits are added only when resource use or the intended claim requires them. AI does not acquire authority over facts, strategy adoption, Trading Plans, or real actions.
 
 ## 3.2 Halpha-Owned Continuity and Handoff Requirements 【FLOW-TOOL-001-REQ】
 
-Halpha must preserve research and planning context, the strategy or plan currently in use, the user's configured funds-use caps and scope and Halpha real-capital operating authority, the real actions initiated by Halpha and any unresolved responsibilities, the necessary reconciled facts, and learning derived from plans, actions, and outcomes.
-
-Halpha does not duplicate a sufficient external capability. A handoff must let the user see the subject, time, applicable plan, action boundaries, and return path. A returned result enters reconciliation as an external fact; clicking “done” does not make it an account fact.
+Halpha preserves research and plan context, the plan in use, User-configured capital boundaries, actions initiated by Halpha and unresolved responsibilities, and necessary reconciled facts. A cross-tool handoff identifies the subject, time, applicable plan, and return path. “Done” in an external tool cannot replace Halpha's reconciliation of account facts.
 
 ---
 
 # 4. User Interaction and Control 【FLOW-UX-001】
 
-## 4.1 Six Primary User Task Domains
+## 4.1 Six User Task Domains 【FLOW-UX-001-DEF】
 
-### Definition of the Six User Task Domains 【FLOW-UX-001-DEF】
+The enduring User tasks are market observation, strategy research, Trading Plans, trade execution and position management, accounts and trading records, and review and learning. They describe task scope, not required pages, modules, or services.
 
-These are enduring task domains, not names for pages, menus, or software modules.
+## 4.2 Requirements for Using the Task Domains 【FLOW-UX-001-REQ】
 
-| User task domain | Question the user must answer | Typical tasks |
-|---|---|---|
-| Market observation and live intelligence | What happened in markets, events, and watched subjects | Observe prices and events, find leads, inspect plan-related signals |
-| Strategy research and validation | Why might a view or strategy be valid | Form hypotheses, explore data, seek counterevidence, backtest, and compare versions |
-| Trading Plans and rehearsal | If acting, how should entry, exit, protection, adjustment, and stopping work | Create, compare, preview, simulate, fix, and enable plans |
-| Trade execution and position management | What action does a current plan, order, or position require | Confirm, execute, protect, adjust, cancel, exit, and handle anomalies |
-| Accounts and trading records | What objectively happened, and can the facts be reconciled | Query balances, orders, fills, positions, fees, and external activity |
-| Review, analysis, and learning | How good were the original judgment and plan, and what should change next | Compare plan with reality, analyze differences, and create improvements |
+Interaction preserves task context and lets the User distinguish facts, inferences, AI suggestions, User decisions, and external outcomes. Frequent tasks take few steps; sources, history, and technical detail expand on demand.
 
-### Requirements for Using the Task Domains 【FLOW-UX-001-REQ】
+Fixing plan content, raising capital caps or widening scope, activating a plan, stopping, exiting, and taking over are distinct User decisions. Under Section 0.2, plan activation includes the bounded machine-execution authority for that activation. One decision must not silently change another.
 
-L3 may combine several task domains in one interface or give a frequent task its own entry, but it must preserve task-context continuity. “Accounts and trading records” provides facts; “review, analysis, and learning” provides explanations with evidence boundaries. They must not collapse into a profit-and-loss-only report.
-
-“Trading Plans and rehearsal” turns research, a user judgment, or a position-management need into a plan that can be previewed, simulated, fixed, and enabled. “Trade execution and position management” takes over actions and responsibilities that have triggered or are underway. An order button does not replace planning.
-
-## 4.2 Current State and Pending Work Form a Cross-Domain Entry
-
-On entering Halpha, the user must be able to see current orders and positions, active plans, time-bound decisions, anomalies, and material changes, and then move directly to the relevant planning, execution, facts, research, or review task. L1 does not prescribe the page name or navigation form. With no pending work, the user may exit or enter any high-value task directly.
-
-## 4.3 Real Usage Allows Direct Entry and Return Flows
-
-A complete discovery–action–learning loop can be expressed as:
-
-~~~text
-Market observation and live intelligence
-        ↓ (research when needed; a sufficiently supported user judgment may start directly)
-Strategy research and validation ─────────┐
-        ↓                                 │
-Trading Plans and rehearsal               │
-        ↓                                 │
-Trade execution and position management   │
-        ↓                                 │
-Accounts and trading records              │
-        ↓                                 │
-Review, analysis, and learning ────────────┘ return to intelligence, research, or a new plan
-~~~
-
-This is not a mandatory funnel. An existing position, a protection need, or an order anomaly may enter execution and position management directly. The user may query facts directly. With no qualified opportunity, the path ends by waiting, holding cash, or making no trade. A return flow is needed only when there is an actionable issue.
-
-## 4.4 Typical Task Paths
-
-| User intent | Reasonable path | Normal ending |
-|---|---|---|
-| Check quickly whether anything needs attention | Current state and pending work → relevant plan, position, order, intelligence, or anomaly | Handle one item, or exit with nothing to do |
-| Turn a view into a trade | User judgment or intelligence → optional research → plan → rehearsal → execute through the same trading chain in exchange simulation or a real-funds environment | No trade, keep observing, execute in simulation, or execute for real |
-| Respond to an active plan | Notification or condition trigger → current facts and plan branch → confirm, wait, reject, or act under an authorized rule | Record the decision; track and reconcile any action |
-| Manage an existing order or position | Order or position → basis, current facts, and unresolved responsibilities → protect, adjust, cancel, or exit | Close the responsibility, or hand over to external manual action |
-| Research and validate a strategy | Fixed task and evaluation basis → AI exploration, falsification, comparison, and screening → out-of-sample evaluation, reproduction, and final-candidate material → final human review | No candidate, reject, return to new research, observe, or select entry into formal strategy implementation and qualification |
-| Query and review | Fact timeline → reconciliation state → comparison with the original decision | Exit, or create new research, a new plan, or an improvement |
-
-Search, saved views, notifications, deep links, or object relationships may start these paths. L1 requires continuity and retrievable outcomes; it does not fix the number of pages.
-
-## 4.5 Commands Must Be Unambiguous
-
-Confirming a current proposed action, enabling or changing a plan, enabling or disabling a fixed strategy, expanding or narrowing funds-use caps and scope, stopping new real actions, entering external human takeover, and restoring applicable Halpha real-capital operating authority must remain separate commands. Narrowing funds-use scope or lowering Halpha real-capital operating authority should be fast. Raising funds-use caps, expanding scope, or increasing Halpha real-capital operating authority must show the current configuration and consequences without adding multi-level approval. A per-action confirmation must not silently change enduring funds-use caps and scope or Halpha real-capital operating authority.
-
-## 4.6 Information Hierarchy
-
-The default view shows the current conclusion, key basis, major unknowns, next action, and whether Halpha is usable. Sources, history, models, execution attempts, and technical information expand on demand. Facts, estimates, AI suggestions, user decisions, and venue results must remain distinguishable.
-
-## 4.7 Business Flow Is Independent of Interaction Form 【FLOW-UX-002】
+## 4.3 Business Flow Is Independent of Interaction Form 【FLOW-UX-002】
 
 ### Platform-Independent Business-Flow Requirements 【FLOW-UX-002-REQ】
 
-Halpha's business flow does not depend on a particular interaction platform or client form. Every supported interaction form MUST read the same authoritative state, preserve the same business objects and path context, invoke the same business commands and applicable authorization, capital-check, execution, and reconciliation chain, and write outcomes back to the same business state. Switching forms MUST NOT copy, migrate, fork, or infer business state, and MUST NOT change decision, authorization, failure, unknown, stopping, recovery, or ending semantics. Lower-level design and L4 record which interaction forms are supported and their current construction scope.
+Different interaction forms read the same authoritative state, invoke the same business commands, and return the same outcome semantics. Switching entry points must not copy, infer, or fork plans, authority, actions, or outcomes.
 
 ---
 
-# 5. Research or Trading Plan Candidates, Research, and Planning 【FLOW-TRADEPLAN-001】
+# 5. Research and Planning 【FLOW-TRADEPLAN-001】
 
-## 5.1 Destinations for Research or Trading Plan Candidates
+## 5.1 AI-Led Research and Final Human Selection 【FLOW-AIR-001-REQ】
 
-A candidate preserves enough context to understand its source, time, subject, initial judgment, and current relevance. Under CTX rules, the user or Halpha decides to end it, wait, enter economic research, or form a Trading Plan directly when the basis is sufficient. Not every candidate requires formal research.
+Strategy research may proceed independently. As long as it does not consume trading runtime state, account writes, or real credentials, it does not depend on the trading execution chain being available. The User need only state the question and currently available data boundary before AI begins exploring, failing, rerunning, and screening without item-by-item approval. Evaluation basis, costs, counterevidence, resources, and stopping conditions are completed only when a result is being prepared for a product or capital decision, and only to the strength of that claim. No qualified result is a normal ending.
 
-## 5.2 AI-Led Research and Final Human Selection 【FLOW-AIR-001-REQ】
+Only the User decides whether to adopt a research result. Adoption does not automatically fix or activate a Trading Plan, change a capital boundary, or create a real action.
 
-Within a problem that the user has explicitly placed into formal ALP research, or that CTX has routed there, and within the research, evaluation, resource, and stopping boundaries fixed by ALP, AI may act as the primary research worker. It may autonomously form specific research tasks and cases and perform intermediate research, screening, falsification, review, reruns, and orchestration of final-candidate material. Task formation, intermediate runs, elimination, and failure within those boundaries do not require item-by-item approval by the user or Project Owner. No qualified candidate is a normal ending; the criteria must not be weakened merely to produce a deliverable. ALP and lower-level design alone own the specific preregistration, data-role, testing, isolation, tooling, and evidence-bundle methods.
+## 5.2 Research Entering Planning
 
-AI's intermediate evaluations, rankings, and reviews remain derived judgments that require verification and must follow ALP rules for evidence, complete search, retention of failures, and when conclusions take effect; agreement among same-source AIs does not add economic evidence. AI must not change fixed boundaries, delete failures, waive hard gates, evaluate its own output as trusted, or make its own positive judgment effective.
+When research supports a plan, the result states its applicable scope, main basis, counterevidence, costs, limitations, and invalidation conditions. The User may also begin planning directly from a sufficiently formed personal judgment; formal research is not mandatory for every plan.
 
-Only final-candidate material defined by ALP is submitted to the Project Owner for necessary result review. The Project Owner may reject it, require new research under new boundaries, or form or confirm an ALP economic-evidence judgment commensurate with the material and select entry into formal strategy implementation and qualification. The Project Owner may stop automated research at any time or sample-review the process, but sample review is not mandatory approval for every intermediate step.
-
-Final-candidate review decides only whether to enter formal strategy implementation and qualification. It does not also replace formal source-code qualification, a fixed Trading Plan version, Trading Plan enablement, real-funds environment selection, funds-use caps and scope, Machine authorization, or confirmation of a current real action. Even when the Project Owner and the user are the same person, those decisions must continue to be formed separately under the domains that own them. AI may implement or inspect functional and implementation validation, analyze economic material, and orchestrate replay, but “AI validated” cannot cross any of these boundaries.
-
-## 5.3 Research Entering Planning
-
-When Halpha forms a strategy or research conclusion under ALP rules, it must express the mechanism, applicable scope, counterevidence, costs, liquidity boundaries, evidence limitations, and invalidation conditions. Research may improve judgment or provide a Trading Plan basis, but it cannot directly create an order.
-
-## 5.4 Decisions Required Before a Real Action
-
-A real action normally must reference a complete Trading Plan; TRADEPLAN owns plan completeness and version boundaries. Exceptions are limited to an explicit user decision, fixed in advance, to protect or reduce an existing exposure and an explicit user instruction to cancel, protect, transfer, or reduce risk that can be shown not to increase or transform risk. Before action, an exception must fix its subject, scope, reason, and permitted outcome, and must pass through the same funds-use caps-and-scope, Halpha real-capital operating authority, execution, and reconciliation path as a plan-based action.
-
-A plan may consume a user decision, a research basis, or a necessary comparison among uses of funds. Before enablement, it must support preview, rehearsal, fixing, or an end without action. Incomplete content remains a draft. A material change creates a new version; the original decision cannot be filled in after a real action.
-
-## 5.5 Compare Multiple Uses of Funds Only When Necessary
-
-An ordinary single-purpose plan or a validation with one objective does not require comparison among multiple uses of funds. The POR boundary is entered only when multiple real uses compete for the same funds, or an existing position and a proposed action require comparison of shared exposure or rebalancing. After the user chooses, TRADEPLAN still forms the applicable plan.
+A complete plan answers why to act, what it applies to, when to enter, when it becomes invalid, how much to take, how long it remains valid, and what happens after a trigger. Incomplete content remains a draft. A material change creates a new version; the original decision cannot be completed after an action.
 
 ---
 
-# 6. Operating Modes, Trading Plan Enablement, Events, and Trading Actions 【FLOW-RUN-001】
+# 6. Operation, Actions, and Reconciliation 【FLOW-RUN-001】
 
-## 6.1 Trading-Record Environments and Halpha Real-Capital Operating Authority
+After activation, Halpha may observe conditions and form action intent permitted by the plan. A satisfied condition does not approve the action. Every action still reads current facts, checks capital boundaries, activation scope, and stopping state, and then proceeds through the one external-write path and reconciliation.
 
-Historical research and historical market replay support research and validation; exchange simulation and real-funds environments support trading paths. The primary purpose of exchange simulation is to validate the system flow, authorization checks, execution states, reconciliation, stopping, recovery, and evidence mechanisms that will be used for real funds. Strategy-behavior validation is secondary. Simulation results do not by themselves prove real-market liquidity, queue position, impact, slippage, fees, funding, latency, permissions, availability, or real Alpha performance.
+Plan activation is the only User authorization entry through which Halpha may create a machine action that adds risk. When a trigger requires judgment outside the plan, exceeds scope, or encounters a blocking unknown, Halpha does not request ad hoc per-action confirmation to bypass the plan; it waits, expires, makes no trade, or the User changes and reactivates the plan. Explicit protection, cancellation, reduction, and exit instructions for existing risk still enter the same check, execution, and reconciliation chain and cannot be converted into risk-adding capability.
 
-Exchange simulation and real-funds environments MUST use the same business flow and stable action semantics from TRADEPLAN through CAP, EXE, DAT, and OUT, while their environment, account, authorization, action, and result identities remain distinguishable. Moving from simulation to real funds is not an upgrade or migration of one runtime identity. The user must create a new real-environment identity and select the applicable plan, funds-use caps and scope, and Halpha real-capital operating authority again. A simulated decision, authorization, action, or result identity MUST NOT migrate into a real decision, authorization, action, or fact. ARC and lower-level design define storage, credential, instance, and adapter isolation.
+An action performed by the User through an official venue interface is external activity. Halpha reads and reconciles the facts afterward and does not relabel that action as its own.
 
-## 6.2 Trading Plan Enablement and Observation
-
-After a plan is enabled, Halpha may evaluate conditions, the completeness and timeliness of necessary facts, and external events. A satisfied condition creates only a current plan branch; it does not prove that a trade should occur. An action still depends on current facts and an applicable authorization path.
-
-## 6.3 Two Authorization Paths and Their Business Uses
-
-A real action has only two authorization paths: Manual authorization and Machine authorization. Real Validation, protection, and risk reduction are purposes or risk situations, not a third authorization path.
-
-### Manual-Authorization Path
-
-Manual authorization is a user decision about the current specific action or an explicitly controlled scope. When post-trigger human judgment is required, the action may continue only while the user is online, can understand and respond, and the complete path from notification through submission is feasible within the applicable time window. Otherwise the outcome is waiting, expiry, blocking, or no trade; it must not be converted automatically into Machine authorization.
-
-### Machine-Authorization Path
-
-The user must grant Machine authorization before the trigger and define its scope, duration, action range, and failure outcome. Halpha may act only within the authorization intersection under deterministic rules. If a key fact is unknown, timing is infeasible, a judgment must be borne by a person, or the authorization boundary is unclear, Halpha must stop the action and enter reconciliation, human takeover, or no trade.
-
-### External Manual Actions and Engineering Validation
-
-An action the user performs through an official venue interface is external activity. Halpha supplies the necessary handoff context, then reads and reconciles venue facts on return; it cannot relabel the external action as a Halpha action. Exchange simulation may validate system mechanisms with the same path shape as Manual or Machine authorization, but its authority has simulation-validation effect only. Engineering or Real Validation may use either authorization path, but the validation purpose cannot raise ordinary funds-use caps, expand scope, or increase Halpha real-capital operating authority.
-
-## 6.4 Unified Trading-Action Chain
-
-~~~text
-Current branch of an enabled Trading Plan,
-or a permitted explicit user decision, fixed in advance, to protect or reduce risk,
-or an explicit user instruction to cancel, protect, transfer, or reduce risk that can be shown not to increase or transform risk
-→ read current key facts and confirm that the current environment's Manual- or Machine-authorization path is usable
-→ Halpha applies CAP rules to check environment-qualified authority effect, funds-use caps and scope, stop state, and applicable limits; a real-funds environment also checks Halpha real-capital operating authority
-→ before external writing, Halpha applies EXE rules to form an environment-qualified ExecutionAction and establish one processing responsibility
-→ the current environment's single isolated external-write boundary refreshes key facts, repeats the CAP check, and submits the action to the venue endpoint bound to that environment
-→ partial results, timeouts, and unresolved results remain visible and are advanced under EXE rules
-→ Halpha reconciles external facts under DAT rules and returns the outcome to the applicable plan, protection responsibility, or outcome-learning path
-~~~
-
-Every permitted source in exchange simulation and real-funds environments enters the same plan, CAP-check, execution, reconciliation, and stopping path. Environment changes configuration, external endpoints, and capital effect of authority; it does not change flow ownership, action-state progression, or failure handling. The chain neither reserves funds for future actions nor creates an independent or final funds approval. A Manual-authorization path must confirm that the current action is supported by the user's current decision or by a still-valid decision for an explicitly controlled scope; a Machine-authorization path requires prior authorization that remains valid through submission. A real-funds environment must additionally satisfy every real-capital boundary; simulation-validation authority cannot satisfy a real-capital check. EXE owns detailed action identity, failure, and retry semantics.
-
-## 6.5 Stopping and Human Intervention
-
-The user can immediately stop new Halpha real actions globally or within an account or strategy scope. Stopping does not itself cancel an order, transfer funds, or close a position. A required real disposition must originate from a new permitted action source or be performed by the user through an official venue interface.
-
-After human intervention, Halpha first reads external orders and positions, then identifies the applicable plan or protection responsibility; any decision for a later action still requires the normal decision and authorization path. Restart or recovery must not let an old proposed action, confirmation, or processing record produce another external action. If external facts remain unclear, the affected scope remains stopped.
+The User may stop Halpha from adding risk, exit a plan, or enter human takeover. Stopping does not automatically cancel orders or close positions; existing orders, positions, and protection responsibilities remain subject to reconciliation or explicit handoff.
 
 ---
 
-# 7. Outcomes, Learning, and Changes to Funds-use Caps and Scope 【FLOW-LRN-001】
+# 7. Outcomes and Learning 【FLOW-LRN-001】
 
-After a plan ends or responsibility for an important real action closes, a short review answers what was originally judged, what actually happened, what it cost, and which actionable differences arose from judgment, planning, data, execution, UX, or stability. OUT owns review and cross-record attribution semantics. A review conclusion cannot directly rewrite a strategy, plan, authorization, or funds-use caps and scope.
-
-When the user asks to raise a funds-use cap or expand scope, Halpha should summarize the relevant quality of judgment, plan expression, fact reliability, execution correctness, UX control, and recovery behavior. Halpha must not expand scope automatically because of profits, workflow completion, or a model conclusion, and it does not decide how much total capital the user should add.
+After a plan ends or responsibility for a material action closes, review compares the original judgment and plan with actual outcomes and cost and retains only improvements that can change a later decision. Review does not directly rewrite a strategy, plan, authority, or capital cap, and profit does not automatically widen scope.
 
 ---
 
-# 8. Onboarding, Real Validation, Failure, and Exit 【FLOW-REC-001】
+# 8. Onboarding, Failure, and Exit 【FLOW-REC-001】
 
-## 8.1 Minimum Onboarding
+Onboarding first establishes read-only observation and an external takeover path through the official venue interface, then verifies planning, actions, stopping, and reconciliation. A simulation environment exercises the same business chain but cannot prove real-market performance or real-funds availability.
 
-Minimum onboarding first establishes read-only connectivity and the external account-control path. It lets the user see account facts, configure funds-use caps and scope and Halpha real-capital operating authority, verify credential revocation and human takeover, and then exercise the plan and action path in an isolated environment. Real Validation begins only after the user explicitly selects the real environment, validation objective, and funds-use caps and scope. Onboarding does not wait for every domain to be deepened and does not create a common production-admission package.
+Failure uses a short loop: prevent affected new risk → reconcile orders, fills, and positions → repair or roll back → decide whether to continue, end, or hand over. After a system restart, the same activation may continue only when the User did not stop it, facts and original authority remain consistent, and missed actions will not be submitted.
 
-## 8.2 Real Validation Path
+After the User stops new risk, exits, or takes over, that activation can never resume adding risk. Existing exposure continues through its original protection or exit path. If the User wants to trade again after the old responsibilities close, a new activation is required.
 
-Each Real Validation must have an explicit objective, real environment, authorization path, funds-use caps and scope, expected action, stopping conditions, and evidence requirements. Stopping and external takeover remain available. A result may support or refute the objective, remain indeterminate, expose a business or technical problem, remain unresolved or unknown, or end by an active stop. One success or profit does not prove maturity.
-
-### Definition of a Validation Plan 【FLOW-VAL-001-DEF】
-
-A Validation Plan organizes the validation objective, environment, funds-use caps and scope, authorization path, stopping conditions, and evidence requirements. It does not replace the Trading Plan normally required for a real action, nor the fixed decision or instruction required for an exception. Lower-level design and L4 decide, from real consumers, whether an independent Validation Plan object or automated orchestration is needed.
-
-## 8.3 Failure and Recovery
-
-Failure uses a short loop: stop new real actions in the affected scope → reconcile external orders and positions → preserve necessary material → repair or roll back → reconcile unresolved responsibility, the validity of the original authorization, and runtime eligibility → follow the accepted recovery mode for the current phase by waiting for a User command or continuing after a strict evidence gate passes. Restoring authority that expired, was revoked, or was contracted requires a User decision. Accepted lower-level design defines by phase whether runtime eligibility under still-valid Machine authorization may continue within the original scope. While an unknown or unresolved result remains, the scope stays stopped; only a contraction action explicitly directed by the User and shown not to increase or transform risk may continue.
-
-## 8.4 Halpha Is Inaccessible
-
-The User uses an official venue interface to inspect the account, revoke Halpha's write capability, and cancel, protect, or dispose of positions when necessary. After recovery, Halpha produces no new real action by default; it first reads authoritative state and external facts, proves a unique writer, and avoids replaying old records. Every action on the manual path still requires new current Manual authorization; an old confirmation cannot be reused. The Machine path may continue within the original scope only when the original Machine authorization remains valid, build/configuration/credentials/account identity and persistent-write continuity are unchanged, orders/fills/positions/protection/unknowns have been reconciled, missed signals will not be replayed, and accepted design for the current phase explicitly permits automatic continuation. Otherwise Halpha MUST wait for an explicit User command to resume the same activation, exit, hand over, or establish new authorization. It MUST NOT continue automatically after a User stop, revocation, handover, authorization expiry, or inability to prove the required evidence.
-
-## 8.5 Disable and Exit
-
-Exit stops new real actions, exposes residual orders and positions, revokes credentials, exports necessary plans and trading records, and confirms that the account remains independently controllable outside Halpha. Complex offboarding, successor identities, and institutional archiving are not requirements for this personal project.
+If Halpha is unavailable, the User uses an official venue interface to inspect the account, revoke write capability, and manage risk. Exit stops new actions, exposes residual responsibilities, revokes credentials, and exports necessary plans and trading records.
 
 ---
 
-# 9. Handoffs Between Horizontal Business Responsibilities and Vertical Constraints 【FLOW-HOF-001】
+# 9. Handoffs Among Core Business Responsibilities 【FLOW-HOF-001】
 
-## 9.1 Two Responsibility Dimensions 【FLOW-HOF-001-DEF】
+## 9.1 Horizontal Business Responsibilities 【FLOW-HOF-001-DEF】
 
-### Six Horizontal Business Responsibilities
+| Domain | Product-level responsibility |
+|---|---|
+| ALP | Research strategies, evaluate economic evidence, and form adoptable results |
+| TRADEPLAN | Turn a basis into a plan that can run, stop, and end |
+| EXE | Preserve unique execution and reconciliation responsibility for external actions initiated by Halpha |
+| OUT | Form useful review and improvement from plans and outcomes |
 
-| Domain | Sole primary responsibility | Enduring entry condition or product effect |
-|---|---|---|
-| CTX | Research or Trading Plan candidates and their disposition | Capture, screen, and decide whether to enter research, planning, waiting, or ending |
-| ALP | Alpha research, economic evidence, and strategy | Improve judgment and profitability |
-| POR | Comparison among multiple uses of funds | Enter only when multiple real uses must be compared |
-| TRADEPLAN | Trading Plan and condition lifecycle | Turn a basis into a complete plan that can run and end |
-| EXE | Environment-qualified execution actions, venue results, protection, and reconciliation progress | Preserve sole responsibility and basic correctness for venue or account changes Halpha initiates in exchange simulation or a real-funds environment |
-| OUT | Integrated outcomes, attribution, and improvement handoff | Create a review or issue only when the outcome can change a later decision |
+CAP, DAT, UX, SYS, and ENG provide capital-control, fact, interaction, runtime, and engineering constraints respectively. Responsibility names do not require same-named modules, services, or equal construction investment.
 
-### Five Vertical Constraints
+## 9.2 Requirements for Lower Levels 【FLOW-HOF-001-REQ】
 
-ARC defines the five vertical constraints, whose stable semantics are owned by CAP, DAT, UX, SYS, and ENG respectively. FLOW only confirms that horizontal paths are subject to the applicable constraints; it does not copy vertical-domain rules.
-
-## 9.2 Use of the Responsibility Map and Requirements for Lower Levels 【FLOW-HOF-001-REQ】
-
-The six horizontal business responsibilities and five vertical constraints form an eleven-responsibility map, but they do not require eleven modules, eleven services, or equal implementation depth. Real consumers, business value, and maintenance cost determine whether to deepen a domain; L4 records current choices and investment.
-
-### Handoff to Lower Levels
-
-HALPHA-DOC-001 governs the general responsibilities, admission rules, and current-state recording boundaries of L2, L3, and L4. FLOW hands off only the six horizontal business responsibilities, main handoffs, task-context continuity, and product-level outcomes for action, no action or waiting, unknown facts, stopping, external human takeover, recovery, and ending that this document defines. Lower-level document creation, deepening, and current records follow DOC.
-
-FLOW's direct handoff also requires every lower-level path to preserve the three classes of control requirements in CON-CMP-003 and their responsibility boundaries. A path must not reintroduce funds reservation for future actions or two-stage funds and real-action approval. Other level and governance constraints are referenced directly from CON and DOC rather than rewritten in FLOW.
+Lower-level design details only the objects and failure handling needed by real consumers. It does not copy the whole workflow or build platforms for future possibilities. Current support, construction order, and evidence belong only in L4.

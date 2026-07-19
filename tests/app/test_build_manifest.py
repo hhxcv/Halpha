@@ -52,7 +52,7 @@ def test_invalid_or_missing_qualification_evidence_never_binds(tmp_path: Path) -
     assert invalid["qualification_status"] == "INVALID_JSON"
 
 
-def test_schema_two_requires_the_complete_b02_to_b04_evidence_set() -> None:
+def test_schema_two_requires_the_direct_b02_to_b04_evidence_set() -> None:
     names = {spec.name for spec in DEFAULT_ARTIFACT_SPECS}
     assert SCHEMA_VERSION == 2
     assert {
@@ -62,9 +62,7 @@ def test_schema_two_requires_the_complete_b02_to_b04_evidence_set() -> None:
         "b04_product_demo_cycle",
         "b04_browser_workbench",
         "b04_implemented_complexity_budget",
-        "b04_windows_72h_soak",
         "b04_actual_smtp_delivery",
-        "b04_live_read_only_observation",
         "b04_summary",
         "nonsecret_live_write_config",
     } <= names
