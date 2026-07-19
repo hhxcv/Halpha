@@ -17,11 +17,16 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from halpha.build_manifest import DEFAULT_ARTIFACT_SPECS, SCHEMA_VERSION  # noqa: E402
 from halpha.source_identity import (  # noqa: E402
     SourceIdentityError,
     source_sha256_digest,
+)
+from tools.qualification.real_write_boundary import (  # noqa: E402
+    assess_closed_real_write_boundary,
 )
 
 
@@ -244,6 +249,14 @@ def classify_summary(
     return "IN_PROGRESS"
 
 
+def is_current_b04_package(status: object) -> bool:
+    return str(status).strip().upper() in {
+        "IN_PROGRESS",
+        "IN_PROGRESS_CONSTRUCTION_GATE_AND_LONG_OBSERVATION",
+        "COMPLETED",
+    }
+
+
 def windows_soak_contract_error(value: Mapping[str, Any]) -> str | None:
     if value.get("schema_version") != 3:
         return "WINDOWS_SOAK_SCHEMA_V3_REQUIRED"
@@ -319,6 +332,7 @@ def summarize(root: Path = ROOT) -> dict[str, Any]:
     )
     current_state = plan["current_state"]
     package = plan["construction_packages"]["B04"]
+    real_write_boundary = assess_closed_real_write_boundary(current_state)
     plan_gates = {
         "d00_aligned": plan["design_formalization_gate"]["status"] == "ALIGNED",
         "b00_qualified": plan["dependency_qualification_gate"]["status"] == "QUALIFIED",
@@ -326,15 +340,17 @@ def summarize(root: Path = ROOT) -> dict[str, Any]:
             plan["construction_packages"][name]["status"] == "COMPLETED"
             for name in ("B01", "B02", "B03")
         ),
-        "b04_is_current_package": package["status"] in {"IN_PROGRESS", "COMPLETED"},
-        "live_write_build_capability_fail_closed": current_state[
-            "live_write_build_capability"
-        ]
-        == "NOT_QUALIFIED",
-        "b05_not_authorized": current_state["b05_package_eligibility"]
-        == "NOT_AUTHORIZED",
-        "runtime_real_write_gate_closed": current_state["runtime_real_write_gate"]
-        == "CLOSED",
+        "b04_is_current_package": is_current_b04_package(package.get("status")),
+        "live_write_build_capability_fail_closed": (
+            real_write_boundary["live_write_build_capability"]
+            == "NOT_QUALIFIED"
+        ),
+        "b05_real_capital_blocked": (
+            real_write_boundary["b05_real_capital_eligibility"] == "BLOCKED"
+        ),
+        "runtime_real_write_gate_closed": (
+            real_write_boundary["runtime_real_write_gate"] == "CLOSED"
+        ),
     }
     for name, expected_stage in EXPECTED_EXTERNAL_STAGES.items():
         artifact = artifacts[name]

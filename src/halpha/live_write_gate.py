@@ -37,11 +37,11 @@ class LiveWriteGateBinding(_FrozenModel):
     account_id: str
     profile: Literal["BINANCE_LIVE_WRITE"]
     live_write_build_capability: Literal["QUALIFIED"]
-    b05_package_eligibility: Literal["AUTHORIZED"]
+    b05_real_capital_eligibility: Literal["AUTHORIZED"]
     runtime_real_write_gate: Literal["CLOSED", "OPEN"]
     build_manifest_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     user_authorization_ref: str = Field(min_length=3, max_length=200)
-    account_capital_limit_version_ref: str | None = Field(default=None, min_length=3)
+    account_capital_limit_version_ref: str = Field(min_length=3)
     machine_authorization_version_ref: str | None = Field(default=None, min_length=3)
     plan_allocation_ref: str | None = Field(default=None, min_length=3)
     effective_at: datetime
@@ -53,21 +53,24 @@ class LiveWriteGateBinding(_FrozenModel):
             raise ValueError("LIVE_WRITE_GATE_TIMEZONE_REQUIRED")
         if self.expires_at <= self.effective_at:
             raise ValueError("LIVE_WRITE_GATE_WINDOW_INVALID")
-        references = (
-            self.account_capital_limit_version_ref,
+        activation_references = (
             self.machine_authorization_version_ref,
             self.plan_allocation_ref,
         )
-        if self.runtime_real_write_gate == "OPEN" and any(ref is None for ref in references):
-            raise ValueError("LIVE_WRITE_GATE_OPEN_REFS_REQUIRED")
-        if self.runtime_real_write_gate == "CLOSED" and any(ref is not None for ref in references):
-            raise ValueError("LIVE_WRITE_GATE_CLOSED_REFS_FORBIDDEN")
+        if self.runtime_real_write_gate == "OPEN" and any(
+            ref is None for ref in activation_references
+        ):
+            raise ValueError("LIVE_WRITE_GATE_OPEN_ACTIVATION_REFS_REQUIRED")
+        if self.runtime_real_write_gate == "CLOSED" and any(
+            ref is not None for ref in activation_references
+        ):
+            raise ValueError("LIVE_WRITE_GATE_CLOSED_ACTIVATION_REFS_FORBIDDEN")
         return self
 
 
 class LiveWriteGateStatus(_FrozenModel):
     live_write_build_capability: Literal["NOT_QUALIFIED", "QUALIFIED"]
-    b05_package_eligibility: Literal["NOT_AUTHORIZED", "AUTHORIZED"]
+    b05_real_capital_eligibility: Literal["BLOCKED", "AUTHORIZED"]
     configured_runtime_real_write_gate: Literal["CLOSED", "OPEN"]
     runtime_real_write_gate: Literal["CLOSED", "OPEN"]
     build_manifest_digest: str | None = None
@@ -79,6 +82,28 @@ class LiveWriteGateStatus(_FrozenModel):
     binding_effective_at: datetime | None = None
     binding_expires_at: datetime | None = None
     violations: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_authorization_phases(self) -> "LiveWriteGateStatus":
+        if self.b05_real_capital_eligibility == "AUTHORIZED" and (
+            self.live_write_build_capability != "QUALIFIED"
+            or self.build_manifest_digest is None
+            or self.user_authorization_ref is None
+            or self.account_capital_limit_version_ref is None
+        ):
+            raise ValueError("LIVE_WRITE_REAL_CAPITAL_STATUS_BINDING_REQUIRED")
+        if self.configured_runtime_real_write_gate == "OPEN" and (
+            self.b05_real_capital_eligibility != "AUTHORIZED"
+            or self.machine_authorization_version_ref is None
+            or self.plan_allocation_ref is None
+        ):
+            raise ValueError("LIVE_WRITE_OPEN_STATUS_ACTIVATION_REFS_REQUIRED")
+        if (
+            self.runtime_real_write_gate == "OPEN"
+            and self.configured_runtime_real_write_gate != "OPEN"
+        ):
+            raise ValueError("LIVE_WRITE_EFFECTIVE_GATE_CONFIGURATION_MISMATCH")
+        return self
 
 
 def _file_grants(settings: HalphaSettings) -> dict[str, int]:
@@ -274,7 +299,7 @@ def _database_assessment(
     authorization_id = binding.machine_authorization_version_ref
     allocation_id = binding.plan_allocation_ref
     if limit_id is None or authorization_id is None or allocation_id is None:
-        return ["LIVE_WRITE_GATE_OPEN_REFS_REQUIRED"], None
+        return ["LIVE_WRITE_GATE_OPEN_ACTIVATION_REFS_REQUIRED"], None
 
     limit = connection.execute(
         """
@@ -378,7 +403,7 @@ def closed_live_write_gate_status() -> LiveWriteGateStatus:
 
     return LiveWriteGateStatus(
         live_write_build_capability="NOT_QUALIFIED",
-        b05_package_eligibility="NOT_AUTHORIZED",
+        b05_real_capital_eligibility="BLOCKED",
         configured_runtime_real_write_gate="CLOSED",
         runtime_real_write_gate="CLOSED",
     )
@@ -403,7 +428,7 @@ def evaluate_live_write_gate(
     if binding is None:
         return LiveWriteGateStatus(
             live_write_build_capability="QUALIFIED" if capability else "NOT_QUALIFIED",
-            b05_package_eligibility="NOT_AUTHORIZED",
+            b05_real_capital_eligibility="BLOCKED",
             configured_runtime_real_write_gate="CLOSED",
             runtime_real_write_gate="CLOSED",
             build_manifest_digest=manifest_digest,
@@ -419,8 +444,8 @@ def evaluate_live_write_gate(
     if not (binding.effective_at <= observed_at < binding.expires_at):
         violations.append("LIVE_WRITE_GATE_BINDING_EXPIRED_OR_NOT_EFFECTIVE")
 
-    package_authorized = capability and not violations
-    configured_gate = binding.runtime_real_write_gate if package_authorized else "CLOSED"
+    real_capital_authorized = capability and not violations
+    configured_gate = binding.runtime_real_write_gate if real_capital_authorized else "CLOSED"
     authorized_activation_id: str | None = None
     if configured_gate == "OPEN":
         if connection is None:
@@ -439,7 +464,9 @@ def evaluate_live_write_gate(
     effective_gate = "OPEN" if configured_gate == "OPEN" and not violations else "CLOSED"
     return LiveWriteGateStatus(
         live_write_build_capability="QUALIFIED" if capability else "NOT_QUALIFIED",
-        b05_package_eligibility="AUTHORIZED" if package_authorized else "NOT_AUTHORIZED",
+        b05_real_capital_eligibility=(
+            "AUTHORIZED" if real_capital_authorized else "BLOCKED"
+        ),
         configured_runtime_real_write_gate=configured_gate,
         runtime_real_write_gate=effective_gate,
         build_manifest_digest=manifest_digest,

@@ -155,7 +155,10 @@ test("B04 renders the synthetic LIVE authorization target state without opening 
     build_manifest_digest: "sha256:synthetic-live-target-build-manifest",
     build_manifest_violations: [],
     live_write_build_capability: "QUALIFIED",
-    b05_package_eligibility: "AUTHORIZED",
+    b05_real_capital_eligibility: "AUTHORIZED",
+    account_capital_limit_version_ref: "synthetic-live-target-capital-limit",
+    machine_authorization_version_ref: null,
+    plan_allocation_ref: null,
     configured_runtime_real_write_gate: "CLOSED",
     runtime_real_write_gate: "CLOSED",
     live_write_gate_violations: [],
@@ -191,7 +194,8 @@ test("B04 renders the synthetic LIVE authorization target state without opening 
       authority_class: "LIVE_REAL_CAPITAL",
       account_ref: "synthetic-live-target-account",
       live_write_build_capability: "QUALIFIED",
-      b05_package_eligibility: "AUTHORIZED",
+      b05_real_capital_eligibility: "AUTHORIZED",
+      account_capital_limit_version_ref: "synthetic-live-target-capital-limit",
       configured_runtime_real_write_gate: "CLOSED",
       runtime_real_write_gate: "CLOSED",
       live_activation_eligible: true,
@@ -250,7 +254,7 @@ test("B04 renders the synthetic LIVE authorization target state without opening 
   };
   await page.reload();
   await expect(page.getByText("REAL WRITE · OPEN")).toBeVisible();
-  await expect(page.getByText("真实写工程能力、B05 包授权或关闭态预备条件尚未满足；当前不能建立 REAL 激活。")).toBeVisible();
+  await expect(page.getByText("真实写工程能力、B05 真实资金资格或关闭态预备条件尚未满足；当前不能建立 REAL 激活。")).toBeVisible();
   await page.getByLabel("重新输入本机所有者口令").fill(fixturePassword!);
   await page.getByLabel("我确认这是 REAL 资金授权，范围仅限本次计划、账户、合约和三轴额度").check();
   await page.getByLabel("我已阅读并接受当前证据局限；Demo 与回测表现不等于实盘表现").check();

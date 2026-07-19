@@ -701,14 +701,16 @@ export interface components {
         };
         /** SettingsStatusResponse */
         SettingsStatusResponse: {
+            /** Account Capital Limit Version Ref */
+            account_capital_limit_version_ref: string | null;
             /** Account Id */
             account_id: string;
             /** Authority Class */
             authority_class: string;
             /** Authorized Activation Id */
             authorized_activation_id: string | null;
-            /** B05 Package Eligibility */
-            b05_package_eligibility: string;
+            /** B05 Real Capital Eligibility */
+            b05_real_capital_eligibility: string;
             /** Bind */
             bind: string;
             /** Build Manifest Digest */
@@ -743,6 +745,10 @@ export interface components {
             live_write_build_capability: string;
             /** Live Write Gate Violations */
             live_write_gate_violations: string[];
+            /** Machine Authorization Version Ref */
+            machine_authorization_version_ref: string | null;
+            /** Plan Allocation Ref */
+            plan_allocation_ref: string | null;
             /** Port */
             port: number;
             /** Profile */

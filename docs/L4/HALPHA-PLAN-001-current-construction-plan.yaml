@@ -3,19 +3,20 @@ document_id: HALPHA-PLAN-001
 level: L4
 status: ACCEPTED
 language: zh-CN
-as_of: 2026-07-18
+as_of: 2026-07-19
 accepted_by: Halpha 项目所有者
-accepted_at: 2026-07-18T23:18:42+08:00
-supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T20:13:31+08:00
-document_update_reason: 接受可信 AI 研究工程边界简化，删除 R00 的安全 sandbox、父进程/worker、第二研究 venv、observation/intent 与专用 IPC；保留按错误成本选择的审查、校验、重演、holdout、人工最终审查和产品内重新资格化
-state_updated_at: 2026-07-19T01:06:17+08:00
+accepted_at: 2026-07-19T10:03:02+08:00
+supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T23:18:42+08:00
+document_update_reason: 接受建设继续与长期观察彻底分离，并在当前 B04 包内完成旧 b05_package_eligibility 到 b05_real_capital_eligibility 的产品迁移；修正为关闭态真实资金资格先绑定 BuildManifest、用户决定和资本额度、激活后运行门再绑定授权与分配的两阶段门禁
+state_updated_at: 2026-07-19T10:03:02+08:00
 state_update_reason: >-
-  HALPHA-RSCH-TRUST-SIMPLIFICATION-001 协调版本集已经接受；B04/B05、P0 build_order、BuildManifest 和三项真实写门不变。
-  R00 的方向授权和 depends_on=[] 保持存在，但既有 ac5270fc344ea4502c6238a13857fc0573aa3f01 / 113bbe9c8a6afbc0cc6ec37663677444029da5e8 绑定只属于被替代合同；
-  简化 R00 必须重新绑定包含本接受文本的干净 base_revision 与 accepted_design_set_and_basis 输入身份并冻结完整包合同后方可继续，当前保持 NOT_STARTED 与阻断。
-  B04 当前分支在最新 origin/main 基线之上形成实现提交 81e2dc032b940d19fffa51268f5ea12ca1a0bba6，并以 78b0fe5314562e6d39eebb0ca635c0bb63488d9d 修复 Windows CRLF 对源码身份的误漂移：文本按规范 LF、二进制按原始字节计算身份。当前后端 334 tests、前端 3 tests 与构建、治理 42 tests、文档校验均通过；本轮 B04 Playwright 命令的 6 个用例因环境条件全部 skip，不作为新增浏览器通过证据。
-  上一轮 Playwright、Demo 产品周期、Windows/数据库故障演练、空库恢复、SMTP 实际投递、复杂度与历史技术复验证据绑定旧源码身份；严格 B04 汇总已将当前状态判为 REJECTED，必须重跑当前源码资格化后才能恢复为当前有效证据。既有 SMTP 邮件仍是 smtp.163.com 已接受的历史外部观察，但不冒充当前源码绑定结果；SMTP 凭据继续只投影给 App，Executor 不可见。
-  App/Executor 已于 2026-07-18T17:00:01Z 以当前源码重建 schema v3 Windows 72 小时基线，初始检查全部为真；临时任务将在 2026-07-22T01:10:02+08:00 起尝试切换无凭据 LIVE_READ_ONLY，2026-07-23T01:15:02+08:00 安排受控重启，2026-07-29T01:15:02+08:00 起最终复核。PR #6 的 33801258df0b767ee2b6b1c7abd8c8dab2a22a57 已由 workflow 29653239882 验证成功。最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED，未加载 LIVE 凭据、未建立外置授权绑定、未发生真实资金写入。
+  HALPHA-ENG-001@v1.8.0 与 HALPHA-ENG-002@v0.9.0 已接受建设继续和长期观察分离：B04 的短时门只允许另行授权的后续建设，不表示 B04 完成、BuildManifest 可发布、B05 真实资金已授权或运行时真实写门开放。
+  当前 B04 包已把运行实现、API、CLI、工作台、证据汇总与测试统一迁移为 b05_real_capital_eligibility；旧字段只作为 fail-closed 负向输入。关闭态资格只绑定最终 BuildManifest、用户授权与精确 AccountCapitalLimitVersion；REAL 激活原子建立 MachineAuthorization、PlanAllocation 与 Activation 后，OPEN 绑定才可引用并数据库复核这些记录。
+  后端 340 项、前端 3 项、生产构建、89 项门禁/治理定向测试和 6 项关键不变量登记通过；App/Executor 已在 2026-07-19T09:59:01+08:00 重启并运行最终当前源码，/operations 返回 200。未加载 LIVE 写凭据、未建立 LIVE ExecutionAction、未发生真实资金写入。
+  2026-07-18T17:00:01Z 建立的 Windows 醒钟基线在 8.166865 小时时仍连续，但随后本次源码迁移和受控进程重启改变了冻结身份；2026-07-19T01:59:16Z 证据以 8.987333 小时明确 REJECTED。该旧基线不能继承到当前源码；只有形成实际提交后才能冻结新的 commit_sha 并重新开始短时门和长期观察。
+  Windows 72 小时与无凭据 LIVE_READ_ONLY 7–14 日时长要求保持不变，旧冻结构建的长期观察已拒绝；对应 checkpoint、transition、restart 与 finalizer 计划任务已停用，终态证据不再被改写。其失败只取消该构建的发布/真实资金资格，不抹除本次已通过自动验证的迁移实现。
+  R00 的方向授权和 depends_on=[] 保持存在，但新的干净 base_revision、accepted_design_set_and_basis 输入身份与完整包合同仍未冻结，当前保持 NOT_STARTED。
+  最终 BuildManifest 尚未重建且不具备发布资格；live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED，未加载 LIVE 写凭据、未建立 LIVE ExecutionAction、未发生真实资金写入。
 
 accepted_design_set:
   upper_level:
@@ -34,7 +35,7 @@ accepted_design_set:
     - HALPHA-SYS-001@v1.6.0
     - HALPHA-OUT-001@v1.5.0
     - HALPHA-UX-001@v1.6.0
-    - HALPHA-ENG-001@v1.7.0
+    - HALPHA-ENG-001@v1.8.0
   l3:
     - HALPHA-ALP-002@v0.5.0
     - HALPHA-TRADEPLAN-002@v0.10.0
@@ -44,7 +45,7 @@ accepted_design_set:
     - HALPHA-OUT-002@v0.8.0
     - HALPHA-UX-002@v0.11.0
     - HALPHA-SYS-002@v0.9.0
-    - HALPHA-ENG-002@v0.8.0
+    - HALPHA-ENG-002@v0.9.0
     - HALPHA-ALP-003@v0.4.0
     - HALPHA-ENG-003@v0.4.0
 
@@ -54,6 +55,7 @@ planning_horizon: >-
   首个 LIVE 闭环从激活到上述条件成立必须由用户主动在线监控，并已验证最小操作入口和 Binance 官方入口可用；P0 不宣称无人在线故障自动恢复。
   首个闭环使用 Binance USDⓈ-M 永续和 ONE_SHOT_DONCHIAN_ATR_BREAKOUT。P0 使用 MANUAL_PLAN_RESUME：Executor、主机或 PostgreSQL 写连续性丢失后开放激活先暂停，
   只读核对后由用户明确选择恢复激活、退出策略或用户接管；长期严格证据自动续行不在 P0 实现。除本计划显式登记、对 P0 产品闭环保持零 effects 的独立研究轨外，P0 之外产品模块暂不设计。
+  B04 的 8 小时建设继续门通过后，只允许项目所有者另行授权的 B05 无真实写建设；Windows 72 小时和 LIVE_READ_ONLY 7–14 日观察继续阻断 B04 完成、发布与真实资金激活，但不阻断该独立建设。
   R00 按本计划重新绑定干净 base_revision 与输入身份并冻结完整包合同后，可通过独立 worktree/branch 与 B04/B05 包级并行；R01 可在 R00 完成后开始，但完成、政策冻结和 confirmation 边界必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。研究轨不属于 P0 产品运行时；R03 仍等待 R02、B05、V01 与项目所有者证据选择。本计划不定义 P1–P3；上位设计保留交互形态可演进性不构成任何阶段的建设承诺或当前支持。
 
 stable_contract_references:
@@ -67,12 +69,12 @@ stable_contract_references:
   live_write_authority_principle: HALPHA-CON-001@v2.11.0#CON-GOV-005、#CON-CAP-003、#CON-CAP-005、#CON-CAP-006；HALPHA-CAP-001@v2.10.0#CAP-MOD-001-REQ
   command_and_receipt: HALPHA-UX-002@v0.11.0
   records_processes_and_transactions: HALPHA-SYS-002@v0.9.0#SYS-AUTO-SCH-001、#SYS-AUTO-WORK-001
-  build_and_component_boundary: HALPHA-ENG-002@v0.8.0
-  engineering_quality: HALPHA-ENG-001@v1.7.0
+  build_and_component_boundary: HALPHA-ENG-002@v0.9.0
+  engineering_quality: HALPHA-ENG-001@v1.8.0
   research_and_parallel_integration: HALPHA-ALP-003@v0.4.0、HALPHA-ENG-003@v0.4.0
   document_version_history: HALPHA-DOC-001@v1.11.0#DOC-LOC-001
   l4_change_rule: 稳定契约变化先修订其 L2/L3 所有者；L4 只能选择、收缩或记录当前事实，不得复制后再局部改写。
-  live_write_gate_representation: L4 以工程能力、B05 包授权和运行时开门三个机器字段记录当前状态；它们不是新的领域权限对象，不能互相替代或覆盖上述稳定权限原则
+  live_write_gate_representation: L4 分别以工程能力、B05 建设资格、B05 真实资金资格和运行时开门四个机器字段记录当前状态；建设资格只允许无真实写建设，其他字段不能互相替代或覆盖上述稳定权限原则
 
 basis:
   accepted:
@@ -90,8 +92,8 @@ basis:
     - HALPHA-OUT-001@v1.5.0
     - HALPHA-UX-001@v1.6.0
     - HALPHA-SYS-001@v1.6.0
-    - HALPHA-ENG-001@v1.7.0
-  owner_confirmed_at: 2026-07-18T23:18:42+08:00
+    - HALPHA-ENG-001@v1.8.0
+  owner_confirmed_at: 2026-07-19T02:23:28+08:00
   current_p0_selections:
     strategy_configuration: 代码策略加 JSON Schema 参数；不启用 DSL、代码上传或可视化编排
     target_host: Windows 10
@@ -113,10 +115,11 @@ current_state:
   current_stage: P0
   design_status: ALIGNED
   research_track_status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE_NOT_STARTED
-  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 实现和跨平台源码身份修复已完成自动测试，但旧源码绑定的即时与外部证据已经过期，当前源码资格化需重跑；App/Executor 已于 2026-07-18T17:00:01Z 重建 72 小时连续运行基线，临时任务将在基线满足后自动切换至无凭据 LIVE_READ_ONLY 观察；当前源码资格化、72 小时与 7–14 天观察仍未满足，BuildManifest 保持 INCOMPLETE，B05 未获授权
+  implementation_status: B00 资格和 B01–B03 完成状态保持；B04 已完成 b05_real_capital_eligibility 产品迁移并通过当前自动验证，旧冻结源码的 8 小时建设继续门和长期观察因源码/进程身份漂移明确 REJECTED；当前工作树尚未提交，不能建立可验证 commit_sha 的新基线。BuildManifest 保持 INCOMPLETE，B05 建设和真实资金均未授权
   first_authorized_work: B04
   live_write_build_capability: NOT_QUALIFIED
-  b05_package_eligibility: NOT_AUTHORIZED
+  b05_construction_eligibility: BLOCKED
+  b05_real_capital_eligibility: BLOCKED
   runtime_real_write_gate: CLOSED
   live_write_gate_evidence:
     observed_at: null
@@ -128,18 +131,18 @@ current_state:
     authorized_activation_id: null
   latest_implementation_observation:
     package: B04
-    status: IN_PROGRESS_CURRENT_SOURCE_REQUALIFICATION_AND_TIME_BOUND_OBSERVATION
-    observed_at: 2026-07-18T17:05:43Z
-    base_commit_sha: 39e500f56c0a1012020fc54faf096a92e2ea2b27
-    commit_sha: 78b0fe5314562e6d39eebb0ca635c0bb63488d9d
-    workflow_run_id: 29653239882
-    workflow_conclusion: SUCCESS
-    workflow_head_commit_sha: 33801258df0b767ee2b6b1c7abd8c8dab2a22a57
-    evidence_ref: build/qualification/b04-summary.json
-    evidence_digest: sha256:25933f759af2a3d182c7ccaf9ca2586a9ef2ac16b5e154c8c2d8c043ea44abff
+    status: IN_PROGRESS_REQUALIFICATION_REQUIRED
+    observed_at: 2026-07-19T01:59:16.189667Z
+    base_commit_sha: 893767e08466a03f94ebfd08a3b41747edf1a455
+    commit_sha: null
+    workflow_run_id: null
+    workflow_conclusion: NOT_RUN_UNCOMMITTED
+    workflow_head_commit_sha: null
+    evidence_ref: build/qualification/b04-windows-72h-soak.json
+    evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
     validated_checks:
-      backend_pytest: {result: 334_PASSED}
-      live_write_preparation_unit_tests: {result: 62_PASSED_INCLUDED_IN_BACKEND_TOTAL}
+      backend_pytest: {result: 340_PASSED}
+      live_write_preparation_and_governance_unit_tests: {result: 89_PASSED_AND_4_SUBTESTS_INCLUDED_IN_BACKEND_TOTAL}
       frontend_types_openapi_and_build: {result: PASSED}
       frontend_vitest: {result: 3_PASSED}
       playwright_workbench: {result: CURRENT_SOURCE_NOT_QUALIFIED_6_SKIPPED_THIS_RUN}
@@ -148,24 +151,27 @@ current_state:
       empty_database_restore: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
       smtp_actual_delivery: {result: PRIOR_SERVER_ACCEPTANCE_OBSERVED_CURRENT_SOURCE_BINDING_NOT_QUALIFIED, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
       historical_technical_revalidation: {result: PRIOR_SOURCE_EVIDENCE_SUPERSEDED_REQUALIFICATION_REQUIRED}
-      critical_invariant_registry: {result: CURRENT_AUTOMATED_TESTS_PASSED_ARTIFACT_REQUALIFICATION_REQUIRED}
+      critical_invariant_registry: {result: QUALIFIED_6_RECORDS, evidence_digest: sha256:3cdb9e48f15f8f84909f1910803ba87b4cdea0d51f9fd9d478c980fa703ebb99}
+      product_field_migration: {result: QUALIFIED_OLD_FIELD_FAIL_CLOSED_ONLY}
+      app_executor_current_source_restart: {result: QUALIFIED_OPERATIONS_HTTP_200}
     current_evidence_refs:
-      - {ref: build/qualification/b04-summary.json, status: REJECTED_CURRENT_SOURCE_REQUALIFICATION_REQUIRED, observed_at: 2026-07-18T17:00:13Z, evidence_digest: sha256:25933f759af2a3d182c7ccaf9ca2586a9ef2ac16b5e154c8c2d8c043ea44abff}
+      - {ref: build/qualification/b02-summary-migration-check.json, status: REJECTED_UNCOMMITTED_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:54.485892Z, evidence_digest: sha256:7c2cb425090eb479013650229fcde71e8d03f05c73da524079932742b9b3b8da}
+      - {ref: build/qualification/b03-summary-migration-check.json, status: REJECTED_UNCOMMITTED_BUT_REAL_WRITE_BOUNDARY_QUALIFIED, observed_at: 2026-07-19T01:50:56.345206Z, evidence_digest: sha256:50e8cf3da7b02d6ac3e22e1e4ef8440bdddd5ae4a8582a1422dc549ec9d59945}
       - {ref: build/qualification/b04-smtp-delivery.json, status: HISTORICAL_SERVER_ACCEPTANCE_SOURCE_BINDING_SUPERSEDED, observed_at: 2026-07-18T16:16:23Z, configuration_digest: sha256:5b524e6e5e29421c517e2c074b075b091f541aa8d2ce106874e0d7ca8b99d1e7, evidence_digest: sha256:43cfff6a84a032dec2bfd241f0873bea3a9c91c5c3c7a3de4e58a5f369ae9722}
-      - {ref: build/qualification/b04-windows-72h-soak.json, status: IN_PROGRESS, baseline_at: 2026-07-18T17:00:01Z, latest_checkpoint_at: 2026-07-18T17:00:01Z, source_sha256_digest: sha256:3410de5b9de0a2226a321edc70e81504105f1bb4cf0df7bceb7698526c00f9c8, evidence_digest: sha256:8dd55ee9d5d9fe4cc79a0a8b1fb37e12f8aaa2b516b3aa13b0907f8705e267e1}
-      - {ref: build/qualification/b04-live-read-only-transition-task.json, status: PROVISIONED, observed_at: 2026-07-19T01:00:02+08:00, evidence_digest: sha256:5474400034630793d33f4d04e66063aa459788f0dea9e6e0233fa6baa9b932cf}
+      - {ref: build/qualification/b04-windows-72h-soak.json, status: REJECTED_SOURCE_AND_PROCESS_IDENTITY_DRIFT, baseline_at: 2026-07-18T17:00:01Z, latest_checkpoint_at: 2026-07-19T01:59:16.189667Z, awake_elapsed_hours: 8.987332774055556, source_sha256_digest: sha256:3410de5b9de0a2226a321edc70e81504105f1bb4cf0df7bceb7698526c00f9c8, current_source_sha256_digest: sha256:9f72c9a3504f460f1407f513839e516cea3c50c716e9e01e5967ada87f9442b4, evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396}
+      - {ref: build/qualification/b04-live-read-only-transition-task.json, status: DISABLED_AFTER_BASELINE_REJECTED, observed_at: 2026-07-19T01:00:02+08:00, evidence_digest: sha256:5474400034630793d33f4d04e66063aa459788f0dea9e6e0233fa6baa9b932cf}
     superseded_observations:
       - {evidence_digest: sha256:222b4ca29c9c6d6d75f7c126e7d228a80578a552a653073f533ad4712fc5cb52, reason: PRODUCT_SOURCE_FRONTEND_AND_SMTP_CONFIGURATION_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T16:29:14Z}
       - {evidence_digest: sha256:957576a99e9b7c8e1ea9f9a56145e01a59665e13329e09e8d863b6eb04ed74ee, reason: SOURCE_IDENTITY_IMPLEMENTATION_AND_PRODUCT_SOURCE_CHANGED, superseded_by: B04_WINDOWS_72H_BASELINE_2026-07-18T17:00:01Z}
-    unmet_exit_evidence: [CURRENT_SOURCE_BOUND_B04_QUALIFICATION, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
-    evidence_scope: 当前只证明本轮代码自动测试、前端构建、治理与文档校验通过，并已为最终当前源码建立源码、配置与进程身份冻结的 72 小时基线；上一源码身份的浏览器、Demo 周期、故障、恢复、SMTP 和历史技术证据均明确标为历史观察，不能替代当前源码资格化；本观察不证明 B04 完成、BuildManifest 可发布、B05 已授权或任何真实资金写能力
+    unmet_exit_evidence: [COMMITTED_CURRENT_SOURCE_BASELINE_AND_8H_CONTINUATION_GATE, CURRENT_SOURCE_BOUND_B04_QUALIFICATION, BINANCE_LIVE_READ_ONLY_7_TO_14_DAY_OBSERVATION, WINDOWS_72H_MINIMUM_DURATION]
+    evidence_scope: 当前证明 b05_real_capital_eligibility 迁移、两阶段门禁、自动测试、前端构建、关键不变量、运行进程切换和关闭的真实写边界通过；旧冻结源码的短时门与长期观察因源码/进程漂移明确失败。该失败不否定本次实现，但在实际提交并建立新基线前不证明 B04 完成、BuildManifest 可发布、B05 建设或真实资金已授权，也不产生任何真实资金写能力
     superseded_by: null
     build_manifest_ref: build/release/build-manifest.json
     build_manifest_schema_version: 2
     build_manifest_completeness: SCHEMA_V2_CURRENT_SOURCE_AND_B04_EVIDENCE_INCOMPLETE
     build_manifest_eligible: false
-    build_manifest_limit: 当前 B04 源码已形成上述实现提交，但 PR workflow、当前源码绑定资格化与外部/时间证据尚未完成；最终 BuildManifest 必须在全部证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
-  warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。D00/B00/B01 资格不等于真实资金权限，runtime_real_write_gate 仍为 CLOSED
+    build_manifest_limit: 当前 B04 迁移仍是未提交工作树，不能绑定最终 commit_sha；旧冻结构建已经因身份漂移失效。8 小时建设继续门不产生可发布 BuildManifest，最终 BuildManifest 必须在全部发布证据满足后重建，当前保持 build_eligible=false。L4 只记录引用和最新有效观察，不复制自引用 manifest 摘要
+  warning: 账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；Halpha 只读取得实际配置并按 accepted CAP 约束执行，不自动修改账户配置。短时建设继续、工程构建能力、B05 真实资金资格和运行时真实写门彼此独立，当前后三者仍未满足且 runtime_real_write_gate=CLOSED
 
 formalization_record:
   status: ALIGNED
@@ -190,7 +196,7 @@ formalization_record:
     - HALPHA-OUT-002@v0.8.0
     - HALPHA-UX-002@v0.11.0
     - HALPHA-SYS-002@v0.9.0
-    - HALPHA-ENG-002@v0.8.0
+    - HALPHA-ENG-002@v0.9.0
   current_selections:
     recovery_mode: MANUAL_PLAN_RESUME
     execution_model: UNIFIED_EXE_EXECUTION_ACTION
@@ -199,7 +205,7 @@ formalization_record:
   scope_limit: 长期 AUTO_CONTINUE 恢复引擎和 P1–P3 交互形态设计继续延期；V01 已登记为 B05 后人工决定门，最小关键不变量追踪纳入 B02，均不得扩展为统计、治理或授权平台
 
 governance_gate_evidence:
-  evidence_kind: LATEST_EFFECTIVE_OBSERVATION
+  evidence_kind: LATEST_COMMITTED_GOVERNANCE_WORKFLOW_OBSERVATION
   observed_at: 2026-07-17T08:41:10+08:00
   commit_sha: 3c7932c090b955f8d530047d2fa9511e790de361
   workflow_run_id: 29503024519
@@ -222,7 +228,7 @@ governance_gate_evidence:
     - 文档 changed 检查 25 files、0 errors、0 warnings；accepted bundle 完整性 5 files、0 errors、0 warnings
     - YAML 解析、责任登记、索引和 ACCEPTED 中英文 bundle 哈希一致
   external_enforcement: UNKNOWN；已证明 workflow 在 PR/head push/main merge push 上成功，不等于 GitHub ruleset 或 branch protection 已把它设为 required check
-  limitation: 门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
+  limitation: 该证据只覆盖 PR #2 已提交基线；当前未提交的 ACCEPTED 变更仅有本地校验，必须在实际提交后取得新的 workflow 证据才能取代本记录。门禁只检查机器可读状态、建设依赖和真实写 fail-closed，不声称自动判断产品语义已经对齐
 
 complexity_budget:
   comparison_baseline: 本轮正式化前设计
@@ -304,7 +310,7 @@ runtime_architecture:
     write_capability:
       BINANCE_DEMO: B00 只允许隔离 qualification fixture 按 required_outputs 执行最窄 Demo 提交/查询/撤销与组合探针，不装载产品运行时、不形成产品记录或开放业务责任；产品 Demo 写仍仅在 B03 及以后按已通过 B00 的建设包启用
       BINANCE_LIVE_READ_ONLY: authority_class 固定 NO_TRADING_AUTHORITY，profile 禁止配置、解析或注入 Binance 凭据并关闭账户佣金查询，composition 不含 CAP/EXE 或私有已持久动作门；只从公开行情产生 preview/资格证据，不建立任何环境执行动作
-      BINANCE_LIVE_WRITE: App 可在工程能力 QUALIFIED、B05 包 AUTHORIZED 且配置门 CLOSED 时建立一个现有 CAP/TRADEPLAN 激活，不产生场所写；Executor 仅在外置绑定为 OPEN、最终 BuildManifest 和该激活的精确 CAP 引用通过数据库复核后才解析 Binance LIVE 凭据并装载同一 EXE 写实现
+      BINANCE_LIVE_WRITE: B05 无真实写建设不得装载该 profile 的 LIVE 写凭据或建立 LIVE ExecutionAction；只有工程能力 QUALIFIED、B05 真实资金资格 AUTHORIZED 且配置门 CLOSED 时，App 才可建立一个现有 CAP/TRADEPLAN 真实激活而不产生场所写。Executor 仅在外置绑定为 OPEN、最终 BuildManifest 和该激活的精确 CAP 引用通过数据库复核后才解析 Binance LIVE 凭据并装载同一 EXE 写实现
     switch_selection:
       hot_switch: false
       automatic_fallback: false
@@ -319,7 +325,7 @@ runtime_architecture:
     capital: HALPHA-CAP-002@v1.2.0
     execution: HALPHA-EXE-002@v1.2.0#EXE-AUTO-SUM-001、#EXE-AUTO-SUB-001
     current_topology: 单一 halpha-executor、单一 TradingNode、同一 active profile；DEMO/LIVE 共用同一 EXE 实现并分别实例化，精确组件接线与 profile 写能力由本节其他配置固定
-  direct_write_guard_contract: HALPHA-ENG-002@v0.8.0#ENG-AUTO-NTL-001-REQ
+  direct_write_guard_contract: HALPHA-ENG-002@v0.9.0#ENG-AUTO-NTL-001-REQ
 
 p0_recovery_selection:
   policy: MANUAL_PLAN_RESUME
@@ -327,8 +333,8 @@ p0_recovery_selection:
     - HALPHA-TRADEPLAN-002@v0.10.0#TRADEPLAN-AUTO-LIF-001
     - HALPHA-EXE-002@v1.2.0#EXE-AUTO-HO-001
     - HALPHA-SYS-002@v0.9.0#SYS-AUTO-REC-001-REQ
-    - HALPHA-ENG-002@v0.8.0#ENG-AUTO-BLD-001-REQ
-  current_limit: 长期 AUTO_CONTINUE 不在 P0；B05 的当前在线要求由 construction_packages.B05.preconditions 记录
+    - HALPHA-ENG-002@v0.9.0#ENG-AUTO-BLD-001-REQ
+  current_limit: 长期 AUTO_CONTINUE 不在 P0；B05 的当前在线要求由 construction_packages.B05.real_capital_preconditions 记录
   evidence_horizon: B02 验证暂停/命令边界，B03 验证动作恢复，B04 验证 Windows 故障链；本计划不复制状态、命令或失败规则
 
 component_selection:
@@ -475,21 +481,26 @@ runtime_configuration:
     startup_rule: 任一摘要漂移时 Executor 保持真实写禁用；不得运行时接受浮动依赖或未知配置
   live_write_gate_binding:
     schema_version: 1
-    state_fields: [live_write_build_capability, b05_package_eligibility, runtime_real_write_gate]
+    state_fields: [live_write_build_capability, b05_real_capital_eligibility, runtime_real_write_gate]
     state_separation_required: true
     default_effective_gate: CLOSED
     location: DETACHED_OUTSIDE_REPOSITORY_AND_BUILDMANIFEST
     target_host_path: D:/projects/Codex/Halpha.runtime/live-write-gate.json
     nonsecret: true
-    binding_inputs: [final_build_manifest_digest, user_authorization_ref, account_capital_limit_version_ref, machine_authorization_version_ref, plan_allocation_ref]
-    authorization_scope: EXACT_ONE_EXISTING_ACTIVATION
+    eligibility_binding_inputs: [final_build_manifest_digest, user_authorization_ref, account_capital_limit_version_ref]
+    open_gate_binding_inputs: [machine_authorization_version_ref, plan_allocation_ref]
+    phase_order: [B05_REAL_CAPITAL_ELIGIBILITY_CLOSED, EXISTING_ACTIVATION_RUNTIME_OPEN]
+    eligibility_scope: EXACT_ONE_ACCOUNT_CAPITAL_LIMIT_VERSION
+    open_gate_scope: EXACT_ONE_EXISTING_ACTIVATION
+    closed_binding_activation_refs: FORBIDDEN
+    open_binding_activation_refs: REQUIRED
     file_security_profile: WINDOWS_PROTECTED_EXACT_DACL_V1
     credential_resolution_order: DATABASE_GATE_BEFORE_BINANCE_SECRETS
     file_security: maintenance SID owns protected DACL；App/Executor SID 只读；maintenance/SYSTEM/Builtin Administrators 完全控制；父目录同样保护；文件或父目录 symlink 均拒绝
     provisioning: maintenance 身份一次性 halpha-live-gate 命令；写入前后均验证固定 profile、environment/account、schema、时间窗和精确 DACL；该命令不是新产品进程或持久 worker
     app_closed_gate_behavior:
-      - 动态显示工程能力、B05 包授权、配置门和数据库复核后的有效门；任何读取或核对失败都显示 CLOSED
-      - REAL 激活必须重新认证并逐项确认真实资金范围、Demo/回测证据局限和主动在线监控；只建立既有 MachineAuthorization/PlanAllocation/PlanActivation，不调用 Binance、不打开门
+      - 动态显示工程能力、B05 真实资金资格、配置门和数据库复核后的有效门；任何读取或核对失败都显示 CLOSED。B05 建设资格只属于建设治理，不进入产品运行绑定或用户交易状态
+      - REAL 激活必须重新认证并逐项确认真实资金范围、Demo/回测证据局限和主动在线监控；请求的 AccountCapitalLimitVersion 必须与关闭态资格绑定精确一致，再原子建立 MachineAuthorization/PlanAllocation/PlanActivation，不调用 Binance、不打开门
       - 配置门已 OPEN 时禁止建立第二个 LIVE 激活；LIVE_READ_ONLY 禁止激活
     executor_startup_order:
       - 验证 repository runtime、当前源码 identity、Windows Executor identity、最终 BuildManifest 与外置绑定；失败时不解析任何 LIVE secret
@@ -598,14 +609,14 @@ runtime_configuration:
     product_result_contract: HALPHA-EXE-002@v1.2.0；核对投影、UNKNOWN、产品终态、原身份查询与禁止重复 submit 的稳定语义不在 L4 复制
     exact_config_digest: 由 build/qualification/b00-qualification-latest.json 固定 B00 配置证据；B01 BuildManifest 再绑定产品构建摘要
   numeric_contract:
-    normative_source: HALPHA-ENG-002@v0.8.0#ENG-AUTO-NTL-003-REQ
+    normative_source: HALPHA-ENG-002@v0.9.0#ENG-AUTO-NTL-003-REQ
     current_implementation: Python Decimal、PostgreSQL NUMERIC 与 NautilusTrader 原生数值边界
     qualification_status: B00_QUALIFIED；B02/B03 按建设包 exit_evidence 继续验证当前实现，不在 L4 复制数值、摘要、量化或失败规则
   database:
     transaction_isolation: READ COMMITTED
     claim_pattern: SQLAlchemy with_for_update(skip_locked=True) 只由 HalphaCoordinator 或 NotificationDispatcher 使用
     concurrency: stable lock order + unique constraint + expected state_version CAS
-    unavailable_contract: HALPHA-SYS-002@v0.9.0、HALPHA-ENG-002@v0.8.0；数据库不可用失败语义不在 L4 复制
+    unavailable_contract: HALPHA-SYS-002@v0.9.0、HALPHA-ENG-002@v0.9.0；数据库不可用失败语义不在 L4 复制
   logging:
     halpha_events:
       format: structlog JSON Lines
@@ -1163,18 +1174,20 @@ design_formalization_gate:
     - id: CAP-P0-SCOPE
       normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-CAP-002@v1.2.0]
     - id: UX-LIMITED-OPERATION-ENTRY
-      normative_sources: [HALPHA-UX-001@v1.6.0, HALPHA-UX-002@v0.11.0, HALPHA-SYS-002@v0.9.0, HALPHA-ENG-002@v0.8.0]
+      normative_sources: [HALPHA-UX-001@v1.6.0, HALPHA-UX-002@v0.11.0, HALPHA-SYS-002@v0.9.0, HALPHA-ENG-002@v0.9.0]
     - id: DEMO-EXECUTION-OWNER
-      normative_sources: [HALPHA-ARC-001@v1.9.0, HALPHA-EXE-001@v1.7.0, HALPHA-EXE-002@v1.2.0, HALPHA-ENG-002@v0.8.0]
+      normative_sources: [HALPHA-ARC-001@v1.9.0, HALPHA-EXE-001@v1.7.0, HALPHA-EXE-002@v1.2.0, HALPHA-ENG-002@v0.9.0]
     - id: DEMO-EVIDENCE-PURPOSE
-      normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-OUT-002@v0.8.0, HALPHA-UX-002@v0.11.0, HALPHA-ENG-002@v0.8.0]
+      normative_sources: [HALPHA-CAP-001@v2.10.0, HALPHA-OUT-002@v0.8.0, HALPHA-UX-002@v0.11.0, HALPHA-ENG-002@v0.9.0]
     - id: DOCUMENT-VERSION-HISTORY
       normative_sources: [HALPHA-DOC-001@v1.11.0]
+    - id: CONSTRUCTION-LONG-OBSERVATION-SEPARATION
+      normative_sources: [HALPHA-ENG-001@v1.8.0, HALPHA-ENG-002@v0.9.0]
   preserved_evidence:
     - 全部拟自研责任已按“当前消费者→成熟组件→一手能力证据→差异性质→总复杂度影响→采用/按组件妥协/最小补充/暂不支持”复核；固定 1.230.0 close_position 因无 cache 恢复缺口不进入 P0 写链
     - B00 的 14/14 required outputs 资格化证据保持为实现证据；它不替代 ACCEPTED 设计或真实资金授权
   deferred_not_blocking_p0: [长期 AUTO_CONTINUE 恢复引擎]
-  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04=IN_PROGRESS。真实写工程能力仍未资格化，B05 未获授权，runtime_real_write_gate=CLOSED
+  result: D00=ALIGNED；B00=QUALIFIED；B01–B03=COMPLETED；B04 已完成本轮字段与两阶段门禁迁移，旧冻结构建的建设继续门和长期观察因源码/进程身份漂移 REJECTED，等待实际提交后建立新基线。短时门只控制另行授权的后续建设；真实写工程能力仍未资格化，B05 建设和真实资金均未授权，runtime_real_write_gate=CLOSED
 
 dependency_qualification_gate:
   id: B00
@@ -1238,7 +1251,7 @@ dependency_qualification_gate:
       artifact_status: QUALIFIED
       plan_binding_rule: 汇总制品为非规范实现证据并记录生成时计划摘要；L4 自身不回填该摘要，避免循环自引用
       runtime_proxy_persistence: false；证据只记录 RUNTIME_LOOPBACK_ARGUMENT 类别，不保存地址或端口
-    runtime_real_write_gate: CLOSED；B00 资格化不替代 D00、B01–B04、B05 包授权或运行时用户授权
+    runtime_real_write_gate: CLOSED；B00 资格化不替代 D00、B01–B04、B05 建设授权、B05 真实资金授权或运行时用户授权
 
 research_track:
   status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE
@@ -1321,7 +1334,8 @@ research_track:
     p0_build_order: NONE
     b01_b05_scope_dependency_status_evidence: NONE
     live_write_build_capability: NONE
-    b05_package_eligibility: NONE
+    b05_construction_eligibility: NONE
+    b05_real_capital_eligibility: NONE
     runtime_real_write_gate: NONE
     product_database_or_migration: NONE
     product_process_or_write_path: NONE
@@ -1398,32 +1412,124 @@ construction_packages:
   B04:
     name: 证据、完整工作台与运维闭环
     eligibility: ELIGIBLE
-    status: IN_PROGRESS
+    status: IN_PROGRESS_CONSTRUCTION_GATE_AND_LONG_OBSERVATION
     started_at: 2026-07-17T20:36:56+08:00
     depends_on: [B03]
+    construction_continuation_gate:
+      purpose: SUCCESSOR_CONSTRUCTION_ONLY
+      target_blocking_hours: 8
+      hard_max_blocking_hours: 24
+      status: REJECTED
+      started_at: 2026-07-18T17:00:01Z
+      target_decision_at: 2026-07-19T01:00:01Z
+      hard_deadline_at: 2026-07-19T17:00:01Z
+      extension:
+        status: NOT_USED
+        allowed_only_for: EXPLICIT_DIURNAL_CONSUMER_WITH_OWNER_RECORDED_REASON
+        reason: null
+        owner_decision_ref: null
+      frozen_baseline:
+        identity_status: FROZEN
+        observation_outcome: REJECTED_SOURCE_AND_PROCESS_IDENTITY_DRIFT
+        commit_sha: 78b0fe5314562e6d39eebb0ca635c0bb63488d9d
+        source_sha256_digest: sha256:3410de5b9de0a2226a321edc70e81504105f1bb4cf0df7bceb7698526c00f9c8
+        dependency_locks:
+          python_runtime: sha256:f44743679f033d09c6395ad5bcd1411fb1bf810a4dcc4e70b3632635e878805b
+          npm: sha256:0d5df4ffda1efad5d7d0b525948db652749a23cb5c67b9ca6890fb3700ca7463
+        migration_head: "20260718_0006"
+        build_artifacts:
+          backend: sha256:41fc67209495b17b12e6722f99db0703c2609bb1f42062e18aac3aaff6ad8646
+          frontend: sha256:e4f0237afce5a2bafd689d09cb710df69717f82fb1598c7a368a6cda924dc62e
+        nonsecret_configuration_digest: sha256:5b524e6e5e29421c517e2c074b075b091f541aa8d2ce106874e0d7ca8b99d1e7
+        observation_tool_digest: sha256:453cc3cbcffee6f03589bf48aec7c9d49305d03de62428766324ea96a286fc36
+        process_identity_ref: build/qualification/b04-windows-72h-soak.json#baseline_processes
+        dependency_closure: PRODUCT_RUNTIME_SOURCE_LOCKS_MIGRATIONS_BUILT_UI_RUNTIME_CONFIG_AND_SOAK_OBSERVER
+        read_only_rule: 冻结闭包保持只读；后续建设使用独立 branch/worktree；闭包内变化不得继承本观察结论，闭包外变化仅在证明无影响后可引用未受影响部分
+      required:
+        - CURRENT_SOURCE_IMMEDIATE_AUTOMATED_INTEGRATION_DEMO_FAULT_AND_ROLLBACK_CHECKS_QUALIFIED
+        - EXACT_SOURCE_CONFIG_PROCESS_IDENTITY_8_WINDOWS_AWAKE_HOURS
+        - RUNTIME_REAL_WRITE_GATE_CLOSED_AT_DECISION
+        - NO_UNISOLATED_CORE_DEFECT
+      current_evidence:
+        observed_at: 2026-07-19T01:59:16.189667Z
+        immediate_qualification: QUALIFIED_AUTOMATED_CHECKS_BUT_BASELINE_REJECTED
+        windows_awake_identity_hours: 8.987332774055556
+        source_configuration_process_identity_unchanged: false
+        runtime_real_write_gate: CLOSED
+        unisolated_core_defect_status: NONE_IN_CURRENT_AUTOMATED_VALIDATION
+        evidence_ref: build/qualification/b04-windows-72h-soak.json
+        evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
+      permits: [SEPARATELY_AUTHORIZED_SUCCESSOR_CONSTRUCTION]
+      does_not_permit: [B04_COMPLETE, BUILD_MANIFEST_RELEASE_ELIGIBLE, B05_REAL_CAPITAL_ACTIVATION, RUNTIME_REAL_WRITE_GATE_OPEN]
+      decision_rule: 8 小时目标后只有明确日周期消费者且项目所有者记录理由才可延长；24 小时绝对截止时必须形成 QUALIFIED 或 REJECTED，未完成长期证据继续按 long_observation 非阻塞观察
+    long_observation:
+      status: REJECTED
+      frozen_baseline_ref: construction_packages.B04.construction_continuation_gate.frozen_baseline
+      windows_awake_runtime:
+        required_hours: 72
+        status: REJECTED
+        baseline_at: 2026-07-18T17:00:01Z
+        latest_checkpoint_at: 2026-07-19T01:59:16.189667Z
+        awake_elapsed_hours: 8.987332774055556
+        evidence_ref: build/qualification/b04-windows-72h-soak.json
+        evidence_digest: sha256:ce3d84c7f004b2848f07b81d8b79dee72f1ad16bcb0cf0783176ce76fb6e5396
+      live_read_only_market:
+        minimum_natural_days: 7
+        maximum_natural_days_if_no_complete_trigger_or_expiry: 14
+        status: CANCELLED_BASELINE_REJECTED
+        started_at: null
+        qualified_at: null
+        observed_natural_days: 0
+        evidence_ref: build/qualification/b04-live-read-only.json
+        evidence_digest: null
+      construction_effect: NON_BLOCKING_AFTER_CONSTRUCTION_CONTINUATION_GATE_QUALIFIED
+      release_effect: BLOCKING
+      real_capital_activation_effect: BLOCKING
+      failure_effect: 当前冻结构建不得发布或用于真实资金，真实写门保持关闭；只暂停依赖该缺陷的切片，修复后建立新基线并按影响重验，不作废无依赖的已完成建设
+      completion_rule: Windows 72 小时、LIVE_READ_ONLY 7–14 日和全部 B04 发布证据满足后，才可由独立 finalizer 将 B04 标为 COMPLETED 并资格化当前 BuildManifest
     scope:
       - 从 schema 合法范围冻结一组用户选择参数、方向和精确 manifest，执行 BacktestEngine development/holdout 与 ReportProvider 判定；默认值仅作初始建议
       - Binance Demo 完整策略周期和 BINANCE_LIVE_READ_ONLY 前向观察
       - 激活复核、运行时间线、三类控制及独立恢复新增风险/恢复激活命令、资本、通知、Review/ImprovementHandoff 页面和同进程 `/operations`；闭合后由 coordinator 幂等生成 Review
       - Windows 无偏醒钟 72 小时、邮件、备份恢复、浏览器、安全、可访问性和故障演练
       - 形成默认关闭且可部署的 LIVE_WRITE 构建预备能力：外置非秘密门绑定、App 关闭态 REAL 激活复核、Executor 凭据前置门检、唯一激活范围和同一 EXE 运行接线；不授予 B05、不开门、不执行真实写
+      - 运行实现、API、CLI、工作台和正向测试统一使用 `b05_real_capital_eligibility`；旧 `b05_package_eligibility` 只保留为必须 fail-closed 拒绝的负向输入，`b05_construction_eligibility` 只留在建设治理，不进入外置运行绑定或产品 API
     exit_evidence:
       - historical technical_safety_gate 与 Demo/前向/运维证据满足；精确 manifest 记录技术资格、完整绩效报告和 owner 是否接受，不以盈利阈值自动授权
       - SMTP 实际投递、ABANDONED 可见 Task、空库 pg_restore 与重启恢复通过
       - Playwright 覆盖激活、未知、保护 GAP、最大损失、退出、接管、闭合、复盘和 stale UI
-      - 机器测试证明三门不能互相替代、门文件与父目录 DACL 精确、BuildManifest/用户决定/CAP 引用缺一即关闭、Binance LIVE 凭据只在数据库复核之后解析、LIVE 只恢复绑定的唯一激活且 REAL 激活提交本身不打开门
+      - 机器测试证明三门不能互相替代、门文件与父目录 DACL 精确；关闭态真实资金资格必须绑定 BuildManifest、用户决定和精确 AccountCapitalLimitVersion，REAL 激活只接受该额度并且提交本身不打开门；OPEN 再绑定并数据库复核 MachineAuthorization/PlanAllocation/唯一激活，Binance LIVE 凭据只在该复核之后解析
       - SPA 静态制品不可用时 `/operations` 仍显示 pause/reconciliation/授权期限/四类停止与开放责任，可提交 RESUME_ACTIVATION、EXIT_STRATEGY、USER_TAKEOVER 并查询同一 Receipt
       - 复杂度复点仍为 16 记录族、2 持久 worker、2 进程、1 DB product、1 write path
   B05:
     name: 首个有界真实交易闭环
-    eligibility: BLOCKED_UNTIL_B04_COMPLETE
-    depends_on: [B04]
+    status: NOT_STARTED
+    depends_on: [B04.CONSTRUCTION_CONTINUATION_GATE=QUALIFIED]
     environment: Binance USDⓈ-M LIVE_WRITE
-    scope:
+    construction_eligibility:
+      status: BLOCKED
+      requires: [B04_CONSTRUCTION_CONTINUATION_GATE_QUALIFIED, SEPARATE_OWNER_CONSTRUCTION_AUTHORIZATION]
+      owner_authorization_ref: null
+      permits: [CODE, CONFIGURATION, UI, ROLLBACK, NO_REAL_WRITE_TESTS]
+      does_not_permit: [B04_COMPLETE, BUILD_MANIFEST_RELEASE_ELIGIBLE, LIVE_WRITE_CREDENTIAL_LOAD, LIVE_EXECUTION_ACTION_CREATE, REAL_CAPITAL_ACTIVATION, RUNTIME_REAL_WRITE_GATE_OPEN]
+    real_capital_eligibility:
+      status: BLOCKED
+      requires: [B04_LONG_OBSERVATION_QUALIFIED, CURRENT_BUILD_MANIFEST_QUALIFIED, USER_AUTHORIZATION, CAPITAL_SCOPE_BOUND]
+      user_authorization_ref: null
+      account_capital_limit_version_ref: null
+      build_manifest_digest: null
+    construction_scope:
+      - 建设并验证 LIVE_WRITE 配置、App 关闭态 REAL 激活复核、Executor 凭据前置门检、唯一激活范围、UI、回退和故障路径；全部测试使用无真实写 fixture、DEMO 或关闭门
+      - 复用既有 DEMO/LIVE 同源 EXE 实现，不创建 LIVE 专用 repository、service、状态机、记录族、worker、写客户端或兼容双写
+      - 在 real_capital_eligibility=BLOCKED 时不解析 LIVE 写凭据、不建立 `ExecutionAction(environment=LIVE)`、不打开外置门、不向真实场所提交或修改任何动作
+    real_capital_scope:
       - 用户在已资格 manifest、Demo profile 和证据规模内固定 BTCUSDT 一次激活的方向、参数与三轴额度
       - 从真实激活、市价入场、基础保护、分级止盈或时间/用户/损失退出，到核对、Review 和额度释放
-    preconditions:
-      - accepted_design_set 中全部列明版本保持 ACCEPTED，B00–B04 全部通过且 BuildManifest/场所规则/费率/组件摘要无漂移
+    construction_preconditions:
+      - B04 construction_continuation_gate=QUALIFIED，当前变更在独立 branch/worktree 中进行，且项目所有者另行记录 B05 建设授权
+      - runtime_real_write_gate=CLOSED；LIVE 写凭据不得提供给建设或测试进程，所有真实资金入口保持不可达
+    real_capital_preconditions:
+      - accepted_design_set 中全部列明版本保持 ACCEPTED，B04 long_observation=QUALIFIED、B04=COMPLETED、当前 BuildManifest=QUALIFIED，且场所规则、费率、组件摘要无漂移
       - 用户验证真实 API 权限、SMTP、账户边界和本次三轴额度；系统只读记录账户实际 position/asset/margin mode 与 actual_leverage 并使用实际配置，P0 不以这些账户配置值阻断 B05、不自动修改，effective_leverage 始终取 min(actual,5)
       - 用户已阅读并明确接受该 manifest 的实际历史交易数、平均净 R、ProfitFactor、MaxDrawdown、样本不足与模型限制；该接受不构成盈利保证
       - entry/exit notional 不超过前向 top-of-book 第 5 百分位的 10%，也不超过证据 manifest 上限
@@ -1468,7 +1574,7 @@ construction_packages:
         - 固定版本、锁摘要、许可证、单一研究 venv 安装闭包、sys.path/DLL 根、harness/study 入口、CLI/schema、预算停止、独立重演与错误反例证据可重演
         - 证明 AI study 可在同一研究环境直接装载，同时 study 自报/篡改 PASS、p 值、绩效、报告、候选计数、失败记录或胜者集合不能越过来源摘要与 gate 重算
         - 明确记录可信 AI 仍可能犯错，控制强度按场景重要度与错误成本选择，且不采用成本投入明显高于风险价值的隔离手段
-        - 研究侧对产品数据库、迁移、产品进程、产品发布组、交易凭据、真实写路径和三项真实写门 effects 全为 NONE
+        - 研究侧对产品数据库、迁移、产品进程、产品发布组、交易凭据、真实写路径、B05 建设资格和三项真实写状态 effects 全为 NONE
         - R00 不消费 B04 完成证据、不固定或声称 confirmation_eligible_not_before；历史 holdout 与进行中的 forward observation 继续只作 discovery/validation，confirmation 保持禁用至 R01 完成门
       output_revision: null
   R01:
@@ -1578,15 +1684,17 @@ value_decision_gate:
   insufficient_evidence_result: EVIDENCE_INSUFFICIENT；单次盈利、一次闭环、代码完成或功能正确不得自动决定继续或扩资
   implementation_limit: 复用现有证据、Review 与用户决定；P0 不建立跨激活统计平台、自动评价流程或新记录族
 
-build_order: [D00, B00, B01, B02, B03, B04, B05]
+build_order: [D00, B00, B01, B02, B03, B04_CONSTRUCTION_CONTINUATION_GATE, B05_CONSTRUCTION]
+release_and_real_capital_order: [B04_LONG_OBSERVATION, B04_COMPLETE, CURRENT_BUILD_MANIFEST_QUALIFIED, B05_REAL_CAPITAL_AUTHORIZED, RUNTIME_REAL_WRITE_GATE_OPEN]
 research_build_order: [R00, R01, R02, R03]
 post_p0_decision_order: [B05, V01]
 currently_authorized_work: [B04]
 parallelization_rule: >-
-  B01–B03 已完成；B04 当前实施历史/Demo/LIVE_READ_ONLY 证据、完整工作台和运维闭环，B05 继续按前序包完成及 exit evidence 推进。
+  B01–B03 已完成；B04 当前实施当前源码即时资格、8 小时建设继续门、历史/Demo/LIVE_READ_ONLY 证据、完整工作台和运维闭环。建设继续门 QUALIFIED 后，只有项目所有者另行授权时 B05 才可在独立 branch/worktree 中开始代码、配置、UI、回退和无真实写测试；它不等待 B04 COMPLETE，但不得加载 LIVE 写凭据、建立 LIVE ExecutionAction、激活真实资金或打开真实写门。
+  B04 的 Windows 72 小时与 LIVE_READ_ONLY 7–14 日观察继续非阻塞运行；它们与最终当前 BuildManifest 仍是 B04 完成、发布和 B05 真实资金激活的硬前提。长期观察失败时只暂停依赖缺陷的切片并取消该冻结构建的发布/真实资金资格，不自动抹除无依赖建设。
   项目所有者对 R00 的建设方向授权保持存在且 R00 不依赖 B04 完成；可信 AI 简化设计已经接受，但新的 base_revision、accepted_design_set_and_basis 输入身份与完整包契约尚未重新冻结，因此必须先形成新的干净治理绑定，不能直接沿用被替代合同继续实施。
   R01 可在 R00 完成后开始非确认性建设，但完成、research_policy 冻结和 confirmation_eligible_not_before 固定必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。
-  R00–R02 不改变 B01–B05、P0 build_order 或三项真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；研究资源与交易产品或开放责任竞争时必须降低并发、PAUSED 或 STOPPED，不为此建设安全隔离或资源调度平台。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 授权和运行时真实写门继续分别 fail closed。
+  R00–R02 不改变 B01–B05、P0 build_order、B05 建设/真实资金资格或运行时真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；研究资源与交易产品或开放责任竞争时必须降低并发、PAUSED 或 STOPPED，不为此建设安全隔离或资源调度平台。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 真实资金资格和运行时真实写门继续分别 fail closed。
 
 owner_inputs_before_specific_gates:
   before_B00:
@@ -1599,7 +1707,9 @@ owner_inputs_before_specific_gates:
     - Binance LIVE_READ_ONLY 不使用 API secret 或账户身份；只允许可选本机网络代理引用，代理值仍仅存在于 WinVault/运行参数且不进入仓库或证据
     - SMTP host、port、TLS mode、sender、recipient 和非秘密 credential reference；SMTP secret 由项目所有者以 App 运行身份本地注入 WinVault
     - 历史证据初始权益、max_margin/max_notional/max_allowed_loss、1–5x 逐仓等价 BACKTEST_MANIFEST_LEVERAGE_PROXY 与最大真实 entry/exit notional 上限；B05 按实际 margin mode/leverage 计算的 effective_leverage 必须与获接受 manifest 一致，actual_leverage 原值无需相等
-  before_B05:
+  before_B05_construction:
+    - 项目所有者在 B04 建设继续门 QUALIFIED 后另行记录 B05 建设授权；建设使用独立 branch/worktree，LIVE 写凭据保持不提供和不可解析
+  before_B05_real_capital_activation:
     - Binance LIVE_WRITE secret 由项目所有者以 Executor 运行身份本地注入 WinVault；只记录非秘密 credential reference 与固定出口 IP（若启用 allowlist）
     - 当前只读取得的 position/asset/margin mode、actual_leverage、effective_leverage、taker fee、账户资本边界、本次三轴额度、方向和精确证据 manifest；账户配置事实用于执行与证据，不作为 P0 包资格阻断
 
@@ -1618,14 +1728,14 @@ definition_of_ready_to_start_p0:
   satisfied:
     - B00 的失败停止、无平行 fallback、第三方优先和复杂度硬上限已经记录
     - B00 汇总证据证明 14/14 required outputs 全部 QUALIFIED；目标账户实际 CROSSED/20x 按 accepted compatibility 得到 effective_leverage=5，不阻断
-    - runtime_real_write_gate=CLOSED；工程资格、B05 包授权与运行时真实写门已拆分记录
+    - runtime_real_write_gate=CLOSED；短时建设继续、工程能力、B05 建设资格、B05 真实资金资格与运行时真实写门已拆分记录
     - D00 已接受 DEMO/LIVE 统一 EXE ExecutionAction、环境限定 CAP 和系统机制验证优先的协调版本集
   blocking: []
   remaining_runtime_inputs_before_B00: []
-  first_step: 继续 B04；为已接受的简化 R00 重新绑定干净 base_revision、accepted_design_set_and_basis 输入身份与完整包合同后，再决定实施续行；不得直接沿用被替代合同的绑定。两轨均不得建立 LIVE 写动作、装载 LIVE 写凭据或打开真实写门
+  first_step: 先把当前已验证的 B04 迁移形成实际提交，再由独立 observer 对该 commit_sha 建立新的只读源码/配置/进程基线并重新判定 8 小时建设继续门；门达到 QUALIFIED 后仍须项目所有者另行授权，才能在独立 branch/worktree 开始 B05 无真实写建设。任何建设轨均不得加载 LIVE 写凭据、建立 LIVE ExecutionAction 或打开真实写门
   current_assessment: >-
-    P0 当前已完成 B01–B03，B04 正在实施证据、完整工作台与运维闭环，仍不具备真实交易资格。Windows 10 和 B00 的目标主机、固定 wheel、Demo 行情/订单/恢复与生命周期证据仍有效；
-    账户实际持仓模式和杠杆变化不阻断建设，按 accepted CAP 兼容边界并以账户实际配置只读处理。live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED。
+    P0 当前已完成 B01–B03；B04 已完成旧 b05_package_eligibility 到 b05_real_capital_eligibility 的当前产品迁移并通过自动验证，App/Executor 已切换到当前源码。旧冻结源码的建设继续门和长期观察因源码/进程身份漂移明确 REJECTED，当前未提交工作树尚不能建立新 commit_sha 基线，仍不具备真实交易资格。
+    账户实际持仓模式和杠杆变化不阻断建设，按 accepted CAP 兼容边界并以账户实际配置只读处理。B04 construction_continuation_gate=REJECTED、live_write_build_capability=NOT_QUALIFIED、b05_construction_eligibility=BLOCKED、b05_real_capital_eligibility=BLOCKED、runtime_real_write_gate=CLOSED。
 
 source_evidence:
   - claim: NautilusTrader v1.230.0 tag、源码、许可证与 Controller
@@ -1698,7 +1808,7 @@ source_evidence:
 
       - https://github.com/mhammond/pywin32
 final_acceptance_statement: >-
-  本计划已接受 HALPHA-RSCH-TRUST-SIMPLIFICATION-001 协调版本集，把项目开发者使用的 AI 定义为不会作恶并会尽最大努力、但仍可能犯错的可信开发者；
-  按场景重要程度、错误成本和可恢复性优先使用审查、schema、测试、重演、holdout、证据复核和产品内重新资格化，不采用成本投入明显高于风险价值的研究安全隔离。
-  R00 仍不依赖 B04，但必须重新绑定包含本接受文本的干净 base_revision、accepted_design_set_and_basis 输入身份并冻结简化合同后方可实施；不得沿用被替代合同的 ac5270fc344ea4502c6238a13857fc0573aa3f01 / 113bbe9c8a6afbc0cc6ec37663677444029da5e8 绑定。
-  B04/B05、P0 build_order、BuildManifest 和三项真实写门均不改变；工程资格不等于真实资金权限，B05 未获授权且 runtime_real_write_gate 保持 CLOSED。
+  本计划已接受建设继续与长期观察分离：B04 以 8 个 Windows 醒钟小时为正常建设阻塞目标、24 小时为绝对上限；到期必须形成 QUALIFIED 或 REJECTED，不能用长期观察无限阻断建设。
+  Windows 72 小时和 LIVE_READ_ONLY 7–14 日观察完整保留，在短时门通过后对另行授权的建设非阻塞，但继续阻断 B04 完成、发布、当前 BuildManifest 资格和真实资金激活。
+  B05 建设资格与真实资金资格分别记录；建设阶段只能修改和验证代码、配置、UI、回退及无真实写路径，不加载 LIVE 写凭据、不建立 LIVE ExecutionAction、不打开真实写门。真实资金仍要求长期观察、当前 BuildManifest、用户授权和资本范围全部满足。
+  R00 仍不依赖 B04，但必须重新绑定包含本接受文本的干净 base_revision、accepted_design_set_and_basis 输入身份并冻结简化合同后方可实施；工程资格不等于真实资金权限，当前 B05 两项资格均为 BLOCKED 且 runtime_real_write_gate=CLOSED。

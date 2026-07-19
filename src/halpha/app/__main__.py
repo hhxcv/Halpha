@@ -74,7 +74,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             profile=settings.release.profile,
             environment_id=settings.release.environment_id,
             live_write_build_capability=gate_status.live_write_build_capability,
-            b05_package_eligibility=gate_status.b05_package_eligibility,
+            b05_real_capital_eligibility=(
+                gate_status.b05_real_capital_eligibility
+            ),
             configured_runtime_real_write_gate=(
                 gate_status.configured_runtime_real_write_gate
             ),

@@ -350,7 +350,8 @@ class PostgreSQLPlanningApi:
                         evidence_scope={
                             "construction_package": "B04",
                             "live_eligibility": (
-                                gate_status.b05_package_eligibility == "AUTHORIZED"
+                                gate_status.b05_real_capital_eligibility
+                                == "AUTHORIZED"
                             ),
                             "runtime_real_write_gate": gate_status.runtime_real_write_gate,
                         },
@@ -533,7 +534,12 @@ class PostgreSQLPlanningApi:
             "actual_account_configuration": "B03_PRE_SUBMIT_FACT_NOT_REQUIRED_FOR_P0_ACTIVATION",
             "account_mode_policy": "USE_ACTUAL_CONFIGURATION_WITH_EFFECTIVE_LEVERAGE_MIN_ACTUAL_5",
             "live_write_build_capability": gate_status.live_write_build_capability,
-            "b05_package_eligibility": gate_status.b05_package_eligibility,
+            "b05_real_capital_eligibility": (
+                gate_status.b05_real_capital_eligibility
+            ),
+            "account_capital_limit_version_ref": (
+                gate_status.account_capital_limit_version_ref
+            ),
             "configured_runtime_real_write_gate": (
                 gate_status.configured_runtime_real_write_gate
             ),
@@ -541,7 +547,7 @@ class PostgreSQLPlanningApi:
             "live_activation_eligible": (
                 self._profile == "BINANCE_LIVE_WRITE"
                 and gate_status.live_write_build_capability == "QUALIFIED"
-                and gate_status.b05_package_eligibility == "AUTHORIZED"
+                and gate_status.b05_real_capital_eligibility == "AUTHORIZED"
                 and gate_status.configured_runtime_real_write_gate == "CLOSED"
             ),
             "capital_notice": "Halpha 内部互斥额度，不是 Binance 资金冻结或损失保证。",
@@ -561,10 +567,15 @@ class PostgreSQLPlanningApi:
         if self._profile == "BINANCE_LIVE_WRITE":
             if gate_status.live_write_build_capability != "QUALIFIED":
                 raise ValueError("LIVE_WRITE_BUILD_CAPABILITY_NOT_QUALIFIED")
-            if gate_status.b05_package_eligibility != "AUTHORIZED":
-                raise ValueError("B05_PACKAGE_NOT_AUTHORIZED")
+            if gate_status.b05_real_capital_eligibility != "AUTHORIZED":
+                raise ValueError("B05_REAL_CAPITAL_ELIGIBILITY_BLOCKED")
             if gate_status.configured_runtime_real_write_gate != "CLOSED":
                 raise ValueError("LIVE_WRITE_GATE_MUST_BE_CLOSED_FOR_ACTIVATION")
+            if (
+                gate_status.account_capital_limit_version_ref
+                != payload.capital_limit_version_id
+            ):
+                raise ValueError("B05_REAL_CAPITAL_SCOPE_MISMATCH")
             activation_terms = {
                 "real_capital_acknowledged": payload.real_capital_acknowledged,
                 "evidence_limitations_acknowledged": (

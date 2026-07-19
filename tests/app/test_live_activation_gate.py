@@ -16,14 +16,27 @@ NOW = datetime(2026, 7, 18, 12, tzinfo=UTC)
 def _status(
     *,
     capability: str = "QUALIFIED",
-    package: str = "AUTHORIZED",
+    real_capital: str = "AUTHORIZED",
     configured: str = "CLOSED",
+    account_limit: str = "limit-live-001",
 ) -> LiveWriteGateStatus:
+    authorized = real_capital == "AUTHORIZED"
     return LiveWriteGateStatus(
         live_write_build_capability=capability,
-        b05_package_eligibility=package,
+        b05_real_capital_eligibility=real_capital,
         configured_runtime_real_write_gate=configured,
         runtime_real_write_gate="CLOSED",
+        build_manifest_digest="a" * 64 if authorized else None,
+        user_authorization_ref=(
+            "owner-decision:b05-live-001" if authorized else None
+        ),
+        account_capital_limit_version_ref=account_limit if authorized else None,
+        machine_authorization_version_ref=(
+            "authorization-live-001" if configured == "OPEN" else None
+        ),
+        plan_allocation_ref=(
+            "allocation-live-001" if configured == "OPEN" else None
+        ),
     )
 
 
@@ -59,12 +72,12 @@ def _payload(**updates: bool) -> ActivationPayload:
     ("status", "reason"),
     (
         (
-            _status(capability="NOT_QUALIFIED"),
+            _status(capability="NOT_QUALIFIED", real_capital="BLOCKED"),
             "LIVE_WRITE_BUILD_CAPABILITY_NOT_QUALIFIED",
         ),
         (
-            _status(package="NOT_AUTHORIZED"),
-            "B05_PACKAGE_NOT_AUTHORIZED",
+            _status(real_capital="BLOCKED"),
+            "B05_REAL_CAPITAL_ELIGIBILITY_BLOCKED",
         ),
         (
             _status(configured="OPEN"),
@@ -102,6 +115,20 @@ def test_live_activation_requires_each_explicit_owner_acknowledgement(
             idempotency_key="live-001",
             observed_at=NOW,
         )
+
+
+def test_live_activation_rejects_unbound_capital_scope_before_database_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api = _api(_status(account_limit="limit-live-authorized"))
+    monkeypatch.setattr(
+        api,
+        "_connect",
+        lambda: pytest.fail("database must not be reached"),
+    )
+
+    with pytest.raises(ValueError, match="B05_REAL_CAPITAL_SCOPE_MISMATCH"):
+        api.activate(_payload(), idempotency_key="live-001", observed_at=NOW)
 
 
 class _Context:
