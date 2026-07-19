@@ -15,6 +15,14 @@ import xml.etree.ElementTree as ET
 
 import yaml
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.qualification.real_write_boundary import (
+    assess_closed_real_write_boundary,
+)
+
 
 EXACT_NODE = r"D:\Environment\node-v24.18.0-win-x64\node.exe"
 
@@ -339,21 +347,7 @@ def summarize(root: Path) -> dict[str, Any]:
         )
     )
     current_state = plan["current_state"]
-    real_write_boundary = {
-        "live_write_build_capability": current_state["live_write_build_capability"],
-        "b05_package_eligibility": current_state["b05_package_eligibility"],
-        "runtime_real_write_gate": current_state["runtime_real_write_gate"],
-    }
-    real_write_boundary["status"] = (
-        "QUALIFIED"
-        if real_write_boundary
-        == {
-            "live_write_build_capability": "NOT_QUALIFIED",
-            "b05_package_eligibility": "NOT_AUTHORIZED",
-            "runtime_real_write_gate": "CLOSED",
-        }
-        else "REJECTED"
-    )
+    real_write_boundary = assess_closed_real_write_boundary(current_state)
 
     revision = subprocess.run(
         ("git", "rev-parse", "HEAD"),

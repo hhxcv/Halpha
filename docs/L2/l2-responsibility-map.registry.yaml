@@ -83,6 +83,6 @@ responsibilities:
   - id: ENG
     shape: vertical
     responsibility_source: HALPHA-ARC-001@v1.9.0#ARC-L2D-001
-    l2_document: HALPHA-ENG-001@v1.7.0
-    scope_source: HALPHA-ENG-001@v1.7.0#ENG-SCP-001
-    owned_stable_semantics: [工程影响级别, 可重复构建与发布回退边界, 部署说明与构建配置识别要求]
+    l2_document: HALPHA-ENG-001@v1.8.0
+    scope_source: HALPHA-ENG-001@v1.8.0#ENG-SCP-001
+    owned_stable_semantics: [工程影响级别, 建设继续与长期观察分离边界, 可重复构建与发布回退边界, 部署说明与构建配置识别要求]

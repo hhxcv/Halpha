@@ -40,22 +40,21 @@ def _settings(tmp_path: Path):
 
 
 def _binding(settings, *, gate: str) -> LiveWriteGateBinding:
-    refs = (
-        {
-            "account_capital_limit_version_ref": "limit-live-001",
-            "machine_authorization_version_ref": "authorization-live-001",
-            "plan_allocation_ref": "allocation-live-001",
-        }
-        if gate == "OPEN"
-        else {}
-    )
+    refs = {"account_capital_limit_version_ref": "limit-live-001"}
+    if gate == "OPEN":
+        refs.update(
+            {
+                "machine_authorization_version_ref": "authorization-live-001",
+                "plan_allocation_ref": "allocation-live-001",
+            }
+        )
     return LiveWriteGateBinding(
         schema_version=1,
         environment_id=settings.release.environment_id,
         account_id=settings.release.account_id,
         profile="BINANCE_LIVE_WRITE",
         live_write_build_capability="QUALIFIED",
-        b05_package_eligibility="AUTHORIZED",
+        b05_real_capital_eligibility="AUTHORIZED",
         runtime_real_write_gate=gate,
         build_manifest_digest=MANIFEST_DIGEST,
         user_authorization_ref="owner-decision:b05-live-001",
@@ -161,7 +160,7 @@ def qualified_manifest(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def test_closed_binding_separates_build_package_and_runtime_gate(
+def test_closed_binding_separates_build_real_capital_and_runtime_gate(
     tmp_path: Path,
     qualified_manifest: None,
 ) -> None:
@@ -171,10 +170,61 @@ def test_closed_binding_separates_build_package_and_runtime_gate(
     status = evaluate_live_write_gate(ROOT, settings, now=NOW)
 
     assert status.live_write_build_capability == "QUALIFIED"
-    assert status.b05_package_eligibility == "AUTHORIZED"
+    assert status.b05_real_capital_eligibility == "AUTHORIZED"
+    assert status.account_capital_limit_version_ref == "limit-live-001"
     assert status.configured_runtime_real_write_gate == "CLOSED"
     assert status.runtime_real_write_gate == "CLOSED"
     assert status.authorized_activation_id is None
+
+
+def test_legacy_package_eligibility_binding_is_rejected_fail_closed(
+    tmp_path: Path,
+    qualified_manifest: None,
+) -> None:
+    settings = _settings(tmp_path)
+    payload = _binding(settings, gate="CLOSED").model_dump(mode="json")
+    payload["b05_package_eligibility"] = payload.pop(
+        "b05_real_capital_eligibility"
+    )
+    Path(str(settings.release.live_write_gate_path)).write_text(
+        json.dumps(payload),
+        encoding="utf-8",
+    )
+
+    status = evaluate_live_write_gate(ROOT, settings, now=NOW)
+
+    assert status.live_write_build_capability == "QUALIFIED"
+    assert status.b05_real_capital_eligibility == "BLOCKED"
+    assert status.configured_runtime_real_write_gate == "CLOSED"
+    assert status.runtime_real_write_gate == "CLOSED"
+    assert status.violations == (
+        "LIVE_WRITE_GATE_BINDING_INVALID_VALIDATIONERROR",
+    )
+
+
+def test_closed_binding_rejects_post_activation_references(tmp_path: Path) -> None:
+    payload = {
+        **_binding(_settings(tmp_path), gate="CLOSED").model_dump(mode="python"),
+        "machine_authorization_version_ref": "authorization-live-001",
+        "plan_allocation_ref": "allocation-live-001",
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="LIVE_WRITE_GATE_CLOSED_ACTIVATION_REFS_FORBIDDEN",
+    ):
+        LiveWriteGateBinding.model_validate(payload)
+
+
+def test_open_binding_requires_post_activation_references(tmp_path: Path) -> None:
+    payload = _binding(_settings(tmp_path), gate="OPEN").model_dump(mode="python")
+    payload["machine_authorization_version_ref"] = None
+
+    with pytest.raises(
+        ValueError,
+        match="LIVE_WRITE_GATE_OPEN_ACTIVATION_REFS_REQUIRED",
+    ):
+        LiveWriteGateBinding.model_validate(payload)
 
 
 def test_open_binding_requires_database_verification_before_becoming_effective(
@@ -307,7 +357,7 @@ def test_provisioning_accepts_only_the_exact_closed_postcondition(
         "configured_runtime_real_write_gate": "CLOSED",
         "runtime_real_write_gate": "CLOSED",
         "live_write_build_capability": "QUALIFIED",
-        "b05_package_eligibility": "AUTHORIZED",
+        "b05_real_capital_eligibility": "AUTHORIZED",
         "violations": [],
     }
     assert LiveWriteGateBinding.model_validate_json(

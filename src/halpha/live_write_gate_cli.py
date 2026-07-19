@@ -109,15 +109,20 @@ def provision_live_write_gate_binding(
     status = evaluate_live_write_gate(root, settings)
     common_postconditions = (
         status.live_write_build_capability == "QUALIFIED"
-        and status.b05_package_eligibility == "AUTHORIZED"
+        and status.b05_real_capital_eligibility == "AUTHORIZED"
         and status.build_manifest_digest == binding.build_manifest_digest
         and status.user_authorization_ref == binding.user_authorization_ref
+        and status.account_capital_limit_version_ref
+        == binding.account_capital_limit_version_ref
     )
     if binding.runtime_real_write_gate == "OPEN":
         postcondition_valid = (
             common_postconditions
             and status.configured_runtime_real_write_gate == "OPEN"
             and status.runtime_real_write_gate == "CLOSED"
+            and status.machine_authorization_version_ref
+            == binding.machine_authorization_version_ref
+            and status.plan_allocation_ref == binding.plan_allocation_ref
             and set(status.violations)
             == {"LIVE_WRITE_DATABASE_BINDING_NOT_VERIFIED"}
         )
@@ -137,7 +142,7 @@ def provision_live_write_gate_binding(
         ),
         "runtime_real_write_gate": status.runtime_real_write_gate,
         "live_write_build_capability": status.live_write_build_capability,
-        "b05_package_eligibility": status.b05_package_eligibility,
+        "b05_real_capital_eligibility": status.b05_real_capital_eligibility,
         "violations": list(status.violations),
     }
 

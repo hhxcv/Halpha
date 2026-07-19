@@ -4,6 +4,8 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
+import yaml
+
 from halpha.source_identity import source_sha256_digest
 
 from tools.qualification.summarize_b04_evidence import (
@@ -11,8 +13,31 @@ from tools.qualification.summarize_b04_evidence import (
     REQUIRED_SOURCE_SHA256_ARTIFACTS,
     _json_artifact,
     classify_summary,
+    is_current_b04_package,
     windows_soak_contract_error,
 )
+from tools.qualification.real_write_boundary import (
+    EXPECTED_CLOSED_REAL_WRITE_BOUNDARY,
+    assess_closed_real_write_boundary,
+)
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_current_accepted_plan_uses_the_shared_closed_real_write_boundary() -> None:
+    plan = yaml.safe_load(
+        (ROOT / "docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    boundary = assess_closed_real_write_boundary(plan["current_state"])
+
+    assert boundary == {
+        **EXPECTED_CLOSED_REAL_WRITE_BOUNDARY,
+        "status": "QUALIFIED",
+    }
 
 
 def test_summary_requires_every_artifact_test_and_gate() -> None:
@@ -36,6 +61,16 @@ def test_summary_requires_every_artifact_test_and_gate() -> None:
         == "REJECTED"
     )
     assert classify_summary(qualified, pytest_status="QUALIFIED", gates_qualified=False) == "REJECTED"
+
+
+def test_current_b04_package_accepts_the_split_observation_state() -> None:
+    assert is_current_b04_package("IN_PROGRESS") is True
+    assert (
+        is_current_b04_package("IN_PROGRESS_CONSTRUCTION_GATE_AND_LONG_OBSERVATION")
+        is True
+    )
+    assert is_current_b04_package("COMPLETED") is True
+    assert is_current_b04_package("NOT_STARTED") is False
 
 
 def test_manifest_contract_has_all_three_external_gates_and_the_final_summary() -> None:

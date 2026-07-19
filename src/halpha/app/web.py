@@ -113,11 +113,14 @@ class SettingsStatusResponse(FrozenResponse):
     build_manifest_digest: str | None
     build_manifest_violations: list[str]
     live_write_build_capability: str
-    b05_package_eligibility: str
+    b05_real_capital_eligibility: str
     configured_runtime_real_write_gate: str
     runtime_real_write_gate: str
     live_write_gate_violations: list[str]
     user_authorization_ref: str | None
+    account_capital_limit_version_ref: str | None
+    machine_authorization_version_ref: str | None
+    plan_allocation_ref: str | None
     authorized_activation_id: str | None
     construction_package: str
     construction_status: str
@@ -1292,13 +1295,22 @@ def create_app(
             build_manifest_digest=current_manifest["digest"],
             build_manifest_violations=list(current_manifest["violations"]),
             live_write_build_capability=gate_status.live_write_build_capability,
-            b05_package_eligibility=gate_status.b05_package_eligibility,
+            b05_real_capital_eligibility=(
+                gate_status.b05_real_capital_eligibility
+            ),
             configured_runtime_real_write_gate=(
                 gate_status.configured_runtime_real_write_gate
             ),
             runtime_real_write_gate=gate_status.runtime_real_write_gate,
             live_write_gate_violations=list(gate_status.violations),
             user_authorization_ref=gate_status.user_authorization_ref,
+            account_capital_limit_version_ref=(
+                gate_status.account_capital_limit_version_ref
+            ),
+            machine_authorization_version_ref=(
+                gate_status.machine_authorization_version_ref
+            ),
+            plan_allocation_ref=gate_status.plan_allocation_ref,
             authorized_activation_id=gate_status.authorized_activation_id,
             construction_package="B04",
             construction_status="IN_PROGRESS",
