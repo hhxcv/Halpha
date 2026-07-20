@@ -1,0 +1,223 @@
+{
+  "candidate_family": {
+    "0.00010000": {
+      "cost_scenarios": {
+        "base_32bps_round_trip": {
+          "bootstrap_95pct_mean": [
+            -0.007401080983879425,
+            0.008298016304526819
+          ],
+          "component_sums": {
+            "fees": -0.021587689923587283,
+            "funding": 0.0013075576605227146,
+            "gross_price": 0.06332932448715733,
+            "net": 0.007102135100545595,
+            "slippage_effect": -0.03594705712354718
+          },
+          "compounded_net_return": 0.00354316823670775,
+          "max_drawdown": -0.09130088822504101,
+          "mean_holding_hours": 8.0,
+          "mean_net_return": 0.0003945630611414216,
+          "median_net_return": -0.004362534376700684,
+          "standard_deviation": 0.02057997117301508,
+          "trades": 18,
+          "win_rate": 0.3333333333333333,
+          "yearly": {
+            "2026": {
+              "compounded_net_return": 0.00354316823670775,
+              "mean_net_return": 0.0003945630611414216,
+              "median_net_return": -0.004362534376700684,
+              "trades": 18,
+              "win_rate": 0.3333333333333333
+            }
+          }
+        },
+        "favorable_12bps_round_trip": {
+          "bootstrap_95pct_mean": [
+            -0.0054085968022675795,
+            0.010303198478201341
+          ],
+          "component_sums": {
+            "fees": -0.01438798000933673,
+            "funding": 0.0013074019768051178,
+            "gross_price": 0.06332932448715733,
+            "net": 0.043061241666443734,
+            "slippage_effect": -0.007187504788181975
+          },
+          "compounded_net_return": 0.040241351683139026,
+          "max_drawdown": -0.07474983373927402,
+          "mean_holding_hours": 8.0,
+          "mean_net_return": 0.002392291203691319,
+          "median_net_return": -0.002364595014754717,
+          "standard_deviation": 0.0206015702103735,
+          "trades": 18,
+          "win_rate": 0.3888888888888889,
+          "yearly": {
+            "2026": {
+              "compounded_net_return": 0.040241351683139026,
+              "mean_net_return": 0.002392291203691319,
+              "median_net_return": -0.002364595014754717,
+              "trades": 18,
+              "win_rate": 0.3888888888888889
+            }
+          }
+        },
+        "stress_52bps_round_trip": {
+          "bootstrap_95pct_mean": [
+            -0.009393194322638439,
+            0.006284823474543722
+          ],
+          "component_sums": {
+            "fees": -0.021594878661855676,
+            "funding": 0.001307754619553551,
+            "gross_price": 0.06332932448715733,
+            "net": -0.028875876263138225,
+            "slippage_effect": -0.07191807670799344
+          },
+          "compounded_net_return": -0.031947397389198384,
+          "max_drawdown": -0.10757933429486044,
+          "mean_holding_hours": 8.0,
+          "mean_net_return": -0.001604215347952123,
+          "median_net_return": -0.006360261497216012,
+          "standard_deviation": 0.02055597721797417,
+          "trades": 18,
+          "win_rate": 0.3333333333333333,
+          "yearly": {
+            "2026": {
+              "compounded_net_return": -0.031947397389198384,
+              "mean_net_return": -0.001604215347952123,
+              "median_net_return": -0.006360261497216012,
+              "trades": 18,
+              "win_rate": 0.3333333333333333
+            }
+          }
+        }
+      },
+      "eligible_trades": 18,
+      "entry_rule": "Enter at the open of the one-minute bar beginning one full minute after fundingTime",
+      "exit_rule": "Exit at the open of the one-minute bar beginning one full minute after the next observed settlement",
+      "long_trades": 6,
+      "next_funding_same_sign_rate": 1.0,
+      "short_trades": 12,
+      "signal_rule": "At observed settlement choose SHORT if current funding > 0, LONG if current funding < 0",
+      "threshold_absolute_funding_rate": 0.0001
+    }
+  },
+  "comparison_baselines": {
+    "CURRENT_FORMAL_STRATEGY_REPLAY_PROXY": {
+      "directions": {
+        "LONG": {
+          "bootstrap_95pct_mean": [
+            -0.0042930065561681535,
+            -0.003107288597170286
+          ],
+          "component_sums": {
+            "fees": -0.5146680053776628,
+            "funding": -0.0008622356156218127,
+            "gross_price": -1.0779910372288617,
+            "net": -1.593521278222146,
+            "slippage_effect": 0.0
+          },
+          "compounded_net_return": -0.7993357213820569,
+          "exit_reason_counts": {
+            "STOP_CONSERVATIVE_INTRABAR": 366,
+            "TAKE_PROFIT_2": 57,
+            "TIME_EXIT": 6
+          },
+          "max_drawdown": -0.7993357213820569,
+          "mean_holding_hours": 2.656993006993007,
+          "mean_net_return": -0.003714501814037638,
+          "median_net_return": -0.004674218563817589,
+          "standard_deviation": 0.006728850318256299,
+          "trades": 429,
+          "win_rate": 0.1561771561771562,
+          "yearly": {
+            "2026": {
+              "compounded_net_return": -0.7993357213820569,
+              "mean_net_return": -0.003714501814037638,
+              "median_net_return": -0.004674218563817589,
+              "trades": 429,
+              "win_rate": 0.1561771561771562
+            }
+          }
+        },
+        "SHORT": {
+          "bootstrap_95pct_mean": [
+            -0.004228702087597033,
+            -0.002923746063001517
+          ],
+          "component_sums": {
+            "fees": -0.5713159102115656,
+            "funding": 0.001019160264440127,
+            "gross_price": -1.1451836859437523,
+            "net": -1.715480435890879,
+            "slippage_effect": 0.0
+          },
+          "compounded_net_return": -0.8229534929598141,
+          "exit_reason_counts": {
+            "STOP_CONSERVATIVE_INTRABAR": 397,
+            "TAKE_PROFIT_2": 74,
+            "TIME_EXIT": 5
+          },
+          "max_drawdown": -0.8248332026285762,
+          "mean_holding_hours": 2.212640056022409,
+          "mean_net_return": -0.0036039504955690735,
+          "median_net_return": -0.005510495242821076,
+          "standard_deviation": 0.007343818947116508,
+          "trades": 476,
+          "win_rate": 0.1722689075630252,
+          "yearly": {
+            "2026": {
+              "compounded_net_return": -0.8229534929598141,
+              "mean_net_return": -0.0036039504955690735,
+              "median_net_return": -0.005510495242821076,
+              "trades": 476,
+              "win_rate": 0.1722689075630252
+            }
+          }
+        }
+      },
+      "identity": {
+        "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+        "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+        "strategy_version": "1.0.0"
+      },
+      "parameters": {
+        "channel_lookback_15m": 20,
+        "confirmation_bars_1m": 2,
+        "cost_scenario": "base_32bps_round_trip",
+        "initial_stop_atr_multiple": 1.5,
+        "max_entry_extension_atr": 0.5,
+        "max_hold_bars_15m": 96,
+        "take_profit_1_fraction": 0.5,
+        "take_profit_1_r": 1.5,
+        "take_profit_2_r": 3.0
+      },
+      "proxy_limits": [
+        "Repeated independent activations are simulated because L4 does not define a historical activation schedule.",
+        "LONG and SHORT are replayed separately; no product plan chooses direction dynamically.",
+        "ATR uses a documented EMA proxy (alpha=2/(14+1)); NautilusTrader 1.230.0 is not imported into the independent study.",
+        "Entry occurs at the next 1m open after two closes confirm the 20x15m channel; same-minute stop/TP ambiguity is resolved stop-first.",
+        "Order-book spread, queueing, partial fills, liquidation, margin and latency beyond the 10 bps slippage proxy are unmodeled."
+      ]
+    },
+    "NO_TRADE": {
+      "net_return": 0.0
+    }
+  },
+  "data_identity": {
+    "funding_snapshot_sha256": "809499ba8e9162756b2ff7ab06dd5efb962f6b23cad3fd83e2f448a2cf7c70dd",
+    "instrument": "BTCUSDT-PERP",
+    "source_manifest": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\btcusdt-next-funding-carry\\source_manifest.json",
+    "source_manifest_sha256": "3174c0670f78ebc51b3a2bcf5776e3ea28d5a4d10a49484a1a54057d6481d435",
+    "timezone": "UTC",
+    "venue": "BINANCE_USDM"
+  },
+  "generated_at": "2026-07-19T23:46:44Z",
+  "known_exposure": "All metrics in this phase become viewed evidence when this file is generated.",
+  "period_end_exclusive": "2026-07-01T00:00:00Z",
+  "period_start": "2026-01-01T00:00:00Z",
+  "phase": "confirmation",
+  "question": "Does one-leg next-settlement funding carry on BTCUSDT-PERP survive observable timing and realistic costs?",
+  "schema_version": 1
+}

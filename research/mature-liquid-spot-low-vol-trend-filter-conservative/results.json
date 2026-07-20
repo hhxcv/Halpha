@@ -1,0 +1,31 @@
+{
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "reason": "The pre-registered development drawdown improvement versus same-gross unfiltered low volatility was 0.017087940531117613, below the required 0.02; sequential holdouts remained unopened.",
+  "development": {
+    "data_quality": "PASS",
+    "base_total_return": 0.9587813829981542,
+    "stress_total_return": 0.9518624412098962,
+    "max_drawdown": -0.21266408002393367,
+    "unfiltered_same_gross_max_drawdown": -0.22975202055505128,
+    "equal_weight_same_gross_max_drawdown": -0.339667577786843,
+    "drawdown_improvement_vs_unfiltered": 0.017087940531117613,
+    "lookback_60_base_total_return": 0.8565112061446267,
+    "lookback_180_base_total_return": 0.777984747510559,
+    "turnover": 3.5366327344070587,
+    "content_digest": "9543d3d8a5f8ae91503d80bd0becb35ef37d08cb1d05dfec95a3fb7d8d7fbc21"
+  },
+  "development_gate": {
+    "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP",
+    "holdout_authorized": false,
+    "content_digest": "95679446d621944becd988c18bed2f3ca97eddb2b2431e818e674f43ec438e12"
+  },
+  "evaluation": "NOT_ACQUIRED_OR_OPENED",
+  "confirmation": "NOT_ACQUIRED_OR_OPENED",
+  "reproduction": {
+    "directory": "D:/projects/Codex/CodexHome/research-data/halpha/mature-liquid-spot-low-vol-trend-filter-conservative-repro",
+    "files": 2,
+    "bytes": 22759,
+    "content_digests_match": true
+  },
+  "product_effects": "NONE"
+}

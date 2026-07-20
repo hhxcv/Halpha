@@ -1,0 +1,1108 @@
+{
+  "archives": [
+    {
+      "bytes": 5792,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-01.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-01.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-01",
+      "sha256": "935eab2221d7a9a099074436b512b57afed44626863f32a55907e1bbbdc27a5e",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-01.zip"
+    },
+    {
+      "bytes": 5053,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-01.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-01",
+      "sha256": "8d614eda7a9fc9c2d64dae4f85173d97d73dd552c34d2596327258dbb8b82fdd",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-01.zip"
+    },
+    {
+      "bytes": 5573,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-02.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-02.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-02",
+      "sha256": "25110933fb168acb88ca24154703ffc9e3f7aa0c6404c3a4303331cac0e279da",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-02.zip"
+    },
+    {
+      "bytes": 4901,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-02.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-02",
+      "sha256": "f56d25a7d842fd0b76a2bfdea5b1ce3ce3ca3b219b3bda7c730edb68738e97fb",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-02.zip"
+    },
+    {
+      "bytes": 6076,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-03.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-03.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-03",
+      "sha256": "db8f97353ffe3648042d336fc9cbccab6645433e69119611cbafd66906da40c8",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-03.zip"
+    },
+    {
+      "bytes": 5420,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-03.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-03",
+      "sha256": "7a30ff724ccc738e6adda8a9554c99ed57d9b8a1e02864100a3d59a83b39faf7",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-03.zip"
+    },
+    {
+      "bytes": 5967,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-04.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-04.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-04",
+      "sha256": "041f4e7232ffae75ad164075ac5cb3c75985fd977a3daefc151c905b106a1eec",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-04.zip"
+    },
+    {
+      "bytes": 5355,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-04.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-04",
+      "sha256": "225ee74c59e689faf8430b255a4286ef17dd2f02aa3d78997d55ff54a7f76efb",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-04.zip"
+    },
+    {
+      "bytes": 5877,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-05.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-05.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-05",
+      "sha256": "96de77af8aec833de495fc8bdb3664874921d32c5a6a6eb29bf2b0d2a0934dde",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-05.zip"
+    },
+    {
+      "bytes": 5404,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-05.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-05",
+      "sha256": "64eb7c03273afbf75afef179ce58313bbbbcf6a56cce1d1354e5a923feaa2b0c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-05.zip"
+    },
+    {
+      "bytes": 5597,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-06.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-06.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-06",
+      "sha256": "6355eb1d4c13f6ce3925b4e0ce47f170f29e2ebbe11f2cb2be34f97b236599a0",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-06.zip"
+    },
+    {
+      "bytes": 5170,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-06.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-06",
+      "sha256": "0a4a483607d2c2288fff2a2c479ca20e32a68288efe72d6bf7253c02aa991267",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-06.zip"
+    },
+    {
+      "bytes": 5672,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-07.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-07.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-07",
+      "sha256": "bda83864b57b0d8e42a465bb3a13fd624504a704634c861a33a5ef89fd955dfb",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-07.zip"
+    },
+    {
+      "bytes": 5230,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-07.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-07",
+      "sha256": "7f46f25f2c0900341454dfaf107c155f95a74edb4950d043b29ecdfed11c996c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-07.zip"
+    },
+    {
+      "bytes": 5639,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-08.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-08.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-08",
+      "sha256": "160c35a6b47cdc8809802be91675400382f888957f52d26f6d7b7b7f5d47bcf0",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-08.zip"
+    },
+    {
+      "bytes": 5230,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-08.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-08",
+      "sha256": "0e2b7898ba716dc0754772659037c37abdc3b44a56977a55a2138ec29ec2359c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-08.zip"
+    },
+    {
+      "bytes": 5059,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-09.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-09.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-09",
+      "sha256": "fe2326c293ec2375fc3ca320b3a1898443b51f2623b4da05d5721e205fdecbbf",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-09.zip"
+    },
+    {
+      "bytes": 5033,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-09.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-09",
+      "sha256": "a590698d7e57250567715f0c668d954bf2207a7fea7054fc089b0256aba63d9a",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-09.zip"
+    },
+    {
+      "bytes": 5165,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-10.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-10.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-10",
+      "sha256": "124f5da6f5b931e82ad376edf56b715ec4901d49fa64572df6f54a9e65d9a68e",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-10.zip"
+    },
+    {
+      "bytes": 5184,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-10.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-10",
+      "sha256": "78ba62baa557783d0a118ebaf08ab6cb427b286bdd547e14090263357a6921ae",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-10.zip"
+    },
+    {
+      "bytes": 5105,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-11.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-11.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-11",
+      "sha256": "6f308c5316c9095c2d0bedf77106a770768494f4e0dd37319f786c54b7a5634c",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-11.zip"
+    },
+    {
+      "bytes": 5053,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-11.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-11",
+      "sha256": "83a718413fe9f118e9071ee20aae46d63a403fec98bfa50d2a9dd304c9049fb8",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-11.zip"
+    },
+    {
+      "bytes": 5165,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2021-12.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-12.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2021-12",
+      "sha256": "935ff50959706f918875f848d5fda55184cea6b2d5a476cc6abaa1dc3582234e",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-12.zip"
+    },
+    {
+      "bytes": 5140,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2021-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-12.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2021-12",
+      "sha256": "efe793bd72353798f1efa36b8889aaedbb586e42a6fcc18ef08996142e893175",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2021-12.zip"
+    },
+    {
+      "bytes": 5157,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-01.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-01.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-01",
+      "sha256": "0c3c98a8b72e45825dce08c1ce517298761e3719de13f682035d4124077fda82",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-01.zip"
+    },
+    {
+      "bytes": 5271,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-01.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-01",
+      "sha256": "87272ac8846b79eb71f92fb0b8f0bffc45490e4e846848180dcc883ede6e5a69",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-01.zip"
+    },
+    {
+      "bytes": 4643,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-02.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-02.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-02",
+      "sha256": "7f567b8a0544d0d209bb8d47eb37ef517773dcbdcf9d59255b55c2be564746bc",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-02.zip"
+    },
+    {
+      "bytes": 4778,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-02.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-02",
+      "sha256": "f7287c2dcc9f0bd32393c3feb74311a9de574da983656cc473ec5247cfdf99af",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-02.zip"
+    },
+    {
+      "bytes": 5074,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-03.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-03.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-03",
+      "sha256": "e6d11b3dcf09c33dda8d23f479d349160fe82a022bb6d51fbcc018f734ca09f0",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-03.zip"
+    },
+    {
+      "bytes": 5204,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-03.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-03",
+      "sha256": "7abfa52502c9a9ace0a20db4c2e40ee0e44d467db5cf232e19d7c7b25ba81a08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-03.zip"
+    },
+    {
+      "bytes": 4920,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-04.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-04.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-04",
+      "sha256": "399c291eafcd0836d89211f77506d36ddaa902b2fba239d0a7adfa489d0c2496",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-04.zip"
+    },
+    {
+      "bytes": 5004,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-04.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-04",
+      "sha256": "c5c8fc0941bd6eafe914d237ce542603a2a32aa79fa069761861abd955800f5e",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-04.zip"
+    },
+    {
+      "bytes": 5131,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-05.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-05.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-05",
+      "sha256": "113cfa7f6e5e6b61f4b7f31670bc84ad4540ec767ec536dab2b06a4508486848",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-05.zip"
+    },
+    {
+      "bytes": 5249,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-05.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-05",
+      "sha256": "5163a1e8c883c4546b8e1bc2add9965d60b3f483bf6317a2fced0d8ed69d3fee",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-05.zip"
+    },
+    {
+      "bytes": 4921,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-06.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-06.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-06",
+      "sha256": "cb99ca6023ad42d1dbbe21d90d7ff158ebfc05ded5a1486dd78aadfc729bc0f4",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-06.zip"
+    },
+    {
+      "bytes": 5106,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-06.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-06",
+      "sha256": "f5ab763f759025fcfb4de546895903d15f77fbf5a0dd595781c1b16cbf74505c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-06.zip"
+    },
+    {
+      "bytes": 4987,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-07.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-07.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-07",
+      "sha256": "d29bbfd07e57753d672339b9cc19769aa52fb496d48ce2d1c7c0bb182552a923",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-07.zip"
+    },
+    {
+      "bytes": 5214,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-07.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-07",
+      "sha256": "681e61511f488a5a8f42fa5ab45b5d298c1ae55277899afa745bf57249e400c5",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-07.zip"
+    },
+    {
+      "bytes": 4995,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-08.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-08.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-08",
+      "sha256": "3fba00cc26cce7347f74eeb308c36958c8991d881ea0a07958a5fdf6985c2be8",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-08.zip"
+    },
+    {
+      "bytes": 5238,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-08.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-08",
+      "sha256": "623030571267ec43363c5a0c6058cd8e5cf9614bc68359380d40661ffe501167",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-08.zip"
+    },
+    {
+      "bytes": 4766,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-09.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-09.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-09",
+      "sha256": "fd57c5f49201ae1b160e1e57a2351223517b3130c92abea4100c0760ca943ad4",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-09.zip"
+    },
+    {
+      "bytes": 5000,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-09.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-09",
+      "sha256": "aa4a221bd462815540d41947f1de884ab12962d5db363e1d2a827c477673fd3b",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-09.zip"
+    },
+    {
+      "bytes": 4910,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-10.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-10.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-10",
+      "sha256": "cfc10b5a2b56a2431f4d6725b6c089063da9718a236eb060c432f210fec4d668",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-10.zip"
+    },
+    {
+      "bytes": 5110,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-10.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-10",
+      "sha256": "cb64ac03e594ac9911600ea2394b428a13269fdb044cd21c87ac50dc986e518b",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-10.zip"
+    },
+    {
+      "bytes": 4903,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-11.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-11.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-11",
+      "sha256": "7ee257a26b5ac8339921b016ccba2279b055cc97a4a79704281c5b1db6f610e3",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-11.zip"
+    },
+    {
+      "bytes": 5133,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-11.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-11",
+      "sha256": "653579eaead87c65f73180e919edfa812ef6cdb9a278be138b98b3fbb0afb452",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-11.zip"
+    },
+    {
+      "bytes": 4901,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2022-12.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-12.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2022-12",
+      "sha256": "da02cb1770796df4973dacdccc2464af4baba8d3c6c2255ce8b30a92422dc3f4",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-12.zip"
+    },
+    {
+      "bytes": 5168,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2022-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-12.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2022-12",
+      "sha256": "9b60608b35652254a9a105e002ee51deb160d4e3d4cd5fe9b384891d81745946",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2022-12.zip"
+    },
+    {
+      "bytes": 4961,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-01.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-01.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-01",
+      "sha256": "61d001dc08edfedbd992e71486aefbde9e333d3988b629bf0f5c8c536e25cf50",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-01.zip"
+    },
+    {
+      "bytes": 5191,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-01.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-01",
+      "sha256": "1fc75cfe192bd88191a1a4e78336e9048395d8b9be0d9a26972b272ef497c7e9",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-01.zip"
+    },
+    {
+      "bytes": 4486,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-02.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-02.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-02",
+      "sha256": "26c4f701955a99cb5a72d4a544edc4ff0a47b275568cb211e404cce6c076ebac",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-02.zip"
+    },
+    {
+      "bytes": 4702,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-02.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-02",
+      "sha256": "9dbfbfada24c7f0512d1a0b9da4acd22b87362f14755fd80eb0237309e94848b",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-02.zip"
+    },
+    {
+      "bytes": 4989,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-03.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-03.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-03",
+      "sha256": "8678314f4d1f5498ce0876904de5c9b936cb127e6300da567db55c4945e26975",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-03.zip"
+    },
+    {
+      "bytes": 5174,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-03.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-03",
+      "sha256": "e75ea4907de2decf569b1c643e64ef648128bb182abc8b56125a861e2fe3bb1c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-03.zip"
+    },
+    {
+      "bytes": 4773,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-04.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-04.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-04",
+      "sha256": "50e5ec547fb30caf28009874b79765b6519e7f2af3781b98d2e6e4b038989298",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-04.zip"
+    },
+    {
+      "bytes": 4930,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-04.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-04",
+      "sha256": "bd6f0aaa0cbcb2898fdabe944451ee4f733876762c965f461385f2ff4ccda651",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-04.zip"
+    },
+    {
+      "bytes": 4878,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-05.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-05.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-05",
+      "sha256": "08bd774872eb18388e7fe2770a6c5f1b242f057a530faddaf5306d33acbaf8ec",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-05.zip"
+    },
+    {
+      "bytes": 5019,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-05.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-05",
+      "sha256": "1cffd0db8bc1d0d24a027d5af3957e04704f7b4ce091c11abe991cdc2402e1ee",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-05.zip"
+    },
+    {
+      "bytes": 4851,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-06.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-06.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-06",
+      "sha256": "4a7b7de86ab8d11fe558af206f41e7d3384f61e986ac2cbf88af6f8ea2dc99e4",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-06.zip"
+    },
+    {
+      "bytes": 5044,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-06.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-06",
+      "sha256": "ac128f775a3ce51ee766a1e87f0492f9981143daad6990d9bc9e9d530ff7b207",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-06.zip"
+    },
+    {
+      "bytes": 4916,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-07.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-07.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-07",
+      "sha256": "790c005f40e8af99eaf3bad56b424c185b9d9afc749dae455bad31beed9b133f",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-07.zip"
+    },
+    {
+      "bytes": 5057,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-07.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-07",
+      "sha256": "8ea38188c25e27bfe117c52e3722a05cf21a3ce396871cf4cf9857008722c03e",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-07.zip"
+    },
+    {
+      "bytes": 4885,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-08.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-08.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-08",
+      "sha256": "4d33231ac7d336e29b7e04b72a54f5afb0a4b56aa496d61d41d48466ce185997",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-08.zip"
+    },
+    {
+      "bytes": 5004,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-08.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-08",
+      "sha256": "62c9dd6f535d7eb06f6a0ff4d97747e86a93a774f8106972353eb7ecc2b5add1",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-08.zip"
+    },
+    {
+      "bytes": 4646,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-09.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-09.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-09",
+      "sha256": "d0e395a9b2d55fd46c8754b2404e510f80f52ba4eca51695bc62233d78b15c8b",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-09.zip"
+    },
+    {
+      "bytes": 4762,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-09.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-09",
+      "sha256": "4ea66e15663a20173af3509d8bc18e241553155722d91187d70652ee36d6f210",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-09.zip"
+    },
+    {
+      "bytes": 4879,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-10.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-10.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-10",
+      "sha256": "a0491b4d03f605e858b33c77c68820b2d67026909659d95a6a9c0ed0738342ec",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-10.zip"
+    },
+    {
+      "bytes": 4957,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-10.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-10",
+      "sha256": "fd651754bcf8aabe1e56f63c07e4bc02d28feb4ca3837e5a64df881045ada2c5",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-10.zip"
+    },
+    {
+      "bytes": 4854,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-11.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-11.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-11",
+      "sha256": "7e6f0333b183c8de477cf4e811f2ce0f2fd41679d59f3150a8c865c7dea0876d",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-11.zip"
+    },
+    {
+      "bytes": 4912,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-11.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-11",
+      "sha256": "72aa7f247cf905e6883f09e2fafb17b4ddeb76d9f90c7c48a1fa19d88f28ccb8",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-11.zip"
+    },
+    {
+      "bytes": 5058,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2023-12.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-12.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2023-12",
+      "sha256": "9441326168c2ebc88f20ebd0643dfc230ab7cd19486875c6608a9a8fa27f1033",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-12.zip"
+    },
+    {
+      "bytes": 5137,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2023-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-12.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2023-12",
+      "sha256": "865d872dbe7d6c1e456bb3acce4dd1f00914839f8b1d05e74c9354598be07a45",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2023-12.zip"
+    },
+    {
+      "bytes": 5031,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-01.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-01.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-01",
+      "sha256": "b2baf0aa4e2070d300e3b90aa9ec55cbff96dbe41953a71be98c2dd359c1c9d2",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-01.zip"
+    },
+    {
+      "bytes": 5119,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-01.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-01",
+      "sha256": "f876cc415dd38743bac593827df6140f1ccea9ad328bab6080e8b2a0f4d1b1ee",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-01.zip"
+    },
+    {
+      "bytes": 4739,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-02.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-02.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-02",
+      "sha256": "b4cb0f0884c1deaa141b4e695b72679cf6c96d817cd27d11f739e24c3a7ba209",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-02.zip"
+    },
+    {
+      "bytes": 4819,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-02.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-02",
+      "sha256": "26788e3ec0f4b5a911494c005d910f020a0e430634fc0fcc1bc7afb2872f0354",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-02.zip"
+    },
+    {
+      "bytes": 5213,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-03.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-03.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-03",
+      "sha256": "f760ca61fd80e52ca25a2cbd200182d7eba30083e7274de89e79eac5b8d5b4f6",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-03.zip"
+    },
+    {
+      "bytes": 5361,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-03.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-03",
+      "sha256": "d9994c8bc443e4ed7ebb54d6bea19e54bdf398c131ca8472569f357daf435ed4",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-03.zip"
+    },
+    {
+      "bytes": 4981,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-04.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-04.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-04",
+      "sha256": "d6e2b5f27fdeaf6df1672d44f07ecc2f1c0c0ba7a4d6786e1f9c90186b251727",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-04.zip"
+    },
+    {
+      "bytes": 5055,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-04.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-04",
+      "sha256": "53bf097dd3866c3687495db7f03cfa42de573eff18709986d529317f33047887",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-04.zip"
+    },
+    {
+      "bytes": 5009,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-05.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-05.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-05",
+      "sha256": "876db24b802265c243d811d1c8c89871a12a144179bbef6763be2947dc0798df",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-05.zip"
+    },
+    {
+      "bytes": 5127,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-05.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-05",
+      "sha256": "30b6b87d654036e54370be5021082c9194a5cac1cbe9efa35089d97f983a4088",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-05.zip"
+    },
+    {
+      "bytes": 4881,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-06.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-06.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-06",
+      "sha256": "5dd18aa44c493f4677462b12a37360e600c3d1ae7f453970450b77b7cf3729a5",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-06.zip"
+    },
+    {
+      "bytes": 5014,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-06.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-06",
+      "sha256": "7d4094a17d74e176f147727905c7450017f94506cfd94b0cbeb2317b39d4526a",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-06.zip"
+    },
+    {
+      "bytes": 5024,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-07.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-07.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-07",
+      "sha256": "7efd02f1faf3afae8f276744e09fe8f29fe3a4311c2a47fe0e2ff0568f0bd754",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-07.zip"
+    },
+    {
+      "bytes": 5129,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-07.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-07",
+      "sha256": "a692351e2c0205d90dbcf20fabdfe3d01453730f164edb1b6a0253d38527f0d1",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-07.zip"
+    },
+    {
+      "bytes": 5034,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-08.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-08.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-08",
+      "sha256": "01f4e7f108cf65145c2f6b6bc64e51e8cf635a9295521d2635710090a7d8f2f5",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-08.zip"
+    },
+    {
+      "bytes": 5157,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-08.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-08",
+      "sha256": "97ffd8356f24c715976ae4c72a2cd9d4c94b9dd9e50c7570fefa7bc7f0db0628",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-08.zip"
+    },
+    {
+      "bytes": 4873,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-09.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-09.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-09",
+      "sha256": "6f60592d1d9408ffef8024c914576604525f789ef4fb5f073ed27aa9c7974cdd",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-09.zip"
+    },
+    {
+      "bytes": 4988,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-09.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-09",
+      "sha256": "2292ceca9384d44d838592d25d8ab50d08fa1634f3c393bf107f8c44782fc19d",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-09.zip"
+    },
+    {
+      "bytes": 5024,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-10.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-10.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-10",
+      "sha256": "eb0e9cf4ae9c35e9d1e6a36f5f098a9912d28ec40d9aff5478caf3fdf86dc4af",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-10.zip"
+    },
+    {
+      "bytes": 5097,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-10.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-10",
+      "sha256": "dd2dffafd7513f77cbef891b065c255ffd452c5a974208f2a8addff282e3f4a3",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-10.zip"
+    },
+    {
+      "bytes": 5234,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-11.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-11.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-11",
+      "sha256": "635d229c5eee20ffb2bdf30bb6a795d0736aab4aa53f17c39aa09e58daadb414",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-11.zip"
+    },
+    {
+      "bytes": 5067,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-11.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-11",
+      "sha256": "811d8bb24751566bff572332f35f1d85f3392428fb68ed1990ccf53e284f39da",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-11.zip"
+    },
+    {
+      "bytes": 5456,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2024-12.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-12.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2024-12",
+      "sha256": "29bfe250c80b934b21c8ef0f040c5c8e4fae3b55348a584c769c4411345b3971",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-12.zip"
+    },
+    {
+      "bytes": 5278,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2024-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-12.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2024-12",
+      "sha256": "49e641b07869a8cfb8b9c0e609e99c08ff12df030e507b60dbaa450fd0a6e249",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2024-12.zip"
+    },
+    {
+      "bytes": 5392,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-01.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-01.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-01",
+      "sha256": "9fd706813067f2835f0d238d0c2cd23fe82e0a203502aa0482c98fff777310ff",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-01.zip"
+    },
+    {
+      "bytes": 5131,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-01.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-01",
+      "sha256": "f4cdf4be0bc5aaa5413cec73630fc55fd5aa601ed099e843be6d289c16c96831",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-01.zip"
+    },
+    {
+      "bytes": 4994,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-02.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-02.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-02",
+      "sha256": "11383de75d94e264257638d8d14dd4e85688ef4e04119008d166053208acab0c",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-02.zip"
+    },
+    {
+      "bytes": 4736,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-02.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-02",
+      "sha256": "30c040aa1fcf298bcea798ef32a4585cbf0c88dcc8ce93909fe4eb370ce5eb8e",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-02.zip"
+    },
+    {
+      "bytes": 5432,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-03.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-03.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-03",
+      "sha256": "7b274f0abc9284685d9d098efa35261fe8db759fad4953aa998ce8b1057df91f",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-03.zip"
+    },
+    {
+      "bytes": 5171,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-03.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-03",
+      "sha256": "8e13bd3df61c88078f8e0b0e94e7d53ab66be4ad72f7a125ad5815aade2ebb8b",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-03.zip"
+    },
+    {
+      "bytes": 5189,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-04.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-04.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-04",
+      "sha256": "00fbdca320e17f3b392305638995bdbd20102fb6cb4f4734ac70c97319ba810a",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-04.zip"
+    },
+    {
+      "bytes": 4973,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-04.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-04",
+      "sha256": "9d0a45515af168de60fc254af4b00e88b5375cf5154cfb06b9832f9a5a932084",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-04.zip"
+    },
+    {
+      "bytes": 5393,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-05.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-05.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-05",
+      "sha256": "deec08dae10c8ca2ee8ca8da668a41f9437e1aca2ac78f101c5fe937db3a047f",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-05.zip"
+    },
+    {
+      "bytes": 5107,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-05.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-05",
+      "sha256": "587e4cd366eccb8563e219eaf48a4abc0f3748e87ea63d93bd37e199aaf11b71",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-05.zip"
+    },
+    {
+      "bytes": 5135,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-06.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-06.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-06",
+      "sha256": "10974d5cc4f93fb37cefc1a4ad5e745e17c72f2976faf7b77377d53255975140",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-06.zip"
+    },
+    {
+      "bytes": 4883,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-06.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-06",
+      "sha256": "5a2dfeec1e25ad630b742e122dc4507a9ecb71e9aeab376f3632b8c086a30500",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-06.zip"
+    },
+    {
+      "bytes": 5408,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-07.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-07.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-07",
+      "sha256": "03b8b1ea72f94693cdfbd56a28dbc8017eae436c151b50a5f3c8f3bb3c738d2b",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-07.zip"
+    },
+    {
+      "bytes": 5133,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-07.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-07",
+      "sha256": "2b77427b9d34e7910838afc5fd3b24bb8814970d721240adfcc719b722b3602d",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-07.zip"
+    },
+    {
+      "bytes": 5400,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-08.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-08.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-08",
+      "sha256": "d0d7d2c015157f71c9de0e0ac57ea64aace9921212de7ec6fdc6788d1baa50d6",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-08.zip"
+    },
+    {
+      "bytes": 5182,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-08.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-08",
+      "sha256": "f434941e2fa1daca08057d7ad06cc86f2f7fd1b1e921e39f35c2f4876b99919c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-08.zip"
+    },
+    {
+      "bytes": 5356,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-09.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-09.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-09",
+      "sha256": "149776ef324716cc318d25c7516080dafa188dada07192bbde91c9680cc41945",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-09.zip"
+    },
+    {
+      "bytes": 5063,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-09.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-09",
+      "sha256": "8efcff0a2c3391f0811ee831b2f15744d49bc8f9267f69254700c7d18b6741dc",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-09.zip"
+    },
+    {
+      "bytes": 5720,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-10.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-10.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-10",
+      "sha256": "294f7e245fa17eb5fd3bd147812808bb8c9f3d136301c8b3683217dafe7f5cb5",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-10.zip"
+    },
+    {
+      "bytes": 5388,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-10.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-10",
+      "sha256": "264ec9a21f70b94c1849cc989e87f0733404b03786bf11d7b7419db57a257844",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-10.zip"
+    },
+    {
+      "bytes": 5340,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-11.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-11.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-11",
+      "sha256": "9e41425398b3a56c9f71410a8995e4d93c1f47268622ef3e1f7469707039175e",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-11.zip"
+    },
+    {
+      "bytes": 5100,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-11.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-11",
+      "sha256": "92c1e6dc6c4cf4eeeac4cfc503f6dace32df387eef420687cf7e5440d4fccc79",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-11.zip"
+    },
+    {
+      "bytes": 5373,
+      "cache_relative_path": "BNBUSDT/spot/BNBUSDT-8h-2025-12.zip",
+      "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-12.zip.CHECKSUM",
+      "market": "spot",
+      "month": "2025-12",
+      "sha256": "ae3ce4c76cf2afe4312aa83e16882e2d4172f59b0baf260a4a9af32986cb2781",
+      "url": "https://data.binance.vision/data/spot/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-12.zip"
+    },
+    {
+      "bytes": 5140,
+      "cache_relative_path": "BNBUSDT/futures/BNBUSDT-8h-2025-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-12.zip.CHECKSUM",
+      "market": "futures",
+      "month": "2025-12",
+      "sha256": "1f1c3af71202550b309a0a43c745cb6326b33ad85ef8e538c4700f86262b753c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BNBUSDT/8h/BNBUSDT-8h-2025-12.zip"
+    }
+  ],
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\binance-positive-funding-cash-carry",
+  "content_identity": "67ac3acc01ea440be7635b98e1e8731cea16d547a0aff11abaf13ce518f5f09b",
+  "funding_snapshot": {
+    "bytes": 434318,
+    "cache_relative_path": "BNBUSDT/funding-2021-01_2025-12.json",
+    "pages": 6,
+    "records": 5478,
+    "request_security": "NONE_PUBLIC_MARKET_DATA",
+    "requested_end_exclusive_ms": 1767225600000,
+    "requested_start_ms": 1609459200000,
+    "sha256": "c844bb187a13505e4fbb9604337eb8f2ab2b150de46e27cf52eeb0d978abb42e",
+    "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+  },
+  "generated_at": "2026-07-20T03:45:50Z",
+  "interval": "8h",
+  "perpetual_contract": "BNBUSDT USD-M linear perpetual",
+  "requested_end_month": "2025-12",
+  "requested_start_month": "2021-01",
+  "schema_version": 1,
+  "spot_contract": "BNBUSDT spot",
+  "spot_timestamp_rule": "Normalize values above 1e14 from microseconds to milliseconds",
+  "symbol": "BNBUSDT",
+  "timezone": "UTC",
+  "venue": "BINANCE"
+}

@@ -1,0 +1,140 @@
+{
+  "artifact_hashes": {
+    "confirmation": "2f4181c619da780a268eeb9bbe3facee788b17211476a286c3d7e441097d56c3",
+    "development": "3eb313a5ee9559c582433119b592629203963970118b595aaa1bd1ac0e337081",
+    "evaluation": "b13b7b5badaca9b12dd3845886f0aed20be7424334d8c237d6c00087601e5538",
+    "selection": "9d307ee1410128c0018eff6520b75e00012438211714507f34a457b72038eda4"
+  },
+  "cannot_infer": [
+    "Future alpha or live profitability",
+    "Spot-perpetual delta-neutral funding arbitrage performance",
+    "Capacity, liquidation safety, order-book fills or account-specific fee rates",
+    "Authorization to add a product strategy or change L4, capital or real-account state"
+  ],
+  "conclusion": "DOES_NOT_SUPPORT",
+  "generated_at": "2026-07-19T23:46:46Z",
+  "phase_metrics_base_cost": {
+    "confirmation": {
+      "bootstrap_95pct_mean": [
+        -0.007401080983879425,
+        0.008298016304526819
+      ],
+      "component_sums": {
+        "fees": -0.021587689923587283,
+        "funding": 0.0013075576605227146,
+        "gross_price": 0.06332932448715733,
+        "net": 0.007102135100545595,
+        "slippage_effect": -0.03594705712354718
+      },
+      "compounded_net_return": 0.00354316823670775,
+      "max_drawdown": -0.09130088822504101,
+      "mean_holding_hours": 8.0,
+      "mean_net_return": 0.0003945630611414216,
+      "median_net_return": -0.004362534376700684,
+      "standard_deviation": 0.02057997117301508,
+      "trades": 18,
+      "win_rate": 0.3333333333333333,
+      "yearly": {
+        "2026": {
+          "compounded_net_return": 0.00354316823670775,
+          "mean_net_return": 0.0003945630611414216,
+          "median_net_return": -0.004362534376700684,
+          "trades": 18,
+          "win_rate": 0.3333333333333333
+        }
+      }
+    },
+    "development": {
+      "bootstrap_95pct_mean": [
+        -0.0033718201410234397,
+        -0.0014517408790944686
+      ],
+      "component_sums": {
+        "fees": -2.217184790726781,
+        "funding": 0.3989665709236118,
+        "gross_price": 1.0331833434040507,
+        "net": -4.480265216624527,
+        "slippage_effect": -3.69523034022542
+      },
+      "compounded_net_return": -0.9927303651207854,
+      "max_drawdown": -0.9927303651207854,
+      "mean_holding_hours": 8.0,
+      "mean_net_return": -0.0024270125767196834,
+      "median_net_return": -0.002502012332015681,
+      "standard_deviation": 0.0217339981223527,
+      "trades": 1846,
+      "win_rate": 0.4057421451787649,
+      "yearly": {
+        "2021": {
+          "compounded_net_return": -0.9532633053139219,
+          "mean_net_return": -0.002787182548383249,
+          "median_net_return": -0.0029559898590648948,
+          "trades": 982,
+          "win_rate": 0.4215885947046843
+        },
+        "2022": {
+          "compounded_net_return": -0.17744639214568014,
+          "mean_net_return": -0.00033825068817134,
+          "median_net_return": -0.0016396134149496567,
+          "trades": 371,
+          "win_rate": 0.4501347708894879
+        },
+        "2023": {
+          "compounded_net_return": -0.8109004949075522,
+          "mean_net_return": -0.0032814623707923276,
+          "median_net_return": -0.002557707600155096,
+          "trades": 493,
+          "win_rate": 0.3407707910750507
+        }
+      }
+    },
+    "evaluation": {
+      "bootstrap_95pct_mean": [
+        -0.004284948545933836,
+        -0.002286373815221114
+      ],
+      "component_sums": {
+        "fees": -1.041596999616226,
+        "funding": 0.1207298795090721,
+        "gross_price": -0.21765681992876496,
+        "net": -2.8747937671731023,
+        "slippage_effect": -1.7362698271371861
+      },
+      "compounded_net_return": -0.9491994950681621,
+      "max_drawdown": -0.949882942720041,
+      "mean_holding_hours": 8.0,
+      "mean_net_return": -0.0033157944258051914,
+      "median_net_return": -0.0037990330244456385,
+      "standard_deviation": 0.015168715095961955,
+      "trades": 867,
+      "win_rate": 0.3517877739331027,
+      "yearly": {
+        "2024": {
+          "compounded_net_return": -0.9204363701276446,
+          "mean_net_return": -0.0036216539106870807,
+          "median_net_return": -0.003927756487426369,
+          "trades": 675,
+          "win_rate": 0.3466666666666667
+        },
+        "2025": {
+          "compounded_net_return": -0.36151096910312697,
+          "mean_net_return": -0.0022405071742673008,
+          "median_net_return": -0.0034495239897712093,
+          "trades": 192,
+          "win_rate": 0.3697916666666667
+        }
+      }
+    }
+  },
+  "predeclared_decision_rule": {
+    "does_not_support": "With minimum sample counts, base-cost mean is non-positive in evaluation or confirmation.",
+    "otherwise": "INSUFFICIENT_EVIDENCE",
+    "support": "Development gate passes; evaluation has >=30 and confirmation >=15 trades; base-cost mean is positive in evaluation, every evaluation calendar year and confirmation; evaluation 8-trade block-bootstrap lower bound is >0."
+  },
+  "question": "Does one-leg next-settlement funding carry on BTCUSDT-PERP survive observable timing and realistic costs?",
+  "schema_version": 1,
+  "selected_threshold": 0.0001,
+  "selection_status": "NO_VARIANT_PASSED_DEVELOPMENT_GATE_BEST_RETAINED_ONLY_FOR_FALSIFICATION",
+  "strongest_counterevidence": "Base-cost out-of-sample and 2026H1 means, year splits, component sums and confidence intervals determine whether price risk and execution costs dominate funding receipts.",
+  "strongest_support": "Funding sign persistence and the most favorable-cost scenario are retained in phase files even if they do not rescue the base-cost result."
+}

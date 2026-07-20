@@ -1,0 +1,163 @@
+{
+  "buy_and_hold": {
+    "base": {
+      "annualized_return": -0.7260227461112799,
+      "annualized_volatility": 0.6553889496859515,
+      "by_year": {
+        "2026": {
+          "days": 181,
+          "return": -0.473779192763914
+        }
+      },
+      "calmar": -1.3635302983137068,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.007972369573313022,
+        0.0015056652281841623
+      ],
+      "days": 181,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.5324580957307369,
+      "sharpe_zero_rf": -1.6440719376660553,
+      "total_return": -0.473779192763914,
+      "transitions_including_stage_boundaries": 2
+    },
+    "favorable": {
+      "annualized_return": -0.7249056918606138,
+      "annualized_volatility": 0.6553548453274187,
+      "by_year": {
+        "2026": {
+          "days": 181,
+          "return": -0.4727163528562177
+        }
+      },
+      "calmar": -1.3614323787598055,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.008053242713653349,
+        0.001643078276816666
+      ],
+      "days": 181,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.5324580957307372,
+      "sharpe_zero_rf": -1.638003348746921,
+      "total_return": -0.4727163528562177,
+      "transitions_including_stage_boundaries": 2
+    },
+    "stress": {
+      "annualized_return": -0.7271363860194089,
+      "annualized_volatility": 0.6554291715604047,
+      "by_year": {
+        "2026": {
+          "days": 181,
+          "return": -0.474840960765778
+        }
+      },
+      "calmar": -1.3656218054521236,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.008001492748459505,
+        0.0015577288948340213
+      ],
+      "days": 181,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.5324580957307371,
+      "sharpe_zero_rf": -1.6501244932866077,
+      "total_return": -0.474840960765778,
+      "transitions_including_stage_boundaries": 2
+    }
+  },
+  "cash_total_return": 0.0,
+  "content_digest": "07b6232e500548977fcd0ec09a6bb6a7cfb7dd250bad92b4a0a5d2065c2e48f6",
+  "data_quality": {
+    "days": 181,
+    "duplicate_days": 0,
+    "expected_days": 181,
+    "gaps": 0,
+    "invalid_ohlc": 0,
+    "max_abs_open_vs_previous_close_gap": 6.3817431092960675e-06,
+    "status": "PASS"
+  },
+  "funding_rate_sum": 0.0021264600000000006,
+  "generated_at": "2026-07-20T03:33:37Z",
+  "manifest_content_identity": "dbce4bfb0f8bb84997043e177ec80c110ceced096d4c41d48714d916493cd093",
+  "period": {
+    "end_exclusive": "2026-07-01T00:00:00Z",
+    "start": "2026-01-01T00:00:00Z"
+  },
+  "phase": "confirmation",
+  "rules": {
+    "funding": "actual daily sum applied to 1x initial notional proxy",
+    "position": "next UTC day long when prior close > prior SMA200, else cash",
+    "sma_days": 200,
+    "transition_costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    }
+  },
+  "schema_version": 1,
+  "strategy": {
+    "base": {
+      "annualized_return": 0.0,
+      "annualized_volatility": 0.0,
+      "by_year": {
+        "2026": {
+          "days": 181,
+          "return": 0.0
+        }
+      },
+      "calmar": null,
+      "daily_mean_block_bootstrap_95pct": [
+        0.0,
+        0.0
+      ],
+      "days": 181,
+      "exposure_fraction": 0.0,
+      "max_drawdown": 0.0,
+      "sharpe_zero_rf": null,
+      "total_return": 0.0,
+      "transitions_including_stage_boundaries": 0
+    },
+    "favorable": {
+      "annualized_return": 0.0,
+      "annualized_volatility": 0.0,
+      "by_year": {
+        "2026": {
+          "days": 181,
+          "return": 0.0
+        }
+      },
+      "calmar": null,
+      "daily_mean_block_bootstrap_95pct": [
+        0.0,
+        0.0
+      ],
+      "days": 181,
+      "exposure_fraction": 0.0,
+      "max_drawdown": 0.0,
+      "sharpe_zero_rf": null,
+      "total_return": 0.0,
+      "transitions_including_stage_boundaries": 0
+    },
+    "stress": {
+      "annualized_return": 0.0,
+      "annualized_volatility": 0.0,
+      "by_year": {
+        "2026": {
+          "days": 181,
+          "return": 0.0
+        }
+      },
+      "calmar": null,
+      "daily_mean_block_bootstrap_95pct": [
+        0.0,
+        0.0
+      ],
+      "days": 181,
+      "exposure_fraction": 0.0,
+      "max_drawdown": 0.0,
+      "sharpe_zero_rf": null,
+      "total_return": 0.0,
+      "transitions_including_stage_boundaries": 0
+    }
+  },
+  "study_code_sha256": "e3e1779ec6d4d51cd1f03c3abbfea021ca1dbf1e3cfe02d22d31dba1fa89e4db"
+}

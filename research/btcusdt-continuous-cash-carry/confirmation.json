@@ -1,0 +1,113 @@
+{
+  "content_digest": "ff1bf507d4ce858c5d0c16bc0b9dee0d3e2cf7063b331f061683449545f62d61",
+  "data_quality": {
+    "intervals": 729,
+    "invalid_ohlc_rows": 0,
+    "missing_funding_settlements": 0,
+    "missing_futures_rows": 0,
+    "missing_spot_rows": 0,
+    "status": "PASS",
+    "unexpected_non_8h_funding_events": 0
+  },
+  "generated_at": "2026-07-20T06:19:11Z",
+  "manifest_content_identity": "f434978bd47792c0e74ab94dc5f0f8ad9a7a4a82618833a56602ee7802d5abd5",
+  "period": {
+    "end_exclusive": "2025-09-01T00:00:00Z",
+    "start": "2025-01-01T00:00:00Z"
+  },
+  "phase": "confirmation",
+  "rules": {
+    "annual_capital_hurdle": 0.04,
+    "capital": "spot purchase plus fully funded short initial notional",
+    "funding": "actual event normalized within 1 second to 8h boundary; positive rate credits short",
+    "position": "one BTC spot long plus one BTC USD-M perpetual short; equal BTC quantity, no rebalance",
+    "round_trip_costs_on_capital": {
+      "base": 0.0024,
+      "favorable": 0.0016,
+      "stress": 0.004
+    }
+  },
+  "scenarios": {
+    "base": {
+      "annualized_compound_equivalent": 0.026108570919793017,
+      "annualized_volatility_of_8h_pnl": 0.0034249261135041115,
+      "basis_pnl_on_initial_capital": 5.750173146482589e-05,
+      "by_year": {
+        "2025": {
+          "intervals": 729,
+          "return_noncompounded": 0.01730689479856232
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.026630136986301373,
+      "funding_pnl_on_initial_capital": 0.019649393067097492,
+      "half_capital_spot_long_benchmark_return": 0.07598740702744296,
+      "interval_mean_block_bootstrap_95pct": [
+        1.4817190935531052e-05,
+        3.0567081846373544e-05
+      ],
+      "intervals": 729,
+      "max_drawdown": -0.001269834253031621,
+      "pnl_digest": "224c3b9d992323342dbe5c9c6a9ffee2747171c23e9e3519230026b747421c17",
+      "return_after_four_pct_annual_capital_hurdle": -0.009323242187739052,
+      "round_trip_cost_on_initial_capital": -0.0024,
+      "sharpe_zero_rf": 7.59022303867855,
+      "total_return_on_fully_funded_capital": 0.01730689479856232,
+      "worst_conservative_same_bar_adverse": -0.05595233769120933
+    },
+    "favorable": {
+      "annualized_compound_equivalent": 0.027320852811670404,
+      "annualized_volatility_of_8h_pnl": 0.0030312497818112145,
+      "basis_pnl_on_initial_capital": 5.750173146482589e-05,
+      "by_year": {
+        "2025": {
+          "intervals": 729,
+          "return_noncompounded": 0.018106894798562326
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.026630136986301373,
+      "funding_pnl_on_initial_capital": 0.019649393067097492,
+      "half_capital_spot_long_benchmark_return": 0.07678740702744295,
+      "interval_mean_block_bootstrap_95pct": [
+        1.814901439616586e-05,
+        3.0749680580522657e-05
+      ],
+      "intervals": 729,
+      "max_drawdown": -0.0008767942169551901,
+      "pnl_digest": "46f2110d3ac313a4530a0afba1d365498ae8408db155a238f9d818736faff842",
+      "return_after_four_pct_annual_capital_hurdle": -0.008523242187739047,
+      "round_trip_cost_on_initial_capital": -0.0016,
+      "sharpe_zero_rf": 8.972404500025965,
+      "total_return_on_fully_funded_capital": 0.018106894798562326,
+      "worst_conservative_same_bar_adverse": -0.05595233769120933
+    },
+    "stress": {
+      "annualized_compound_equivalent": 0.02368544291454877,
+      "annualized_volatility_of_8h_pnl": 0.004437724114462488,
+      "basis_pnl_on_initial_capital": 5.750173146482589e-05,
+      "by_year": {
+        "2025": {
+          "intervals": 729,
+          "return_noncompounded": 0.015706894798562306
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.026630136986301373,
+      "funding_pnl_on_initial_capital": 0.019649393067097492,
+      "half_capital_spot_long_benchmark_return": 0.07438740702744295,
+      "interval_mean_block_bootstrap_95pct": [
+        8.28270064297083e-06,
+        3.0582079717091346e-05
+      ],
+      "intervals": 729,
+      "max_drawdown": -0.002056841123930009,
+      "pnl_digest": "4f4835da3d5d88e71a0ca0da925d4016d9aa8ef7cf58a223353d07ba8d40a934",
+      "return_after_four_pct_annual_capital_hurdle": -0.010923242187739067,
+      "round_trip_cost_on_initial_capital": -0.004,
+      "sharpe_zero_rf": 5.316387477656067,
+      "total_return_on_fully_funded_capital": 0.015706894798562306,
+      "worst_conservative_same_bar_adverse": -0.05595233769120933
+    }
+  },
+  "schema_version": 1,
+  "source_manifest_sha256": "0bbdd5c539701e48cc8625954b68b9b0b8728df653523168ffbed093839b1ef1",
+  "study_code_sha256": "e57aff534843816258d21061986aef9afa567c9a61215e5532947f57a28afea4"
+}

@@ -1,0 +1,22 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_DOGEUSDT_SINGLE_PAIR_CONTINUOUS_CASH_CARRY",
+  "created_at": "2026-07-20T22:35:00+08:00",
+  "formal_strategy_background": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 / BTCUSDT-PERP",
+  "question": "Can the historically high-funding DOGEUSDT single fully-funded equal-quantity spot-long/perpetual-short pair remain positive after conservative costs and capital hurdle in a fresh post-parent period?",
+  "parent_result_content_digest": "3d221747e9e5d3425591120e57bebbe3acfe5fe941c3829fc492010764b0de31",
+  "inherited_doge_base_returns": {"2021_2022": 6.763318705029634, "2023": 0.053936554634059504, "2024_to_2025_aug": 0.18424283516858397},
+  "selection_bias": "DOGE was the highest-return parent constituent; inherited results are exposed and excluded from fresh confirmation evidence",
+  "fresh_period": ["2025-09-01T00:00:00Z", "2026-06-30T16:00:00Z"],
+  "fresh_fetch_months": ["2025-09", "2026-06"],
+  "fresh_source_manifest_sha256": "61b1af25ec78bc94ca1a2b53e2df7a439a58393de119b3cffe3c3cfd8cff1d33",
+  "fresh_content_identity": "b8d9781abb23e9be697a4fcc1b2264c2f50c55c7c2c0f4a4844c5ac4b53be4bd",
+  "fresh_data_inventory": {"archives": 20, "funding_records": 909, "backfill_records": 0, "external_files": 23, "external_bytes": 175859},
+  "capital": "spot purchase plus equal futures guarantee margin; no leverage credit",
+  "round_trip_costs": {"favorable": 0.0016, "base": 0.0024, "stress": 0.004},
+  "annual_capital_hurdle": 0.04,
+  "support_gate": "data PASS; stress total and post-4%-hurdle returns >0; 2025 and 2026 slices positive; max drawdown >-5%; funding > absolute basis; block-bootstrap 95% lower mean >0",
+  "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/dogeusdt-single-pair-continuous-cash-carry",
+  "study_code_sha256": "56c17271a0a6ef42ba5d8a34eb55f82d4c6c7726782a0ae7257b982577d3e131",
+  "pre_holdout_status": "LOCKED_BEFORE_FRESH_DOGE_DATA_FETCH"
+}

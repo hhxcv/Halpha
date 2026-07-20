@@ -1,0 +1,191 @@
+{
+  "conclusion": "SUPPORTS_WITHIN_SCOPE",
+  "confirmation_balanced": {
+    "annualized_return": 0.12167881835520511,
+    "annualized_volatility": 0.11330362812721183,
+    "by_year": {
+      "2025": {
+        "days": 365,
+        "return": 0.1728560095470606
+      },
+      "2026": {
+        "days": 181,
+        "return": 0.012402343081863831
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -6.1520172790345e-05,
+      0.0006942667803134904
+    ],
+    "days": 546,
+    "invested_day_fraction": 1.0,
+    "max_drawdown": -0.07256049152140343,
+    "selected_asset_day_quote_volume_median": 41017408.917785004,
+    "selected_asset_day_quote_volume_min": 680344.5476,
+    "selection_counts": {
+      "PAXGUSDT": 18,
+      "TRXUSDT": 18
+    },
+    "sharpe_zero_rf": 1.070236553123497,
+    "total_return": 0.18740217216308985,
+    "turnover": 1.3810071421512364
+  },
+  "confirmation_paxg_half_long": {
+    "annualized_return": 0.15662489556579717,
+    "annualized_volatility": 0.13216680842892925,
+    "by_year": {
+      "2025": {
+        "days": 365,
+        "return": 0.2867203251128454
+      },
+      "2026": {
+        "days": 181,
+        "return": -0.033849134117025614
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -8.140974321954119e-05,
+      0.0009076740953997475
+    ],
+    "days": 546,
+    "invested_day_fraction": 1.0,
+    "max_drawdown": -0.15163534396269274,
+    "selected_asset_day_quote_volume_median": 16461523.6731675,
+    "selected_asset_day_quote_volume_min": 680344.5476,
+    "selection_counts": {
+      "PAXGUSDT": 18,
+      "TRXUSDT": 0
+    },
+    "sharpe_zero_rf": 1.167428243128203,
+    "total_return": 0.24316595625700121,
+    "turnover": 1.1930903214685864
+  },
+  "confirmation_stress": {
+    "annualized_return": 0.11857160808244771,
+    "annualized_volatility": 0.1133795555928896,
+    "by_year": {
+      "2025": {
+        "days": 365,
+        "return": 0.17021083898854772
+      },
+      "2026": {
+        "days": 181,
+        "return": 0.010488983215667602
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -6.468578190675731e-05,
+      0.0006882816901277297
+    ],
+    "days": 546,
+    "invested_day_fraction": 1.0,
+    "max_drawdown": -0.07393684502275044,
+    "selected_asset_day_quote_volume_median": 41017408.917785004,
+    "selected_asset_day_quote_volume_min": 680344.5476,
+    "selection_counts": {
+      "PAXGUSDT": 18,
+      "TRXUSDT": 18
+    },
+    "sharpe_zero_rf": 1.0451218386504053,
+    "total_return": 0.18248516083748845,
+    "turnover": 1.3810071421512367
+  },
+  "confirmation_stress_return_after_4pct_annual_hurdle": 0.1151048134782906,
+  "confirmation_support_gate": true,
+  "confirmation_trx_half_long": {
+    "annualized_return": 0.07938190858386118,
+    "annualized_volatility": 0.17556860091767132,
+    "by_year": {
+      "2025": {
+        "days": 365,
+        "return": 0.06258762746598201
+      },
+      "2026": {
+        "days": 181,
+        "return": 0.05502223095579817
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -0.0003771259215935385,
+      0.0008630142053091759
+    ],
+    "days": 546,
+    "invested_day_fraction": 1.0,
+    "max_drawdown": -0.14177468971135476,
+    "selected_asset_day_quote_volume_median": 72745252.45440501,
+    "selected_asset_day_quote_volume_min": 16804892.63234,
+    "selection_counts": {
+      "PAXGUSDT": 0,
+      "TRXUSDT": 18
+    },
+    "sharpe_zero_rf": 0.5228379715171176,
+    "total_return": 0.12105356931519218,
+    "turnover": 1.201413882583198
+  },
+  "content_digest": "1208be7124b1967ff50da6f89a62023cf91cb398a70204588d192010094c89b7",
+  "development_balanced": {
+    "annualized_return": 0.17293172317850147,
+    "annualized_volatility": 0.2827017004012888,
+    "by_year": {
+      "2021": {
+        "days": 365,
+        "return": 0.45318578765996986
+      },
+      "2022": {
+        "days": 365,
+        "return": -0.0532739592410576
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -0.0003977497923736316,
+      0.0016693563855308677
+    ],
+    "days": 730,
+    "invested_day_fraction": 1.0,
+    "max_drawdown": -0.2389191980587324,
+    "selected_asset_day_quote_volume_median": 17842075.97331,
+    "selected_asset_day_quote_volume_min": 181060.8217,
+    "selection_counts": {
+      "PAXGUSDT": 24,
+      "TRXUSDT": 24
+    },
+    "sharpe_zero_rf": 0.7040328146317684,
+    "total_return": 0.3757688272384889,
+    "turnover": 2.2575680762125914
+  },
+  "evaluation_balanced": {
+    "annualized_return": 0.28806067825153425,
+    "annualized_volatility": 0.22711499225428725,
+    "by_year": {
+      "2023": {
+        "days": 365,
+        "return": 0.22668574826685672
+      },
+      "2024": {
+        "days": 366,
+        "return": 0.3534447146642896
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      0.00031472476854034037,
+      0.0013333123338811115
+    ],
+    "days": 731,
+    "invested_day_fraction": 1.0,
+    "max_drawdown": -0.1812112187104875,
+    "selected_asset_day_quote_volume_median": 10547333.034277,
+    "selected_asset_day_quote_volume_min": 214394.0197,
+    "selection_counts": {
+      "PAXGUSDT": 24,
+      "TRXUSDT": 24
+    },
+    "sharpe_zero_rf": 1.2191983839585938,
+    "total_return": 0.6602513425457819,
+    "turnover": 1.6179140989881677
+  },
+  "evaluation_confirmation_compounded_return": 0.9713860504755476,
+  "formal_product_strategy_comparison": "FIXED_BACKGROUND_ONLY_DIFFERENT_MULTI_ASSET_SPOT_CONTRACT",
+  "generated_at": "2026-07-20T08:03:28Z",
+  "product_effects": "NONE",
+  "scope": "Binance spot monthly 25% TRXUSDT plus 25% PAXGUSDT, maximum 0.5 gross"
+}

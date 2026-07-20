@@ -1,0 +1,20 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MATURE_LIQUID_SPOT_BOTTOM3_REALIZED_VOL_90D_0P5X",
+  "created_at": "2026-07-20T18:00:00+08:00",
+  "question": "Can a fixed monthly bottom-3 realized-volatility spot portfolio over 13 mature liquid cryptocurrencies earn positive cost-adjusted returns across development, evaluation and confirmation while reducing drawdown?",
+  "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "LTCUSDT", "LINKUSDT", "DOGEUSDT", "BCHUSDT", "TRXUSDT", "XLMUSDT", "ETCUSDT", "ATOMUSDT"],
+  "primary_lookback_days": 90,
+  "robustness_lookback_days": [60, 180],
+  "holdings": 3,
+  "maximum_gross": 0.5,
+  "rebalance": "first UTC daily open monthly using information through prior close",
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"], "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"], "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]},
+  "development_gate": "data PASS; 90d base/stress >0; max drawdown >-35% and below 0.5x benchmark; 60d/180d base >0; turnover <=30",
+  "evaluation_gate": "90d base/stress >0; at least one positive year; max drawdown >-35% and below benchmark; 60d/180d base >0",
+  "confirmation_gate": "90d base/stress >0; max drawdown >-30% and below benchmark; 60d/180d base >=0; evaluation+confirmation compounded >0",
+  "holdout_release_rule": "fetch evaluation only after development pass; fetch confirmation only after evaluation pass; never change rules or gates after release",
+  "formal_strategy_baseline": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "study_code_sha256": "31ea82a254942988d9626517c225a1399bf8b0448f4f55f05894a42ccd8a97b9"
+}

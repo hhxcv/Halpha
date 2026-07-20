@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_AVAX_DOT_NEAR_SPOT_MONTHLY_LONG_CASH_0P5X",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "development": {
+    "data_quality": "PASS",
+    "primary_90d": {"base_total_return": 0.9664749688094469, "stress_total_return": 0.9596129340700912, "by_year": {"2021": 1.0382613000886973, "2022": -0.03521939570560728}, "max_drawdown": -0.3151560436718319, "turnover": 3.493270762663679, "invested_day_fraction": 0.49726027397260275, "daily_mean_block_bootstrap_95pct": [-0.0002361143558245215, 0.0028452111736651134]},
+    "robustness_base_total_return": {"60d": 0.6521384635896204, "120d": -0.15448916716394145},
+    "monthly_rebalanced_half_long": {"base_total_return": 1.0538974083208537, "base_max_drawdown": -0.6253921444060622}
+  },
+  "failed_conditions": ["120-day pre-registered robustness total return was negative"],
+  "holdout": {"evaluation_2023_2024": "UNOPENED_NOT_DOWNLOADED", "confirmation_2025_2026_h1": "UNOPENED_NOT_DOWNLOADED"},
+  "data_identity": {"manifest_content_identity": "2b15ca11340ba2770bdeb28dd9fdff3180220b31e27f7e2d23f5274728e69ad5", "checksum_verified_archives": 78, "official_rest_backfill_records": 0},
+  "development_content_digest": "800511a82b120ceec9f273aaecad95938e55317d7fb236568e9abd2bf648e453",
+  "selection_content_digest": "4b10718ab9d41c5f5972a789134018479002f92fb994e269a9b7836c5731bf7b",
+  "product_effects": "NONE"
+}

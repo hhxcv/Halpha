@@ -1,0 +1,9 @@
+{
+  "content_digest": "6202cae8747f2a4e926a1c610952eca265bca30146670d35aebe9260cc256f18",
+  "fixed_rule": "BTC_ETH_BNB_MONTHLY_180D_TSMOM_60D_VOLSCALED_MAX_0P3X",
+  "generated_at": "2026-07-20T06:51:24Z",
+  "holdout_authorized": false,
+  "input_content_digest": "4639265995fef4c28db3448cece82451e27b0ad48ae827152c9714763a3b3462",
+  "phase": "evaluation",
+  "qualification_status": "FAILED_EVALUATION_GATE_STOP"
+}

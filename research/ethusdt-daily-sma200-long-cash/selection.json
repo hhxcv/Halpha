@@ -1,0 +1,11 @@
+{
+  "content_digest": "6023f81d0cd80b79f4ee9b3d263e26839813bd0da94673337f34450a37470c39",
+  "development_content_digest": "265e3b4162bdafc50f9a01ff1fdfa5a474b68f9c114d587b56dd0640f66a2411",
+  "drawdown_ratio_vs_buy_hold": 0.4229197119104364,
+  "fixed_rule": "SMA200_LONG_CASH",
+  "gate": "positive total; at least two positive years; max-drawdown magnitude <= 80% of buy-and-hold; higher Calmar",
+  "generated_at": "2026-07-20T03:31:28Z",
+  "holdout_authorized": true,
+  "positive_years": 2,
+  "qualification_status": "PASSED_DEVELOPMENT_GATE"
+}

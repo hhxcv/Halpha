@@ -1,0 +1,9 @@
+{
+  "content_digest": "7f9a7a5e95ab59ac9808418f260e6a04a4c5c36778e8399a4ee736ba4841a479",
+  "fixed_rule": "BTCUSDT_CONTINUOUS_EQUAL_QUANTITY_SPOT_LONG_PERP_SHORT_FULLY_FUNDED",
+  "generated_at": "2026-07-20T06:18:17Z",
+  "holdout_authorized": true,
+  "input_content_digest": "115c5f7dab0f11b45792d333be66076793d6ebd94ad5902b14b440313ae0b4c4",
+  "phase": "development",
+  "qualification_status": "PASSED_DEVELOPMENT_GATE"
+}

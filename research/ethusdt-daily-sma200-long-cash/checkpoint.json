@@ -1,0 +1,37 @@
+{
+  "allowed_fixes": [
+    "download and checksum handling",
+    "CSV, funding or timestamp parsing",
+    "data integrity reporting",
+    "implementation defects that do not change the fixed economic rule or gates"
+  ],
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_ETHUSDT_DAILY_SMA200_LONG_CASH",
+  "cost_per_transition": {
+    "base": 0.0016,
+    "favorable": 0.0006,
+    "stress": 0.0026
+  },
+  "created_at": "2026-07-20T11:40:00+08:00",
+  "development_gate": "base compounded return > 0; at least two positive calendar years; max-drawdown magnitude <= 80% of buy-and-hold; Calmar > buy-and-hold",
+  "formal_strategy_baseline": "NOT_RUN_UNLESS_FAIR_EXACT_REPLAY_IS_AVAILABLE_WITHOUT_A_SECOND_IMPLEMENTATION",
+  "holdout_release_rule": "Fetch and analyze 2024-2025 only after development passes; fetch and analyze 2026H1 only after fixed evaluation; otherwise stop",
+  "known_exposure": {
+    "2021_2023": "Underlying ETHUSDT prices were exposed by the prior 2h reversal development study; this rule has not been calculated",
+    "2024_2026h1": "No ETHUSDT archives or outcomes downloaded or viewed"
+  },
+  "periods": {
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"],
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"]
+  },
+  "question": "Can a fixed ETHUSDT daily SMA200 long/cash rule deliver positive compounded returns and materially lower drawdown than continuous 1x perpetual exposure after actual funding proxy and 32 bp round trips?",
+  "rule": {
+    "direction": "LONG_OR_CASH",
+    "execution": "use prior UTC close signal for next UTC day position",
+    "leverage": "1x_initial_notional",
+    "sma_days": 200
+  },
+  "study_code_sha256": "e3e1779ec6d4d51cd1f03c3abbfea021ca1dbf1e3cfe02d22d31dba1fa89e4db",
+  "study_status": "FIXED_BEFORE_NEW_HOLDOUT_ACCESS"
+}

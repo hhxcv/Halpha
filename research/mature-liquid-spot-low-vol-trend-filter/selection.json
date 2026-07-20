@@ -1,0 +1,8 @@
+{
+  "content_digest": "8db0e3966703db6424e198f00a6240a3adff5744c52c9b8d3da4411f52ef35ec",
+  "development_content_digest": "f949e4f31b550a1f6a441515b47e85fc247aec88e447618ef93ab70b499f9f62",
+  "fixed_rule": "BOTTOM3_REALIZED_VOL_POSITIVE_TREND_90D_0P5X",
+  "generated_at": "2026-07-20T05:19:13Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

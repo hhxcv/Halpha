@@ -1,0 +1,9 @@
+{
+  "content_digest": "0e7cc594f1594b6a7e26e11f726ae208eb6a6bcbb0e1d157f155897f5601cd27",
+  "fixed_rule": "SOLUSDT_CONTINUOUS_FULLY_FUNDED_EQUAL_QUANTITY_CASH_CARRY",
+  "generated_at": "2026-07-20T07:26:08Z",
+  "holdout_authorized": true,
+  "input_content_digest": "51d4aaabcf59e421cc82eefa555fe440f02e81f739379c16fe4a187f632a8e12",
+  "phase": "evaluation",
+  "qualification_status": "PASSED_EVALUATION_GATE"
+}

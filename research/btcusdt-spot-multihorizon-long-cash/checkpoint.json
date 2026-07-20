@@ -1,0 +1,18 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 on BTCUSDT-PERP",
+  "candidate_id": "RESEARCH_BTCUSDT_SPOT_MULTIHORIZON_LONG_CASH_0P5X",
+  "created_at": "2026-07-20T20:30:00+08:00",
+  "inherited_exposed_single_window_results": {"development_60d": 0.052655554903418667, "development_90d": 0.22951769692956803, "development_180d": 0.07252288696690057, "evaluation_60d": 0.6096807172750214, "evaluation_90d": 0.7312598998797735, "evaluation_180d": 0.7005655160257305},
+  "question": "Can an equal-vote 60/90/180-day positive BTC spot momentum ensemble reduce parameter dependence and preserve nonnegative confirmation returns while keeping the complete rule-level holdout profitable?",
+  "windows_days": [60, 90, 180],
+  "weight_per_positive_window": 0.16666666666666666,
+  "maximum_gross": 0.5,
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"], "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"], "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]},
+  "development_gate": "base/stress >0; max drawdown >-30% and >=15pp better than BTC 0.5x; turnover <=20",
+  "evaluation_gate": "base/stress >0; max drawdown >-20% and no more than 2pp worse than BTC 0.5x; all single windows >0",
+  "confirmation_gate": "base/stress >=0; max drawdown >-18% and no more than 3pp worse than BTC 0.5x; all single windows >=0; evaluation+confirmation compounded >0",
+  "holdout_release_rule": "reuse exposed development/evaluation only after checkpoint and gates; download confirmation only after both pass",
+  "study_code_sha256": "f9875be67f0467dddafefc2c23a71e7867b5e29927d5519fce519a46bd06e1c2"
+}

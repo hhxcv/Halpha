@@ -1,0 +1,107 @@
+{
+  "content_digest": "0f11f213f56b6db3c96bdb974e89ec832b7a5168a198eaa59ef9e013629d6834",
+  "data_quality": {
+    "intervals": 1094,
+    "missing_funding_settlements": 0,
+    "missing_futures_rows": 0,
+    "missing_spot_rows": 0,
+    "status": "PASS"
+  },
+  "generated_at": "2026-07-20T07:24:15Z",
+  "manifest_content_identity": "86ec4935f4641bf24270da2d32f411ae80ddc8c31d370d685c4fe4bf14d935ec",
+  "manifest_sha256": "f522f3f6db446286bf0146b31296a9cd3bc7f289d0982f1f9afc49995ccfcdb4",
+  "period": {
+    "end_inclusive": "2023-12-31T16:00:00Z",
+    "start": "2023-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "primitive_study_sha256": "0c75dd8b3a1eb249d6f04be951e698514aebe21312ccf5f9977f72b2a5b88303",
+  "rules": {
+    "annual_capital_hurdle": 0.04,
+    "capital": "spot purchase plus equal futures guarantee margin; no leverage credit",
+    "position": "equal SOL quantity long spot and short USD-M perpetual continuously",
+    "rebalance": "none inside phase; one modeled entry and one modeled exit",
+    "round_trip_costs": {
+      "base": 0.0024,
+      "favorable": 0.0016,
+      "stress": 0.004
+    }
+  },
+  "scenarios": {
+    "base": {
+      "annualized_compound_equivalent": 0.12039020478330142,
+      "annualized_volatility_of_8h_pnl": 0.03724292077449885,
+      "basis_pnl_on_initial_capital": -0.004463837897482301,
+      "by_year": {
+        "2023": {
+          "intervals": 1094,
+          "return_noncompounded": 0.12027389792406444
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.0399634703196347,
+      "funding_pnl_on_initial_capital": 0.12713773582154683,
+      "interval_mean_block_bootstrap_95pct": [
+        3.5412499668990116e-05,
+        0.00018782653441115334
+      ],
+      "intervals": 1094,
+      "max_drawdown": -0.03183790360856775,
+      "pnl_digest": "8b27e28224168d9e2c5ffa62da8864f42b5454d7fefed11caea3fa09ff456d2b",
+      "return_after_four_pct_annual_capital_hurdle": 0.08031042760442975,
+      "round_trip_cost_on_initial_capital": -0.0024,
+      "sharpe_zero_rf": 3.232395177343915,
+      "total_return_on_fully_funded_capital": 0.12027389792406444
+    },
+    "favorable": {
+      "annualized_compound_equivalent": 0.12119101943796795,
+      "annualized_volatility_of_8h_pnl": 0.037249898950254386,
+      "basis_pnl_on_initial_capital": -0.004463837897482301,
+      "by_year": {
+        "2023": {
+          "intervals": 1094,
+          "return_noncompounded": 0.12107389792406445
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.0399634703196347,
+      "funding_pnl_on_initial_capital": 0.12713773582154683,
+      "interval_mean_block_bootstrap_95pct": [
+        3.454392464170699e-05,
+        0.00019058998003041526
+      ],
+      "intervals": 1094,
+      "max_drawdown": -0.03182520535935285,
+      "pnl_digest": "8f473d3cf1fac868bf57ca81d984ebfca86b14faa0ea5cc7324923d7a344fd4b",
+      "return_after_four_pct_annual_capital_hurdle": 0.08111042760442974,
+      "round_trip_cost_on_initial_capital": -0.0016,
+      "sharpe_zero_rf": 3.253285839109369,
+      "total_return_on_fully_funded_capital": 0.12107389792406445
+    },
+    "stress": {
+      "annualized_compound_equivalent": 0.11878857704254187,
+      "annualized_volatility_of_8h_pnl": 0.03725473790844694,
+      "basis_pnl_on_initial_capital": -0.004463837897482301,
+      "by_year": {
+        "2023": {
+          "intervals": 1094,
+          "return_noncompounded": 0.11867389792406446
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.0399634703196347,
+      "funding_pnl_on_initial_capital": 0.12713773582154683,
+      "interval_mean_block_bootstrap_95pct": [
+        3.6816411880942745e-05,
+        0.000186161877762107
+      ],
+      "intervals": 1094,
+      "max_drawdown": -0.031863330530865985,
+      "pnl_digest": "523a76c9c46224800334655cdffe12dba581abb659f7729aef0787bce66cb9f1",
+      "return_after_four_pct_annual_capital_hurdle": 0.07871042760442976,
+      "round_trip_cost_on_initial_capital": -0.004,
+      "sharpe_zero_rf": 3.18838305266691,
+      "total_return_on_fully_funded_capital": 0.11867389792406446
+    }
+  },
+  "schema_version": 1,
+  "study_code_sha256": "781180ecf93246f6390030560600220e50ae2cdac741d29084644043d4479770",
+  "symbol": "SOLUSDT"
+}

@@ -1,0 +1,361 @@
+{
+  "content_digest": "de3a119e5ae234ec32288a674e532517932d69908e20e26cc68b32f79f2b1f7f",
+  "continuous_half_long": {
+    "base": {
+      "annualized_return": -0.6166570829482206,
+      "annualized_volatility": 1.6500772840803464,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 6.238698833310858
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.9796991426998554
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0051566409152125165,
+        0.0076606730260695925
+      ],
+      "days": 730,
+      "max_drawdown": -0.9821752201924159,
+      "sharpe_zero_rf": 0.2614267736258343,
+      "total_return": -0.8530482079462326,
+      "turnover": 5.874991099748873,
+      "worst_daily_intraday_adverse_on_capital": -0.5926329001350241
+    },
+    "favorable": {
+      "annualized_return": -0.6155231583331562,
+      "annualized_volatility": 1.6500554130587397,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 6.242321080525262
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.9795890792282589
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.004864581995570673,
+        0.0076952672741696215
+      ],
+      "days": 730,
+      "max_drawdown": -0.9820785810644689,
+      "sharpe_zero_rf": 0.2632002533387073,
+      "total_return": -0.8521775582218887,
+      "turnover": 5.874991099748188,
+      "worst_daily_intraday_adverse_on_capital": -0.592632900135025
+    },
+    "stress": {
+      "annualized_return": -0.6177933285725354,
+      "annualized_volatility": 1.6501078684712442,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 6.235076586096415
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.9798092061714472
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.005097886520523235,
+        0.00772600236774767
+      ],
+      "days": 730,
+      "max_drawdown": -0.9822718593203591,
+      "sharpe_zero_rf": 0.25965196983020244,
+      "total_return": -0.8539180603163381,
+      "turnover": 5.874991099748322,
+      "worst_daily_intraday_adverse_on_capital": -0.5926329001350245
+    }
+  },
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "AVAXUSDT": {
+        "days": 730,
+        "expected_days": 730,
+        "funding_records": 2190,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "missing_funding_days": 0,
+        "status": "PASS"
+      },
+      "DOTUSDT": {
+        "days": 730,
+        "expected_days": 730,
+        "funding_records": 2190,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "missing_funding_days": 0,
+        "status": "PASS"
+      },
+      "NEARUSDT": {
+        "days": 730,
+        "expected_days": 730,
+        "funding_records": 2190,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "missing_funding_days": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "generated_at": "2026-07-20T04:32:01Z",
+  "manifest_content_identity": "48988b71d3e9b6a8b79da633ffa52f0ca6fd6712193cf09a84a04ffeee764ae9",
+  "period": {
+    "end_exclusive": "2023-01-01T00:00:00Z",
+    "start": "2021-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    },
+    "lookbacks": [
+      60,
+      90,
+      120
+    ],
+    "primary": 90,
+    "symbols": [
+      "AVAXUSDT",
+      "DOTUSDT",
+      "NEARUSDT"
+    ],
+    "weight_per_symbol": 0.16666666666666666
+  },
+  "schema_version": 1,
+  "strategy": {
+    "120": {
+      "base": {
+        "annualized_return": -0.2949476700769702,
+        "annualized_volatility": 0.8234609907210807,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.672215351638525
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.5165407849781307
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0028977514371866862,
+          0.0022538011675572052
+        ],
+        "days": 730,
+        "max_drawdown": -0.8727922804843734,
+        "sharpe_zero_rf": 0.0035523247356366015,
+        "total_return": -0.5029012120701071,
+        "turnover": 10.055056182905222,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416057
+      },
+      "favorable": {
+        "annualized_return": -0.2913889803516574,
+        "annualized_volatility": 0.8234997359239372,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.6702729012195672
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.5228641474246427
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0029095021495791655,
+          0.0024484846666660135
+        ],
+        "days": 730,
+        "max_drawdown": -0.8726359657412337,
+        "sharpe_zero_rf": 0.009701530843207828,
+        "total_return": -0.49787042283293614,
+        "turnover": 10.055056182905219,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416057
+      },
+      "stress": {
+        "annualized_return": -0.29849309499943244,
+        "annualized_volatility": 0.8234301130657247,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.6741500633314452
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.5102410109228772
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0030009573751724242,
+          0.0023273121744939837
+        ],
+        "days": 730,
+        "max_drawdown": -0.8729485102422367,
+        "sharpe_zero_rf": -0.0025974352421185955,
+        "total_return": -0.5078880622365247,
+        "turnover": 10.055056182905222,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416063
+      }
+    },
+    "60": {
+      "base": {
+        "annualized_return": -0.37149852594920707,
+        "annualized_volatility": 0.8784962673671609,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.5789495354300039
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.06183667725569664
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0031406363464595846,
+          0.00240661087849328
+        ],
+        "days": 730,
+        "max_drawdown": -0.8286821111972816,
+        "sharpe_zero_rf": -0.07542077606511058,
+        "total_return": -0.6049858971159805,
+        "turnover": 14.54963383733045,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416056
+      },
+      "favorable": {
+        "annualized_return": -0.3669015007061438,
+        "annualized_volatility": 0.8785649915825705,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.5755541497017479
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.0556776334920297
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.003177576593808659,
+          0.0024970435350793138
+        ],
+        "days": 730,
+        "max_drawdown": -0.8284259460934075,
+        "sharpe_zero_rf": -0.06705730892673245,
+        "total_return": -0.5991862901918672,
+        "turnover": 14.549633837330452,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416056
+      },
+      "stress": {
+        "annualized_return": -0.37606948777803273,
+        "annualized_volatility": 0.8784411355164297,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.5823256022763265
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.0679599079972466
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0030264379933000445,
+          0.0023906702053886645
+        ],
+        "days": 730,
+        "max_drawdown": -0.8289380432868572,
+        "sharpe_zero_rf": -0.0837842554062982,
+        "total_return": -0.6107107159184335,
+        "turnover": 14.549633837330454,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416068
+      }
+    },
+    "90": {
+      "base": {
+        "annualized_return": 0.12876671007383522,
+        "annualized_volatility": 0.8605357731797646,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.3310134609144071
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.9045439800813282
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0016474971645586488,
+          0.003900596354391509
+        ],
+        "days": 730,
+        "max_drawdown": -0.8286821111972817,
+        "sharpe_zero_rf": 0.5846955445025045,
+        "total_return": 0.27411428577090935,
+        "turnover": 10.449314781551427,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416062
+      },
+      "favorable": {
+        "annualized_return": 0.1346902534165646,
+        "annualized_volatility": 0.8606185396997479,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.32684422535091373
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.9126657152569642
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0018049945452396866,
+          0.004024892822982795
+        ],
+        "days": 730,
+        "max_drawdown": -0.8284259460934082,
+        "sharpe_zero_rf": 0.5908092273412546,
+        "total_return": 0.2875219711985475,
+        "turnover": 10.449314781551427,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416056
+      },
+      "stress": {
+        "annualized_return": 0.12286440914528884,
+        "annualized_volatility": 0.8604633555398543,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": -0.33516715412273645
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.896453355371617
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.001760329216600245,
+          0.003962659440128464
+        ],
+        "days": 730,
+        "max_drawdown": -0.8289380432868558,
+        "sharpe_zero_rf": 0.5785737268713055,
+        "total_return": 0.26082448132519875,
+        "turnover": 10.449314781551427,
+        "worst_daily_intraday_adverse_on_capital": -0.6398922904416059
+      }
+    }
+  },
+  "study_code_sha256": "1204afe0284daab4c9763b93a56f4ba0fe637d9408c554cf57e4d36af2f6450f"
+}

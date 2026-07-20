@@ -1,0 +1,8 @@
+{
+  "content_digest": "4963e9348c1881ef69de879efba72bbf7e3eef1797c29e8c8e0fdd9c04d2aab1",
+  "development_content_digest": "b5f376315a68aa650efa319e13d6b61153ede868ca5eda2486b1377c98d72b0c",
+  "fixed_rule": "MULTI_ASSET_TWO_EVENT_3BP_CARRY",
+  "generated_at": "2026-07-20T04:41:24Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

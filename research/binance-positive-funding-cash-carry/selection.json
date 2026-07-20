@@ -1,0 +1,38 @@
+{
+  "candidates": [
+    {
+      "active_intervals": 2265,
+      "bootstrap_low": -1.866883312660973e-05,
+      "passed": false,
+      "positive_years": 1,
+      "return_noncompounded": 0.05244240473800062,
+      "threshold_bps": 1.0,
+      "variant": "1bps"
+    },
+    {
+      "active_intervals": 984,
+      "bootstrap_low": 0.00018270898693647592,
+      "passed": true,
+      "positive_years": 2,
+      "return_noncompounded": 0.23132996397203928,
+      "threshold_bps": 3.0,
+      "variant": "3bps"
+    },
+    {
+      "active_intervals": 647,
+      "bootstrap_low": 0.00022869772154821116,
+      "passed": false,
+      "positive_years": 1,
+      "return_noncompounded": 0.18870396315974217,
+      "threshold_bps": 5.0,
+      "variant": "5bps"
+    }
+  ],
+  "content_digest": "ee8eee930527154e91bb7481c497541a5a8a5c740c9cb7d7ce36c863a3e1cbe0",
+  "development_content_digest": "2210c7ca29a24fe80105c0660e086f17b380660ed653a56b1bcb6d536c720216",
+  "gate": "active intervals >= 300; positive noncompounded return; >=2 positive years; 9-interval block-bootstrap lower mean > 0",
+  "generated_at": "2026-07-20T03:43:14Z",
+  "holdout_authorized": true,
+  "selected_threshold_bps": 3.0,
+  "selection_status": "PASSED_DEVELOPMENT_GATE"
+}

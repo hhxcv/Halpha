@@ -1,0 +1,13 @@
+{
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "reason": "Development was profitable but maximum drawdown was -44.52%, worse than both the pre-registered -25% floor and passive 0.5x exposure; holdouts remained unopened.",
+  "development_content_digest": "4043ccb11f51d1caab4d100cb169af8b48f8e418eae338c767b05cc19c96297b",
+  "development_gate_content_digest": "2eb098673a8e05e54e6d686a5f18c875257a27badc3bd5518441430e8d4f46fe",
+  "base_total_return": 0.5716986582619346,
+  "stress_total_return": 0.5544863418914603,
+  "max_drawdown": -0.4451685371951203,
+  "passive_half_max_drawdown": -0.43198486582843876,
+  "evaluation": "NOT_ACQUIRED_OR_OPENED",
+  "confirmation": "NOT_ACQUIRED_OR_OPENED",
+  "product_effects": "NONE"
+}

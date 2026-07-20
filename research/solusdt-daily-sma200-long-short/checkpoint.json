@@ -1,0 +1,32 @@
+{
+  "allowed_fixes": [
+    "download/checksum and public API pagination",
+    "CSV, funding or timestamp parsing",
+    "data quality reporting",
+    "implementation defects that do not change SMA, exposure, costs, periods or gates"
+  ],
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_SOLUSDT_DAILY_SMA200_LONG_SHORT_0P5X",
+  "created_at": "2026-07-20T13:00:00+08:00",
+  "development_gate": "positive base compounded total and each of 2021/2022/2023; 30-day circular-block bootstrap lower daily mean > 0; lower max drawdown than continuous 0.5x long; max episode adverse > -50% capital",
+  "exposure": 0.5,
+  "formal_strategy_baseline": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "holdout_release_rule": "Fetch 2024-2025 only after development passes; fetch 2026H1 only after fixed evaluation; never modify the rule after release",
+  "known_exposure": "No SOLUSDT price, funding, spot, perpetual or result data was used by earlier research before this checkpoint",
+  "periods": {
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"],
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"]
+  },
+  "positions": "Use prior UTC close versus its SMA200; next UTC day +0.5 long above, else -0.5 short",
+  "question": "Can a fixed SOLUSDT daily SMA200 0.5x long/short rule remain profitable through development, independent evaluation and later confirmation after actual funding proxy, turnover costs and intraday adverse checks?",
+  "sma_days": 200,
+  "study_code_sha256": "57a08da1d3706167496749ce6585f91dccc448d874169e8ac457565ddccc54f6",
+  "study_code_sha256_initial": "f4c11129f30398d0860918b4602a102678c2f45bf5713532889de0c7dc1619c9",
+  "study_code_revision_reason": "Data-integrity-only revision: preserve checksum-verified monthly archives, backfill only absent daily timestamps from the official public USD-M Kline REST endpoint, bind the backfill hash into the manifest, normalize timestamps, and make data-quality PASS mandatory before holdout authorization. Economic rules, periods, costs and gates are unchanged.",
+  "turnover_costs": {
+    "base": 0.0016,
+    "favorable": 0.0006,
+    "stress": 0.0026
+  }
+}

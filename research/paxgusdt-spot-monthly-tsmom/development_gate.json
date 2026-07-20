@@ -1,0 +1,8 @@
+{
+  "content_digest": "799e9fe6bf25c4990ab3198aebcd61a7192f2841a56e99191f3bff2094ba652a",
+  "development_content_digest": "3c5895e7a3b3511d9b055512f37764597b4a984a942c13a32873a9f066e7f365",
+  "fixed_rule": "PAXGUSDT_POSITIVE_180D_MONTHLY_0P5X",
+  "generated_at": "2026-07-20T07:09:21Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

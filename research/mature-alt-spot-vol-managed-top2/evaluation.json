@@ -1,0 +1,1088 @@
+{
+  "base_study_code_sha256": "89d9192cc5af59325d397028e34d5916a9e34c8ee2baa3a514e3a81475a8d67c",
+  "content_digest": "5b0cf9ce849d993852ee4d2ccdfe51a5961992a0c263df03272414c2bfae5d09",
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "ADAUSDT": {
+        "days": 731,
+        "duplicates": 0,
+        "expected_days": 731,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "DOGEUSDT": {
+        "days": 731,
+        "duplicates": 0,
+        "expected_days": 731,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "LINKUSDT": {
+        "days": 731,
+        "duplicates": 0,
+        "expected_days": 731,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "LTCUSDT": {
+        "days": 731,
+        "duplicates": 0,
+        "expected_days": 731,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "XRPUSDT": {
+        "days": 731,
+        "duplicates": 0,
+        "expected_days": 731,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "equal_weight_buy_and_hold": {
+    "base": {
+      "annualized_return": 0.9519583938065139,
+      "annualized_volatility": 0.6617477147115406,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.8423136425061988
+        },
+        "2024": {
+          "days": 366,
+          "return": 1.0719217738274
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0003385346521717996,
+        0.005790415420993159
+      ],
+      "days": 731,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.5023879386868492,
+      "sharpe_zero_rf": 1.3386796816690285,
+      "total_return": 2.8171297501278585,
+      "turnover": 2.0
+    },
+    "favorable": {
+      "annualized_return": 0.9539108044646598,
+      "annualized_volatility": 0.6617474879436971,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.8441589085744126
+        },
+        "2024": {
+          "days": 366,
+          "return": 1.0739970159886818
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0003526583465205271,
+        0.005821044988173189
+      ],
+      "days": 731,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.5023879386868488,
+      "sharpe_zero_rf": 1.3401943047373348,
+      "total_return": 2.8247800733922825,
+      "turnover": 2.0
+    },
+    "stress": {
+      "annualized_return": 0.9500059804732097,
+      "annualized_volatility": 0.661749458681474,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.8404683764379834
+        },
+        "2024": {
+          "days": 366,
+          "return": 1.0698465316661148
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.000385263171815007,
+        0.005820371685271878
+      ],
+      "days": 731,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.5023879386868483,
+      "sharpe_zero_rf": 1.3371619939020516,
+      "total_return": 2.8094870856113245,
+      "turnover": 2.0
+    }
+  },
+  "fixed_20pct_exposure_90d": {
+    "base": {
+      "annualized_return": 0.14874435022278187,
+      "annualized_volatility": 0.1532308564907961,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.11352484919787798
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.18552811926293855
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0001844579915940929,
+        0.001116618779347376
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.9165526675786594,
+      "max_drawdown": -0.14835369788810482,
+      "selected_asset_day_quote_volume_median": 97647045.91914,
+      "selected_asset_day_quote_volume_min": 7858884.07283,
+      "selection_counts": {
+        "ADAUSDT": 9,
+        "DOGEUSDT": 7,
+        "LINKUSDT": 6,
+        "LTCUSDT": 7,
+        "XRPUSDT": 9
+      },
+      "sharpe_zero_rf": 0.9814137075965707,
+      "total_return": 0.3201150202221037,
+      "turnover": 4.329031511492188
+    },
+    "favorable": {
+      "annualized_return": 0.1512308096184991,
+      "annualized_volatility": 0.1532671190614566,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.11600506678680844
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.1880267227502046
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.00021147127401373314,
+        0.0011586466988348367
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.9165526675786594,
+      "max_drawdown": -0.14720173450669694,
+      "selected_asset_day_quote_volume_median": 97647045.91914,
+      "selected_asset_day_quote_volume_min": 7858884.07283,
+      "selection_counts": {
+        "ADAUSDT": 9,
+        "DOGEUSDT": 7,
+        "LINKUSDT": 6,
+        "LTCUSDT": 7,
+        "XRPUSDT": 9
+      },
+      "sharpe_zero_rf": 0.995329215050189,
+      "total_return": 0.3258438420673557,
+      "turnover": 4.329031511492188
+    },
+    "stress": {
+      "annualized_return": 0.14626262712912452,
+      "annualized_volatility": 0.153198139112654,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.11104949528548635
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.18303415059807282
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.00020327211209195394,
+        0.0011347408953634604
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.9165526675786594,
+      "max_drawdown": -0.14950443631031618,
+      "selected_asset_day_quote_volume_median": 97647045.91914,
+      "selected_asset_day_quote_volume_min": 7858884.07283,
+      "selection_counts": {
+        "ADAUSDT": 9,
+        "DOGEUSDT": 7,
+        "LINKUSDT": 6,
+        "LTCUSDT": 7,
+        "XRPUSDT": 9
+      },
+      "sharpe_zero_rf": 0.9674692233450105,
+      "total_return": 0.3144094959274779,
+      "turnover": 4.329031511492188
+    }
+  },
+  "generated_at": "2026-07-20T04:18:44Z",
+  "manifest_content_identity": "3e80d1efd6f250694d5e4749a069e2a7bf2372dcf0de5076cb1f024d4009b000",
+  "period": {
+    "end_exclusive": "2025-01-01T00:00:00Z",
+    "start": "2023-01-01T00:00:00Z"
+  },
+  "phase": "evaluation",
+  "rules": {
+    "costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    },
+    "primary": "mom90_vol56_target20",
+    "variants": {
+      "mom120_vol56_target20": [
+        120,
+        56,
+        0.2
+      ],
+      "mom60_vol56_target20": [
+        60,
+        56,
+        0.2
+      ],
+      "mom90_vol28_target20": [
+        90,
+        28,
+        0.2
+      ],
+      "mom90_vol56_target15": [
+        90,
+        56,
+        0.15
+      ],
+      "mom90_vol56_target20": [
+        90,
+        56,
+        0.2
+      ],
+      "mom90_vol56_target25": [
+        90,
+        56,
+        0.25
+      ],
+      "mom90_vol84_target20": [
+        90,
+        84,
+        0.2
+      ]
+    }
+  },
+  "schema_version": 1,
+  "study_code_sha256": "4f09905a3aca475fa768181c6836984df57738f69246e2b60d0c0100cf4b8304",
+  "unmanaged_90d": {
+    "base": {
+      "annualized_return": 0.48717255837764406,
+      "annualized_volatility": 0.7133310169637449,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.4388540311592948
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.5387859465802272
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.001158080840406104,
+        0.0049506911693752926
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.9165526675786594,
+      "max_drawdown": -0.5769092495457917,
+      "selected_asset_day_quote_volume_median": 97647045.91914,
+      "selected_asset_day_quote_volume_min": 7858884.07283,
+      "selection_counts": {
+        "ADAUSDT": 9,
+        "DOGEUSDT": 7,
+        "LINKUSDT": 6,
+        "LTCUSDT": 7,
+        "XRPUSDT": 9
+      },
+      "sharpe_zero_rf": 0.9090099432656344,
+      "total_return": 1.214088362328226,
+      "turnover": 20.46731318777259
+    },
+    "favorable": {
+      "annualized_return": 0.5024702110538353,
+      "annualized_volatility": 0.7134869957581002,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.45495285222371895
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.5532709492337422
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0010163448611932198,
+        0.005076430244043261
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.9165526675786594,
+      "max_drawdown": -0.5738523797719566,
+      "selected_asset_day_quote_volume_median": 97647045.91914,
+      "selected_asset_day_quote_volume_min": 7858884.07283,
+      "selection_counts": {
+        "ADAUSDT": 9,
+        "DOGEUSDT": 7,
+        "LINKUSDT": 6,
+        "LTCUSDT": 7,
+        "XRPUSDT": 9
+      },
+      "sharpe_zero_rf": 0.9233053730096481,
+      "total_return": 1.2599359978638711,
+      "turnover": 20.46731318777259
+    },
+    "stress": {
+      "annualized_return": 0.47201160455370017,
+      "annualized_volatility": 0.7131930318178797,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.42291208372898215
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.5244192727184493
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.001179414124059293,
+        0.00498138753077823
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.9165526675786594,
+      "max_drawdown": -0.5799488428505496,
+      "selected_asset_day_quote_volume_median": 97647045.91914,
+      "selected_asset_day_quote_volume_min": 7858884.07283,
+      "selection_counts": {
+        "ADAUSDT": 9,
+        "DOGEUSDT": 7,
+        "LINKUSDT": 6,
+        "LTCUSDT": 7,
+        "XRPUSDT": 9
+      },
+      "sharpe_zero_rf": 0.8946856871796228,
+      "total_return": 1.1691146038204194,
+      "turnover": 20.46731318777259
+    }
+  },
+  "variants": {
+    "mom120_vol56_target20": {
+      "base": {
+        "annualized_return": 0.5153619359572106,
+        "annualized_volatility": 0.2622477882017233,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.28315225466238236
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.791633285146319
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -2.2759641415978345e-05,
+          0.0029044079238824422
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.957592339261286,
+        "max_drawdown": -0.15651961149821692,
+        "max_risky_exposure": 0.6415388538702997,
+        "mean_risky_exposure": 0.2730572694077706,
+        "selection_counts": {
+          "ADAUSDT": 7,
+          "DOGEUSDT": 8,
+          "LINKUSDT": 6,
+          "LTCUSDT": 6,
+          "XRPUSDT": 12
+        },
+        "sharpe_zero_rf": 1.7142593644536963,
+        "total_return": 1.2989382893636785,
+        "turnover": 6.285266644372311
+      },
+      "favorable": {
+        "annualized_return": 0.5201269596284699,
+        "annualized_volatility": 0.2622686435776209,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.28808823002384587
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.796025141530228
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -6.091258839159178e-05,
+          0.0028691189723902884
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.957592339261286,
+        "max_drawdown": -0.1553599256401731,
+        "max_risky_exposure": 0.6415388538702997,
+        "mean_risky_exposure": 0.27305726940777064,
+        "selection_counts": {
+          "ADAUSDT": 7,
+          "DOGEUSDT": 8,
+          "LINKUSDT": 6,
+          "LTCUSDT": 6,
+          "XRPUSDT": 12
+        },
+        "sharpe_zero_rf": 1.7261271241606424,
+        "total_return": 1.3134388456320036,
+        "turnover": 6.285266644372312
+      },
+      "stress": {
+        "annualized_return": 0.5106101842164086,
+        "annualized_volatility": 0.2622310537125699,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.2782331943918184
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.7872510198826408
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -6.329384003221796e-05,
+          0.002913988832831069
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.957592339261286,
+        "max_drawdown": -0.1576779663238631,
+        "max_risky_exposure": 0.6415388538702999,
+        "mean_risky_exposure": 0.27305726940777064,
+        "selection_counts": {
+          "ADAUSDT": 7,
+          "DOGEUSDT": 8,
+          "LINKUSDT": 6,
+          "LTCUSDT": 6,
+          "XRPUSDT": 12
+        },
+        "sharpe_zero_rf": 1.702362964446255,
+        "total_return": 1.2845235803246218,
+        "turnover": 6.285266644372312
+      }
+    },
+    "mom60_vol56_target20": {
+      "base": {
+        "annualized_return": 0.2834954249827253,
+        "annualized_volatility": 0.24415853615486469,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.3181632753192307
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.2505942077629928
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00019541122773879797,
+          0.0019113408258210856
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.957592339261286,
+        "max_drawdown": -0.20638616958043698,
+        "max_risky_exposure": 0.49355945143533186,
+        "mean_risky_exposure": 0.26999546029431815,
+        "selection_counts": {
+          "ADAUSDT": 6,
+          "DOGEUSDT": 5,
+          "LINKUSDT": 9,
+          "LTCUSDT": 5,
+          "XRPUSDT": 11
+        },
+        "sharpe_zero_rf": 1.1425855483353422,
+        "total_return": 0.6484873570001195,
+        "turnover": 7.870351878230612
+      },
+      "favorable": {
+        "annualized_return": 0.2885515437519681,
+        "annualized_volatility": 0.24418578307551256,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.3233974720798396
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.2554948604105758
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0001644368747512802,
+          0.0019209410270085905
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.957592339261286,
+        "max_drawdown": -0.20471968011188502,
+        "max_risky_exposure": 0.4935594514353319,
+        "mean_risky_exposure": 0.26999546029431815,
+        "selection_counts": {
+          "ADAUSDT": 6,
+          "DOGEUSDT": 5,
+          "LINKUSDT": 9,
+          "LTCUSDT": 5,
+          "XRPUSDT": 11
+        },
+        "sharpe_zero_rf": 1.1585954493526194,
+        "total_return": 0.661518724476583,
+        "turnover": 7.870351878230612
+      },
+      "stress": {
+        "annualized_return": 0.27845704747183664,
+        "annualized_volatility": 0.2441378762323167,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.31294765189372065
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.24571060890848329
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00018436007717845195,
+          0.0018474189397106465
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.957592339261286,
+        "max_drawdown": -0.2080498747858225,
+        "max_risky_exposure": 0.49355945143533186,
+        "mean_risky_exposure": 0.26999546029431815,
+        "selection_counts": {
+          "ADAUSDT": 6,
+          "DOGEUSDT": 5,
+          "LINKUSDT": 9,
+          "LTCUSDT": 5,
+          "XRPUSDT": 11
+        },
+        "sharpe_zero_rf": 1.1265416780185056,
+        "total_return": 0.6355528189054884,
+        "turnover": 7.870351878230613
+      }
+    },
+    "mom90_vol28_target20": {
+      "base": {
+        "annualized_return": 0.32421190358365437,
+        "annualized_volatility": 0.2296429836422453,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.24121032968004075
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.41385126222557767
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00011939928417463181,
+          0.00198962713148535
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.21268495951757405,
+        "max_risky_exposure": 0.5826162467081915,
+        "mean_risky_exposure": 0.27195105020453575,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.3372891128758146,
+        "total_return": 0.7548867913055506,
+        "turnover": 6.971310018425721
+      },
+      "favorable": {
+        "annualized_return": 0.32883143319240293,
+        "annualized_volatility": 0.2296873833094361,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.24574578230587263
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.41856301808501106
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00010427219716551862,
+          0.0019771464951249844
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.21090527233866307,
+        "max_risky_exposure": 0.5826162467081915,
+        "mean_risky_exposure": 0.27195105020453575,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.3522461044889766,
+        "total_return": 0.7671688967144903,
+        "turnover": 6.971310018425721
+      },
+      "stress": {
+        "annualized_return": 0.3196065659741105,
+        "annualized_volatility": 0.22960464341366152,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.23668956276240838
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.4091532445542745
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00011742301652560775,
+          0.002005650239139254
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.21446140330712848,
+        "max_risky_exposure": 0.5826162467081913,
+        "mean_risky_exposure": 0.27195105020453575,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.3222914393275196,
+        "total_return": 0.7426851098730496,
+        "turnover": 6.971310018425721
+      }
+    },
+    "mom90_vol56_target15": {
+      "base": {
+        "annualized_return": 0.2033160448155591,
+        "annualized_volatility": 0.16760442413727308,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.12856384854364222
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.28367031772877604
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00015020810902612047,
+          0.0013658592191404962
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.16168826561995653,
+        "max_risky_exposure": 0.4278537881259853,
+        "mean_risky_exposure": 0.19224703134244847,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1877684689588264,
+        "total_return": 0.44870391403723153,
+        "turnover": 4.676187052095803
+      },
+      "favorable": {
+        "annualized_return": 0.20612981739648806,
+        "annualized_volatility": 0.16763324891488077,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.13125640198221933
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.286619281400156
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00015255439747541242,
+          0.0013904308270300855
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.1603731269623726,
+        "max_risky_exposure": 0.42785378812598523,
+        "mean_risky_exposure": 0.19224703134244847,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.201532010030452,
+        "total_return": 0.4554962989976954,
+        "turnover": 4.676187052095803
+      },
+      "stress": {
+        "annualized_return": 0.20050804573153136,
+        "annualized_volatility": 0.16757946081262193,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.12587696489467626
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.2807272641980807
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00015952028486102064,
+          0.0013788106599691896
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.16300174752714358,
+        "max_risky_exposure": 0.4278537881259853,
+        "mean_risky_exposure": 0.19224703134244847,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.173973141015492,
+        "total_return": 0.4419413250731936,
+        "turnover": 4.676187052095803
+      }
+    },
+    "mom90_vol56_target20": {
+      "base": {
+        "annualized_return": 0.26701153553443535,
+        "annualized_volatility": 0.2207648769303057,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.1695145897252408
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.3735266316308332
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00022340184744177737,
+          0.0018563979500459704
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.21060865541620666,
+        "max_risky_exposure": 0.5312307439634067,
+        "mean_risky_exposure": 0.2551434310967691,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1817916267235271,
+        "total_return": 0.6063594350684236,
+        "turnover": 6.176744767392466
+      },
+      "favorable": {
+        "annualized_return": 0.27092682286034653,
+        "annualized_volatility": 0.22080262584386548,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.17322818959099706
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.37766575607095176
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00019702156960519588,
+          0.0018197214726554066
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.20894907243071115,
+        "max_risky_exposure": 0.5312307439634067,
+        "mean_risky_exposure": 0.2551434310967691,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1956081838846884,
+        "total_return": 0.6163163008566346,
+        "turnover": 6.176744767392466
+      },
+      "stress": {
+        "annualized_return": 0.2631068586537868,
+        "annualized_volatility": 0.22073224721075435,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.16581137965148462
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.36939839515391926
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00020782671481947907,
+          0.0018282428784178616
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.2122654410400917,
+        "max_risky_exposure": 0.5312307439634067,
+        "mean_risky_exposure": 0.2551434310967691,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1679432563084875,
+        "total_return": 0.5964602323469119,
+        "turnover": 6.176744767392467
+      }
+    },
+    "mom90_vol56_target25": {
+      "base": {
+        "annualized_return": 0.3282990693981931,
+        "annualized_volatility": 0.27293936186531403,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.20920657598714643
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.4602561142010959
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0002587062471035588,
+          0.0022551592487414104
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.2572007424001034,
+        "max_risky_exposure": 0.6213010639112869,
+        "mean_risky_exposure": 0.3176460578205696,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1756713160782182,
+        "total_return": 0.7657512959173998,
+        "turnover": 7.666779074404937
+      },
+      "favorable": {
+        "annualized_return": 0.3333963318948827,
+        "annualized_volatility": 0.27298595514456137,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.21401093562165574
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.46567698201831575
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00023346631231711584,
+          0.0022892674694228025
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.25523841779370393,
+        "max_risky_exposure": 0.6213010639112869,
+        "mean_risky_exposure": 0.31764605782056954,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1895556648484389,
+        "total_return": 0.7793478842591752,
+        "turnover": 7.666779074404937
+      },
+      "stress": {
+        "annualized_return": 0.3232189487677424,
+        "annualized_volatility": 0.2728991579218544,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.20441900987994566
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.4548528156071374
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0002873738875259018,
+          0.0022560245084692456
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.2591589174051733,
+        "max_risky_exposure": 0.6213010639112869,
+        "mean_risky_exposure": 0.31764605782056954,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.161755025539507,
+        "total_return": 0.7522523876946057,
+        "turnover": 7.6667790744049364
+      }
+    },
+    "mom90_vol84_target20": {
+      "base": {
+        "annualized_return": 0.25300230364735743,
+        "annualized_volatility": 0.21727312358485373,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.1446027643722747
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.3725156644295835
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00017979180135970217,
+          0.001798612758179247
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.1731045156521911,
+        "max_risky_exposure": 0.5483649230096999,
+        "mean_risky_exposure": 0.24683881440774635,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1459328991610689,
+        "total_return": 0.570985223650347,
+        "turnover": 5.685515726177723
+      },
+      "favorable": {
+        "annualized_return": 0.25656584470383037,
+        "annualized_volatility": 0.21731304992766606,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.1477748327724242
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.37652956706035234
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00019036496599984573,
+          0.0017482905888428412
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.1716869830413178,
+        "max_risky_exposure": 0.5483649230097,
+        "mean_risky_exposure": 0.24683881440774635,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.158837181640583,
+        "total_return": 0.5799459936389986,
+        "turnover": 5.685515726177724
+      },
+      "stress": {
+        "annualized_return": 0.24944762206190862,
+        "annualized_volatility": 0.2172377205908667,
+        "by_year": {
+          "2023": {
+            "days": 365,
+            "return": 0.14143844660236837
+          },
+          "2024": {
+            "days": 366,
+            "return": 0.3685119498667879
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00021820687389348875,
+          0.0018113780127008174
+        ],
+        "days": 731,
+        "invested_day_fraction": 0.9165526675786594,
+        "max_drawdown": -0.17452012039685472,
+        "max_risky_exposure": 0.5483649230096999,
+        "mean_risky_exposure": 0.2468388144077463,
+        "selection_counts": {
+          "ADAUSDT": 9,
+          "DOGEUSDT": 7,
+          "LINKUSDT": 6,
+          "LTCUSDT": 7,
+          "XRPUSDT": 9
+        },
+        "sharpe_zero_rf": 1.1330002812467395,
+        "total_return": 0.5620721542127254,
+        "turnover": 5.685515726177723
+      }
+    }
+  }
+}

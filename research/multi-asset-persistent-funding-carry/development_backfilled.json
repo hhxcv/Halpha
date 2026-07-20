@@ -1,0 +1,224 @@
+{
+  "base": {
+    "active_interval_bootstrap_95pct_mean": [
+      0.0005688243326166964,
+      0.0011428875209867598
+    ],
+    "active_interval_mean": 0.0008351064715637205,
+    "active_intervals": 827,
+    "basis_sum": -0.002735916665258814,
+    "by_year": {
+      "2021": {
+        "active_intervals": 681,
+        "intervals": 1094,
+        "return_noncompounded": 0.6789655868058618
+      },
+      "2022": {
+        "active_intervals": 0,
+        "intervals": 1095,
+        "return_noncompounded": 0.0
+      },
+      "2023": {
+        "active_intervals": 146,
+        "intervals": 1095,
+        "return_noncompounded": 0.011667465177335544
+      }
+    },
+    "cost_sum": -0.011999999999999999,
+    "episode_median": 0.027369025386409635,
+    "episode_returns": [
+      -0.0012316823933997672,
+      0.6245587436925426,
+      0.028269500120308818,
+      0.027369025386409635,
+      0.011667465177335544
+    ],
+    "episode_symbols": [
+      "DOGEUSDT",
+      "XRPUSDT",
+      "DOGEUSDT",
+      "DOGEUSDT",
+      "XRPUSDT"
+    ],
+    "episodes": 5,
+    "exposure_fraction": 0.2518270401948843,
+    "funding_sum": 0.7053689686484547,
+    "intervals": 3284,
+    "max_drawdown_noncompounded": -0.017722254035586027,
+    "positive_episode_fraction": 0.8,
+    "return_compounded_resized_sensitivity": 0.9906000572106264,
+    "return_noncompounded": 0.6906330519831965,
+    "rows_digest": "528ec63ab5911febaf94986bc122f6d1abc530ef296343f4090a77bcf29bdb06",
+    "selection_counts": {
+      "ADAUSDT": 0,
+      "DOGEUSDT": 3,
+      "XRPUSDT": 2
+    }
+  },
+  "base_study_code_sha256": "4d383f72c0d1ce998b5521a4b24b07061695936303322bc8c569848720e007b1",
+  "content_digest": "d7591b90bdc24848d8ee6ba2b33a0310aaa44441e9eacb335da4c6187f43c412",
+  "data_alignment": {
+    "common_events_inclusive": 3285,
+    "episodes": 5,
+    "forced_exit_at_last_event": "2023-12-31T16:00:00Z",
+    "per_symbol_alignment": {
+      "ADAUSDT": {
+        "aligned_events": 3285,
+        "funding_events": 3285,
+        "missing_event_prices": 0
+      },
+      "DOGEUSDT": {
+        "aligned_events": 3285,
+        "funding_events": 3285,
+        "missing_event_prices": 0
+      },
+      "XRPUSDT": {
+        "aligned_events": 3285,
+        "funding_events": 3285,
+        "missing_event_prices": 0
+      }
+    },
+    "selection_counts": {
+      "ADAUSDT": 0,
+      "DOGEUSDT": 3,
+      "XRPUSDT": 2
+    }
+  },
+  "favorable": {
+    "active_interval_bootstrap_95pct_mean": [
+      0.0005903219028335519,
+      0.0011407544650819626
+    ],
+    "active_interval_mean": 0.0008399432309349419,
+    "active_intervals": 827,
+    "basis_sum": -0.002735916665258814,
+    "by_year": {
+      "2021": {
+        "active_intervals": 681,
+        "intervals": 1094,
+        "return_noncompounded": 0.6821655868058618
+      },
+      "2022": {
+        "active_intervals": 0,
+        "intervals": 1095,
+        "return_noncompounded": 0.0
+      },
+      "2023": {
+        "active_intervals": 146,
+        "intervals": 1095,
+        "return_noncompounded": 0.012467465177335546
+      }
+    },
+    "cost_sum": -0.008000000000000002,
+    "episode_median": 0.028169025386409634,
+    "episode_returns": [
+      -0.0004316823933997676,
+      0.6253587436925425,
+      0.029069500120308813,
+      0.028169025386409634,
+      0.012467465177335544
+    ],
+    "episode_symbols": [
+      "DOGEUSDT",
+      "XRPUSDT",
+      "DOGEUSDT",
+      "DOGEUSDT",
+      "XRPUSDT"
+    ],
+    "episodes": 5,
+    "exposure_fraction": 0.2518270401948843,
+    "funding_sum": 0.7053689686484547,
+    "intervals": 3284,
+    "max_drawdown_noncompounded": -0.016922254035586004,
+    "positive_episode_fraction": 0.8,
+    "return_compounded_resized_sensitivity": 0.9985993662758743,
+    "return_noncompounded": 0.6946330519831964,
+    "rows_digest": "b91a56d099737577e8894da5570463dee9089d9f5c3874093184ef3a251d6abd",
+    "selection_counts": {
+      "ADAUSDT": 0,
+      "DOGEUSDT": 3,
+      "XRPUSDT": 2
+    }
+  },
+  "generated_at": "2026-07-20T04:45:08Z",
+  "manifest_content_identity": "1587d2f2505177db808e915a5a83dd1b4d35991e6f9588cf4dd95adcdb438609",
+  "period": {
+    "end_exclusive": "2024-01-01T00:00:00Z",
+    "start": "2021-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "costs": {
+      "base": 0.0024,
+      "favorable": 0.0016,
+      "stress": 0.004
+    },
+    "max_simultaneous_assets": 1,
+    "persistence_events": 2,
+    "threshold_bps": 3.0
+  },
+  "schema_version": 1,
+  "stress": {
+    "active_interval_bootstrap_95pct_mean": [
+      0.0005681534129464185,
+      0.001138106823108704
+    ],
+    "active_interval_mean": 0.000825432952821278,
+    "active_intervals": 827,
+    "basis_sum": -0.002735916665258814,
+    "by_year": {
+      "2021": {
+        "active_intervals": 681,
+        "intervals": 1094,
+        "return_noncompounded": 0.6725655868058618
+      },
+      "2022": {
+        "active_intervals": 0,
+        "intervals": 1095,
+        "return_noncompounded": 0.0
+      },
+      "2023": {
+        "active_intervals": 146,
+        "intervals": 1095,
+        "return_noncompounded": 0.010067465177335541
+      }
+    },
+    "cost_sum": -0.020000000000000004,
+    "episode_median": 0.025769025386409634,
+    "episode_returns": [
+      -0.002831682393399767,
+      0.6229587436925427,
+      0.026669500120308814,
+      0.025769025386409634,
+      0.010067465177335541
+    ],
+    "episode_symbols": [
+      "DOGEUSDT",
+      "XRPUSDT",
+      "DOGEUSDT",
+      "DOGEUSDT",
+      "XRPUSDT"
+    ],
+    "episodes": 5,
+    "exposure_fraction": 0.2518270401948843,
+    "funding_sum": 0.7053689686484547,
+    "intervals": 3284,
+    "max_drawdown_noncompounded": -0.019322254035586073,
+    "positive_episode_fraction": 0.8,
+    "return_compounded_resized_sensitivity": 0.9746878267442431,
+    "return_noncompounded": 0.6826330519831963,
+    "rows_digest": "2eb86ec8970d609b106b8198224e319a0f9bb734565e48bff5b8d6c246c32091",
+    "selection_counts": {
+      "ADAUSDT": 0,
+      "DOGEUSDT": 3,
+      "XRPUSDT": 2
+    }
+  },
+  "study_code_sha256": "41408a2b75718132153c0c5338273a4898146ae9f1a28d267eeb4f0c2b1ab2e7",
+  "symbols": [
+    "DOGEUSDT",
+    "XRPUSDT",
+    "ADAUSDT"
+  ],
+  "universe": "core"
+}

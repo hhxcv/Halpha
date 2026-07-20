@@ -1,0 +1,19 @@
+{
+  "content_digest": "5140772b234dc08fa5723a4ca731632f06e0f646670880847487d8f7ae051f33",
+  "development_content_digest": "43abf8ac6c564d279a492248edcd50ebb63a6362a73b7fe54b2de9238040c46a",
+  "diagnostics": {
+    "development": {
+      "passed": true,
+      "stress_return_after_4pct_hurdle": 0.025925574469762624
+    },
+    "evaluation": {
+      "passed": false,
+      "stress_return_after_4pct_hurdle": 0.4892843801335258
+    }
+  },
+  "evaluation_content_digest": "8f6b5a7ed5aff2b986c8310b40924a2922ce02f59664957d472ca019e60bec24",
+  "fixed_rule": "TRXUSDT_VOL60_TARGET10PCT_MONTHLY_LONG_MAX0P5X",
+  "generated_at": "2026-07-20T07:46:10Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_EXPOSED_CALIBRATION_GATE_STOP"
+}

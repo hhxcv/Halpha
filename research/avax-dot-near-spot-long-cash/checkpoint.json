@@ -1,0 +1,21 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_AVAX_DOT_NEAR_SPOT_MONTHLY_LONG_CASH_0P5X",
+  "created_at": "2026-07-20T16:05:00+08:00",
+  "inherited_exposed_failure": "AVAX/DOT/NEAR perpetual monthly 90d long-short 0.5x: development +27.41%, max drawdown -82.87%, adverse -63.99%, DOES_NOT_SUPPORT",
+  "question": "Can a fixed three-altcoin spot monthly positive-90-day-momentum long/cash portfolio earn positive independent-evaluation returns and preserve capital in confirmation so the combined untouched period remains profitable?",
+  "symbols": ["AVAXUSDT", "DOTUSDT", "NEARUSDT"],
+  "primary_lookback_days": 90,
+  "robustness_lookback_days": [60, 120],
+  "weight_per_positive_symbol": 0.16666666666666666,
+  "maximum_gross": 0.5,
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"], "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"], "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]},
+  "development_gate": "data PASS; 90d base/stress total >0; max drawdown >-40% and >=15 percentage points better than 0.5x long; 60d and 120d base >0; turnover <=20",
+  "evaluation_gate": "90d base/stress total >0; at least one positive year; max drawdown >-40% and below 0.5x long; 60d and 120d base >0",
+  "confirmation_gate": "90d base/stress >=-5%; max drawdown >-25% and below 0.5x long; 60d and 120d base >=-5%; compounded evaluation+confirmation >0",
+  "holdout_release_rule": "Run exposed development after checkpoint; fetch evaluation only after it passes; fetch confirmation only after fixed evaluation passes",
+  "formal_strategy_baseline": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "base_spot_code_sha256": "89d9192cc5af59325d397028e34d5916a9e34c8ee2baa3a514e3a81475a8d67c",
+  "study_code_sha256": "53b05f553d07bcbd3e1599e9844ca2d59cd4743a78c403f4bd40f0342d85c938"
+}

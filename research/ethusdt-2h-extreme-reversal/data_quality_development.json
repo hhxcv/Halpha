@@ -1,0 +1,16 @@
+{
+  "bars": 13140,
+  "duplicates": 0,
+  "end_exclusive": "2024-01-01T00:00:00Z",
+  "expected_bars": 13140,
+  "first_bar": "2021-01-01T00:00:00Z",
+  "funding_duplicates": 0,
+  "funding_records": 3285,
+  "gaps": [],
+  "generated_at": "2026-07-20T03:20:04Z",
+  "invalid_ohlc": 0,
+  "last_bar": "2023-12-31T22:00:00Z",
+  "manifest_content_identity": "83420cc3465abf9b13c8a046bf11d09508d47d36abd6ec7c9824308f2bf6b977",
+  "start": "2021-01-01T00:00:00Z",
+  "status": "PASS"
+}

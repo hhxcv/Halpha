@@ -1,0 +1,31 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_TRXUSDT_VOL60_TARGET8_LONG_MAX0P5X",
+  "created_at": "2026-07-21T01:30:00+08:00",
+  "formal_strategy_background": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 / BTCUSDT-PERP",
+  "question": "Can the pre-registered 8% diagnostic from the parent become a fresh-confirmed, low-risk TRXUSDT always-long volatility-target candidate in 2025-2026?",
+  "evidence_boundary": "8% was pre-registered before parent results. Development/evaluation are exposed; confirmation is unopened.",
+  "annual_target_volatilities": [0.06, 0.08, 0.10],
+  "primary_target_volatility": 0.08,
+  "volatility_lookback_days": 60,
+  "maximum_gross": 0.5,
+  "turnover_costs": {"favorable": 0.001, "base": 0.003, "stress": 0.006},
+  "annual_capital_hurdle": 0.04,
+  "exposed_calibration_snapshot": {
+    "development_base": 0.09195151311896965,
+    "development_stress_after_hurdle": 0.006460834245307526,
+    "development_max_drawdown": -0.10456516363219004,
+    "evaluation_base": 0.47625371120809046,
+    "evaluation_stress_after_hurdle": 0.35711084289002076,
+    "evaluation_max_drawdown": -0.12874925652207503
+  },
+  "calibration_gate": "each phase stress after hurdle >0; max drawdown >-14% and better than unscaled; 6%/10% targets positive; data PASS",
+  "confirmation_gate": "stress after hurdle >0; 2025/2026 slices positive; max drawdown >-10% and better than unscaled; 6%/10% targets nonnegative; data PASS",
+  "confirmation_fetch_months": ["2024-04", "2026-06"],
+  "confirmation_source_manifest_sha256": "cbc34ad6be133bb9761cf37460bf034ee77ff6b0f8a47d8a1a1ac599e0e232e5",
+  "confirmation_content_identity": "df496c8fb29099fd22af64ab48017b46b2a11f51aa59a625a80d15dfe76f7353",
+  "confirmation_data_inventory": {"archives": 27, "backfill_records": 0, "external_files": 28, "external_bytes": 49882},
+  "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/trxusdt-voltarget-8pct-long",
+  "study_code_sha256": "0cf2834b6158d4c58dc2297a6d28633830aa50cf3043047d8f62c7d7e1ee445c",
+  "pre_holdout_status": "CALIBRATION_PASSED_CONFIRMATION_DATA_LOCKED_BEFORE_CONFIRMATION_RESULT"
+}

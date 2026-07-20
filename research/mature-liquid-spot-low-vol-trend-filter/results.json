@@ -1,0 +1,21 @@
+{
+  "candidate_id": "RESEARCH_MATURE_LIQUID_SPOT_LOW_VOL_POSITIVE_TREND_90D_0P5X",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "development_content_digest": "f949e4f31b550a1f6a441515b47e85fc247aec88e447618ef93ab70b499f9f62",
+  "development_gate": "FAILED_DEVELOPMENT_GATE_STOP",
+  "failed_conditions": [
+    "90d base maximum drawdown -0.32954280679962233 is not greater than -0.30",
+    "drawdown improvement over unfiltered is 0.0340230196484667, below 0.05"
+  ],
+  "main_90d_base_total_return": 1.7981682085418007,
+  "main_90d_stress_total_return": 1.7821518375384753,
+  "main_90d_max_drawdown": -0.32954280679962233,
+  "main_90d_turnover": 5.7353345899864445,
+  "robustness_60d_base_total_return": 1.5665179943409715,
+  "robustness_180d_base_total_return": 1.3879084256016387,
+  "unfiltered_90d_base_total_return": 1.6677767994393435,
+  "unfiltered_90d_max_drawdown": -0.363565826448089,
+  "evaluation_opened": false,
+  "confirmation_opened": false,
+  "product_effects": "NONE"
+}

@@ -1,0 +1,211 @@
+{
+  "buy_and_hold": {
+    "base": {
+      "annualized_return": 0.24777172560425242,
+      "annualized_volatility": 0.8470204119477499,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 2.4267802595880843
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.676952874837986
+        },
+        "2023": {
+          "days": 365,
+          "return": 0.7549036773215463
+        }
+      },
+      "calmar": 0.30982540685522714,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0009177298902802854,
+        0.004147623084545379
+      ],
+      "days": 1095,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.7997140328779728,
+      "sharpe_zero_rf": 0.6859779001162177,
+      "total_return": 0.9426985722315253,
+      "transitions_including_stage_boundaries": 2
+    },
+    "favorable": {
+      "annualized_return": 0.24861171300148932,
+      "annualized_volatility": 0.847011794765117,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 2.430252794555594
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.676952874837986
+        },
+        "2023": {
+          "days": 365,
+          "return": 0.756670089027853
+        }
+      },
+      "calmar": 0.31087576656220145,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0007834937042472197,
+        0.004092513894131018
+      ],
+      "days": 1095,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.7997140328779726,
+      "sharpe_zero_rf": 0.6867719597357778,
+      "total_return": 0.946624629546742,
+      "transitions_including_stage_boundaries": 2
+    },
+    "stress": {
+      "annualized_return": 0.24693145536663397,
+      "annualized_volatility": 0.8470298153876352,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 2.423307724620578
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.676952874837986
+        },
+        "2023": {
+          "days": 365,
+          "return": 0.7531372656152397
+        }
+      },
+      "calmar": 0.3087746934713509,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0008596379212226977,
+        0.004107392747279278
+      ],
+      "days": 1095,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.799714032877973,
+      "sharpe_zero_rf": 0.6851832206298705,
+      "total_return": 0.93877647801091,
+      "transitions_including_stage_boundaries": 2
+    }
+  },
+  "cash_total_return": 0.0,
+  "content_digest": "265e3b4162bdafc50f9a01ff1fdfa5a474b68f9c114d587b56dd0640f66a2411",
+  "data_quality": {
+    "days": 1095,
+    "duplicate_days": 0,
+    "expected_days": 1095,
+    "gaps": 0,
+    "invalid_ohlc": 0,
+    "max_abs_open_vs_previous_close_gap": 0.0005309431890787586,
+    "status": "PASS"
+  },
+  "funding_rate_sum": 0.46584018000000005,
+  "generated_at": "2026-07-20T03:31:11Z",
+  "manifest_content_identity": "c15d35d4cd016f51ada1a436bf05557c2f4fa9fa64e9816dfd4c5a0c49ee4547",
+  "period": {
+    "end_exclusive": "2024-01-01T00:00:00Z",
+    "start": "2021-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "funding": "actual daily sum applied to 1x initial notional proxy",
+    "position": "next UTC day long when prior close > prior SMA200, else cash",
+    "sma_days": 200,
+    "transition_costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    }
+  },
+  "schema_version": 1,
+  "strategy": {
+    "base": {
+      "annualized_return": 0.253467127821807,
+      "annualized_volatility": 0.4047012125183517,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.5979143298497165
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.11028474791149745
+        },
+        "2023": {
+          "days": 365,
+          "return": 0.3852696526542365
+        }
+      },
+      "calmar": 0.7494264193686379,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.00017143474250491656,
+        0.002016628886107503
+      ],
+      "days": 1095,
+      "exposure_fraction": 0.41278538812785387,
+      "max_drawdown": -0.33821482839548556,
+      "sharpe_zero_rf": 0.7598260454322505,
+      "total_return": 0.9694222820004763,
+      "transitions_including_stage_boundaries": 10
+    },
+    "favorable": {
+      "annualized_return": 0.25763430972636003,
+      "annualized_volatility": 0.4047307335287518,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.5994716162719229
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.10760801153943356
+        },
+        "2023": {
+          "days": 365,
+          "return": 0.3935768729502789
+        }
+      },
+      "calmar": 0.7677401061021195,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.00018007071775197269,
+        0.002003135735652227
+      ],
+      "days": 1095,
+      "exposure_fraction": 0.41278538812785387,
+      "max_drawdown": -0.33557490051469485,
+      "sharpe_zero_rf": 0.7680065521901064,
+      "total_return": 0.9891298318591246,
+      "transitions_including_stage_boundaries": 10
+    },
+    "stress": {
+      "annualized_return": 0.24930962067540063,
+      "annualized_volatility": 0.40467985863764755,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.5963570434275101
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.11295612633129926
+        },
+        "2023": {
+          "days": 365,
+          "return": 0.37700373934612896
+        }
+      },
+      "calmar": 0.7314416939124355,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.000178935758368923,
+        0.0020151428950879033
+      ],
+      "days": 1095,
+      "exposure_fraction": 0.41278538812785387,
+      "max_drawdown": -0.34084688191872026,
+      "sharpe_zero_rf": 0.7516291756651949,
+      "total_return": 0.9498906339254336,
+      "transitions_including_stage_boundaries": 10
+    }
+  },
+  "study_code_sha256": "e3e1779ec6d4d51cd1f03c3abbfea021ca1dbf1e3cfe02d22d31dba1fa89e4db"
+}

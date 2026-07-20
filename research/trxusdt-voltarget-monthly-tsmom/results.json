@@ -1,0 +1,13 @@
+{
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "reason": "Evaluation maximum drawdown was -21.25%, breaching the pre-registered -15% floor and essentially matching the simpler volatility-scaled always-long benchmark; confirmation remained unopened.",
+  "development_content_digest": "a9ccb372bdd9c55e99a28c2c707255dab65d520ca30518003b078d058c5c1ea0",
+  "evaluation_content_digest": "9da922ce9615100140742d2ed7888af7ddd410b7cb559a600404adcd95af7567",
+  "evaluation_base_total_return": 0.7887519975160706,
+  "evaluation_stress_total_return": 0.7753343455940773,
+  "evaluation_max_drawdown": -0.21249379041260896,
+  "evaluation_scaled_passive_max_drawdown": -0.21249379041260918,
+  "evaluation_gate": "FAILED_EVALUATION_GATE_STOP",
+  "confirmation": "NOT_ACQUIRED_OR_OPENED",
+  "product_effects": "NONE"
+}

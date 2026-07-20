@@ -1,0 +1,9 @@
+{
+  "content_digest": "9f2b7ccf8749ead4da68dfd5932b83750eda7ab31b27a4b1c1e088852f9029a9",
+  "development_content_digest": "f264b5acb721befbe0639e6eb7b36be49f49b6ac4b30bbb2e750fc00f9f88d59",
+  "fixed_rule": "MATURE_ALT_SPOT_VOL_MANAGED_TOP2_90D_56D_20PCT",
+  "generated_at": "2026-07-20T04:16:19Z",
+  "holdout_authorized": true,
+  "qualification_status": "PASSED_DEVELOPMENT_GATE",
+  "robustness_positive_count": 6
+}

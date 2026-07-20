@@ -1,0 +1,72 @@
+{
+  "conclusion": "DOES_NOT_SUPPORT",
+  "content_digest": "bf0a0e4bbdddacf5458a16d159cccafaa941129b923a889e0106e84124f06ec3",
+  "formal_product_strategy_comparison": "FIXED_BACKGROUND_ONLY_ECONOMICALLY_INCOMPARABLE",
+  "fresh_confirmation_base": {
+    "annualized_compound_equivalent": -0.0001793034545187755,
+    "annualized_volatility_of_8h_pnl": 0.002718838062549035,
+    "basis_pnl_on_initial_capital": -0.00014414154699917743,
+    "by_year": {
+      "2025": {
+        "intervals": 366,
+        "return_noncompounded": 0.0034986293245166376
+      },
+      "2026": {
+        "intervals": 542,
+        "return_noncompounded": -0.0036473142829858782
+      }
+    },
+    "four_pct_annual_capital_hurdle": 0.0331689497716895,
+    "funding_pnl_on_initial_capital": 0.0023954565885299394,
+    "interval_mean_block_bootstrap_95pct": [
+      -7.053374521886993e-06,
+      4.9863686335135885e-06
+    ],
+    "intervals": 908,
+    "max_drawdown": -0.0043494733465401225,
+    "pnl_digest": "835f3fc3fe9c8036830a5aca928538b9f54beaac3c815ad15dc04ec58aaeb535",
+    "return_after_four_pct_annual_capital_hurdle": -0.03331763473015874,
+    "round_trip_cost_on_initial_capital": -0.0024,
+    "sharpe_zero_rf": -0.06594956955545628,
+    "total_return_on_fully_funded_capital": -0.00014868495846924
+  },
+  "fresh_confirmation_stress": {
+    "annualized_compound_equivalent": -0.002108441710534592,
+    "annualized_volatility_of_8h_pnl": 0.003676000841472898,
+    "basis_pnl_on_initial_capital": -0.00014414154699917743,
+    "by_year": {
+      "2025": {
+        "intervals": 366,
+        "return_noncompounded": 0.0026986293245166372
+      },
+      "2026": {
+        "intervals": 542,
+        "return_noncompounded": -0.004447314282985879
+      }
+    },
+    "four_pct_annual_capital_hurdle": 0.0331689497716895,
+    "funding_pnl_on_initial_capital": 0.0023954565885299394,
+    "interval_mean_block_bootstrap_95pct": [
+      -1.2174362085549815e-05,
+      4.976760828891857e-06
+    ],
+    "intervals": 908,
+    "max_drawdown": -0.0051502150775973865,
+    "pnl_digest": "b253ee85851148df80d7a06a8e50b1b80168df28b62bd515d46bfad32d2861e9",
+    "return_after_four_pct_annual_capital_hurdle": -0.03491763473015874,
+    "round_trip_cost_on_initial_capital": -0.004,
+    "sharpe_zero_rf": -0.5736727790229071,
+    "total_return_on_fully_funded_capital": -0.0017486849584692416
+  },
+  "fresh_confirmation_support_gate": false,
+  "generated_at": "2026-07-20T07:15:44Z",
+  "inherited_exposed_evidence": {
+    "2021_2022_xrp_base_return": 0.9208230887137557,
+    "2023_xrp_base_return": 0.06418328209206224,
+    "2024_to_2025_aug_xrp_base_return": 0.14704667409031838,
+    "selection_status": "EXPOSED_CONTEXT_NOT_COUNTED_AS_FRESH_CONFIRMATION",
+    "source_candidate": "DOGE_XRP_ADA_EQUAL_CAPITAL_CONTINUOUS_CASH_CARRY_BASKET"
+  },
+  "product_effects": "NONE",
+  "scope": "single XRPUSDT same-venue continuous fully-funded equal-quantity spot-long/perpetual-short cash-and-carry, 2025-09 through 2026-06"
+}

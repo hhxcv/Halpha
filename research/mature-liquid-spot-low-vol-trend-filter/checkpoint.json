@@ -1,0 +1,20 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MATURE_LIQUID_SPOT_LOW_VOL_POSITIVE_TREND_90D_0P5X",
+  "created_at": "2026-07-20T18:30:00+08:00",
+  "inherited_exposed_result": "parent 90d base +166.78%, max drawdown -36.36%, failed >-35% gate; parent holdouts unopened",
+  "question": "Can an own-positive-trend filter applied after bottom-3 realized-volatility selection preserve profitability while repairing the parent's excessive drawdown across untouched rule-level periods?",
+  "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "LTCUSDT", "LINKUSDT", "DOGEUSDT", "BCHUSDT", "TRXUSDT", "XLMUSDT", "ETCUSDT", "ATOMUSDT"],
+  "lookbacks_days": [60, 90, 180],
+  "primary_lookback_days": 90,
+  "selection": "bottom 3 realized volatility, retain each only when own same-window return is positive",
+  "weight_per_eligible_asset": 0.16666666666666666,
+  "maximum_gross": 0.5,
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"], "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"], "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]},
+  "development_gate": "90d base/stress >0; max drawdown >-30% and >=5pp better than unfiltered; 60d/180d base >0; turnover <=30",
+  "evaluation_gate": "90d base/stress >0; at least one positive year; max drawdown >-30% and below unfiltered; 60d/180d base >0",
+  "confirmation_gate": "90d base/stress >0; max drawdown >-25% and below unfiltered; 60d/180d base >=0; evaluation+confirmation compounded >0",
+  "holdout_release_rule": "reuse exposed development after checkpoint; fetch evaluation only after pass; confirmation only after evaluation pass",
+  "study_code_sha256": "c58cff2b0b83b9052521ab800620a199e7cfabd6ab59d2a298efd4150fe52c46"
+}

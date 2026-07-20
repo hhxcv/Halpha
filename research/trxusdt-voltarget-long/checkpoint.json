@@ -1,0 +1,22 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_TRXUSDT_VOL60_TARGET10_LONG_MAX0P5X",
+  "created_at": "2026-07-21T01:00:00+08:00",
+  "formal_strategy_background": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 / BTCUSDT-PERP",
+  "question": "Can the simpler TRXUSDT always-long monthly 60-day volatility target at 10% annual risk remain post-cost and post-hurdle positive with bounded drawdown in a fresh 2025-2026 confirmation?",
+  "evidence_boundary": "Development 2021-2022 and evaluation 2023-2024 are exposed calibration. Only confirmation 2025-2026-06 is fresh.",
+  "annual_target_volatilities": [0.08, 0.10, 0.12],
+  "primary_target_volatility": 0.10,
+  "maximum_gross": 0.5,
+  "volatility_lookback_days": 60,
+  "turnover_costs": {"favorable": 0.001, "base": 0.003, "stress": 0.006},
+  "annual_capital_hurdle": 0.04,
+  "calibration_gate": "development and evaluation each: stress after hurdle >0; max drawdown >-15% and better than unscaled 0.5x passive; 8%/12% target returns >0; data PASS",
+  "confirmation_gate": "stress after hurdle >0; both year slices positive; max drawdown >-10% and better than unscaled passive; 8%/12% target returns >=0; data PASS",
+  "development_source": {"manifest": "../trxusdt-spot-monthly-tsmom/source_manifest_development.json", "identity": "eb5afd3336c822f32716cdb82c8876a4e5b4c42554f01df482a2d316f2a182c1"},
+  "evaluation_source": {"manifest": "../trxusdt-voltarget-monthly-tsmom/source_manifest_evaluation.json", "identity": "bbc660858200b5a893a08c22418f0fcdf422ef906cf4288362b5bb570722a5f3"},
+  "confirmation_fetch_months": ["2024-04", "2026-06"],
+  "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/trxusdt-voltarget-long",
+  "study_code_sha256": "14b1b4dd95d21a745441b7c179df4f51d540a54dbab59e0b68ce061c456d7b98",
+  "pre_holdout_status": "LOCKED_BEFORE_RECOMPUTING_EXPOSED_CALIBRATION_AND_BEFORE_CONFIRMATION_FETCH"
+}

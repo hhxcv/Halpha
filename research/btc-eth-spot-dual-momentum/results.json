@@ -1,0 +1,20 @@
+{
+  "candidate_id": "RESEARCH_BTC_ETH_SPOT_POSITIVE_TOP1_90D_0P5X",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "development_content_digest": "e9211438687416670d8b4bb870ba3d86cff1158631151aac2de14328f66e50ef",
+  "development_gate": "FAILED_DEVELOPMENT_GATE_STOP",
+  "main_90d_base_total_return": 0.31223110145379795,
+  "main_90d_stress_total_return": 0.30519069985435254,
+  "main_90d_max_drawdown": -0.42639715816843393,
+  "main_90d_turnover": 5.37330891017716,
+  "robustness_60d_base_total_return": -0.046131517525626164,
+  "robustness_180d_base_total_return": 0.7063989602486747,
+  "btc_only_90d_base_total_return": 0.22951769692956803,
+  "btc_only_90d_max_drawdown": -0.2706880877984188,
+  "benchmark_base_total_return": 0.20076358383145765,
+  "benchmark_base_max_drawdown": -0.47071478806849365,
+  "failed_conditions": ["90d max drawdown <=-35%", "60d base total return <0"],
+  "evaluation_opened": false,
+  "confirmation_opened": false,
+  "product_effects": "NONE"
+}

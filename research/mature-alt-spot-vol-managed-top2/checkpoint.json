@@ -1,0 +1,37 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MATURE_ALT_SPOT_VOL_MANAGED_TOP2_MOMENTUM",
+  "created_at": "2026-07-20T13:25:00+08:00",
+  "inherited_exposed_development_manifest_identity": "3ab96ceeef8e615fb64f1e7929bb7bce093903c74cb642bed2c438e2a5e7d530",
+  "inherited_failure": "unmanaged 90d top-2 2021-2022 base return +243.96%, max drawdown -85.70%, DOES_NOT_SUPPORT",
+  "question": "Can ex-ante 56-day realized-volatility scaling to a 20% annual target make the fixed mature-alt spot top-2 momentum rule profitable and drawdown-bounded in untouched evaluation and confirmation periods?",
+  "symbols": ["XRPUSDT", "ADAUSDT", "LTCUSDT", "LINKUSDT", "DOGEUSDT"],
+  "primary": {"momentum_days": 90, "volatility_days": 56, "annual_target": 0.20, "exposure_cap": 1.0},
+  "robustness": [
+    {"momentum_days": 60, "volatility_days": 56, "annual_target": 0.20},
+    {"momentum_days": 120, "volatility_days": 56, "annual_target": 0.20},
+    {"momentum_days": 90, "volatility_days": 28, "annual_target": 0.20},
+    {"momentum_days": 90, "volatility_days": 84, "annual_target": 0.20},
+    {"momentum_days": 90, "volatility_days": 56, "annual_target": 0.15},
+    {"momentum_days": 90, "volatility_days": 56, "annual_target": 0.25}
+  ],
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"],
+    "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "development_gate": "data PASS; primary base/stress total >0; primary max drawdown >-35% and improves at least 30 percentage points vs unmanaged; at least 4/6 robustness base totals >0; turnover <=30",
+  "evaluation_gate": "primary base/stress total >0; at least one positive year; max drawdown >-35% and below buy-and-hold; at least 4/6 robustness base totals >=0",
+  "confirmation_gate": "primary base/stress total >=0; max drawdown >-35% and below buy-and-hold; at least 4/6 robustness base totals >=0",
+  "holdout_release_rule": "Use exposed development only after checkpoint; fetch evaluation only after development implementation gate passes; fetch confirmation only after fixed evaluation passes",
+  "formal_strategy_baseline": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "allowed_fixes": [
+    "download/checksum/public REST pagination",
+    "CSV/timestamp parsing",
+    "data-quality reporting",
+    "implementation defects that do not change universe, signals, risk formula, periods, costs, benchmark or gates"
+  ],
+  "base_study_code_sha256": "89d9192cc5af59325d397028e34d5916a9e34c8ee2baa3a514e3a81475a8d67c",
+  "study_code_sha256": "4f09905a3aca475fa768181c6836984df57738f69246e2b60d0c0100cf4b8304"
+}

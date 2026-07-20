@@ -1,0 +1,112 @@
+{
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "confirmation": {
+    "annualized_return": 0.0,
+    "annualized_volatility": 0.0,
+    "by_year": {
+      "2026": {
+        "days": 181,
+        "return": 0.0
+      }
+    },
+    "calmar": null,
+    "daily_mean_block_bootstrap_95pct": [
+      0.0,
+      0.0
+    ],
+    "days": 181,
+    "exposure_fraction": 0.0,
+    "max_drawdown": 0.0,
+    "sharpe_zero_rf": null,
+    "total_return": 0.0,
+    "transitions_including_stage_boundaries": 0
+  },
+  "confirmation_support_gate": false,
+  "content_digest": "de3fb252a20109bac3b3482cc65ec59922f96611940ba1314b8bf60e8bad58e2",
+  "development": {
+    "annualized_return": 0.253467127821807,
+    "annualized_volatility": 0.4047012125183517,
+    "by_year": {
+      "2021": {
+        "days": 365,
+        "return": 0.5979143298497165
+      },
+      "2022": {
+        "days": 365,
+        "return": -0.11028474791149745
+      },
+      "2023": {
+        "days": 365,
+        "return": 0.3852696526542365
+      }
+    },
+    "calmar": 0.7494264193686379,
+    "daily_mean_block_bootstrap_95pct": [
+      -0.00017143474250491656,
+      0.002016628886107503
+    ],
+    "days": 1095,
+    "exposure_fraction": 0.41278538812785387,
+    "max_drawdown": -0.33821482839548556,
+    "sharpe_zero_rf": 0.7598260454322505,
+    "total_return": 0.9694222820004763,
+    "transitions_including_stage_boundaries": 10
+  },
+  "evaluation": {
+    "annualized_return": 0.114179232391042,
+    "annualized_volatility": 0.50680148634809,
+    "by_year": {
+      "2024": {
+        "days": 366,
+        "return": 0.32106551462644917
+      },
+      "2025": {
+        "days": 365,
+        "return": -0.06002910454656396
+      }
+    },
+    "calmar": 0.2926273984693067,
+    "daily_mean_block_bootstrap_95pct": [
+      -0.0014058941571931307,
+      0.002747980989668012
+    ],
+    "days": 731,
+    "exposure_fraction": 0.5772913816689467,
+    "max_drawdown": -0.3901864042406751,
+    "sharpe_zero_rf": 0.463735324315086,
+    "total_return": 0.24176313473607647,
+    "transitions_including_stage_boundaries": 20
+  },
+  "evaluation_buy_and_hold": {
+    "annualized_return": 0.041057789437580094,
+    "annualized_volatility": 0.7010859295416159,
+    "by_year": {
+      "2024": {
+        "days": 366,
+        "return": 0.2810161179226729
+      },
+      "2025": {
+        "days": 365,
+        "return": -0.1538585738769771
+      }
+    },
+    "calmar": 0.060944052745119326,
+    "daily_mean_block_bootstrap_95pct": [
+      -0.0018734337493989863,
+      0.0035602676045443996
+    ],
+    "days": 731,
+    "exposure_fraction": 1.0,
+    "max_drawdown": -0.6736964082335037,
+    "sharpe_zero_rf": 0.403282291697965,
+    "total_return": 0.083920804905669,
+    "transitions_including_stage_boundaries": 2
+  },
+  "evaluation_drawdown_ratio_vs_buy_hold": 0.5791724573146843,
+  "evaluation_support_gate": false,
+  "formal_product_strategy_comparison": "NOT_RUN_NO_FAIR_EXACT_REPLAY_WITHOUT_SECOND_IMPLEMENTATION",
+  "generated_at": "2026-07-20T03:33:44Z",
+  "product_effects": "NONE",
+  "scope": "ETHUSDT daily SMA200 long/cash, 1x, actual funding proxy and fixed modeled transition costs",
+  "selection_content_digest": "6023f81d0cd80b79f4ee9b3d263e26839813bd0da94673337f34450a37470c39"
+}

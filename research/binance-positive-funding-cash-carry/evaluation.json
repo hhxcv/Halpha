@@ -1,0 +1,145 @@
+{
+  "content_digest": "a3d501cb739c6b573b0d677c8f127aa5e1d44f94ba3dd8f47c328f996f131859",
+  "generated_at": "2026-07-20T03:44:20Z",
+  "manifest_content_identity": "f434978bd47792c0e74ab94dc5f0f8ad9a7a4a82618833a56602ee7802d5abd5",
+  "period": {
+    "end_exclusive": "2026-01-01T00:00:00Z",
+    "start": "2024-01-01T00:00:00Z"
+  },
+  "phase": "evaluation",
+  "rules": {
+    "capital": "two fully funded units; all PnL divided by two",
+    "combined_transition_costs": {
+      "base": 0.0024,
+      "favorable": 0.0016,
+      "stress": 0.004
+    },
+    "entry_thresholds_bps": [
+      3.0
+    ],
+    "exit": "after a settled funding rate <= 0"
+  },
+  "schema_version": 1,
+  "study_code_sha256": "4d383f72c0d1ce998b5521a4b24b07061695936303322bc8c569848720e007b1",
+  "symbol": "BTCUSDT",
+  "variants": {
+    "3bps": {
+      "base": {
+        "active_interval_bootstrap_95pct_mean": [
+          8.23709712397282e-05,
+          0.000145835391223553
+        ],
+        "active_interval_mean": 0.000113137240417846,
+        "active_intervals": 473,
+        "basis_sum": 0.001360127259345002,
+        "by_year": {
+          "2024": {
+            "active_intervals": 473,
+            "intervals": 1097,
+            "return_noncompounded": 0.05351391471764116
+          },
+          "2025": {
+            "active_intervals": 0,
+            "intervals": 1095,
+            "return_noncompounded": 0.0
+          }
+        },
+        "cost_sum": -0.0048,
+        "episode_returns": [
+          0.0428207276388534,
+          0.010693187078787761
+        ],
+        "episodes": 2,
+        "exposure_fraction": 0.21578467153284672,
+        "funding_sum": 0.056953787458296164,
+        "intervals": 2192,
+        "max_drawdown_noncompounded": -0.002406508206203292,
+        "positive_episode_fraction": 1.0,
+        "return_compounded_resized_sensitivity": 0.054952929130132944,
+        "return_noncompounded": 0.05351391471764116,
+        "rows_digest": "fb17256eb57eb50b8420ad8d1cb547533442a1f049654c5947652af9a0b36a8e"
+      },
+      "data_alignment": {
+        "aligned_events_inclusive": 2193,
+        "episodes": 2,
+        "event_gap_counts": {
+          "8": 2192
+        },
+        "forced_exit_at_last_available_event": null,
+        "funding_events_inclusive": 2193,
+        "missing_event_prices": 0
+      },
+      "favorable": {
+        "active_interval_bootstrap_95pct_mean": [
+          8.779538109815359e-05,
+          0.00014884962561071845
+        ],
+        "active_interval_mean": 0.00011651990426562614,
+        "active_intervals": 473,
+        "basis_sum": 0.001360127259345002,
+        "by_year": {
+          "2024": {
+            "active_intervals": 473,
+            "intervals": 1097,
+            "return_noncompounded": 0.05511391471764116
+          },
+          "2025": {
+            "active_intervals": 0,
+            "intervals": 1095,
+            "return_noncompounded": 0.0
+          }
+        },
+        "cost_sum": -0.0032,
+        "episode_returns": [
+          0.0436207276388534,
+          0.011493187078787761
+        ],
+        "episodes": 2,
+        "exposure_fraction": 0.21578467153284672,
+        "funding_sum": 0.056953787458296164,
+        "intervals": 2192,
+        "max_drawdown_noncompounded": -0.0016065082062032832,
+        "positive_episode_fraction": 1.0,
+        "return_compounded_resized_sensitivity": 0.056643842878979056,
+        "return_noncompounded": 0.05511391471764116,
+        "rows_digest": "506d6050773745db02e205e086f5c6bcbea94a700f7de03f3900ae121b7cb434"
+      },
+      "stress": {
+        "active_interval_bootstrap_95pct_mean": [
+          6.801409451130147e-05,
+          0.0001419861686738153
+        ],
+        "active_interval_mean": 0.00010637191272228575,
+        "active_intervals": 473,
+        "basis_sum": 0.001360127259345002,
+        "by_year": {
+          "2024": {
+            "active_intervals": 473,
+            "intervals": 1097,
+            "return_noncompounded": 0.05031391471764114
+          },
+          "2025": {
+            "active_intervals": 0,
+            "intervals": 1095,
+            "return_noncompounded": 0.0
+          }
+        },
+        "cost_sum": -0.008,
+        "episode_returns": [
+          0.041220727638853386,
+          0.009093187078787758
+        ],
+        "episodes": 2,
+        "exposure_fraction": 0.21578467153284672,
+        "funding_sum": 0.056953787458296164,
+        "intervals": 2192,
+        "max_drawdown_noncompounded": -0.004006508206203296,
+        "positive_episode_fraction": 1.0,
+        "return_compounded_resized_sensitivity": 0.051577190754400704,
+        "return_noncompounded": 0.05031391471764114,
+        "rows_digest": "14e78a6c68ca0f7f12367b115270f21fbacf699b3dc4eb9648893ecf186be197"
+      },
+      "threshold_bps": 3.0
+    }
+  }
+}

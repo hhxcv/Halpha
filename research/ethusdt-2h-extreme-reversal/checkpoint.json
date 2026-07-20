@@ -1,0 +1,49 @@
+{
+  "allowed_pre_holdout_fixes": [
+    "download or checksum handling",
+    "CSV or JSON parsing",
+    "data integrity reporting",
+    "implementation errors that do not change the fixed economic rule"
+  ],
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "cost_round_trip": {
+    "base": 0.0032,
+    "favorable": 0.0012,
+    "stress": 0.0052
+  },
+  "created_at": "2026-07-20T00:00:00+08:00",
+  "data_identity_rule": "Binance official ETHUSDT USD-M 2h monthly klines verified against adjacent .CHECKSUM plus public funding history snapshot hashes",
+  "development_gate": "2021-2023 count >= 60; base mean > 0; at least two positive calendar years; 8-trade circular-block bootstrap 95% mean lower bound > 0",
+  "formal_strategy_baseline": "NOT_RUN_UNLESS_FAIR_EXACT_REPLAY_BECOMES_AVAILABLE_WITHOUT_A_SECOND_IMPLEMENTATION",
+  "holdout_release_rule": "Open 2024-2025 only after a threshold passes the development gate and selection.json fixes it; open 2026H1 only after evaluation; otherwise stop and preserve both intervals",
+  "known_prior_exposure": "BTCUSDT 2021-2026 was exposed by the earlier funding-carry study; no ETHUSDT historical outcomes were inspected before this checkpoint",
+  "periods": {
+    "confirmation": [
+      "2026-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ],
+    "development": [
+      "2021-01-01T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2026-01-01T00:00:00Z"
+    ]
+  },
+  "question": "Can a fixed 2h ETHUSDT extreme-return contrarian trade survive actual funding and 32 bp round-trip modeled cost after selecting only 2/3/4 sigma on development data?",
+  "search_scope": {
+    "direction": "contrarian only",
+    "holding_bars": 1,
+    "lookback_bars": 1080,
+    "thresholds_sigma": [
+      2.0,
+      3.0,
+      4.0
+    ],
+    "timeframe": "2h"
+  },
+  "strategy_id": "RESEARCH_ETHUSDT_2H_EXTREME_REVERSAL",
+  "study_code_sha256": "070cd345bbc31f57057d2bb315511e8f2558981c4df91ac1e8022c0b14f4d850",
+  "study_status": "PRE_HOLDOUT_FIXED"
+}

@@ -1,0 +1,19 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 on BTCUSDT-PERP",
+  "candidate_id": "RESEARCH_BTCUSDT_SPOT_POSITIVE_90D_0P5X",
+  "created_at": "2026-07-20T20:00:00+08:00",
+  "inherited_exposed_comparator": {"90d_base_total_return": 0.22951769692956803, "90d_base_max_drawdown": -0.2706880877984188},
+  "question": "Can the pre-registered simpler BTC-only positive 90-day spot rule remain profitable across 60/180-day neighborhoods and sequential rule-level holdouts with controlled drawdown?",
+  "instrument": "BTCUSDT Binance Spot",
+  "primary_lookback_days": 90,
+  "robustness_lookback_days": [60, 180],
+  "maximum_gross": 0.5,
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"], "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"], "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]},
+  "development_gate": "data PASS; 90d base/stress >0; max drawdown >-30% and below BTC 0.5x; 60d/180d base >0; turnover <=20",
+  "evaluation_gate": "90d base/stress >0; max drawdown >-25% and below BTC 0.5x; 60d/180d base >0",
+  "confirmation_gate": "90d base/stress >=0; max drawdown >-20% and below BTC 0.5x; 60d/180d base >=0; evaluation+confirmation compounded >0",
+  "holdout_release_rule": "reuse exposed development after checkpoint; fetch evaluation only after pass; confirmation only after evaluation pass",
+  "study_code_sha256": "96379a14a4f88890199089bac5569e0c196d29573b9d1503126ff2383c463782"
+}

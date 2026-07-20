@@ -1,0 +1,147 @@
+{
+  "content_digest": "7e5798ea5b0e9d0e29baaa0ee5f1b90ce08ca2fbeab625a15d5825819a5211ec",
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "ADAUSDT": {
+        "intervals": 1094,
+        "missing_funding_settlements": 0,
+        "missing_futures_rows": 0,
+        "missing_spot_rows": 0,
+        "status": "PASS"
+      },
+      "DOGEUSDT": {
+        "intervals": 1094,
+        "missing_funding_settlements": 0,
+        "missing_futures_rows": 0,
+        "missing_spot_rows": 0,
+        "status": "PASS"
+      },
+      "XRPUSDT": {
+        "intervals": 1094,
+        "missing_funding_settlements": 0,
+        "missing_futures_rows": 0,
+        "missing_spot_rows": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "generated_at": "2026-07-20T06:26:57Z",
+  "loader_sha256": "41408a2b75718132153c0c5338273a4898146ae9f1a28d267eeb4f0c2b1ab2e7",
+  "manifest_content_identity": "1587d2f2505177db808e915a5a83dd1b4d35991e6f9588cf4dd95adcdb438609",
+  "manifest_sha256": "19525c87fe169cdd99e5a4f7830fd6a2dc07ad2a72d37e0236d8ac4b3d5538cd",
+  "period": {
+    "end_exclusive": "2023-12-31T16:00:00Z",
+    "start": "2023-01-01T00:00:00Z"
+  },
+  "phase": "evaluation",
+  "rules": {
+    "allocation": "equal one-third capital to each independent equal-quantity spot-long/perpetual-short pair",
+    "annual_capital_hurdle": 0.04,
+    "rebalance": "none inside phase",
+    "round_trip_costs": {
+      "base": 0.0024,
+      "favorable": 0.0016,
+      "stress": 0.004
+    }
+  },
+  "scenarios": {
+    "base": {
+      "annualized_compound_equivalent": 0.05852556257289421,
+      "annualized_volatility_of_8h_pnl": 0.0070138132343256195,
+      "basis_pnl_on_initial_capital": -0.0008918422816648467,
+      "by_year": {
+        "2023": {
+          "intervals": 1094,
+          "return_noncompounded": 0.05847058161064024
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.0399634703196347,
+      "funding_pnl_on_initial_capital": 0.061762423892305095,
+      "interval_mean_block_bootstrap_95pct": [
+        4.176849892893985e-05,
+        6.566773095378922e-05
+      ],
+      "intervals": 1094,
+      "max_drawdown": -0.0014927777645057372,
+      "per_asset_total_return": {
+        "ADAUSDT": 0.05729190810579885,
+        "DOGEUSDT": 0.053936554634059504,
+        "XRPUSDT": 0.06418328209206224
+      },
+      "pnl_digest": "c17b48cd5f0469feb15e2cf6e7394287c7cfb5611081619f39541f8e00f95072",
+      "positive_asset_count": 3,
+      "return_after_four_pct_annual_capital_hurdle": 0.01850711129100554,
+      "round_trip_cost_on_initial_capital": -0.0024,
+      "sharpe_zero_rf": 8.344109866702764,
+      "total_return_on_fully_funded_capital": 0.05847058161064024
+    },
+    "favorable": {
+      "annualized_compound_equivalent": 0.0593263357038718,
+      "annualized_volatility_of_8h_pnl": 0.006919516499393232,
+      "basis_pnl_on_initial_capital": -0.0008918422816648467,
+      "by_year": {
+        "2023": {
+          "intervals": 1094,
+          "return_noncompounded": 0.05927058161064024
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.0399634703196347,
+      "funding_pnl_on_initial_capital": 0.061762423892305095,
+      "interval_mean_block_bootstrap_95pct": [
+        4.2379348439658835e-05,
+        6.693553847854123e-05
+      ],
+      "intervals": 1094,
+      "max_drawdown": -0.0014921937989585965,
+      "per_asset_total_return": {
+        "ADAUSDT": 0.05809190810579885,
+        "DOGEUSDT": 0.054736554634059506,
+        "XRPUSDT": 0.06498328209206224
+      },
+      "pnl_digest": "0ad225d5265a3d04a6e3f7a3f372197589c6872c395ed894d563f38de9d3042c",
+      "positive_asset_count": 3,
+      "return_after_four_pct_annual_capital_hurdle": 0.01930711129100554,
+      "round_trip_cost_on_initial_capital": -0.0016,
+      "sharpe_zero_rf": 8.573541153977295,
+      "total_return_on_fully_funded_capital": 0.05927058161064024
+    },
+    "stress": {
+      "annualized_compound_equivalent": 0.05692401797103752,
+      "annualized_volatility_of_8h_pnl": 0.00733084632739346,
+      "basis_pnl_on_initial_capital": -0.0008918422816648467,
+      "by_year": {
+        "2023": {
+          "intervals": 1094,
+          "return_noncompounded": 0.05687058161064021
+        }
+      },
+      "four_pct_annual_capital_hurdle": 0.0399634703196347,
+      "funding_pnl_on_initial_capital": 0.061762423892305095,
+      "interval_mean_block_bootstrap_95pct": [
+        3.9701995640900093e-05,
+        6.566341713111392e-05
+      ],
+      "intervals": 1094,
+      "max_drawdown": -0.0020568112895521518,
+      "per_asset_total_return": {
+        "ADAUSDT": 0.055691908105798854,
+        "DOGEUSDT": 0.05233655463405951,
+        "XRPUSDT": 0.06258328209206224
+      },
+      "pnl_digest": "4a39c74e2918e87a24960297c58865cbac4e7819b86122fb104396bbff11c4fa",
+      "positive_asset_count": 3,
+      "return_after_four_pct_annual_capital_hurdle": 0.016907111291005507,
+      "round_trip_cost_on_initial_capital": -0.004,
+      "sharpe_zero_rf": 7.76480138127983,
+      "total_return_on_fully_funded_capital": 0.05687058161064021
+    }
+  },
+  "schema_version": 1,
+  "study_code_sha256": "b922d1a450a697b7d7cf8297f653f6868ee60b217e124a0b77ae07a17c45ff4c",
+  "symbols": [
+    "DOGEUSDT",
+    "XRPUSDT",
+    "ADAUSDT"
+  ]
+}

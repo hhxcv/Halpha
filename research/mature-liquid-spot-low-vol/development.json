@@ -1,0 +1,653 @@
+{
+  "base_study_code_sha256": "89d9192cc5af59325d397028e34d5916a9e34c8ee2baa3a514e3a81475a8d67c",
+  "content_digest": "14a585655efc3073f596b03387291fbdc43f6fe55e7021d734f5e6cfb825c7f3",
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "ADAUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "ATOMUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "BCHUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "BNBUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "BTCUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "DOGEUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "ETCUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "ETHUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "LINKUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "LTCUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "TRXUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "XLMUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "XRPUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "generated_at": "2026-07-20T05:13:25Z",
+  "manifest_content_identity": "ddbef4626a3ef10340ce9e352f3bd08a447c3591ec1bb4f418549148ebcc5799",
+  "monthly_rebalanced_half_long": {
+    "base": {
+      "annualized_return": 0.4952307621492049,
+      "annualized_volatility": 0.5247552172646253,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 2.3069793277221406
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.3239404270430468
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0007457565843388017,
+        0.0039387241580796754
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.5112979616801939,
+      "selected_asset_day_quote_volume_median": 127665425.41947,
+      "selected_asset_day_quote_volume_min": 1078652.7386,
+      "selection_counts": {
+        "ADAUSDT": 24,
+        "ATOMUSDT": 24,
+        "BCHUSDT": 24,
+        "BNBUSDT": 24,
+        "BTCUSDT": 24,
+        "DOGEUSDT": 24,
+        "ETCUSDT": 24,
+        "ETHUSDT": 24,
+        "LINKUSDT": 24,
+        "LTCUSDT": 24,
+        "TRXUSDT": 24,
+        "XLMUSDT": 24,
+        "XRPUSDT": 24
+      },
+      "sharpe_zero_rf": 1.0265203850592035,
+      "total_return": 1.2357150320772923,
+      "turnover": 3.180042651317386
+    },
+    "favorable": {
+      "annualized_return": 0.4976107431439478,
+      "annualized_volatility": 0.5247810789054852,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 2.313343645006831
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.3230892481194668
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0005876336643428767,
+        0.004062571379015252
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.5108319031949302,
+      "selected_asset_day_quote_volume_median": 127665425.41947,
+      "selected_asset_day_quote_volume_min": 1078652.7386,
+      "selection_counts": {
+        "ADAUSDT": 24,
+        "ATOMUSDT": 24,
+        "BCHUSDT": 24,
+        "BNBUSDT": 24,
+        "BTCUSDT": 24,
+        "DOGEUSDT": 24,
+        "ETCUSDT": 24,
+        "ETHUSDT": 24,
+        "LINKUSDT": 24,
+        "LTCUSDT": 24,
+        "TRXUSDT": 24,
+        "XLMUSDT": 24,
+        "XRPUSDT": 24
+      },
+      "sharpe_zero_rf": 1.0295297056857584,
+      "total_return": 1.242837937980168,
+      "turnover": 3.1800426513173865
+    },
+    "stress": {
+      "annualized_return": 0.49285398199142194,
+      "annualized_volatility": 0.5247300999118059,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 2.3006255402623297
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.32479071486233346
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0006721642248555083,
+        0.0038528671958921188
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.5117636153660028,
+      "selected_asset_day_quote_volume_median": 127665425.41947,
+      "selected_asset_day_quote_volume_min": 1078652.7386,
+      "selection_counts": {
+        "ADAUSDT": 24,
+        "ATOMUSDT": 24,
+        "BCHUSDT": 24,
+        "BNBUSDT": 24,
+        "BTCUSDT": 24,
+        "DOGEUSDT": 24,
+        "ETCUSDT": 24,
+        "ETHUSDT": 24,
+        "LINKUSDT": 24,
+        "LTCUSDT": 24,
+        "TRXUSDT": 24,
+        "XLMUSDT": 24,
+        "XRPUSDT": 24
+      },
+      "sharpe_zero_rf": 1.0235093160309752,
+      "total_return": 1.2286130115476448,
+      "turnover": 3.1800426513173865
+    }
+  },
+  "period": {
+    "end_exclusive": "2023-01-01T00:00:00Z",
+    "start": "2021-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    },
+    "holdings": 3,
+    "lookbacks": [
+      60,
+      90,
+      180
+    ],
+    "maximum_gross": 0.5,
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BNBUSDT",
+      "XRPUSDT",
+      "ADAUSDT",
+      "LTCUSDT",
+      "LINKUSDT",
+      "DOGEUSDT",
+      "BCHUSDT",
+      "TRXUSDT",
+      "XLMUSDT",
+      "ETCUSDT",
+      "ATOMUSDT"
+    ]
+  },
+  "schema_version": 1,
+  "strategy": {
+    "180": {
+      "base": {
+        "annualized_return": 0.4543716182765416,
+        "annualized_volatility": 0.5045931832561562,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 1.7716267198296762
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.2368392219215204
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0005728182417229727,
+          0.0036762545464807117
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.43848248535276735,
+        "selected_asset_day_quote_volume_median": 1000492463.1534641,
+        "selected_asset_day_quote_volume_min": 3446897.183,
+        "selection_counts": {
+          "ADAUSDT": 1,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 4,
+          "BNBUSDT": 12,
+          "BTCUSDT": 24,
+          "DOGEUSDT": 0,
+          "ETCUSDT": 2,
+          "ETHUSDT": 13,
+          "LINKUSDT": 0,
+          "LTCUSDT": 6,
+          "TRXUSDT": 7,
+          "XLMUSDT": 2,
+          "XRPUSDT": 1
+        },
+        "sharpe_zero_rf": 0.988946919070735,
+        "total_return": 1.1151968040483267,
+        "turnover": 7.3555043644706455
+      },
+      "favorable": {
+        "annualized_return": 0.45973295203988473,
+        "annualized_volatility": 0.5046541547923007,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 1.782054254889442
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.23408384738501709
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0006282324873125299,
+          0.00380104949541836
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.43666661194116774,
+        "selected_asset_day_quote_volume_median": 1000492463.1534641,
+        "selected_asset_day_quote_volume_min": 3446897.183,
+        "selection_counts": {
+          "ADAUSDT": 1,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 4,
+          "BNBUSDT": 12,
+          "BTCUSDT": 24,
+          "DOGEUSDT": 0,
+          "ETCUSDT": 2,
+          "ETHUSDT": 13,
+          "LINKUSDT": 0,
+          "LTCUSDT": 6,
+          "TRXUSDT": 7,
+          "XLMUSDT": 2,
+          "XRPUSDT": 1
+        },
+        "sharpe_zero_rf": 0.996186152509728,
+        "total_return": 1.1308202912710765,
+        "turnover": 7.355504364470645
+      },
+      "stress": {
+        "annualized_return": 0.44902756579852543,
+        "annualized_volatility": 0.5045355244107037,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 1.7612328307139364
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.23958571581191013
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0005766884636616602,
+          0.0037258610447670733
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.44029313013338156,
+        "selected_asset_day_quote_volume_median": 1000492463.1534641,
+        "selected_asset_day_quote_volume_min": 3446897.183,
+        "selection_counts": {
+          "ADAUSDT": 1,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 4,
+          "BNBUSDT": 12,
+          "BTCUSDT": 24,
+          "DOGEUSDT": 0,
+          "ETCUSDT": 2,
+          "ETHUSDT": 13,
+          "LINKUSDT": 0,
+          "LTCUSDT": 6,
+          "TRXUSDT": 7,
+          "XLMUSDT": 2,
+          "XRPUSDT": 1
+        },
+        "sharpe_zero_rf": 0.9816994902360197,
+        "total_return": 1.0996808864440002,
+        "turnover": 7.355504364470645
+      }
+    },
+    "60": {
+      "base": {
+        "annualized_return": 0.4400823744014142,
+        "annualized_volatility": 0.5069746970459725,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 1.906622253910859
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.2865129817707577
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0007282198444449114,
+          0.0038333577903767453
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.47792197641211487,
+        "selected_asset_day_quote_volume_median": 343909301.7702955,
+        "selected_asset_day_quote_volume_min": 1078652.7386,
+        "selection_counts": {
+          "ADAUSDT": 5,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 7,
+          "BNBUSDT": 10,
+          "BTCUSDT": 22,
+          "DOGEUSDT": 1,
+          "ETCUSDT": 2,
+          "ETHUSDT": 7,
+          "LINKUSDT": 0,
+          "LTCUSDT": 3,
+          "TRXUSDT": 11,
+          "XLMUSDT": 1,
+          "XRPUSDT": 3
+        },
+        "sharpe_zero_rf": 0.9657764833318134,
+        "total_return": 1.0738372450616152,
+        "turnover": 9.688191558584911
+      },
+      "favorable": {
+        "annualized_return": 0.4470790061425809,
+        "annualized_volatility": 0.5070405304308194,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 1.9199109725055115
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.2828419531497759
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0007064082773810161,
+          0.0038370534743770186
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.476455116833599,
+        "selected_asset_day_quote_volume_median": 343909301.7702955,
+        "selected_asset_day_quote_volume_min": 1078652.7386,
+        "selection_counts": {
+          "ADAUSDT": 5,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 7,
+          "BNBUSDT": 10,
+          "BTCUSDT": 22,
+          "DOGEUSDT": 1,
+          "ETCUSDT": 2,
+          "ETHUSDT": 7,
+          "LINKUSDT": 0,
+          "LTCUSDT": 3,
+          "TRXUSDT": 11,
+          "XLMUSDT": 1,
+          "XRPUSDT": 3
+        },
+        "sharpe_zero_rf": 0.9752856756000052,
+        "total_return": 1.0940376500185995,
+        "turnover": 9.688191558584911
+      },
+      "stress": {
+        "annualized_return": 0.4331161360514315,
+        "annualized_volatility": 0.5069135502131966,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 1.8933880845407316
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.2901671675554096
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0007248333406525678,
+          0.003775393055110984
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.47938555206699895,
+        "selected_asset_day_quote_volume_median": 343909301.7702955,
+        "selected_asset_day_quote_volume_min": 1078652.7386,
+        "selection_counts": {
+          "ADAUSDT": 5,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 7,
+          "BNBUSDT": 10,
+          "BTCUSDT": 22,
+          "DOGEUSDT": 1,
+          "ETCUSDT": 2,
+          "ETHUSDT": 7,
+          "LINKUSDT": 0,
+          "LTCUSDT": 3,
+          "TRXUSDT": 11,
+          "XLMUSDT": 1,
+          "XRPUSDT": 3
+        },
+        "sharpe_zero_rf": 0.9562559801782053,
+        "total_return": 1.0538218594109852,
+        "turnover": 9.688191558584911
+      }
+    },
+    "90": {
+      "base": {
+        "annualized_return": 0.6333330338419485,
+        "annualized_volatility": 0.5119397976772287,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 2.237115946514931
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.1758785154694661
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0002819417573761072,
+          0.004082043532001957
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.363565826448089,
+        "selected_asset_day_quote_volume_median": 685430321.044541,
+        "selected_asset_day_quote_volume_min": 2416962.7994,
+        "selection_counts": {
+          "ADAUSDT": 4,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 4,
+          "BNBUSDT": 11,
+          "BTCUSDT": 23,
+          "DOGEUSDT": 1,
+          "ETCUSDT": 1,
+          "ETHUSDT": 10,
+          "LINKUSDT": 0,
+          "LTCUSDT": 2,
+          "TRXUSDT": 11,
+          "XLMUSDT": 1,
+          "XRPUSDT": 4
+        },
+        "sharpe_zero_rf": 1.2075292964913436,
+        "total_return": 1.6677767994393435,
+        "turnover": 9.071896225618493
+      },
+      "favorable": {
+        "annualized_return": 0.6407627105863665,
+        "annualized_volatility": 0.5120027298227044,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 2.250718988510846
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.17184404989618018
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00026932433868482876,
+          0.00413380243978221
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.36149932721896694,
+        "selected_asset_day_quote_volume_median": 685430321.044541,
+        "selected_asset_day_quote_volume_min": 2416962.7994,
+        "selection_counts": {
+          "ADAUSDT": 4,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 4,
+          "BNBUSDT": 11,
+          "BTCUSDT": 23,
+          "DOGEUSDT": 1,
+          "ETCUSDT": 1,
+          "ETHUSDT": 10,
+          "LINKUSDT": 0,
+          "LTCUSDT": 2,
+          "TRXUSDT": 11,
+          "XLMUSDT": 1,
+          "XRPUSDT": 4
+        },
+        "sharpe_zero_rf": 1.2163191707847032,
+        "total_return": 1.6921022724507209,
+        "turnover": 9.071896225618492
+      },
+      "stress": {
+        "annualized_return": 0.6259332710073655,
+        "annualized_volatility": 0.5118813084125549,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 2.2235631274880827
+          },
+          "2022": {
+            "days": 365,
+            "return": -0.1798953837058136
+          }
+        },
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0003020627369412703,
+          0.004211520616157812
+        ],
+        "days": 730,
+        "invested_day_fraction": 1.0,
+        "max_drawdown": -0.36562667551951367,
+        "selected_asset_day_quote_volume_median": 685430321.044541,
+        "selected_asset_day_quote_volume_min": 2416962.7994,
+        "selection_counts": {
+          "ADAUSDT": 4,
+          "ATOMUSDT": 0,
+          "BCHUSDT": 4,
+          "BNBUSDT": 11,
+          "BTCUSDT": 23,
+          "DOGEUSDT": 1,
+          "ETCUSDT": 1,
+          "ETHUSDT": 10,
+          "LINKUSDT": 0,
+          "LTCUSDT": 2,
+          "TRXUSDT": 11,
+          "XLMUSDT": 1,
+          "XRPUSDT": 4
+        },
+        "sharpe_zero_rf": 1.198726856418466,
+        "total_return": 1.6436590017687114,
+        "turnover": 9.071896225618492
+      }
+    }
+  },
+  "study_code_sha256": "31ea82a254942988d9626517c225a1399bf8b0448f4f55f05894a42ccd8a97b9"
+}

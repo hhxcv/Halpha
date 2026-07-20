@@ -1,0 +1,9 @@
+{
+  "content_digest": "f78186a997fe291d3e0df64932847150629be430e6ecef32da8375ca3d7be322",
+  "fixed_rule": "DOGE_XRP_ADA_EQUAL_CAPITAL_CONTINUOUS_CASH_CARRY_BASKET",
+  "generated_at": "2026-07-20T06:26:38Z",
+  "holdout_authorized": true,
+  "input_content_digest": "c5ccbbbda30802fb4c7e4753d821cd2f329e61cb666650553fed07ee8c8d5ca4",
+  "phase": "development",
+  "qualification_status": "PASSED_DEVELOPMENT_GATE"
+}

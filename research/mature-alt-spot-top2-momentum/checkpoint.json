@@ -1,0 +1,31 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MATURE_ALT_SPOT_TOP2_ABSOLUTE_RELATIVE_MOMENTUM",
+  "created_at": "2026-07-20T12:25:00+08:00",
+  "question": "Can a fixed monthly spot-only top-2 rule over five mature altcoins, filtered by positive 90-day own momentum, retain positive cost-adjusted returns and improve drawdown through development, independent evaluation and confirmation?",
+  "symbols": ["XRPUSDT", "ADAUSDT", "LTCUSDT", "LINKUSDT", "DOGEUSDT"],
+  "primary_lookback_days": 90,
+  "robustness_lookback_days": [60, 120],
+  "max_holdings": 2,
+  "rebalance": "first UTC daily open of each calendar month using only prior close data",
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"],
+    "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "development_gate": "data PASS; 90d base and stress total >0; at least one positive calendar year; max drawdown at least 10 percentage points better than equal-weight buy-and-hold; 60d and 120d base totals >0; turnover <=50",
+  "evaluation_gate": "90d base and stress total >0; at least one positive calendar year; max drawdown better than equal-weight buy-and-hold; 60d and 120d base totals >0",
+  "confirmation_gate": "90d base and stress total >=0; max drawdown better than equal-weight buy-and-hold; 60d and 120d base totals >=0",
+  "holdout_release_rule": "Fetch evaluation only after development passes; fetch confirmation only after fixed evaluation passes; never change economic rules or gates after release",
+  "known_exposure": "No XRPUSDT, ADAUSDT, LTCUSDT, LINKUSDT or DOGEUSDT spot price/result data was read by prior research before this checkpoint",
+  "formal_strategy_baseline": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "allowed_fixes": [
+    "download/checksum and public REST pagination",
+    "CSV or timestamp parsing including documented 2025 microseconds",
+    "fill only archive-missing daily timestamps from official public Spot Kline REST",
+    "data quality reporting",
+    "implementation defects that do not change universe, signals, periods, costs, benchmark or gates"
+  ],
+  "study_code_sha256": "89d9192cc5af59325d397028e34d5916a9e34c8ee2baa3a514e3a81475a8d67c"
+}

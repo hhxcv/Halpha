@@ -1,0 +1,27 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MULTI_ASSET_PERSISTENT_POSITIVE_FUNDING_CARRY",
+  "created_at": "2026-07-20T15:15:00+08:00",
+  "inherited_evidence": "Prior fixed 3bp single-asset carry: BTC development +23.13%, BTC evaluation +5.35%, BNB confirmation +9.04%, conclusion INSUFFICIENT_EVIDENCE",
+  "question": "Can a same-venue one-asset-at-a-time cash-and-carry rule requiring two consecutive settled funding rates >=3bp cover basis and two-leg costs across time and fresh instruments?",
+  "development_evaluation_symbols": ["DOGEUSDT", "XRPUSDT", "ADAUSDT"],
+  "confirmation_symbols": ["LTCUSDT", "LINKUSDT"],
+  "entry": "flat; current and previous settled funding >=3bp; choose highest current rate, symbol ascending tie-break",
+  "exit": "after selected symbol settled funding <=0, after counting that funding; sample-end forced exit",
+  "capital": "two fully funded units; equal initial spot long and perpetual short; all PnL divided by two",
+  "combined_transition_costs": {"favorable": 0.0016, "base": 0.0024, "stress": 0.0040},
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2021-01-01T00:00:00Z", "2026-01-01T00:00:00Z"]
+  },
+  "development_gate": "complete event/price alignment; base/stress return >0; >=10 episodes and >=100 active intervals; episode median >0; win rate >=50%; max noncompounded drawdown >-10%",
+  "evaluation_gate": "base/stress return >0; >=3 episodes and >=30 active intervals; episode median >=0; max drawdown >-10%",
+  "confirmation_gate": "base/stress return >0; >=10 episodes and >=100 active intervals; both symbols selected; episode median >=0; max drawdown >-10%",
+  "holdout_release_rule": "Fetch evaluation only after development passes; fetch confirmation only after evaluation passes",
+  "formal_strategy_baseline": "NOT_RUN_ECONOMICALLY_INCOMPARABLE_SINGLE_LEG_TREND_STRATEGY",
+  "base_carry_code_sha256": "4d383f72c0d1ce998b5521a4b24b07061695936303322bc8c569848720e007b1",
+  "study_code_sha256": "41408a2b75718132153c0c5338273a4898146ae9f1a28d267eeb4f0c2b1ab2e7",
+  "study_code_sha256_initial": "4c34fe20204b488b7877cc8bf479a182c2e509cefb827d8b5db99d1a8aa11436",
+  "study_code_revision_reason": "Data-integrity-only revision after analysis reported 15 XRP funding boundaries without archive prices: fill only missing 8h timestamps from official public Spot and USD-M Kline REST, bind hashes into the manifest, and preserve original manifest/results. Economic rules and gates are unchanged."
+}

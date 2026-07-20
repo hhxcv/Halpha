@@ -1,0 +1,329 @@
+{
+  "balanced": {
+    "base": {
+      "annualized_return": 0.17293172317850147,
+      "annualized_volatility": 0.2827017004012888,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.45318578765996986
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.0532739592410576
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0003977497923736316,
+        0.0016693563855308677
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.2389191980587324,
+      "selected_asset_day_quote_volume_median": 17842075.97331,
+      "selected_asset_day_quote_volume_min": 181060.8217,
+      "selection_counts": {
+        "PAXGUSDT": 24,
+        "TRXUSDT": 24
+      },
+      "sharpe_zero_rf": 0.7040328146317684,
+      "total_return": 0.3757688272384889,
+      "turnover": 2.2575680762125914
+    },
+    "favorable": {
+      "annualized_return": 0.1755841603792636,
+      "annualized_volatility": 0.2827005265526826,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.45692861053159284
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.051430448860247835
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0003663324859231525,
+        0.001688871335923946
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.23854706786653945,
+      "selected_asset_day_quote_volume_median": 17842075.97331,
+      "selected_asset_day_quote_volume_min": 181060.8217,
+      "selection_counts": {
+        "PAXGUSDT": 24,
+        "TRXUSDT": 24
+      },
+      "sharpe_zero_rf": 0.7120285682897738,
+      "total_return": 0.3819981181346179,
+      "turnover": 2.257568076212592
+    },
+    "stress": {
+      "annualized_return": 0.16896153313382234,
+      "annualized_volatility": 0.2827116839656421,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.4475858038824332
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.056034493926580775
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.00040088644902706177,
+        0.0017064727599424223
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.23947720127767358,
+      "selected_asset_day_quote_volume_median": 17842075.97331,
+      "selected_asset_day_quote_volume_min": 181060.8217,
+      "selection_counts": {
+        "PAXGUSDT": 24,
+        "TRXUSDT": 24
+      },
+      "sharpe_zero_rf": 0.6920191803831982,
+      "total_return": 0.36647106594657664,
+      "turnover": 2.257568076212591
+    }
+  },
+  "base_study_code_sha256": "89d9192cc5af59325d397028e34d5916a9e34c8ee2baa3a514e3a81475a8d67c",
+  "content_digest": "1014d54458c11234b991c52a1e74cad43313106a93665f871a8831a6dd708ab0",
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "PAXGUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "TRXUSDT": {
+        "days": 730,
+        "duplicates": 0,
+        "expected_days": 730,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "generated_at": "2026-07-20T08:00:12Z",
+  "manifest_content_identity": "062b2d56bfe9e1ac7b316efa70212133c588393d6fdebaa7a5946fd2e9201ccc",
+  "manifest_sha256": "2344435fe6f58cbda3c8b68bb4a7fe6b1e2273c306f3ea102eb2b17b38ed8f38",
+  "paxg_half_long": {
+    "base": {
+      "annualized_return": -0.014533810774712164,
+      "annualized_volatility": 0.07814353474621491,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": -0.025487638726927386
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.0034568583229254157
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0002991801016567615,
+        0.00024549956064466236
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.11203598750574095,
+      "selected_asset_day_quote_volume_median": 3624454.5053000003,
+      "selected_asset_day_quote_volume_min": 181060.8217,
+      "selection_counts": {
+        "PAXGUSDT": 24,
+        "TRXUSDT": 0
+      },
+      "sharpe_zero_rf": -0.14829461008722836,
+      "total_return": -0.028856389893789136,
+      "turnover": 1.1945674872878804
+    },
+    "favorable": {
+      "annualized_return": -0.01335489298039283,
+      "annualized_volatility": 0.0781439225746289,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": -0.024329009665321588
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.0022573420248886977
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.00029248945571415125,
+        0.00023672478601914463
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.11196883285418968,
+      "selected_asset_day_quote_volume_median": 3624454.5053000003,
+      "selected_asset_day_quote_volume_min": 181060.8217,
+      "selection_counts": {
+        "PAXGUSDT": 24,
+        "TRXUSDT": 0
+      },
+      "sharpe_zero_rf": -0.1329941607145196,
+      "total_return": -0.02653143279426795,
+      "turnover": 1.1945674872878804
+    },
+    "stress": {
+      "annualized_return": -0.01630143635350534,
+      "annualized_volatility": 0.07816742788886594,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": -0.027224842461880505
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.0052553700393415115
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.00030214674411155345,
+        0.00022890488229351886
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.11213671170961226,
+      "selected_asset_day_quote_volume_median": 3624454.5053000003,
+      "selected_asset_day_quote_volume_min": 181060.8217,
+      "selection_counts": {
+        "PAXGUSDT": 24,
+        "TRXUSDT": 0
+      },
+      "sharpe_zero_rf": -0.1711919504689837,
+      "total_return": -0.03233713587982334,
+      "turnover": 1.19456748728788
+    }
+  },
+  "period": {
+    "end_exclusive": "2023-01-01T00:00:00Z",
+    "start": "2021-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "annual_capital_hurdle": 0.04,
+    "costs_per_unit_turnover": {
+      "base": 0.003,
+      "favorable": 0.001,
+      "stress": 0.006
+    },
+    "maximum_gross": 0.5,
+    "rebalance": "first UTC daily open monthly",
+    "symbols": [
+      "TRXUSDT",
+      "PAXGUSDT"
+    ],
+    "target_weights": {
+      "PAXGUSDT": 0.25,
+      "TRXUSDT": 0.25
+    }
+  },
+  "schema_version": 1,
+  "study_code_sha256": "89bde290199ed50e35410f660e5005a3fff0938cd326a48eaa873927fd22521e",
+  "trx_half_long": {
+    "base": {
+      "annualized_return": 0.3153748990206606,
+      "annualized_volatility": 0.5306282289682639,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.9622568733058994
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.11825452186662344
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0007140810746516879,
+        0.0033158240244474256
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.43198486582843876,
+      "selected_asset_day_quote_volume_median": 84053883.059461,
+      "selected_asset_day_quote_volume_min": 9974159.280091,
+      "selection_counts": {
+        "PAXGUSDT": 0,
+        "TRXUSDT": 24
+      },
+      "sharpe_zero_rf": 0.7776803147600201,
+      "total_return": 0.7302111249736132,
+      "turnover": 2.1453900641517913
+    },
+    "favorable": {
+      "annualized_return": 0.3182014936511086,
+      "annualized_volatility": 0.5306264666253514,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.9669584005736933
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.11657756597333302
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.000652035860270775,
+        0.0034322041647997696
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.4317016466302894,
+      "selected_asset_day_quote_volume_median": 84053883.059461,
+      "selected_asset_day_quote_volume_min": 9974159.280091,
+      "selection_counts": {
+        "PAXGUSDT": 0,
+        "TRXUSDT": 24
+      },
+      "sharpe_zero_rf": 0.781729833762393,
+      "total_return": 0.7376551778640139,
+      "turnover": 2.1453900641517913
+    },
+    "stress": {
+      "annualized_return": 0.311143427877683,
+      "annualized_volatility": 0.5306350459189824,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 0.9552208905534452
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.12076579338294757
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0007015821440240756,
+        0.003332584613827201
+      ],
+      "days": 730,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.4324095410509553,
+      "selected_asset_day_quote_volume_median": 84053883.059461,
+      "selected_asset_day_quote_volume_min": 9974159.280091,
+      "selection_counts": {
+        "PAXGUSDT": 0,
+        "TRXUSDT": 24
+      },
+      "sharpe_zero_rf": 0.7716000180217044,
+      "total_return": 0.7190970884668408,
+      "turnover": 2.145390064151792
+    }
+  }
+}

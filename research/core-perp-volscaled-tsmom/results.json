@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-07-20T19:35:00+08:00",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "candidate_id": "RESEARCH_CORE_PERP_VOLSCALED_TSMOM_MAX_0P5X",
+  "reason": "Development was profitable across all preregistered lookbacks and both years, but the primary rule's -21.80% max drawdown exceeded the fixed -20% development limit. Evaluation and confirmation remained unopened.",
+  "development": {
+    "data_quality": "PASS",
+    "base_return": 0.33486912314242234,
+    "stress_return": 0.329689354974668,
+    "returns_by_year": {"2021": 0.30324301538221654, "2022": 0.024267237489032034},
+    "max_drawdown": -0.21801163276904956,
+    "worst_daily_intrabar_adverse": -0.11626031703103558,
+    "turnover": 2.775872608412327,
+    "average_gross_at_rebalance": 0.18775617262823538,
+    "lookback_base_returns": {"120": 0.3505690983799392, "180": 0.33486912314242234, "240": 0.6058090453640985},
+    "funding_pnl_on_initial_capital": -0.07881301822949346,
+    "price_pnl_on_initial_capital": 0.41933588027625673,
+    "continuous_half_long_return": 0.7499761934032914,
+    "continuous_half_long_max_drawdown": -0.4546143037359103,
+    "content_digest": "8a6b21434aa330df9364f59f711ef7f73acc0504c5438e6a7b8b84b215a7f0dc",
+    "gate": "FAILED_DEVELOPMENT_GATE_STOP"
+  },
+  "evaluation": "NOT_FETCHED_DEVELOPMENT_GATE_FAILED",
+  "confirmation": "NOT_FETCHED_DEVELOPMENT_GATE_FAILED",
+  "strongest_support": "All 120/180/240-day variants and both development years were positive; volatility scaling reduced drawdown by 23.66pp versus continuous 0.5x long.",
+  "strongest_counterevidence": "The primary rule still lost 21.80% peak-to-trough at only 18.78% average gross and paid 7.88% of initial capital in funding, exceeding the personal-account risk gate.",
+  "study_code_sha256": "aca8bcce736a7452d29e2ef01c76d32f4c7de92e1a4d541f9d0711bc6f0437fa",
+  "manifest_sha256": "0d1d0d6c08549a909a0b4f761f8e7f29fca75488f35c0a325a2b49e0399f79c7",
+  "manifest_content_identity": "2823f1e8c4bb36990472db98a462511109576fc8053bb843bcff1e00512feb87",
+  "result_file_sha256": {
+    "development.json": "eaa322def92d13c2aac27840c41deaee81c1da8df8b634d8822429bbce087d7a",
+    "development_gate.json": "404a9abfec0d068786b60b76abdeb85fe997aa8bf020def0d3a5ee3e6079b8fd"
+  },
+  "product_effects": "NONE"
+}

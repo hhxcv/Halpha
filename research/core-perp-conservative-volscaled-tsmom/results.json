@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-07-20T20:15:00+08:00",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "candidate_id": "RESEARCH_CORE_PERP_CONSERVATIVE_VOLSCALED_TSMOM_MAX_0P3X",
+  "reason": "Conservative calibration passed, but independent evaluation failed: stress return was negative and 2023 lost 5.74%. Confirmation was not downloaded.",
+  "development_calibration": {
+    "base_return": 0.19943979297141246,
+    "stress_return": 0.19662303891993127,
+    "returns_by_year": {"2021": 0.18010705116619485, "2022": 0.016382193281634816},
+    "max_drawdown": -0.14548934786168677,
+    "worst_daily_intrabar_adverse": -0.07975223747109256,
+    "lookback_base_returns": {"120": 0.20759752523478747, "180": 0.19943979297141246, "240": 0.340361240413954},
+    "content_digest": "fb1000c7230372107e1d912e39f4c8dc116bf31be06f5acd2f9bd6d0973cf5b9",
+    "revised_after_gate_key_fix_content_digest": "cb8a2eb06a8ddb81c9f21e798350fcc247538269f5adb721fc7ef3e4318a34f8",
+    "economic_returns_digest_unchanged": true,
+    "role": "EXPOSED_CALIBRATION_NOT_SUPPORT_EVIDENCE"
+  },
+  "evaluation": {
+    "data_quality": "PASS",
+    "base_return": 0.0018188634330058573,
+    "stress_return": -0.002499022412042029,
+    "returns_by_year": {"2023": -0.05741580867399454, "2024": 0.06284284486425551},
+    "max_drawdown": -0.10271552892450697,
+    "worst_daily_intrabar_adverse": -0.034992827605563576,
+    "lookback_base_returns": {"120": 0.022644484740303783, "180": 0.0018188634330058573, "240": 0.08194453299085325},
+    "funding_pnl_on_initial_capital": -0.009707805874446966,
+    "price_pnl_on_initial_capital": 0.01643845771204857,
+    "continuous_long_return": 0.5169328511700639,
+    "content_digest": "4639265995fef4c28db3448cece82451e27b0ad48ae827152c9714763a3b3462",
+    "gate": "FAILED_EVALUATION_GATE_STOP"
+  },
+  "confirmation": "NOT_FETCHED_EVALUATION_GATE_FAILED",
+  "strongest_support": "All lookbacks were positive in calibration and evaluation, while the conservative rule kept evaluation drawdown to 10.27%.",
+  "strongest_counterevidence": "The primary rule lost 5.74% in 2023, stress costs erased the full two-year evaluation profit, and it captured almost none of the simple long benchmark's 51.69% return.",
+  "study_code_sha256": "2730a77b125eff6088fc736d5d38fa39278817b38d21aa6b2c081f8ac378523c",
+  "evaluation_manifest_sha256": "aada0e7d643c8d73bc62579a2cb23255b823c8cdeec3f5a39261b5e8f0dd669d",
+  "result_file_sha256": {
+    "development.json": "1871eddf3b43dcf198d31b0b8ba21e625fde02b54046d9e5d488511dad892440",
+    "development_gate.json": "f6a736e6feae308818e6945fc3675a234d17a38999fe14c53f72549a321eb8b0",
+    "evaluation.json": "c9f717f616203dcbb9921619f87092e8ccfa6db2384c08afd9a89586cd387dec",
+    "evaluation_gate.json": "eb14c7b51e1e439fb14b9ad4e428e03cb42d337dd517a243e67a612d6f721ca2",
+    "development_revised.json": "e1252e256ab3cd21ff1b90046a88fa33804f95c6a2655ee4c5fb53193c95c6cf",
+    "development_gate_revised.json": "62fbfce3ca7de08513c01ed18be95b32f6eae4fda438ffb4c85afaa498f2d969"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/core-perp-conservative-volscaled-tsmom-repro",
+    "files": 4,
+    "bytes": 34428,
+    "evaluation_and_gate_content_digests_match": true,
+    "development_current_code_content_digests_match_revised_files": true,
+    "original_development_difference": "Only study_code_sha256 and derived outer content digest changed after the gate-key fix; primary returns_digest and rebalance_digest match."
+  },
+  "product_effects": "NONE"
+}
