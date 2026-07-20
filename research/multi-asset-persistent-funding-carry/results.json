@@ -1,0 +1,27 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MULTI_ASSET_PERSISTENT_POSITIVE_FUNDING_CARRY",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "development": {
+    "active_intervals": 827,
+    "episodes": 5,
+    "base_return_noncompounded": 0.6906330519831965,
+    "stress_return_noncompounded": 0.6826330519831963,
+    "funding_sum": 0.7053689686484547,
+    "basis_sum": -0.002735916665258814,
+    "base_cost_sum": -0.011999999999999999,
+    "episode_median": 0.027369025386409635,
+    "positive_episode_fraction": 0.8,
+    "active_interval_bootstrap_95pct_mean": [0.0005688243326166964, 0.0011428875209867598],
+    "max_drawdown_noncompounded": -0.017722254035586027,
+    "selection_counts": {"ADAUSDT": 0, "DOGEUSDT": 3, "XRPUSDT": 2},
+    "episode_returns": [-0.0012316823933997672, 0.6245587436925426, 0.028269500120308818, 0.027369025386409635, 0.011667465177335544]
+  },
+  "failed_conditions": ["only 5 episodes versus pre-registered minimum 10"],
+  "holdout": {"evaluation_core_2024_2025": "UNOPENED_NOT_DOWNLOADED", "confirmation_ltc_link_2021_2025": "UNOPENED_NOT_DOWNLOADED"},
+  "data_identity": {"manifest_content_identity": "1587d2f2505177db808e915a5a83dd1b4d35991e6f9588cf4dd95adcdb438609", "checksum_verified_archives": 216, "funding_records": 9855, "official_rest_backfill_records": 15, "xrp_futures_backfill_sha256": "fd0df4962a1c40d851f0bf5043d92a107659c0c4608f625768a8cc9134e3cc34"},
+  "development_content_digest": "d7591b90bdc24848d8ee6ba2b33a0310aaa44441e9eacb335da4c6187f43c412",
+  "selection_content_digest": "ec6d816208c4013f45f807e732cc743aa8146b454ceac5751cd9103172e31e1a",
+  "formal_product_strategy_comparison": "NOT_RUN_ECONOMICALLY_INCOMPARABLE_SINGLE_LEG_TREND_STRATEGY",
+  "product_effects": "NONE"
+}

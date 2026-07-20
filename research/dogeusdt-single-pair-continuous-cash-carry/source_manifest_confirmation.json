@@ -1,0 +1,241 @@
+{
+  "archives": {
+    "DOGEUSDT": [
+      {
+        "bytes": 5235,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2025-09.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-09.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-09",
+        "sha256": "a19237ff11cb171ff80fd64e3097af4daa954846c22359cb8d20ac76197694be",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-09.zip"
+      },
+      {
+        "bytes": 5324,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2025-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-09.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-09",
+        "sha256": "c17e5f09e50f6b79ea472c771f0f5c68f24e5be0f3d181c27c20b09779fb0184",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-09.zip"
+      },
+      {
+        "bytes": 5403,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2025-10.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-10.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-10",
+        "sha256": "71ee17e4116fa7c8bdd50cd41f17fa5ea6c396a7aba8c30c20fa79e63639581c",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-10.zip"
+      },
+      {
+        "bytes": 5480,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2025-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-10.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-10",
+        "sha256": "1f3e31387bd63bd790a5c69795e546a3c22a437a11b3b47dcb54c7894943a88c",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-10.zip"
+      },
+      {
+        "bytes": 5174,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2025-11.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-11.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-11",
+        "sha256": "88bc18cb5b3edfacba0a81ff2aa16213504e026744710aa9194aa56a67ea38ea",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-11.zip"
+      },
+      {
+        "bytes": 5248,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2025-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-11.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-11",
+        "sha256": "8ea4a0684ed45a9a83d52f1416e9df4e6267be132b9ec97c53d78277afc444e5",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-11.zip"
+      },
+      {
+        "bytes": 5237,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2025-12.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-12.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-12",
+        "sha256": "a00f67651f17e4af41229f159e8d0364a5ce7f1a625bf2a71975f1107c227190",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-12.zip"
+      },
+      {
+        "bytes": 5301,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2025-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-12.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-12",
+        "sha256": "7900a2c19eba9e7f11d70ebb1d2ddb90a2c3ebcce090f01e5b2d8368b72e248d",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2025-12.zip"
+      },
+      {
+        "bytes": 5272,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2026-01.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-01.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-01",
+        "sha256": "83293c95401a340509f8353e351986428a806442e58da8394338698a4afc73c3",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-01.zip"
+      },
+      {
+        "bytes": 5328,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2026-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-01.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-01",
+        "sha256": "819478dd46cb1673b5047713dc576f8116a511e106a6037007060f7fe32ce319",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-01.zip"
+      },
+      {
+        "bytes": 4782,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2026-02.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-02.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-02",
+        "sha256": "096dbae67a2cdd84f0d4a364235764e65c1d53528e9c02e93abfe8b98f5c2a37",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-02.zip"
+      },
+      {
+        "bytes": 4863,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2026-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-02.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-02",
+        "sha256": "0b573a6c631cfaddfd0e8e758cb8484b0b50870605d78b86aaac4e5e81456ecf",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-02.zip"
+      },
+      {
+        "bytes": 5174,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2026-03.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-03.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-03",
+        "sha256": "c4005764b5506e8714f3a671f372fae888f42d073afd6571a1fc75241347865e",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-03.zip"
+      },
+      {
+        "bytes": 5269,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2026-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-03.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-03",
+        "sha256": "df6efda0cf0be0106364baf372f2bd8e0b73b20d6c2e31d1b071296063ee6f32",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-03.zip"
+      },
+      {
+        "bytes": 5009,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2026-04.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-04.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-04",
+        "sha256": "0a59c56bd1a710064871767a3639df5ef952bb2ccf10c30ad7044cf092378f6f",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-04.zip"
+      },
+      {
+        "bytes": 5086,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2026-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-04.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-04",
+        "sha256": "1c52214870d3cf345474aceac3f884bdb9042d7e86d57d1214ea86705049bf87",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-04.zip"
+      },
+      {
+        "bytes": 5185,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2026-05.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-05.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-05",
+        "sha256": "195a159e6b7166241f19001e46d13ef561d5286d600b5782d6a908de68ff0686",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-05.zip"
+      },
+      {
+        "bytes": 5281,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2026-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-05.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-05",
+        "sha256": "be9f42e867a948ba4e2df628d76109652789b679e10238c3b3408652f822870d",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-05.zip"
+      },
+      {
+        "bytes": 4980,
+        "cache_relative_path": "DOGEUSDT/spot/DOGEUSDT-8h-2026-06.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-06.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-06",
+        "sha256": "5b15c025bf573349e8b5c6f8777ac69c933709e0eade77a76504b54e04fabb21",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-06.zip"
+      },
+      {
+        "bytes": 5070,
+        "cache_relative_path": "DOGEUSDT/futures/DOGEUSDT-8h-2026-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-06.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-06",
+        "sha256": "d55d121e31dbcbed546407dec9d0130eb5fcfdd4f9b3cfa0c89050d56d3d8f7e",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/8h/DOGEUSDT-8h-2026-06.zip"
+      }
+    ]
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\dogeusdt-single-pair-continuous-cash-carry",
+  "content_identity": "b8d9781abb23e9be697a4fcc1b2264c2f50c55c7c2c0f4a4844c5ac4b53be4bd",
+  "funding_snapshots": {
+    "DOGEUSDT": {
+      "bytes": 72150,
+      "cache_relative_path": "DOGEUSDT/funding-2025-09_2026-06.json",
+      "pages": 1,
+      "records": 909,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_end_exclusive_ms": 1782864000000,
+      "requested_start_ms": 1756684800000,
+      "sha256": "a02a1c7fadccffc390d97848c0c02e79e84fee91cd37955229134d6537599ce4",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+    }
+  },
+  "generated_at": "2026-07-20T07:18:50Z",
+  "interval": "8h",
+  "kline_backfills": {
+    "DOGEUSDT": {
+      "futures": {
+        "bytes": 4,
+        "cache_relative_path": "DOGEUSDT/futures/kline-backfill-2025-09_2026-06.json",
+        "market": "futures",
+        "open_times_ms": [],
+        "pages": 1,
+        "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+        "records": 0,
+        "request_security": "NONE_PUBLIC_MARKET_DATA",
+        "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+        "url": "https://fapi.binance.com/fapi/v1/klines"
+      },
+      "spot": {
+        "bytes": 4,
+        "cache_relative_path": "DOGEUSDT/spot/kline-backfill-2025-09_2026-06.json",
+        "market": "spot",
+        "open_times_ms": [],
+        "pages": 1,
+        "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+        "records": 0,
+        "request_security": "NONE_PUBLIC_MARKET_DATA",
+        "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+        "url": "https://data-api.binance.vision/api/v3/klines"
+      }
+    }
+  },
+  "requested_end_month": "2026-06",
+  "requested_start_month": "2025-09",
+  "schema_version": 1,
+  "spot_timestamp_rule": "Normalize values above 1e14 from microseconds to milliseconds",
+  "symbols": [
+    "DOGEUSDT"
+  ],
+  "timezone": "UTC",
+  "universe": "xrp",
+  "venue": "BINANCE"
+}

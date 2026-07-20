@@ -1,0 +1,9 @@
+{
+  "content_digest": "e53b629e2114c9e3f3a17386894bb62d2b1c15f2bc48e9e3457b81463e00a6e1",
+  "fixed_rule": "BTCUSDT_PERP_MONTHLY_60_90_180_DIRECTION_ENSEMBLE_MAX_0P25X",
+  "generated_at": "2026-07-20T06:07:20Z",
+  "holdout_authorized": false,
+  "input_content_digest": "8bed7eb5c44fa155be921f24de529ce9b5d0db6055c6158abfb9369402440475",
+  "phase": "evaluation",
+  "qualification_status": "FAILED_EVALUATION_GATE_STOP"
+}

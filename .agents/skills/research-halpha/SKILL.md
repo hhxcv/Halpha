@@ -17,7 +17,9 @@ Use `develop-halpha` only when a selected result is authorized to change product
 
 ### 1. Ground the Direction and Survey Prior Art
 
-Read the current L4 research facts, the project decision or evidence gap that motivates the work, and directly relevant Halpha design and existing research materials. Do not choose a direction from general novelty, model preference or an isolated backtest idea.
+Read the current L4 research facts, the project decision or evidence gap that motivates the work, and directly relevant Halpha design. Before new web research, scan `research/**` by mechanism, instrument or venue, question, data period and conclusion. If an earlier study answers or materially overlaps the question, reproduce, extend or reference it instead of duplicating it; do not create a global index or registry for this scan.
+
+Do not choose a direction from general novelty, model preference or an isolated backtest idea.
 
 Before selecting a new direction or starting an experiment for a user-defined question, search the public web for directly relevant current work and mature solutions. Prefer original papers, official venue or data-source rules and API documentation, official library documentation and source code, then credible independent replications. Use secondary summaries only to find primary material. If online access is unavailable, state that prior-art coverage is incomplete and do not present the selection as well grounded.
 
@@ -25,7 +27,9 @@ Record each material source, publication or access date, problem addressed, main
 
 ### 2. Select and Fix One Question
 
-When the user has not fixed the question, form a small candidate set from current project gaps and the prior-art survey. Reject any candidate without a concrete decision or information value, an unresolved gap, a falsifier, a meaningful baseline, enough obtainable data to begin, and proportionate expected cost. Select only one active question and preserve the candidates, duplication check and selection rationale in its research note.
+When the user has not fixed the question, form a small candidate set from current project gaps and the prior-art survey. Evaluate concrete decision or information value, the unresolved gap, a falsifier, a meaningful baseline, enough obtainable data to begin, fit with personal maintenance, any capital and validation-cycle limits explicitly supplied by the user, eventual operating complexity, and proportionate research cost. By default reject directions that require scale capital, cross-venue inventory or a long validation cycle unless they directly inform the current decision. Keep any personal capital scale the user has not supplied unknown; do not turn it into a Halpha capability or guarantee.
+
+Select only one active question and preserve the candidates, duplication check and selection rationale in its research note.
 
 State:
 
@@ -60,11 +64,17 @@ Reuse mature libraries already justified by the study. Add a dependency only whe
 
 Keep generated bulk data out of Git when appropriate, but record its source, immutable identity or retrieval rule and expected location.
 
+Before first revealing outcomes from an interval intended as untouched evaluation, save a lightweight checkpoint in the existing study materials. Record the fixed question, search scope, development or selection gate, input identity, code or method identity, allowed fixes, and the rule for opening the interval. Use a short note, snapshot or hash as appropriate; do not require a fixed manifest, schema or new tracking system.
+
 ### 5. Run and Challenge the Study
 
 Include only assumptions applicable to the decision, such as fees, funding, spread, slippage, latency, liquidity, capacity, position sizing and execution timing. Compare against a meaningful simple baseline and the strongest plausible alternative explanation.
 
+Use the current product strategy as a comparison only when an exact replay or a bounded, explicitly labeled proxy is both fair and decision-relevant. Do not build a research-side second product implementation merely to force the comparison. If a comparable replay is unavailable or disproportionate, state that comparison as unknown or not run.
+
 Preserve all material attempts, parameter searches, failures and condition changes. Never report only the best run. Mark exploratory tuning and later evaluation separately, and prevent overlap or future information from silently crossing the boundary.
+
+If the fixed development gate fails, stop by default and preserve the untouched interval. Open it to confirm rejection only when that additional evidence has explicit decision value, and then record it as exposed. Record any outcome-revealing chart, summary or manual inspection; integrity-only access may be distinguished only when it cannot reveal performance and the reason is stated.
 
 When a nontrivial implementation or interpretation problem could affect the study, search current original research, official documentation, source code and documented issues before inventing a workaround. Check versions, assumptions and context; record the useful lead, what was tried and why it applies or does not apply. If no reliable answer is available, preserve the unknown or weaken the claim rather than guessing past it.
 
@@ -72,7 +82,7 @@ Read [Research Method and Evidence](references/research-method-and-evidence.md) 
 
 ### 6. Reproduce and Report Honestly
 
-Rerun the final command from recorded inputs where proportionate. Check that reported metrics, tables and plots derive from the saved result rather than manual transcription. State unmodeled items and any environment limitation.
+Rerun the final command from recorded inputs where proportionate. Check that reported metrics, tables and plots derive from the saved result rather than manual transcription. Verify that small inputs, commands, results and any recorded hashes remain available. For external bulk data, verify and record its source identity or retrieval rule, expected location and whether a local cache is durable or reacquirable. State unmodeled items and any environment limitation.
 
 Conclude with exactly one bounded result:
 
@@ -89,6 +99,6 @@ Research completion does not update the product strategy, trading plan, funds, c
 
 ## Delivery
 
-Report the question, data boundary, exact artifacts and command, actual attempts, conclusion, counterevidence, reproducibility result and remaining unknowns. Distinguish newly created evidence from earlier files and say what was not run.
+Report the question, data boundary, exact artifacts and command, actual attempts, conclusion, counterevidence, reproducibility result and remaining unknowns. Distinguish newly created evidence from earlier files and say what was not run. Report whether the research artifacts are Git-tracked and how external caches are retained; describe untracked artifacts only as retained in the current worktree, not as durable Git history.
 
 Do not claim quality from experiment count, framework size or procedural formality.

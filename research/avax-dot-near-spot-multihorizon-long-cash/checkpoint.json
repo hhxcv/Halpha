@@ -1,0 +1,21 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_AVAX_DOT_NEAR_SPOT_MULTIHORIZON_LONG_CASH_0P5X",
+  "created_at": "2026-07-20T16:45:00+08:00",
+  "inherited_exposed_single_window_results": {"60d": 0.6521384635896204, "90d": 0.9664749688094469, "120d": -0.15448916716394145},
+  "question": "Can an equal-weight 60/90/120-day positive-momentum spot ensemble over AVAX/DOT/NEAR earn positive untouched-period returns while preserving capital in the later confirmation period?",
+  "symbols": ["AVAXUSDT", "DOTUSDT", "NEARUSDT"],
+  "signal_windows_days": [60, 90, 120],
+  "weight_per_positive_symbol_window": 0.05555555555555555,
+  "maximum_symbol_weight": 0.16666666666666666,
+  "maximum_gross": 0.5,
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"], "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"], "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]},
+  "development_gate": "data PASS; ensemble base/stress total >0; max drawdown >-40% and >=15 percentage points better than half-long; turnover <=20",
+  "evaluation_gate": "ensemble base/stress total >0; >=1 positive year; max drawdown >-40% and below half-long",
+  "confirmation_gate": "ensemble base/stress >=-10%; max drawdown >-25% and below half-long; compounded evaluation+confirmation >0",
+  "holdout_release_rule": "Reuse exposed development only after checkpoint; fetch evaluation only after pass; fetch confirmation only after evaluation pass",
+  "formal_strategy_baseline": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "single_window_study_code_sha256": "53b05f553d07bcbd3e1599e9844ca2d59cd4743a78c403f4bd40f0342d85c938",
+  "study_code_sha256": "0f79f63a776ea2b00fb3fa0c0e7cf258e5c5c29b4609d1c4b4a9b2500d587c0d"
+}

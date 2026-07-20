@@ -1,0 +1,325 @@
+{
+  "btc_half_long": {
+    "base": {
+      "annualized_return": 0.5974859336728924,
+      "annualized_volatility": 0.24828916953205482,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.6522463364412914
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.546523948858664
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        0.00043238171896328265,
+        0.002351986752718553
+      ],
+      "days": 731,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.13529197410919402,
+      "selected_asset_day_quote_volume_median": 1669750777.6239815,
+      "selected_asset_day_quote_volume_min": 250873957.3886738,
+      "selection_counts": {
+        "BTCUSDT": 24,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 2.0110385222938296,
+      "total_return": 1.5552385287204413,
+      "turnover": 1.7092476570371937
+    },
+    "favorable": {
+      "annualized_return": 0.5988503626843957,
+      "annualized_volatility": 0.24829387943692713,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.6536040002250532
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.5478985839108295
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        0.0004669128942068671,
+        0.002347929579020387
+      ],
+      "days": 731,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.13515900658292312,
+      "selected_asset_day_quote_volume_median": 1669750777.6239815,
+      "selected_asset_day_quote_volume_min": 250873957.3886738,
+      "selection_counts": {
+        "BTCUSDT": 24,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 2.0144480483592964,
+      "total_return": 1.5596112902976342,
+      "turnover": 1.7092476570371937
+    },
+    "stress": {
+      "annualized_return": 0.5961222464934999,
+      "annualized_volatility": 0.24828552470987622,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.6508893473115156
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.5451501271963233
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        0.0004360988567272793,
+        0.0023697207928593425
+      ],
+      "days": 731,
+      "invested_day_fraction": 1.0,
+      "max_drawdown": -0.13542492526690986,
+      "selected_asset_day_quote_volume_median": 1669750777.6239815,
+      "selected_asset_day_quote_volume_min": 250873957.3886738,
+      "selection_counts": {
+        "BTCUSDT": 24,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 2.0076202546475344,
+      "total_return": 1.5508718849854368,
+      "turnover": 1.7092476570371944
+    }
+  },
+  "content_digest": "1a7828ca5379808cc359afa995d1bcfa7709ded6066ece527841e1c444e72b5f",
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "BTCUSDT": {
+        "days": 731,
+        "duplicates": 0,
+        "expected_days": 731,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      },
+      "ETHUSDT": {
+        "days": 731,
+        "duplicates": 0,
+        "expected_days": 731,
+        "gaps": 0,
+        "invalid_ohlc": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "ensemble": {
+    "base": {
+      "annualized_return": 0.29735994643641206,
+      "annualized_volatility": 0.21294599669894512,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.16638320234013393
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.44407406987831455
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        1.158927391584071e-05,
+        0.0016691845212496845
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.8741450068399452,
+      "max_drawdown": -0.11692891425591256,
+      "selected_asset_day_quote_volume_median": 1669750777.6239815,
+      "selected_asset_day_quote_volume_min": 250873957.3886738,
+      "selection_counts": {
+        "BTCUSDT": 21,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 1.3286943292505178,
+      "total_return": 0.6843437380410153,
+      "turnover": 3.5559833762825535
+    },
+    "favorable": {
+      "annualized_return": 0.2996663680889171,
+      "annualized_volatility": 0.21296221300535847,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.16855030627408496
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.44653256784064976
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        9.810549294873505e-06,
+        0.0016872238986504102
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.8741450068399452,
+      "max_drawdown": -0.11674201257485661,
+      "selected_asset_day_quote_volume_median": 1669750777.6239815,
+      "selected_asset_day_quote_volume_min": 250873957.3886738,
+      "selection_counts": {
+        "BTCUSDT": 21,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 1.3369557822951557,
+      "total_return": 0.6903460751856263,
+      "turnover": 3.5559833762825535
+    },
+    "stress": {
+      "annualized_return": 0.2950568601227499,
+      "annualized_volatility": 0.21293251505575644,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.16421933971137115
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.4416190240567328
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -7.984009855160027e-06,
+        0.0016412827778277252
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.8741450068399452,
+      "max_drawdown": -0.11711579259584515,
+      "selected_asset_day_quote_volume_median": 1669750777.6239815,
+      "selected_asset_day_quote_volume_min": 250873957.3886738,
+      "selection_counts": {
+        "BTCUSDT": 21,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 1.3204146597313715,
+      "total_return": 0.6783607483026826,
+      "turnover": 3.5559833762825535
+    }
+  },
+  "generated_at": "2026-07-20T05:43:17Z",
+  "manifest_content_identity": "91be0f7c56f3b20e624fb4842a827ef417dfd64212ec27aa5304582d4f28ba6b",
+  "period": {
+    "end_exclusive": "2025-01-01T00:00:00Z",
+    "start": "2023-01-01T00:00:00Z"
+  },
+  "phase": "evaluation",
+  "rules": {
+    "costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    },
+    "instrument": "BTCUSDT Binance Spot",
+    "maximum_gross": 0.5,
+    "weight_per_positive_window": 0.16666666666666666,
+    "windows": [
+      60,
+      90,
+      180
+    ]
+  },
+  "schema_version": 1,
+  "single_window_diagnostics_base": {
+    "180": {
+      "annualized_return": 0.30358381436327564,
+      "annualized_volatility": 0.23029730861244782,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.20464289758700627
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.4116760406192532
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -6.3706227319669525e-06,
+        0.0017099490140319877
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.8317373461012312,
+      "max_drawdown": -0.13309720750846687,
+      "selected_asset_day_quote_volume_median": 1674541498.416964,
+      "selected_asset_day_quote_volume_min": 250873957.3886738,
+      "selection_counts": {
+        "BTCUSDT": 20,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 1.265926876696867,
+      "total_return": 0.7005655160257305,
+      "turnover": 3.4743490972333393
+    },
+    "60": {
+      "annualized_return": 0.2683188934140057,
+      "annualized_volatility": 0.20363693654174034,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.1130303995345947
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.44621451305202564
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -4.38727256771963e-05,
+        0.0015785480972325598
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.6238030095759234,
+      "max_drawdown": -0.13844531090425238,
+      "selected_asset_day_quote_volume_median": 1800913455.2741187,
+      "selected_asset_day_quote_volume_min": 261041530.4758038,
+      "selection_counts": {
+        "BTCUSDT": 15,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 1.268715477022883,
+      "total_return": 0.6096807172750214,
+      "turnover": 5.238324390654559
+    },
+    "90": {
+      "annualized_return": 0.31527963688607485,
+      "annualized_volatility": 0.22800075438356066,
+      "by_year": {
+        "2023": {
+          "days": 365,
+          "return": 0.18150694401967726
+        },
+        "2024": {
+          "days": 366,
+          "return": 0.4652981166490242
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -4.201618988592058e-05,
+        0.001766210546436402
+      ],
+      "days": 731,
+      "invested_day_fraction": 0.7906976744186046,
+      "max_drawdown": -0.14703289284411203,
+      "selected_asset_day_quote_volume_median": 1729648577.7228847,
+      "selected_asset_day_quote_volume_min": 261041530.4758038,
+      "selection_counts": {
+        "BTCUSDT": 19,
+        "ETHUSDT": 0
+      },
+      "sharpe_zero_rf": 1.3155787268650834,
+      "total_return": 0.7312598998797735,
+      "turnover": 4.387221608622036
+    }
+  },
+  "single_window_study_code_sha256": "96379a14a4f88890199089bac5569e0c196d29573b9d1503126ff2383c463782",
+  "study_code_sha256": "f9875be67f0467dddafefc2c23a71e7867b5e29927d5519fce519a46bd06e1c2"
+}

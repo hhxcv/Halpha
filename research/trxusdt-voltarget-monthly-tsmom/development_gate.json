@@ -1,0 +1,9 @@
+{
+  "content_digest": "01e52a33b6d7dcf3a6b4278cccbd8a3cec06503ecdc07cb16005e429c264d98d",
+  "development_content_digest": "a9ccb372bdd9c55e99a28c2c707255dab65d520ca30518003b078d058c5c1ea0",
+  "fixed_rule": "TRXUSDT_POSITIVE_180D_VOL60_TARGET15PCT_MONTHLY_MAX0P5X",
+  "generated_at": "2026-07-20T07:38:53Z",
+  "holdout_authorized": true,
+  "qualification_status": "PASSED_DEVELOPMENT_GATE",
+  "stress_return_after_4pct_annual_hurdle": 0.04785778439656463
+}

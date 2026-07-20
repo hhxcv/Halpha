@@ -1,0 +1,11 @@
+{
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "reason": "The exposed calibration gate failed because 10% target evaluation drawdown was -15.49%, below the pre-registered -15% floor; confirmation remained unopened.",
+  "development_base_total_return": 0.11391792444635818,
+  "development_max_drawdown": -0.12979078229498175,
+  "evaluation_base_total_return": 0.6222077059125803,
+  "evaluation_max_drawdown": -0.15491455293568246,
+  "calibration_gate": "FAILED_EXPOSED_CALIBRATION_GATE_STOP",
+  "confirmation": "NOT_ACQUIRED_OR_OPENED",
+  "product_effects": "NONE"
+}

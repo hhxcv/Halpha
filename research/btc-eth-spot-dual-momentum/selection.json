@@ -1,0 +1,8 @@
+{
+  "content_digest": "a19460946bf0bcdef9988454f9b90375f3e239ccd3c86de29bbe5276861e0fa2",
+  "development_content_digest": "e9211438687416670d8b4bb870ba3d86cff1158631151aac2de14328f66e50ef",
+  "fixed_rule": "BTC_ETH_SPOT_POSITIVE_TOP1_90D_0P5X",
+  "generated_at": "2026-07-20T05:30:12Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

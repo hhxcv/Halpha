@@ -1,0 +1,35 @@
+{
+  "candidate_rows": [
+    {
+      "bootstrap_95pct_mean_low": -0.0033718201410234397,
+      "mean_net_return": -0.0024270125767196834,
+      "passed_development_gate": false,
+      "positive_calendar_years": 0,
+      "threshold": 0.0001,
+      "trades": 1846
+    },
+    {
+      "bootstrap_95pct_mean_low": -0.005317114757799858,
+      "mean_net_return": -0.002400483267710278,
+      "passed_development_gate": false,
+      "positive_calendar_years": 1,
+      "threshold": 0.0003,
+      "trades": 356
+    },
+    {
+      "bootstrap_95pct_mean_low": -0.006748861662172849,
+      "mean_net_return": -0.00266893515310107,
+      "passed_development_gate": false,
+      "positive_calendar_years": 1,
+      "threshold": 0.0005,
+      "trades": 207
+    }
+  ],
+  "development_file": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\btcusdt-next-funding-carry\\development.json",
+  "development_sha256": "3eb313a5ee9559c582433119b592629203963970118b595aaa1bd1ac0e337081",
+  "gate": "At least 60 trades and positive base-cost mean in at least two development calendar years; rank passers by 8-trade circular-block bootstrap lower bound then mean.",
+  "generated_at": "2026-07-19T23:44:30Z",
+  "selected_threshold": 0.0001,
+  "selection_rule_predeclared_in_study_py": true,
+  "selection_status": "NO_VARIANT_PASSED_DEVELOPMENT_GATE_BEST_RETAINED_ONLY_FOR_FALSIFICATION"
+}

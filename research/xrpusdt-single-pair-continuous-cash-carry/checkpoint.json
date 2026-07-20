@@ -1,0 +1,35 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_XRPUSDT_SINGLE_PAIR_CONTINUOUS_CASH_CARRY",
+  "created_at": "2026-07-20T22:05:00+08:00",
+  "formal_strategy_background": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.0",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "question": "Can a single fully-funded XRPUSDT equal-quantity spot-long/perpetual-short continuous carry preserve positive post-cost, post-capital-hurdle returns in a fresh post-parent period while reducing the parent basket from six legs to two?",
+  "relationship_to_prior_work": "Operational-simplification follow-up to supported DOGE/XRP/ADA basket. All parent data through 2025-08 are exposed context and are not counted as fresh evidence.",
+  "parent_result_file_sha256": "5d05b69b53cd0a3898bc1c00db5bbe56624c2e0c9a3aefcb10cf357c8ce6bfaa",
+  "parent_result_content_digest": "3d221747e9e5d3425591120e57bebbe3acfe5fe941c3829fc492010764b0de31",
+  "parent_confirmation_file_sha256": "38be54c620306f01dd5bf114c3f9fe29cb9e51d902d169b85c7286521c58ad5f",
+  "parent_confirmation_pnl_digest": "b2fe6c2dcb61536d9095441a73854f49336c2ce6d9a64dfca992c9be3b39a5b2",
+  "inherited_xrp_base_returns": {
+    "2021_2022": 0.9208230887137557,
+    "2023": 0.06418328209206224,
+    "2024_to_2025_aug": 0.14704667409031838
+  },
+  "fresh_period": ["2025-09-01T00:00:00Z", "2026-06-30T16:00:00Z"],
+  "fresh_fetch_months": ["2025-09", "2026-06"],
+  "fresh_source_manifest_sha256": "a0f3b1b2f6402f685db345a40473e26c0a590e5b9d6f55435c9a4f9364b2b91b",
+  "fresh_content_identity": "58d21e5e84f7c04d62d53cc8fd478a7da9435ee46f3a829825978cb6bd837198",
+  "fresh_data_inventory": {"archives": 20, "funding_records": 909, "backfill_records": 0, "external_files": 23, "external_bytes": 176189},
+  "position": "equal XRP quantity long Binance spot and short Binance USD-M perpetual continuously",
+  "capital": "spot purchase plus equal futures guarantee margin; no leverage credit",
+  "round_trip_costs": {"favorable": 0.0016, "base": 0.0024, "stress": 0.004},
+  "annual_capital_hurdle": 0.04,
+  "support_gate": "data PASS; stress total and post-4%-hurdle returns >0; both 2025 and 2026 slices positive; max drawdown >-5%; funding PnL > absolute basis PnL; 8h block-bootstrap 95% lower mean >0",
+  "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/xrpusdt-single-pair-continuous-cash-carry",
+  "study_code_sha256": "0c75dd8b3a1eb249d6f04be951e698514aebe21312ccf5f9977f72b2a5b88303",
+  "large_data_policy": "Git-external checksum-verified public spot/perpetual 8h archives plus public settled funding history; manifest retained in research",
+  "pre_holdout_status": "LOCKED_BEFORE_2025_09_TO_2026_06_DATA_FETCH"
+}

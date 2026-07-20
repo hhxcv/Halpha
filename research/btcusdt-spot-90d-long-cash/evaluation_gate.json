@@ -1,0 +1,8 @@
+{
+  "content_digest": "191a91378d172c0f7adf047c15a923edbc0242fc8e4cbfeaeca419563986c687",
+  "evaluation_content_digest": "de6f908badbbcbbd9db7864e531f08804cc42b5adea0753b8a3b4846cfd87248",
+  "fixed_rule": "BTCUSDT_SPOT_POSITIVE_90D_0P5X",
+  "generated_at": "2026-07-20T05:36:22Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_EVALUATION_GATE_STOP"
+}

@@ -1,0 +1,8 @@
+{
+  "content_digest": "a2dd7916ad8682ce61b1a8bc3d71eda1b704e66beb99e2952ed18e6972d156ca",
+  "evaluation_content_digest": "a489f2853bfd979633f845a4d56c038cb9929069fa44332bb94ed6a8c6401acf",
+  "fixed_rule": "AVAX_DOT_NEAR_SPOT_60_90_120_EQUAL_VOTE_LONG_CASH",
+  "generated_at": "2026-07-20T04:56:49Z",
+  "holdout_authorized": true,
+  "qualification_status": "PASSED_EVALUATION_GATE"
+}

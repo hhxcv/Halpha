@@ -1,0 +1,31 @@
+{
+  "allowed_fixes": [
+    "download and official checksum handling",
+    "spot microsecond timestamp normalization",
+    "CSV, funding pagination or event alignment",
+    "implementation defects that leave the fixed economic rules and gates unchanged"
+  ],
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_BINANCE_POSITIVE_FUNDING_CASH_CARRY",
+  "capital": "Two fully funded units: one spot notional and one perpetual-short collateral unit; all PnL divided by two",
+  "combined_transition_cost_one_leg_notional": {
+    "base": 0.0024,
+    "favorable": 0.0016,
+    "stress": 0.004
+  },
+  "created_at": "2026-07-20T12:15:00+08:00",
+  "data_sequence": {
+    "confirmation": "BNBUSDT spot/perpetual/funding 2021-2025; completely unviewed; only after fixed BTC evaluation",
+    "development": "BTCUSDT spot/perpetual/funding 2021-2023; spot and basis unviewed",
+    "evaluation": "BTCUSDT spot/perpetual/funding 2024-2025; spot and basis unviewed; only after development gate"
+  },
+  "development_gate": "active 8h intervals >= 300; positive base noncompounded return; at least two positive development years; 9-interval circular-block bootstrap 95% active-mean lower bound > 0",
+  "entry_thresholds_bps": [1.0, 3.0, 5.0],
+  "exit": "After a settled funding rate <= 0, including that settlement, then close at the aligned 8h boundary",
+  "formal_strategy_baseline": "NOT_RUN_ECONOMICALLY_INCOMPARABLE_SINGLE_LEG_TREND_STRATEGY",
+  "holdout_release_rule": "BTC evaluation only after one threshold passes development; BNB confirmation only after fixed BTC evaluation; no rule changes after either release",
+  "known_exposure": "BTC perpetual prices and funding rates were viewed in the prior naked-carry study, but BTC spot/basis and all BNB inputs were not viewed before this checkpoint",
+  "question": "Does a same-venue long-spot/short-perpetual position entered after positive settled funding and exited after non-positive settled funding retain positive returns after basis, actual later funding, two-leg costs and two fully funded capital units, and transfer from BTC to BNB?",
+  "study_code_sha256": "4d383f72c0d1ce998b5521a4b24b07061695936303322bc8c569848720e007b1",
+  "study_status": "PRE_SPOT_AND_BNB_DATA_FIXED"
+}

@@ -1,0 +1,43 @@
+{
+  "conclusion": "DOES_NOT_SUPPORT",
+  "conclusion_scope": "Development-only decision for fixed ETHUSDT 2h one-period extreme-return reversal with 90-day trailing sigma and modeled costs",
+  "development_content_digest": "f041f16293279fa348b325a399f00475944f6ba7c5bbaadb79b2ce984a8773bf",
+  "development_gate": "NO_VARIANT_PASSED_DEVELOPMENT_GATE_STOP",
+  "formal_product_strategy_comparison": "NOT_RUN_NO_FAIR_EXACT_REPLAY_WITHOUT_SECOND_IMPLEMENTATION",
+  "holdout": {
+    "confirmation_2026_h1": "UNOPENED_NOT_DOWNLOADED",
+    "evaluation_2024_2025": "UNOPENED_NOT_DOWNLOADED"
+  },
+  "input_content_identity": "83420cc3465abf9b13c8a046bf11d09508d47d36abd6ec7c9824308f2bf6b977",
+  "metrics": {
+    "2sigma": {
+      "base_bootstrap_95pct_mean": [-0.004110597449899228, -0.0018705739631652183],
+      "base_mean": -0.002991696271028937,
+      "count": 673,
+      "favorable_mean": -0.0009916962710289367,
+      "gross_mean": 0.00019489361008420076,
+      "positive_development_years": 0
+    },
+    "3sigma": {
+      "base_bootstrap_95pct_mean": [-0.00533109719492194, -0.0009011196854478978],
+      "base_mean": -0.0031541021455527454,
+      "count": 221,
+      "favorable_mean": -0.0011541021455527454,
+      "gross_mean": 0.000011919215250110349,
+      "positive_development_years": 0
+    },
+    "4sigma": {
+      "base_bootstrap_95pct_mean": [-0.00390613683675048, 0.0027721276220258337],
+      "base_mean": -0.0005740654763328701,
+      "count": 82,
+      "favorable_mean": 0.0014259345236671296,
+      "gross_mean": 0.002546476871605049,
+      "positive_development_years": 1
+    }
+  },
+  "phase_return_lag1_autocorrelation": -0.020331849928028424,
+  "product_effects": "NONE",
+  "selection_content_digest": "4004a79ed37e420e71fdcfc01ac02143f454cef9f36c49a3c3ab3255910544a0",
+  "strongest_counterevidence": "All fixed variants have non-positive 32 bp development mean; 2/3 sigma are negative in every year, while 4 sigma is positive in only one year and its interval crosses zero",
+  "strongest_support": "The 4 sigma variant has positive gross and 12 bp favorable-cost mean, showing limited reversal potential before Halpha base costs"
+}

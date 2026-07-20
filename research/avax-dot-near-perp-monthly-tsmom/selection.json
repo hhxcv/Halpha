@@ -1,0 +1,8 @@
+{
+  "content_digest": "f7af6ba22c22d9107f3808c9ffb66b93f2e2016d9b2e0db3799002615362f7a5",
+  "development_content_digest": "de3a119e5ae234ec32288a674e532517932d69908e20e26cc68b32f79f2b1f7f",
+  "fixed_rule": "AVAX_DOT_NEAR_MONTHLY_90D_TSMOM_0P5X",
+  "generated_at": "2026-07-20T04:32:02Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

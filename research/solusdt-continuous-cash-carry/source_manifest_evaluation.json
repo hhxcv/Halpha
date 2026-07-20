@@ -1,0 +1,277 @@
+{
+  "archives": {
+    "SOLUSDT": [
+      {
+        "bytes": 5185,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-01.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-01.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-01",
+        "sha256": "7dd123a1ce6695c8ad5f021c290c1daf569907842222963f8f1fc7796c079088",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-01.zip"
+      },
+      {
+        "bytes": 5064,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-01.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-01",
+        "sha256": "a5a826fd35f5f4add00a4be7602e48c75767b4db3212890334d388a6fe709d98",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-01.zip"
+      },
+      {
+        "bytes": 4810,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-02.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-02.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-02",
+        "sha256": "79cf691ac4970880a83482be0528355852e0f37b8f4808e76a9f510729190663",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-02.zip"
+      },
+      {
+        "bytes": 4743,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-02.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-02",
+        "sha256": "d3e4ef627f6f02e7092863c76e51243158165549f0729ef39a8017933950077e",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-02.zip"
+      },
+      {
+        "bytes": 5285,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-03.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-03.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-03",
+        "sha256": "7f832b9c6bd1826e26953c882af466167111195cdc702e4c6202add73420e4f6",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-03.zip"
+      },
+      {
+        "bytes": 5182,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-03.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-03",
+        "sha256": "a830b1b07df0579c8d96afdc80c6f64e1f3f6e8651ba5849472223e103583f8d",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-03.zip"
+      },
+      {
+        "bytes": 5082,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-04.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-04.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-04",
+        "sha256": "cb935fcee9a1dc78df3fd8d4eec825f8ecfe1d8fdd3c4a6bcc00d75c84479927",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-04.zip"
+      },
+      {
+        "bytes": 4994,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-04.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-04",
+        "sha256": "90715ccc07e8e41b96a521a73b797a562ff3794c25a991a44610cebba1e5c531",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-04.zip"
+      },
+      {
+        "bytes": 5429,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-05.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-05.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-05",
+        "sha256": "40fca46ea1a90d748313eff8498d25264dd34c02dcf749a8cba27d6a2e2913f1",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-05.zip"
+      },
+      {
+        "bytes": 5125,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-05.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-05",
+        "sha256": "830ff83ae67fdb00120d938331885ccde3fe11fa9f050ac1d624ecbe4eacb3da",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-05.zip"
+      },
+      {
+        "bytes": 5216,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-06.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-06.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-06",
+        "sha256": "325b31080382b607a7d82753a85a380527b93b41f04d704192a3b3abbe56e3c8",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-06.zip"
+      },
+      {
+        "bytes": 4898,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-06.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-06",
+        "sha256": "a234d6d81e7c0beba10f828e6383827637f370aa9a5a42fa043c2e520314015e",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-06.zip"
+      },
+      {
+        "bytes": 5447,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-07.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-07.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-07",
+        "sha256": "f5f06437080f2eda0bc0d805f625f7122d9e5bb3d1bd3d35e0abb4f619cd7a70",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-07.zip"
+      },
+      {
+        "bytes": 5094,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-07.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-07.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-07",
+        "sha256": "cc42c999e4bf1dd0055fa1672b5530dc2a65ed8bfc9fcf503576178894c065e7",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-07.zip"
+      },
+      {
+        "bytes": 5456,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-08.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-08.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-08",
+        "sha256": "f6a232ac425d401f7805475134955f9e1b595a11f87ba5bd164bbaf21d210045",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-08.zip"
+      },
+      {
+        "bytes": 5115,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-08.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-08.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-08",
+        "sha256": "2305c4e7d8700e3d571a6c5cc1cd57512f730d4e258ca19df43d7a2d4f40e30b",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-08.zip"
+      },
+      {
+        "bytes": 5211,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-09.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-09.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-09",
+        "sha256": "439755313e6956ceafe40aff9198aa98297d2dbd46a3dacf1773211120718afb",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-09.zip"
+      },
+      {
+        "bytes": 4893,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-09.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-09",
+        "sha256": "72643c844fa9cfa401e7f67b6f69106b8a1df6c5b6be3c42bca2cbd31c7fd4fa",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-09.zip"
+      },
+      {
+        "bytes": 5443,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-10.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-10.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-10",
+        "sha256": "5721c91da8c8a60126e274dbecdfc1adc6ff8a78aef8d643e26196dcbfd91669",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-10.zip"
+      },
+      {
+        "bytes": 5004,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-10.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-10",
+        "sha256": "ba3a0aaafdff56e2478bda786b8ac2e4589bbc95075a95023291693baa1d3f97",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-10.zip"
+      },
+      {
+        "bytes": 5345,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-11.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-11.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-11",
+        "sha256": "2b96340817533fde5cc1b5c33c9767e023e58be91d5c1a6434584e68e043d481",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-11.zip"
+      },
+      {
+        "bytes": 4873,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-11.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-11",
+        "sha256": "077aaa9e72c484c8016965dba0cfa628cd9719d4c7a2d2f7c30311b8c5bde5a3",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-11.zip"
+      },
+      {
+        "bytes": 5512,
+        "cache_relative_path": "SOLUSDT/spot/SOLUSDT-8h-2024-12.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-12.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2024-12",
+        "sha256": "31163a8bbb45d2b4b4c574d5b7cfb587146c1a91adc34ae683b600838385816b",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-12.zip"
+      },
+      {
+        "bytes": 4991,
+        "cache_relative_path": "SOLUSDT/futures/SOLUSDT-8h-2024-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-12.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2024-12",
+        "sha256": "3ee51cc3bad7544a875fdbb7dfc86f1fa2b5a8e8ae421557e8ac3d154d11d644",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/8h/SOLUSDT-8h-2024-12.zip"
+      }
+    ]
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\solusdt-continuous-cash-carry",
+  "content_identity": "9ba91137fecbd579795aa0fbd1ebabc8d3fd57838d5c70e684e89502912c57ae",
+  "funding_snapshots": {
+    "SOLUSDT": {
+      "bytes": 86860,
+      "cache_relative_path": "SOLUSDT/funding-2024-01_2024-12.json",
+      "pages": 2,
+      "records": 1098,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_end_exclusive_ms": 1735689600000,
+      "requested_start_ms": 1704067200000,
+      "sha256": "85dbb84d71059b7bbb87d9ca790c7392c1578cf8d656eb2213015f815ae4cd40",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+    }
+  },
+  "generated_at": "2026-07-20T07:24:55Z",
+  "interval": "8h",
+  "kline_backfills": {
+    "SOLUSDT": {
+      "futures": {
+        "bytes": 4,
+        "cache_relative_path": "SOLUSDT/futures/kline-backfill-2024-01_2024-12.json",
+        "market": "futures",
+        "open_times_ms": [],
+        "pages": 1,
+        "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+        "records": 0,
+        "request_security": "NONE_PUBLIC_MARKET_DATA",
+        "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+        "url": "https://fapi.binance.com/fapi/v1/klines"
+      },
+      "spot": {
+        "bytes": 4,
+        "cache_relative_path": "SOLUSDT/spot/kline-backfill-2024-01_2024-12.json",
+        "market": "spot",
+        "open_times_ms": [],
+        "pages": 2,
+        "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+        "records": 0,
+        "request_security": "NONE_PUBLIC_MARKET_DATA",
+        "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+        "url": "https://data-api.binance.vision/api/v3/klines"
+      }
+    }
+  },
+  "requested_end_month": "2024-12",
+  "requested_start_month": "2024-01",
+  "schema_version": 1,
+  "spot_timestamp_rule": "Normalize values above 1e14 from microseconds to milliseconds",
+  "symbols": [
+    "SOLUSDT"
+  ],
+  "timezone": "UTC",
+  "universe": "xrp",
+  "venue": "BINANCE"
+}

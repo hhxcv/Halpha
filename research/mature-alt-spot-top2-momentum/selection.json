@@ -1,0 +1,9 @@
+{
+  "content_digest": "aefff9437b9caebb18d5af76767656c9346347960f80b23199aaf356f79d1b75",
+  "development_content_digest": "0ee0f06d77a05ff80ebb049ff9a4c8ae7546217927a7d138cea165c44736eed5",
+  "fixed_rule": "MATURE_ALT_SPOT_MONTHLY_TOP2_POSITIVE_90D",
+  "gate": "pre-registered development gate in checkpoint.json",
+  "generated_at": "2026-07-20T04:09:31Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

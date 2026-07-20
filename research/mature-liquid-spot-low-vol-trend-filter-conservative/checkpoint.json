@@ -1,0 +1,39 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MATURE_LIQUID_SPOT_LOW_VOL_POSITIVE_TREND_90D_0P3X",
+  "created_at": "2026-07-20T20:45:00+08:00",
+  "formal_strategy_background": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.0",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "question": "Can a fixed 0.3x mature-liquid spot bottom-3 realized-volatility portfolio with an own-positive-trend filter remain profitable and risk-bounded across sequential untouched evaluation and confirmation periods?",
+  "relationship_to_prior_work": "Transparent conservative-risk follow-up to the exposed 0.5x trend-filter study; development is calibration evidence only; parent evaluation and confirmation were unopened at checkpoint time.",
+  "symbols": [
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "LTCUSDT", "LINKUSDT",
+    "DOGEUSDT", "BCHUSDT", "TRXUSDT", "XLMUSDT", "ETCUSDT", "ATOMUSDT"
+  ],
+  "lookbacks_days": [60, 90, 180],
+  "primary_lookback_days": 90,
+  "selection": "bottom 3 realized volatility then retain only assets with positive own-window return",
+  "weight_per_eligible_asset": 0.1,
+  "maximum_gross": 0.3,
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "rebalance": "first UTC daily open monthly using information through prior UTC close",
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"],
+    "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "development_gate": "data PASS; 90d base/stress >0; max drawdown >-22%, >=2pp better than same-gross unfiltered low-vol and better than same-gross equal-weight; 60d/180d base >0; turnover <=18",
+  "evaluation_gate": "data PASS; 90d base/stress >0; every calendar year positive; max drawdown >-18% and better than same-gross unfiltered and equal-weight; 60d/180d base >0",
+  "confirmation_gate": "data PASS; 90d base/stress >0; at least one positive calendar year; max drawdown >-15% and better than same-gross unfiltered and equal-weight; 60d/180d base >=0; evaluation+confirmation compounded >0",
+  "holdout_release_rule": "reuse already exposed development only; obtain evaluation data only after development pass; obtain confirmation data only after evaluation pass",
+  "development_source_manifest": "../mature-liquid-spot-low-vol/source_manifest_development.json",
+  "development_source_manifest_sha256": "b8ab9b7b7d2573865026185ab7ed00d484d538df3de6e658b14562bc5538b7ed",
+  "development_content_identity": "ddbef4626a3ef10340ce9e352f3bd08a447c3591ec1bb4f418549148ebcc5799",
+  "development_cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/mature-liquid-spot-low-vol",
+  "large_data_policy": "Git-external checksum-verified public data; manifests and identities retained under research",
+  "study_code_sha256": "0f7fd8e771c8ecd669064485f27fd2176ddd320c8abef898ad7c6c1b91d5a1a7",
+  "pre_holdout_status": "LOCKED_BEFORE_ANY_NEW_EVALUATION_OR_CONFIRMATION_DATA"
+}

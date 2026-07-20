@@ -1,0 +1,10 @@
+{
+  "content_digest": "bed623c3757890168cda6753a2a0530c2de76e89ef3e86f230b6f5c839376d80",
+  "evaluation_content_digest": "9da922ce9615100140742d2ed7888af7ddd410b7cb559a600404adcd95af7567",
+  "fixed_rule": "TRXUSDT_POSITIVE_180D_VOL60_TARGET15PCT_MONTHLY_MAX0P5X",
+  "generated_at": "2026-07-20T07:41:50Z",
+  "holdout_authorized": false,
+  "positive_years": 2,
+  "qualification_status": "FAILED_EVALUATION_GATE_STOP",
+  "stress_return_after_4pct_annual_hurdle": 0.6412200342556671
+}

@@ -1,0 +1,8 @@
+{
+  "content_digest": "4b10718ab9d41c5f5972a789134018479002f92fb994e269a9b7836c5731bf7b",
+  "development_content_digest": "800511a82b120ceec9f273aaecad95938e55317d7fb236568e9abd2bf648e453",
+  "fixed_rule": "AVAX_DOT_NEAR_SPOT_MONTHLY_POSITIVE_90D_0P5X",
+  "generated_at": "2026-07-20T04:51:20Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

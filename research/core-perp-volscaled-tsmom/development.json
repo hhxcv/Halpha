@@ -1,0 +1,444 @@
+{
+  "content_digest": "8a6b21434aa330df9364f59f711ef7f73acc0504c5438e6a7b8b84b215a7f0dc",
+  "continuous_half_long_benchmark": {
+    "base": {
+      "annualized_return": 0.3228666574539141,
+      "annualized_volatility": 0.5047125695713084,
+      "average_gross_at_rebalance": 0.5,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 1.5868501991219595
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.32351081094789735
+        }
+      },
+      "cost_pnl_on_initial_capital": -0.008104624997738633,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0008132040765291614,
+        0.0032938219373182067
+      ],
+      "days": 730,
+      "funding_pnl_on_initial_capital": -0.33721751301582137,
+      "max_drawdown": -0.4546143037359103,
+      "price_pnl_on_initial_capital": 1.0952983314168356,
+      "rebalance_count": 24,
+      "rebalance_digest": "b4575413f299402e454a1b221ffe67ae984eddc998297c9f18cd682d4a99f32b",
+      "returns_digest": "712fb11ee744b91e6d23298f3ac650ceb2acfa09a8c4024e1b1fd0191561cd5f",
+      "sharpe_zero_rf": 0.8000574819237634,
+      "total_return": 0.7499761934032914,
+      "turnover": 2.749284781551795,
+      "worst_daily_intrabar_adverse_on_then_nav": -0.24066148705241183
+    },
+    "favorable": {
+      "annualized_return": 0.32468692878424243,
+      "annualized_volatility": 0.5047488939570532,
+      "average_gross_at_rebalance": 0.5,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 1.5912348366944706
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.3227956669761568
+        }
+      },
+      "cost_pnl_on_initial_capital": -0.0030433826072381797,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0007341320264017728,
+        0.0033903702153442283
+      ],
+      "days": 730,
+      "funding_pnl_on_initial_capital": -0.3375245174582633,
+      "max_drawdown": -0.4544446573951083,
+      "price_pnl_on_initial_capital": 1.0953633593573224,
+      "rebalance_count": 24,
+      "rebalance_digest": "359e4b69de15329075c874d404ca46b8207e03aaf77c42fc84a7589cefb921de",
+      "returns_digest": "4eacf79361ce926f8dc1966bb65d4e51885df24987e275fad270d3e827285a66",
+      "sharpe_zero_rf": 0.8027610974401335,
+      "total_return": 0.7547954592918285,
+      "turnover": 2.7492847815517942,
+      "worst_daily_intrabar_adverse_on_then_nav": -0.24066148705241194
+    },
+    "stress": {
+      "annualized_return": 0.3203216374137212,
+      "annualized_volatility": 0.5046629989531836,
+      "average_gross_at_rebalance": 0.5,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 1.5807220148518515
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.32451104140988973
+        }
+      },
+      "cost_pnl_on_initial_capital": -0.015167184737421128,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0007815130294705357,
+        0.0033366922276048265
+      ],
+      "days": 730,
+      "funding_pnl_on_initial_capital": -0.33678800707555184,
+      "max_drawdown": -0.45485173434011505,
+      "price_pnl_on_initial_capital": 1.095204418035822,
+      "rebalance_count": 24,
+      "rebalance_digest": "a29cea29ad4d7326847d97959758ad3a61e23a819c9256188b1cadf96d6b368e",
+      "returns_digest": "098df4ee26e8aae0a1ec5de5084c2a080204f4b14607bf2bf59e2bd1c6d11a8e",
+      "sharpe_zero_rf": 0.7962697411670966,
+      "total_return": 0.7432492262228501,
+      "turnover": 2.749284781551795,
+      "worst_daily_intrabar_adverse_on_then_nav": -0.24066148705241194
+    }
+  },
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "BNBUSDT": {
+        "funding_events": 2190,
+        "invalid_ohlc": 0,
+        "missing_funding_days": 0,
+        "missing_price_days": 0,
+        "status": "PASS"
+      },
+      "BTCUSDT": {
+        "funding_events": 2190,
+        "invalid_ohlc": 0,
+        "missing_funding_days": 0,
+        "missing_price_days": 0,
+        "status": "PASS"
+      },
+      "ETHUSDT": {
+        "funding_events": 2190,
+        "invalid_ohlc": 0,
+        "missing_funding_days": 0,
+        "missing_price_days": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "generated_at": "2026-07-20T06:40:55Z",
+  "manifest_content_identity": "2823f1e8c4bb36990472db98a462511109576fc8053bb843bcff1e00512feb87",
+  "manifest_sha256": "0d1d0d6c08549a909a0b4f761f8e7f29fca75488f35c0a325a2b49e0399f79c7",
+  "period": {
+    "end_exclusive": "2023-01-01T00:00:00Z",
+    "start": "2021-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "asset_annual_risk_budget": 0.05,
+    "costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.003
+    },
+    "funding_assignment": "actual events in (daily open, next daily open]",
+    "max_asset_weight": 0.16666666666666666,
+    "max_gross": 0.5,
+    "primary_lookback_days": 180,
+    "robustness_lookbacks_days": [
+      120,
+      240
+    ],
+    "volatility_lookback_days": 60
+  },
+  "schema_version": 1,
+  "source_code_sha256": "1204afe0284daab4c9763b93a56f4ba0fe637d9408c554cf57e4d36af2f6450f",
+  "strategy": {
+    "120": {
+      "base": {
+        "annualized_return": 0.16213987900766025,
+        "annualized_volatility": 0.20998149501504587,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.3138952270090105
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.027912325592664544
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.00706113210744288,
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00022350601925351274,
+          0.0013205002614530609
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.06816914102977259,
+        "max_drawdown": -0.1773808916184204,
+        "price_pnl_on_initial_capital": 0.425799371517147,
+        "rebalance_count": 24,
+        "rebalance_digest": "c2f2644a3c58e50ec30934648983228d76afc7889f57b9aece6c0f21227ab600",
+        "returns_digest": "a716c97e15b8aa0827b6b00748faa0369d51eae3958efbbaef480b9a9d5d1340",
+        "sharpe_zero_rf": 0.8180350270172526,
+        "total_return": 0.3505690983799392,
+        "turnover": 3.342903742560766,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103558
+      },
+      "favorable": {
+        "annualized_return": 0.16408450236625582,
+        "annualized_volatility": 0.2099830661796037,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.3157894860554611
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.02987046409046723
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.002652152493047225,
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00020810366000348652,
+          0.0013158720910933046
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.06818447452664747,
+        "max_drawdown": -0.176808088225901,
+        "price_pnl_on_initial_capital": 0.425929355668993,
+        "rebalance_count": 24,
+        "rebalance_digest": "424d31bbe12c9a3b1d5bf085544ce0238e2f70c874489c7eeb0ab8c50d3f4c00",
+        "returns_digest": "9554d942db9db123afc7bbbc491215e20b733290cc68aad0d32649914ad5f5aa",
+        "sharpe_zero_rf": 0.8259960918357735,
+        "total_return": 0.3550927286492933,
+        "turnover": 3.342903742560765,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103555
+      },
+      "stress": {
+        "annualized_return": 0.15942204323373588,
+        "annualized_volatility": 0.2099826059200964,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.31124729183586086
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.02517616829867042
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.013210095013597526,
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00024226231814674572,
+          0.0013456105104227177
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.06814762753202584,
+        "max_drawdown": -0.17818229539260289,
+        "price_pnl_on_initial_capital": 0.42561719688192223,
+        "rebalance_count": 24,
+        "rebalance_digest": "5dc252deaa5f10434daf9993a180a056113819e44e8180cfe9436bc59c634137",
+        "returns_digest": "c21070ec8b04bf8e3bb8682e2cb5b8ef74afee545295c4c41ff63098708e2b27",
+        "sharpe_zero_rf": 0.8068766148974338,
+        "total_return": 0.3442594743362908,
+        "turnover": 3.342903742560765,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103554
+      }
+    },
+    "180": {
+      "base": {
+        "annualized_return": 0.15536536348569085,
+        "annualized_volatility": 0.2048469467103418,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.30324301538221654
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.024267237489032034
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.0056537389043475545,
+        "daily_mean_block_bootstrap_95pct": [
+          -0.0002295243226850768,
+          0.0013280775438776224
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.07881301822949346,
+        "max_drawdown": -0.21801163276904956,
+        "price_pnl_on_initial_capital": 0.41933588027625673,
+        "rebalance_count": 24,
+        "rebalance_digest": "1cfd9b6aa546b20cc34b2cd28259e32596b7df8f85d87affea43b2e2f97e5dad",
+        "returns_digest": "a762429d8c11a064ac116ff3515d5e23b82add6fbba9a81df164f0b205633009",
+        "sharpe_zero_rf": 0.804703536794132,
+        "total_return": 0.33486912314242234,
+        "turnover": 2.775872608412327,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103558
+      },
+      "favorable": {
+        "annualized_return": 0.1569703828713933,
+        "annualized_volatility": 0.20484882752445954,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.3049621842729666
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.025761882584625084
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.0021229435824418378,
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00022224577606666884,
+          0.0013305361225041685
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.0788501061669805,
+        "max_drawdown": -0.2168171589360819,
+        "price_pnl_on_initial_capital": 0.4195535165910057,
+        "rebalance_count": 24,
+        "rebalance_digest": "47b0e3af6b2c867f29118f7da5b6fb32af3a803d24c13f81f2ad099aa534ed46",
+        "returns_digest": "5e0f73fd4098f750f5a14d48e0dbff5fe5cee80cd63f2d6926682b8f4b514418",
+        "sharpe_zero_rf": 0.8114776834331736,
+        "total_return": 0.3385804668415784,
+        "turnover": 2.7758726084123255,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103555
+      },
+      "stress": {
+        "annualized_return": 0.1531215699026136,
+        "annualized_volatility": 0.20484641660347272,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.3008394157264447
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.02217794056625877
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.010581257592577142,
+        "daily_mean_block_bootstrap_95pct": [
+          -0.00022894149442750534,
+          0.0013489068134642246
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.07876113754115804,
+        "max_drawdown": -0.21968126569615998,
+        "price_pnl_on_initial_capital": 0.4190317501084053,
+        "rebalance_count": 24,
+        "rebalance_digest": "55c054fe6d0a2536b67156edf0a3452f24985643917a5e3428ba92bf4804186a",
+        "returns_digest": "ec824cd9d3e585eb34fc9e7e0a3be1757aa6d785763847abcca541e4ac1d53ff",
+        "sharpe_zero_rf": 0.7952113584815659,
+        "total_return": 0.329689354974668,
+        "turnover": 2.775872608412326,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103554
+      }
+    },
+    "240": {
+      "base": {
+        "annualized_return": 0.26720521043913736,
+        "annualized_volatility": 0.2088421234104185,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.42950488003228804
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.12333232841277364
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.005237969387808863,
+        "daily_mean_block_bootstrap_95pct": [
+          6.945068659283233e-05,
+          0.0015063271327318245
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.09400784026915346,
+        "max_drawdown": -0.16405629415298817,
+        "price_pnl_on_initial_capital": 0.70505485502105,
+        "rebalance_count": 24,
+        "rebalance_digest": "04ac149b45993060a58c3596fa63b30b6ce713e45fe71afcc7bd0ce083a90d8d",
+        "returns_digest": "5c8d3168a3d15c066ab7a5aaf466438be13ea657b882446d552c44f0e48041d3",
+        "sharpe_zero_rf": 1.2359477563102907,
+        "total_return": 0.6058090453640985,
+        "turnover": 2.349730190481329,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103558
+      },
+      "favorable": {
+        "annualized_return": 0.26869521024619836,
+        "annualized_volatility": 0.20884452471010914,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.4308305789387603
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.12493230169533098
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.0019664863890502715,
+        "daily_mean_block_bootstrap_95pct": [
+          5.904279656503617e-05,
+          0.0015207817390426245
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.09406089674858621,
+        "max_drawdown": -0.16376694235930522,
+        "price_pnl_on_initial_capital": 0.7056149196392847,
+        "rebalance_count": 24,
+        "rebalance_digest": "bcd0a6005df3b59ab94000d761b6275bf0b754592afca771ae4b1437f587c762",
+        "returns_digest": "cbb4e1d57273d62a69b6bc4dad0a5bc00b7652de78a51377e792d2c903206f0d",
+        "sharpe_zero_rf": 1.2415664610641224,
+        "total_return": 0.6095875365016452,
+        "turnover": 2.3497301904813295,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103555
+      },
+      "stress": {
+        "annualized_return": 0.265121647588751,
+        "annualized_volatility": 0.20884062907694767,
+        "average_gross_at_rebalance": 0.18775617262823538,
+        "by_year": {
+          "2021": {
+            "days": 365,
+            "return": 0.4276506294389062
+          },
+          "2022": {
+            "days": 365,
+            "return": 0.12109556091234341
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.009805482778138499,
+        "daily_mean_block_bootstrap_95pct": [
+          4.547498698913607e-05,
+          0.0015302818207592404
+        ],
+        "days": 730,
+        "funding_pnl_on_initial_capital": -0.09393363196751321,
+        "max_drawdown": -0.16446130646623291,
+        "price_pnl_on_initial_capital": 0.7042718979433236,
+        "rebalance_count": 24,
+        "rebalance_digest": "7614b68b9d717ae9e2146b2732527b885649d1c1b205016456fb852b03148a46",
+        "returns_digest": "c7cb9a1c9d7b2bbb7ba5959e2224e5a80c7e75df3923d0f45865a88326242bd6",
+        "sharpe_zero_rf": 1.2280703708808134,
+        "total_return": 0.6005327831976761,
+        "turnover": 2.349730190481329,
+        "worst_daily_intrabar_adverse_on_then_nav": -0.11626031703103554
+      }
+    }
+  },
+  "study_code_sha256": "aca8bcce736a7452d29e2ef01c76d32f4c7de92e1a4d541f9d0711bc6f0437fa",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT"
+  ]
+}

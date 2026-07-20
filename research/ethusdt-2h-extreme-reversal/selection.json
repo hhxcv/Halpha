@@ -1,0 +1,38 @@
+{
+  "candidates": [
+    {
+      "bootstrap_95pct_mean_low": -0.004110597449899228,
+      "count": 673,
+      "mean": -0.002991696271028937,
+      "passed": false,
+      "positive_development_years": 0,
+      "threshold_sigma": 2.0,
+      "variant": "2sigma"
+    },
+    {
+      "bootstrap_95pct_mean_low": -0.00533109719492194,
+      "count": 221,
+      "mean": -0.0031541021455527454,
+      "passed": false,
+      "positive_development_years": 0,
+      "threshold_sigma": 3.0,
+      "variant": "3sigma"
+    },
+    {
+      "bootstrap_95pct_mean_low": -0.00390613683675048,
+      "count": 82,
+      "mean": -0.0005740654763328701,
+      "passed": false,
+      "positive_development_years": 1,
+      "threshold_sigma": 4.0,
+      "variant": "4sigma"
+    }
+  ],
+  "content_digest": "4004a79ed37e420e71fdcfc01ac02143f454cef9f36c49a3c3ab3255910544a0",
+  "development_content_digest": "f041f16293279fa348b325a399f00475944f6ba7c5bbaadb79b2ce984a8773bf",
+  "gate": "count >= 60; base mean > 0; at least two positive calendar years; 8-trade block-bootstrap 95% lower mean > 0",
+  "generated_at": "2026-07-20T03:21:13Z",
+  "holdout_authorized": false,
+  "selected_threshold_sigma": null,
+  "selection_status": "NO_VARIANT_PASSED_DEVELOPMENT_GATE_STOP"
+}

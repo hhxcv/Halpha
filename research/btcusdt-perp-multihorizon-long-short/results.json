@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-07-20T17:45:00+08:00",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "candidate_id": "RESEARCH_BTCUSDT_PERP_MULTIHORIZON_LONG_SHORT_MAX_0P25X",
+  "reason": "Development passed, but independent evaluation failed the preregistered stress-profit, per-year, and benchmark-relative drawdown gates. Confirmation remained unopened.",
+  "development": {
+    "period": ["2021-07-01T00:00:00Z", "2023-01-01T00:00:00Z"],
+    "data_quality": "PASS",
+    "base_return": 0.07399172522602981,
+    "stress_return": 0.07131949986208075,
+    "max_drawdown": -0.13070885868927307,
+    "funding_pnl_on_initial_capital": -0.003883350728073504,
+    "single_window_base_returns": {"60": -0.006065460433584247, "90": 0.15694389474826087, "180": 0.04482955652181797},
+    "continuous_quarter_long_return": -0.14952199341435424,
+    "gate": "PASSED_DEVELOPMENT_GATE",
+    "content_digest": "149a523c9106de4894c987999091a4f2560873c26a41e5f7308cf30e279732ef"
+  },
+  "evaluation": {
+    "period": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "data_quality": "PASS",
+    "base_return": 0.003252489548870585,
+    "stress_return": -0.0013125420467899884,
+    "max_drawdown": -0.16200015709351845,
+    "funding_pnl_on_initial_capital": -0.035123447100910726,
+    "returns_by_year": {"2023": -0.12047826553860808, "2024": 0.14665593950244338},
+    "single_window_base_returns": {"60": -0.03759248482268429, "90": 0.03003379616777102, "180": 0.010294476703569977},
+    "continuous_quarter_long_return": 0.5492010061796198,
+    "gate": "FAILED_EVALUATION_GATE_STOP",
+    "content_digest": "8bed7eb5c44fa155be921f24de529ce9b5d0db6055c6158abfb9369402440475"
+  },
+  "confirmation": "NOT_OPENED_EVALUATION_GATE_FAILED",
+  "strongest_support": "Direction diversification preserved capital relative to continuous 0.25x long in development, and two of three windows stayed marginally positive in evaluation.",
+  "strongest_counterevidence": "Evaluation stress return was negative, 2023 lost 12.05%, the rule lagged the simple long benchmark by 54.59pp, and funding consumed 3.51% of initial capital.",
+  "source_manifest_sha256": "0bbdd5c539701e48cc8625954b68b9b0b8728df653523168ffbed093839b1ef1",
+  "source_content_identity": "f434978bd47792c0e74ab94dc5f0f8ad9a7a4a82618833a56602ee7802d5abd5",
+  "study_code_sha256": "a5d379e5d276cec91318c32eb5a17ffe1d5f055403499ae2e5db09a8093cdc23",
+  "result_file_sha256": {
+    "development.json": "ebb3a31b5dc83f17b59f43c2dcb8d46d53301418bd73249278e6e80d33039840",
+    "development_gate.json": "50c482ff3ed5e0978d93ef9c32a7fd69f6ce691f9b0f16c13bb4f7b90ca87f40",
+    "evaluation.json": "cb2645ec3b3f59d8fd09e4c4002e890ccb59e71b291855b0485f44ec1cfd4507",
+    "evaluation_gate.json": "fcd23151dc75e172cf3e187924619bbe05ed74cb1ae78e92650ff9e345039eeb"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-perp-multihorizon-long-short-repro",
+    "files": 4,
+    "bytes": 48657,
+    "all_content_digests_match": true,
+    "note": "File SHA-256 differs because generated_at is intentionally not part of content_digest."
+  },
+  "product_effects": "NONE"
+}

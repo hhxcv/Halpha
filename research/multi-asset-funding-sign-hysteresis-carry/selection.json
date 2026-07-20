@@ -1,0 +1,8 @@
+{
+  "content_digest": "4e7d6165f8d98ca40ec36cdc3187947267486f71934d1cde1c1f266451ad00b6",
+  "development_content_digest": "e0448f9f73f690736ef7519aae8c9daf3b4a61a58e78c7546223c432a1af8b5d",
+  "fixed_rule": "MULTI_ASSET_TWO_POSITIVE_IN_TWO_NONPOSITIVE_OUT_CARRY",
+  "generated_at": "2026-07-20T05:24:27Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

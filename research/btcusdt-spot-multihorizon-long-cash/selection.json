@@ -1,0 +1,8 @@
+{
+  "content_digest": "939c99fe8361846437d756d18c44107e5f2e8aa30ef981b92e1710cc18c3e2b7",
+  "development_content_digest": "37496622bcf115018789db068c7903246c736f138c17ae0b6f0919d44b454cd2",
+  "fixed_rule": "BTCUSDT_SPOT_EQUAL_VOTE_60_90_180_POSITIVE_MOMENTUM",
+  "generated_at": "2026-07-20T05:42:54Z",
+  "holdout_authorized": true,
+  "qualification_status": "PASSED_DEVELOPMENT_GATE"
+}

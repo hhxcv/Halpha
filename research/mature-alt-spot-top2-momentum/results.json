@@ -1,0 +1,38 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MATURE_ALT_SPOT_TOP2_ABSOLUTE_RELATIVE_MOMENTUM",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "development": {
+    "data_quality": "PASS",
+    "primary_90d": {
+      "base_total_return": 2.439622712950572,
+      "stress_total_return": 2.392733219298501,
+      "by_year": {"2021": 4.217873642294044, "2022": -0.3407999218167469},
+      "max_drawdown": -0.8569513401221223,
+      "turnover": 13.693993140866192,
+      "daily_mean_block_bootstrap_95pct": [-0.0014174037498039301, 0.009387098041850311],
+      "selected_asset_day_quote_volume_min": 8500540.74031
+    },
+    "robustness_base_total_return": {"60d": 0.9600692267282662, "120d": 4.286266772782879},
+    "equal_weight_buy_and_hold": {
+      "base_total_return": 2.787389328869173,
+      "base_max_drawdown": -0.9056824829842507
+    }
+  },
+  "failed_conditions": [
+    "primary max drawdown improved by only 4.87 percentage points versus the benchmark, below the pre-registered 10-point requirement"
+  ],
+  "holdout": {
+    "evaluation_2023_2024": "UNOPENED_NOT_DOWNLOADED",
+    "confirmation_2025_2026_h1": "UNOPENED_NOT_DOWNLOADED"
+  },
+  "data_identity": {
+    "manifest_content_identity": "3ab96ceeef8e615fb64f1e7929bb7bce093903c74cb642bed2c438e2a5e7d530",
+    "checksum_verified_archives": 140,
+    "official_rest_backfill_records": 0
+  },
+  "development_content_digest": "0ee0f06d77a05ff80ebb049ff9a4c8ae7546217927a7d138cea165c44736eed5",
+  "selection_content_digest": "aefff9437b9caebb18d5af76767656c9346347960f80b23199aaf356f79d1b75",
+  "formal_product_strategy_comparison": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "product_effects": "NONE"
+}

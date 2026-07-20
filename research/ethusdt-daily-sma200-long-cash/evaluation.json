@@ -1,0 +1,187 @@
+{
+  "buy_and_hold": {
+    "base": {
+      "annualized_return": 0.041057789437580094,
+      "annualized_volatility": 0.7010859295416159,
+      "by_year": {
+        "2024": {
+          "days": 366,
+          "return": 0.2810161179226729
+        },
+        "2025": {
+          "days": 365,
+          "return": -0.1538585738769771
+        }
+      },
+      "calmar": 0.060944052745119326,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0018734337493989863,
+        0.0035602676045443996
+      ],
+      "days": 731,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.6736964082335037,
+      "sharpe_zero_rf": 0.403282291697965,
+      "total_return": 0.083920804905669,
+      "transitions_including_stage_boundaries": 2
+    },
+    "favorable": {
+      "annualized_return": 0.04208428685952126,
+      "annualized_volatility": 0.7011041192670717,
+      "by_year": {
+        "2024": {
+          "days": 366,
+          "return": 0.2822617917659147
+        },
+        "2025": {
+          "days": 365,
+          "return": -0.15301046943737306
+        }
+      },
+      "calmar": 0.06246773226811502,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0019546046450342742,
+        0.0035729533599972167
+      ],
+      "days": 731,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.6736964082335042,
+      "sharpe_zero_rf": 0.40469619926109984,
+      "total_return": 0.08606231306620615,
+      "transitions_including_stage_boundaries": 2
+    },
+    "stress": {
+      "annualized_return": 0.04003129039663711,
+      "annualized_volatility": 0.7010691618358708,
+      "by_year": {
+        "2024": {
+          "days": 366,
+          "return": 0.27977044407942686
+        },
+        "2025": {
+          "days": 365,
+          "return": -0.15470667831658125
+        }
+      },
+      "calmar": 0.059420370818961246,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.001768421887044814,
+        0.0035493329686340316
+      ],
+      "days": 731,
+      "exposure_fraction": 1.0,
+      "max_drawdown": -0.6736964082335041,
+      "sharpe_zero_rf": 0.40186749563198604,
+      "total_return": 0.08178140966816283,
+      "transitions_including_stage_boundaries": 2
+    }
+  },
+  "cash_total_return": 0.0,
+  "content_digest": "731fd8703bf7f824ebe5454d61c62fe99b84ea826c2546ead06c5e039207ba94",
+  "data_quality": {
+    "days": 731,
+    "duplicate_days": 0,
+    "expected_days": 731,
+    "gaps": 0,
+    "invalid_ohlc": 0,
+    "max_abs_open_vs_previous_close_gap": 8.039494762424049e-05,
+    "status": "PASS"
+  },
+  "funding_rate_sum": 0.17925638,
+  "generated_at": "2026-07-20T03:32:24Z",
+  "manifest_content_identity": "b788b01db3cf1aec97d14080227ce55c55fe5a8ec819ba840ad6d94def35b5c6",
+  "period": {
+    "end_exclusive": "2026-01-01T00:00:00Z",
+    "start": "2024-01-01T00:00:00Z"
+  },
+  "phase": "evaluation",
+  "rules": {
+    "funding": "actual daily sum applied to 1x initial notional proxy",
+    "position": "next UTC day long when prior close > prior SMA200, else cash",
+    "sma_days": 200,
+    "transition_costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    }
+  },
+  "schema_version": 1,
+  "strategy": {
+    "base": {
+      "annualized_return": 0.114179232391042,
+      "annualized_volatility": 0.50680148634809,
+      "by_year": {
+        "2024": {
+          "days": 366,
+          "return": 0.32106551462644917
+        },
+        "2025": {
+          "days": 365,
+          "return": -0.06002910454656396
+        }
+      },
+      "calmar": 0.2926273984693067,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0014058941571931307,
+        0.002747980989668012
+      ],
+      "days": 731,
+      "exposure_fraction": 0.5772913816689467,
+      "max_drawdown": -0.3901864042406751,
+      "sharpe_zero_rf": 0.463735324315086,
+      "total_return": 0.24176313473607647,
+      "transitions_including_stage_boundaries": 20
+    },
+    "favorable": {
+      "annualized_return": 0.12530889443873416,
+      "annualized_volatility": 0.5068887171019717,
+      "by_year": {
+        "2024": {
+          "days": 366,
+          "return": 0.3302404407958641
+        },
+        "2025": {
+          "days": 365,
+          "return": -0.04774376066585129
+        }
+      },
+      "calmar": 0.32474501815840184,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0013147237022645235,
+        0.002782982641204361
+      ],
+      "days": 731,
+      "exposure_fraction": 0.5772913816689467,
+      "max_drawdown": -0.38586856589624996,
+      "sharpe_zero_rf": 0.48335672797220613,
+      "total_return": 0.2667297595624709,
+      "transitions_including_stage_boundaries": 20
+    },
+    "stress": {
+      "annualized_return": 0.10314871786080082,
+      "annualized_volatility": 0.5067334352579879,
+      "by_year": {
+        "2024": {
+          "days": 366,
+          "return": 0.31194487942175453
+        },
+        "2025": {
+          "days": 365,
+          "return": -0.0721680017958265
+        }
+      },
+      "calmar": 0.2614814175526221,
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0012827679986491523,
+        0.0027416308931977828
+      ],
+      "days": 731,
+      "exposure_fraction": 0.5772913816689467,
+      "max_drawdown": -0.39447819591249744,
+      "sharpe_zero_rf": 0.44409035573306926,
+      "total_return": 0.21726443900761927,
+      "transitions_including_stage_boundaries": 20
+    }
+  },
+  "study_code_sha256": "e3e1779ec6d4d51cd1f03c3abbfea021ca1dbf1e3cfe02d22d31dba1fa89e4db"
+}

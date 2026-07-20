@@ -1,0 +1,9 @@
+{
+  "content_digest": "5441a441809c82a196fd39c744c25e2974969e7a7ca66b4c7631fed678984346",
+  "development_content_digest": "1014d54458c11234b991c52a1e74cad43313106a93665f871a8831a6dd708ab0",
+  "fixed_rule": "TRX_PAXG_MONTHLY_25PCT_EACH_MAX0P5X",
+  "generated_at": "2026-07-20T08:00:13Z",
+  "holdout_authorized": true,
+  "qualification_status": "PASSED_DEVELOPMENT_GATE",
+  "stress_return_after_4pct_annual_hurdle": 0.263379313929897
+}

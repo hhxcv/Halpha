@@ -1,0 +1,858 @@
+{
+  "archives": {
+    "AVAXUSDT": [
+      {
+        "bytes": 602,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2020-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-09.zip.CHECKSUM",
+        "month": "2020-09",
+        "sha256": "517a2b4db4d8da914561e9252d95885d818f5584ede65c2cd8b201f3cda8c2aa",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-09.zip"
+      },
+      {
+        "bytes": 1707,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2020-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-10.zip.CHECKSUM",
+        "month": "2020-10",
+        "sha256": "8e5a371f93c881cf0c8603dcf670f5e0e2bfa91f9bd909da028f8a2c9cb9a9b6",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-10.zip"
+      },
+      {
+        "bytes": 1657,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2020-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-11.zip.CHECKSUM",
+        "month": "2020-11",
+        "sha256": "ce2bb1a752992abf7105a658d755055cfe6b082c41d3bd661ad518447cb14989",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-11.zip"
+      },
+      {
+        "bytes": 1693,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2020-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-12.zip.CHECKSUM",
+        "month": "2020-12",
+        "sha256": "ccc3dce8af913ccda4061f0e30c171d2c26766b325a442a2ff9fdef359ea5724",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2020-12.zip"
+      },
+      {
+        "bytes": 1796,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-01.zip.CHECKSUM",
+        "month": "2021-01",
+        "sha256": "d71b9645ac540433a1c907161c1378e8ad370691d0fad080ca02d2b8be6eea42",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-01.zip"
+      },
+      {
+        "bytes": 1677,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-02.zip.CHECKSUM",
+        "month": "2021-02",
+        "sha256": "4cefeed641961029b0e71fbf23f94eaf72e82ebb94f192971d480e45920df5b1",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-02.zip"
+      },
+      {
+        "bytes": 1832,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-03.zip.CHECKSUM",
+        "month": "2021-03",
+        "sha256": "903f64f3c277dfc99e9a66e5213f4950f9fc79992c9795de348a6482dd646b7e",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-03.zip"
+      },
+      {
+        "bytes": 1777,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-04.zip.CHECKSUM",
+        "month": "2021-04",
+        "sha256": "cf49bb01ee11254f162e0a719f2649024cffee8cacb98fe94ee421deceec16ab",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-04.zip"
+      },
+      {
+        "bytes": 1826,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-05.zip.CHECKSUM",
+        "month": "2021-05",
+        "sha256": "da3f004ffc33b0d078deb79479283033feeac0d37d05826b0e7c0af64b55c6c3",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-05.zip"
+      },
+      {
+        "bytes": 1671,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-06.zip.CHECKSUM",
+        "month": "2021-06",
+        "sha256": "7fbc4d056e7e7496542449a4e2b01f711c6913c8c45dde47492b977b710153c6",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-06.zip"
+      },
+      {
+        "bytes": 1699,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-07.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-07.zip.CHECKSUM",
+        "month": "2021-07",
+        "sha256": "1b3b16aa74e6facc3451f50a143c79e2ace1c674af117e158beaaa65f6daac63",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-07.zip"
+      },
+      {
+        "bytes": 1798,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-08.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-08.zip.CHECKSUM",
+        "month": "2021-08",
+        "sha256": "cba0f8d0b69c4df84aa1b01239ae5d2e6ff06c4641695d634650f14f338bcd57",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-08.zip"
+      },
+      {
+        "bytes": 1821,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-09.zip.CHECKSUM",
+        "month": "2021-09",
+        "sha256": "16fe4d24637ab53f8c8a44bda20e44e9449a76bff89b5be00a99a4879cd8dbe8",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-09.zip"
+      },
+      {
+        "bytes": 1796,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-10.zip.CHECKSUM",
+        "month": "2021-10",
+        "sha256": "334f4af52e1e97322633b2da34cd30feaf7c0354e0c94cb0c37905599641232b",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-10.zip"
+      },
+      {
+        "bytes": 1782,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-11.zip.CHECKSUM",
+        "month": "2021-11",
+        "sha256": "da22323987d848b71cc7cc3e6cea6d5568d9565f76d0826bb3dbeac33d67a621",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-11.zip"
+      },
+      {
+        "bytes": 1846,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2021-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-12.zip.CHECKSUM",
+        "month": "2021-12",
+        "sha256": "6c5a7750c9f60d9632f95a97e8b25de774a5b39ea444bc77c12631d5ee5f2b43",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2021-12.zip"
+      },
+      {
+        "bytes": 1914,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-01.zip.CHECKSUM",
+        "month": "2022-01",
+        "sha256": "d6824f64e4a5872a2571c076702150c98e590af1f9b3a6973be6ef2f49627cc4",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-01.zip"
+      },
+      {
+        "bytes": 1701,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-02.zip.CHECKSUM",
+        "month": "2022-02",
+        "sha256": "77f0fd894ab21e2a352ba2e8a373bf710da852cd366c2730b1fdc8c23a06cf5c",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-02.zip"
+      },
+      {
+        "bytes": 1866,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-03.zip.CHECKSUM",
+        "month": "2022-03",
+        "sha256": "c09385707196b6ef29b50fc459369c4a8f61131bc5676373615224c241b0c1a4",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-03.zip"
+      },
+      {
+        "bytes": 1807,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-04.zip.CHECKSUM",
+        "month": "2022-04",
+        "sha256": "b3df679b16539fcd4ca25257fa3cc1047d6b5e54340c0d51b32a2528df9161f9",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-04.zip"
+      },
+      {
+        "bytes": 1867,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-05.zip.CHECKSUM",
+        "month": "2022-05",
+        "sha256": "845abc87fcdd768eaeaca40ae11d0915580558a63a0b545a118ce3808f9a9253",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-05.zip"
+      },
+      {
+        "bytes": 1771,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-06.zip.CHECKSUM",
+        "month": "2022-06",
+        "sha256": "424254978f4ebd49ae28dd2903e13b1054adde959b3b248670b06dfc27b80b46",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-06.zip"
+      },
+      {
+        "bytes": 1797,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-07.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-07.zip.CHECKSUM",
+        "month": "2022-07",
+        "sha256": "5aa28d4d1d60bb7d9438b2445a22a08bb037130abe81e4de7815e05771f8b661",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-07.zip"
+      },
+      {
+        "bytes": 1790,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-08.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-08.zip.CHECKSUM",
+        "month": "2022-08",
+        "sha256": "337d001602ce7ef572976febe0936573d5291478cf5c5dcce1bc851ce9200ed1",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-08.zip"
+      },
+      {
+        "bytes": 1702,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-09.zip.CHECKSUM",
+        "month": "2022-09",
+        "sha256": "e82d3eb7ad575d640c3f6fc4fc50190cec374b970841a5d4df183731450f11d9",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-09.zip"
+      },
+      {
+        "bytes": 1737,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-10.zip.CHECKSUM",
+        "month": "2022-10",
+        "sha256": "67521df2d519345a0faa6db3062e866e680d1941be1f06ca8c9a18dc37923bf1",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-10.zip"
+      },
+      {
+        "bytes": 1801,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-11.zip.CHECKSUM",
+        "month": "2022-11",
+        "sha256": "093abcff1d96c89e93b2420e558dd89a2edf874b2b31cb27741e42537dbf8bed",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-11.zip"
+      },
+      {
+        "bytes": 1810,
+        "cache_relative_path": "AVAXUSDT/klines-1d/AVAXUSDT-1d-2022-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-12.zip.CHECKSUM",
+        "month": "2022-12",
+        "sha256": "0d58feee95b5d3bb950a58ef3d5cd29e1b7aaf25279821e52b8b1d0eef773b86",
+        "symbol": "AVAXUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/AVAXUSDT/1d/AVAXUSDT-1d-2022-12.zip"
+      }
+    ],
+    "DOTUSDT": [
+      {
+        "bytes": 1720,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2020-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-09.zip.CHECKSUM",
+        "month": "2020-09",
+        "sha256": "2710954ce22d0e47a6468d97da920f9ebb29fd12f2c69d570f21c7490a0b8465",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-09.zip"
+      },
+      {
+        "bytes": 1735,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2020-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-10.zip.CHECKSUM",
+        "month": "2020-10",
+        "sha256": "d0660be886baff19e8f9757983e349fbb80bdfe70c4a8b2afc174807e914a7a7",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-10.zip"
+      },
+      {
+        "bytes": 1702,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2020-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-11.zip.CHECKSUM",
+        "month": "2020-11",
+        "sha256": "7b49eebc39ec500299dcfc6cddfe32e34e6307a425ead83571f88bb2d29cac7c",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-11.zip"
+      },
+      {
+        "bytes": 1740,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2020-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-12.zip.CHECKSUM",
+        "month": "2020-12",
+        "sha256": "3eef255c687d51c5a911357f5b0cec030578b7782000de53c25e5d37d7860ed0",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2020-12.zip"
+      },
+      {
+        "bytes": 1852,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-01.zip.CHECKSUM",
+        "month": "2021-01",
+        "sha256": "b837d5e5c50786b05f8d1bb98c44cddff1834aded7b04f85b080603bfdaab07e",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-01.zip"
+      },
+      {
+        "bytes": 1724,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-02.zip.CHECKSUM",
+        "month": "2021-02",
+        "sha256": "9feeb6d916d76964289ebb678359067cc39bac007165a7bc2c51b64109f26065",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-02.zip"
+      },
+      {
+        "bytes": 1853,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-03.zip.CHECKSUM",
+        "month": "2021-03",
+        "sha256": "0c9e740463de2fa3688b1c51a4bd4a1dfaca112d2fc1a923f52aa5816b6920c2",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-03.zip"
+      },
+      {
+        "bytes": 1821,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-04.zip.CHECKSUM",
+        "month": "2021-04",
+        "sha256": "f51d87639fc20ca3f323b18be88a9f9a316a1bc45ab1d614534bcd346d2540cf",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-04.zip"
+      },
+      {
+        "bytes": 1901,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-05.zip.CHECKSUM",
+        "month": "2021-05",
+        "sha256": "9682523e809bff69855043778ff5d0f5007eb27edbdcd015db19e4c025fff86d",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-05.zip"
+      },
+      {
+        "bytes": 1811,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-06.zip.CHECKSUM",
+        "month": "2021-06",
+        "sha256": "821d8eb329548cdd3bd539a07b373a1da1c34d7b598292f5df16e9d926c0aae4",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-06.zip"
+      },
+      {
+        "bytes": 1834,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-07.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-07.zip.CHECKSUM",
+        "month": "2021-07",
+        "sha256": "057288cb2b897047bd9f636666f36e3e1f43569df7b042b2c1b1d3c75151c61b",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-07.zip"
+      },
+      {
+        "bytes": 1888,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-08.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-08.zip.CHECKSUM",
+        "month": "2021-08",
+        "sha256": "a4b0f55570bde04d173e46bfb44428064504b7fb3f00cfd8efe1c90b02233c2e",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-08.zip"
+      },
+      {
+        "bytes": 1820,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-09.zip.CHECKSUM",
+        "month": "2021-09",
+        "sha256": "b4f95f216106a783e0292947883bf088d81963f15b677cce61ed0d874fd11624",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-09.zip"
+      },
+      {
+        "bytes": 1875,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-10.zip.CHECKSUM",
+        "month": "2021-10",
+        "sha256": "0da73e8e00ddaaaf8a6a6f5902b96e606ac980997b5987686f53a4f46887e5f2",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-10.zip"
+      },
+      {
+        "bytes": 1822,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-11.zip.CHECKSUM",
+        "month": "2021-11",
+        "sha256": "cbc265000bda37f8b9b2e3382b0af1a807cda6d00ce97d11dbae0982bd423811",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-11.zip"
+      },
+      {
+        "bytes": 1870,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2021-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-12.zip.CHECKSUM",
+        "month": "2021-12",
+        "sha256": "29e22dc4e64b59aef2f2732e54ae02e80f78e0a694fee8f6738c9829a11b8a02",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2021-12.zip"
+      },
+      {
+        "bytes": 1965,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-01.zip.CHECKSUM",
+        "month": "2022-01",
+        "sha256": "5de38150b6bad018e765adcd4a669e2d2e1190159cd19fbb4e781c182547a5f3",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-01.zip"
+      },
+      {
+        "bytes": 1782,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-02.zip.CHECKSUM",
+        "month": "2022-02",
+        "sha256": "e76ecdb173882350d7aa4cdbfc5917d1876a7ea052f868f64f5b4375624709cc",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-02.zip"
+      },
+      {
+        "bytes": 1925,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-03.zip.CHECKSUM",
+        "month": "2022-03",
+        "sha256": "a9e51586a148af003cc7d04a35f3c60a89f36746d0fde99be0f4a2fa94102144",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-03.zip"
+      },
+      {
+        "bytes": 1872,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-04.zip.CHECKSUM",
+        "month": "2022-04",
+        "sha256": "8efaa7c1068ec6dc91d36a2e4b6d9096d35b01142ad01c11960a00bd7b36f44a",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-04.zip"
+      },
+      {
+        "bytes": 1961,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-05.zip.CHECKSUM",
+        "month": "2022-05",
+        "sha256": "346d1f2b65710ae97272ecee4ca6a5c30af5a14168b613e907366f27b2945969",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-05.zip"
+      },
+      {
+        "bytes": 1844,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-06.zip.CHECKSUM",
+        "month": "2022-06",
+        "sha256": "3a6763684556147a54a7dd2f8c69d8d826983b2f2a6cc72d8766ef501b683e38",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-06.zip"
+      },
+      {
+        "bytes": 1909,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-07.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-07.zip.CHECKSUM",
+        "month": "2022-07",
+        "sha256": "8e74ae3b7b6ce6203cedcdbebc56213ae769f1bd35b2acf9985e28607424bbc0",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-07.zip"
+      },
+      {
+        "bytes": 1902,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-08.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-08.zip.CHECKSUM",
+        "month": "2022-08",
+        "sha256": "1d18a4a3e32c0a5ff475708cf743b7567885ca36ff60fdb9de42147dc48efcc8",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-08.zip"
+      },
+      {
+        "bytes": 1828,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-09.zip.CHECKSUM",
+        "month": "2022-09",
+        "sha256": "d643de9b699ff4cb123e58a6dbd67441cef090f24fb53c60273b5765490d936c",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-09.zip"
+      },
+      {
+        "bytes": 1869,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-10.zip.CHECKSUM",
+        "month": "2022-10",
+        "sha256": "1241cae3f12d5d612de63ab4bb709fd37072ed23d701e307e0e7f7b94cfa41e7",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-10.zip"
+      },
+      {
+        "bytes": 1839,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-11.zip.CHECKSUM",
+        "month": "2022-11",
+        "sha256": "ee9e4cafc09e4489e230539ecaa25b0d0c28b11ebf9e67bed7ab5584e0a9c9dd",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-11.zip"
+      },
+      {
+        "bytes": 1858,
+        "cache_relative_path": "DOTUSDT/klines-1d/DOTUSDT-1d-2022-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-12.zip.CHECKSUM",
+        "month": "2022-12",
+        "sha256": "6d75daf7c73a9fe8408bc528ec77570215545a25c79151d303f3400568868048",
+        "symbol": "DOTUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOTUSDT/1d/DOTUSDT-1d-2022-12.zip"
+      }
+    ],
+    "NEARUSDT": [
+      {
+        "bytes": 1024,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2020-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2020-10.zip.CHECKSUM",
+        "month": "2020-10",
+        "sha256": "8ee6ba69f5464862d8702b5adda7b84241e954800579a9e4cbef66b443f774c6",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2020-10.zip"
+      },
+      {
+        "bytes": 1664,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2020-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2020-11.zip.CHECKSUM",
+        "month": "2020-11",
+        "sha256": "7e7f695c66d0808f6fe6418d47e9ee93fd5b8d27f763f6c836ac3ad926d4d435",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2020-11.zip"
+      },
+      {
+        "bytes": 1674,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2020-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2020-12.zip.CHECKSUM",
+        "month": "2020-12",
+        "sha256": "6f4c98c57349e60e7f1b9f16424ec122f304d0f12af700e00112ae9c9fde3266",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2020-12.zip"
+      },
+      {
+        "bytes": 1704,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-01.zip.CHECKSUM",
+        "month": "2021-01",
+        "sha256": "07f93119c1a9e4d46efd968a41c777ce1e5827da31a3f25aa1f466aa56ca0ed4",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-01.zip"
+      },
+      {
+        "bytes": 1584,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-02.zip.CHECKSUM",
+        "month": "2021-02",
+        "sha256": "a5f506bbc47ed9312be5e7c69cada2d6b171f41a85bd235b33b7b2e4bf841df6",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-02.zip"
+      },
+      {
+        "bytes": 1766,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-03.zip.CHECKSUM",
+        "month": "2021-03",
+        "sha256": "0ccaf0c7d607d06666badbcdb49a9ad5042998565e0d8655797dc01bef7a1937",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-03.zip"
+      },
+      {
+        "bytes": 1716,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-04.zip.CHECKSUM",
+        "month": "2021-04",
+        "sha256": "cf8a5190ef69471ae2fff2af02b28c16edccf2a4ee9a433239de5abfd754fcfc",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-04.zip"
+      },
+      {
+        "bytes": 1758,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-05.zip.CHECKSUM",
+        "month": "2021-05",
+        "sha256": "8fde02d32b3d56c5e63f88d96e8d47c756dbffdd0e5fb2012da7ed39efdb6dc8",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-05.zip"
+      },
+      {
+        "bytes": 1682,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-06.zip.CHECKSUM",
+        "month": "2021-06",
+        "sha256": "eb744f9684d99a088b59e9216ede5be3a9574475c19dd38454f1abe7543ef943",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-06.zip"
+      },
+      {
+        "bytes": 1729,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-07.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-07.zip.CHECKSUM",
+        "month": "2021-07",
+        "sha256": "307d4d1c7cded636fb60baa16c8f77fb21e11a0851bead9958099c86d5ca7415",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-07.zip"
+      },
+      {
+        "bytes": 1788,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-08.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-08.zip.CHECKSUM",
+        "month": "2021-08",
+        "sha256": "e5798efebd8d9ee42f483252f485d66669a142e15260a5b94449e6b9e33e661f",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-08.zip"
+      },
+      {
+        "bytes": 1778,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-09.zip.CHECKSUM",
+        "month": "2021-09",
+        "sha256": "f3612266a409f2f070a83f45a394ea556c9a6e3d59f17acb947c0d6f62911d1b",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-09.zip"
+      },
+      {
+        "bytes": 1801,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-10.zip.CHECKSUM",
+        "month": "2021-10",
+        "sha256": "dcbb6a55431507bd342645c6a4aa7ba8e4787e81f3714d19cdee56bbe11e6f23",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-10.zip"
+      },
+      {
+        "bytes": 1752,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-11.zip.CHECKSUM",
+        "month": "2021-11",
+        "sha256": "1da982c3e4dba999ad52c6e845d3ea2d450a2bdd543db9a473e334274a490ad4",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-11.zip"
+      },
+      {
+        "bytes": 1868,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2021-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-12.zip.CHECKSUM",
+        "month": "2021-12",
+        "sha256": "aa63b66c6b5a63f75e1e3f574b4aefb1e733ed96e172e44ea2c65746b8939c2c",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2021-12.zip"
+      },
+      {
+        "bytes": 1980,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-01.zip.CHECKSUM",
+        "month": "2022-01",
+        "sha256": "5b471da5230cefc7d7d6cfef412f734a65772bc289f4124c607992c86490d54c",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-01.zip"
+      },
+      {
+        "bytes": 1589,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-02.zip.CHECKSUM",
+        "month": "2022-02",
+        "sha256": "92ebf6ad46168d55c5658dba81039a1d12eae1bcda54eb52aec212f7ca728a9c",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-02.zip"
+      },
+      {
+        "bytes": 1769,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-03.zip.CHECKSUM",
+        "month": "2022-03",
+        "sha256": "68fb1786da06e7fd99fc39371484b0667ab21a72c6d541d9df071e0073130ccb",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-03.zip"
+      },
+      {
+        "bytes": 1763,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-04.zip.CHECKSUM",
+        "month": "2022-04",
+        "sha256": "93fa292fa85aebd2c2abcd6062c562390835d70da1fee47d8ca3933e2e8f7b85",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-04.zip"
+      },
+      {
+        "bytes": 1915,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-05.zip.CHECKSUM",
+        "month": "2022-05",
+        "sha256": "d2ea4c9fc2c45f25f100322433418d08b47d59d60685c7d7f77c568907963f98",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-05.zip"
+      },
+      {
+        "bytes": 1808,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-06.zip.CHECKSUM",
+        "month": "2022-06",
+        "sha256": "b89ad8f72e984fc7eebdd0d89801b33b2c4b57fd1d9db6e5e7dd8727a3ec46b3",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-06.zip"
+      },
+      {
+        "bytes": 1832,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-07.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-07.zip.CHECKSUM",
+        "month": "2022-07",
+        "sha256": "2eb759ba5a2a6ce9732b71282af6ffdf4696055d941b8126f9104597a0fb710c",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-07.zip"
+      },
+      {
+        "bytes": 1843,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-08.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-08.zip.CHECKSUM",
+        "month": "2022-08",
+        "sha256": "ec8521df4a2763ea90af63ca20c7a9787da9dfda5260985439b9f4ceb9103325",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-08.zip"
+      },
+      {
+        "bytes": 1760,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-09.zip.CHECKSUM",
+        "month": "2022-09",
+        "sha256": "d2c69f8f02e19c171e384f8628ee02df7b7d365e59ebfe14afa94c49704fe830",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-09.zip"
+      },
+      {
+        "bytes": 1793,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-10.zip.CHECKSUM",
+        "month": "2022-10",
+        "sha256": "ddd1932ba36936e0f03f1f1fbb48180d636c3256a5d5a6303fd0a9291e0993f8",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-10.zip"
+      },
+      {
+        "bytes": 1752,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-11.zip.CHECKSUM",
+        "month": "2022-11",
+        "sha256": "dcbfe44626c1dd5908a32288511d896d9123161c459f96277aba3515d7680c56",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-11.zip"
+      },
+      {
+        "bytes": 1776,
+        "cache_relative_path": "NEARUSDT/klines-1d/NEARUSDT-1d-2022-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-12.zip.CHECKSUM",
+        "month": "2022-12",
+        "sha256": "bb00498a3ba8c6971cec1d053cb9ec1e2b1c1e2e1a1ba5a8cd62b5400e0091ce",
+        "symbol": "NEARUSDT",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/NEARUSDT/1d/NEARUSDT-1d-2022-12.zip"
+      }
+    ]
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\avax-dot-near-perp-monthly-tsmom",
+  "content_identity": "48988b71d3e9b6a8b79da633ffa52f0ca6fd6712193cf09a84a04ffeee764ae9",
+  "funding_snapshots": {
+    "AVAXUSDT": {
+      "bytes": 197518,
+      "cache_relative_path": "AVAXUSDT/funding-2020-09_2022-12.json",
+      "pages": 3,
+      "records": 2491,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "sha256": "0ac4f763450473a3c3d3b6890d5d1cffb53782da3ac9921cde69c4b7aab8a406",
+      "symbol": "AVAXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+    },
+    "DOTUSDT": {
+      "bytes": 202906,
+      "cache_relative_path": "DOTUSDT/funding-2020-09_2022-12.json",
+      "pages": 3,
+      "records": 2556,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "sha256": "95f9064f084e41e3931a0ffed4db6204dbb24bc729d9c368a71d5386b271a3f3",
+      "symbol": "DOTUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+    },
+    "NEARUSDT": {
+      "bytes": 192074,
+      "cache_relative_path": "NEARUSDT/funding-2020-09_2022-12.json",
+      "pages": 3,
+      "records": 2425,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "sha256": "cece5b969fd775749acdd08ba1913d6e8f8dbc172c568ca4aa29b9a3acbbcbd0",
+      "symbol": "NEARUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+    }
+  },
+  "generated_at": "2026-07-20T04:31:42Z",
+  "interval": "1d",
+  "kline_backfills": {
+    "AVAXUSDT": {
+      "available_start_ms": 1600819200000,
+      "bytes": 4,
+      "cache_relative_path": "AVAXUSDT/kline-backfill-2020-09_2022-12.json",
+      "open_times_ms": [],
+      "pages": 1,
+      "policy": "fill_only_archive_missing_timestamps_after_first_official_archive_bar",
+      "records": 0,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_prelisting_days": 22,
+      "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "skipped_prelisting_months": [],
+      "symbol": "AVAXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines"
+    },
+    "DOTUSDT": {
+      "available_start_ms": 1598918400000,
+      "bytes": 4,
+      "cache_relative_path": "DOTUSDT/kline-backfill-2020-09_2022-12.json",
+      "open_times_ms": [],
+      "pages": 1,
+      "policy": "fill_only_archive_missing_timestamps_after_first_official_archive_bar",
+      "records": 0,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_prelisting_days": 0,
+      "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "skipped_prelisting_months": [],
+      "symbol": "DOTUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines"
+    },
+    "NEARUSDT": {
+      "available_start_ms": 1602720000000,
+      "bytes": 1008,
+      "cache_relative_path": "NEARUSDT/kline-backfill-2020-09_2022-12.json",
+      "open_times_ms": [
+        1645833600000,
+        1645920000000,
+        1646006400000,
+        1648771200000,
+        1648857600000
+      ],
+      "pages": 1,
+      "policy": "fill_only_archive_missing_timestamps_after_first_official_archive_bar",
+      "records": 5,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_prelisting_days": 44,
+      "sha256": "716e5c5ac9c47401c56ffcf22bc808947d0cad80564b789b67c6d4d743a8bf0f",
+      "skipped_prelisting_months": [
+        "2020-09"
+      ],
+      "symbol": "NEARUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines"
+    }
+  },
+  "requested_end_month": "2022-12",
+  "requested_start_month": "2020-09",
+  "schema_version": 1,
+  "symbols": [
+    "AVAXUSDT",
+    "DOTUSDT",
+    "NEARUSDT"
+  ],
+  "timezone": "UTC",
+  "venue": "BINANCE_USDM"
+}

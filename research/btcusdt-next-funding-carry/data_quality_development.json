@@ -1,0 +1,51 @@
+{
+  "funding": {
+    "duplicates": 0,
+    "empty_mark_price_records": 3100,
+    "first_time": "2021-01-01T00:00:00.002000Z",
+    "last_time": "2023-12-31T16:00:00Z",
+    "observed_interval_hours": {
+      "7.999989": 2,
+      "7.999991": 4,
+      "7.999992": 3,
+      "7.999993": 5,
+      "7.999994": 25,
+      "7.999995": 62,
+      "7.999996": 134,
+      "7.999997": 157,
+      "7.999998": 283,
+      "7.999999": 369,
+      "8.0": 1194,
+      "8.000001": 375,
+      "8.000002": 238,
+      "8.000003": 206,
+      "8.000004": 134,
+      "8.000005": 40,
+      "8.000006": 27,
+      "8.000007": 20,
+      "8.000008": 1,
+      "8.000009": 2,
+      "8.000012": 1,
+      "8.000013": 2
+    },
+    "records": 3285
+  },
+  "generated_at": "2026-07-19T23:42:16Z",
+  "instrument": "BTCUSDT-PERP",
+  "klines": {
+    "duplicates": 0,
+    "expected_rows_if_continuous": 1576800,
+    "first_open_time": "2021-01-01T00:00:00Z",
+    "gap_count": 0,
+    "gaps": [],
+    "invalid_ohlc": 0,
+    "last_open_time": "2023-12-31T23:59:00Z",
+    "non_positive_prices": 0,
+    "out_of_order": 0,
+    "rows": 1576800
+  },
+  "requested_end_exclusive": "2024-01-01T00:00:00Z",
+  "requested_start": "2021-01-01T00:00:00Z",
+  "timezone": "UTC",
+  "venue": "BINANCE_USDM"
+}

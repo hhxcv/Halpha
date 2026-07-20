@@ -1,0 +1,10 @@
+{
+  "content_digest": "20501fcc3fa37fd870b5f071b66cc16eb93a97e7208172b856a29040906c8b1d",
+  "data_quality_status": "PASS",
+  "development_content_digest": "f0c9a0087b167896e038b5048c5aad680ef449524292971caeea7197a3148d4b",
+  "fixed_rule": "SOLUSDT_DAILY_SMA200_LONG_SHORT_0P5X",
+  "gate": "positive total and every development year; 30-day block-bootstrap lower daily mean >0; lower drawdown than half-long; episode adverse > -50%",
+  "generated_at": "2026-07-20T03:58:06Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

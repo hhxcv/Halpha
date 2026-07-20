@@ -1,0 +1,32 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_SOLUSDT_CONTINUOUS_FULLY_FUNDED_CASH_CARRY",
+  "created_at": "2026-07-20T23:05:00+08:00",
+  "formal_strategy_background": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 / BTCUSDT-PERP",
+  "question": "Can a single continuous fully-funded SOLUSDT equal-quantity spot-long/perpetual-short carry pass post-cost, post-capital-hurdle and path-risk gates across sequential 2023, 2024 and 2025-2026 periods?",
+  "relationship_to_prior_work": "Same broad carry mechanism as the supported mature-alt basket, but SOL data and a single-pair operating form have not been opened; no dynamic universe or threshold is reused.",
+  "phases": {
+    "development": ["2023-01-01T00:00:00Z", "2023-12-31T16:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2024-12-31T16:00:00Z"],
+    "confirmation": ["2025-01-01T00:00:00Z", "2026-06-30T16:00:00Z"]
+  },
+  "fetch_months": {"development": ["2023-01", "2023-12"], "evaluation": ["2024-01", "2024-12"], "confirmation": ["2025-01", "2026-06"]},
+  "development_source_manifest_sha256": "f522f3f6db446286bf0146b31296a9cd3bc7f289d0982f1f9afc49995ccfcdb4",
+  "development_content_identity": "86ec4935f4641bf24270da2d32f411ae80ddc8c31d370d685c4fe4bf14d935ec",
+  "development_data_inventory": {"archives": 24, "funding_records": 1095, "backfill_records": 0, "external_files": 27, "external_bytes": 202530},
+  "evaluation_source_manifest_sha256": "82ab0da166fce0618264edc6804d50de2bfea36cc6ac36e5cde9b88767fef5c4",
+  "evaluation_content_identity": "9ba91137fecbd579795aa0fbd1ebabc8d3fd57838d5c70e684e89502912c57ae",
+  "evaluation_data_inventory": {"archives": 24, "funding_records": 1098, "backfill_records": 0},
+  "confirmation_source_manifest_sha256": "c24ecef875f9394d2aa944de687a0ec3c9be9fc62b2e8ae3794f493e5c85ca44",
+  "confirmation_content_identity": "252b0a42cef24ce8a31bef5b6fb695158d5eabe03e16eed4e721ded1c165ac36",
+  "confirmation_data_inventory": {"archives": 36, "funding_records": 1638, "backfill_records": 0},
+  "position": "equal SOL quantity long Binance spot and short Binance USD-M perpetual continuously",
+  "capital": "spot purchase plus equal futures guarantee margin; no leverage credit",
+  "round_trip_costs": {"favorable": 0.0016, "base": 0.0024, "stress": 0.004},
+  "annual_capital_hurdle": 0.04,
+  "phase_gate": "data PASS; stress total and post-4%-hurdle returns >0; every year slice positive; max drawdown >-5%; funding > absolute basis; 8h block-bootstrap 95% lower mean >0",
+  "holdout_release_rule": "development fetch only after checkpoint; evaluation only after development pass; confirmation only after evaluation pass",
+  "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/solusdt-continuous-cash-carry",
+  "study_code_sha256": "781180ecf93246f6390030560600220e50ae2cdac741d29084644043d4479770",
+  "pre_holdout_status": "DEVELOPMENT_AND_EVALUATION_PASSED_CONFIRMATION_DATA_LOCKED_BEFORE_CONFIRMATION_RESULT"
+}

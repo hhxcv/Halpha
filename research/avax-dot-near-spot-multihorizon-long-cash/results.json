@@ -1,0 +1,134 @@
+{
+  "conclusion": "DOES_NOT_SUPPORT",
+  "confirmation": {
+    "annualized_return": -0.13580499112952604,
+    "annualized_volatility": 0.1923267832553476,
+    "by_year": {
+      "2025": {
+        "days": 365,
+        "return": -0.1978358037877883
+      },
+      "2026": {
+        "days": 181,
+        "return": 0.0021087551335763344
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -0.0011051770451479862,
+      0.0002841542549754008
+    ],
+    "days": 546,
+    "invested_day_fraction": 0.5,
+    "max_drawdown": -0.27421164305782286,
+    "selected_asset_day_quote_volume_median": 40864349.8023,
+    "selected_asset_day_quote_volume_min": 4513038.678,
+    "selection_counts": {
+      "AVAXUSDT": 7,
+      "DOTUSDT": 5,
+      "NEARUSDT": 7
+    },
+    "sharpe_zero_rf": -0.6609191920434895,
+    "total_return": -0.1961442359210548,
+    "turnover": 2.4442623050665544
+  },
+  "confirmation_half_long": {
+    "annualized_return": -0.36815905607166555,
+    "annualized_volatility": 0.42029851207010616,
+    "by_year": {
+      "2025": {
+        "days": 365,
+        "return": -0.4110677450368554
+      },
+      "2026": {
+        "days": 181,
+        "return": -0.1455911713498068
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -0.002561040862115785,
+      0.0005641947988594253
+    ],
+    "days": 546,
+    "invested_day_fraction": 1.0,
+    "max_drawdown": -0.5595412275621308,
+    "selected_asset_day_quote_volume_median": 28077753.3653,
+    "selected_asset_day_quote_volume_min": 2654147.4764,
+    "selection_counts": {
+      "AVAXUSDT": 18,
+      "DOTUSDT": 18,
+      "NEARUSDT": 18
+    },
+    "sharpe_zero_rf": -0.881507445723617,
+    "total_return": -0.49681108188262246,
+    "turnover": 1.7092442760832034
+  },
+  "confirmation_support_gate": false,
+  "content_digest": "b054a7918a2231eb7ed00ea10997860c8f93efbd738e031ec0370beb17389785",
+  "development": {
+    "annualized_return": 0.2013213821784552,
+    "annualized_volatility": 0.398612391497793,
+    "by_year": {
+      "2021": {
+        "days": 365,
+        "return": 0.7534046836333881
+      },
+      "2022": {
+        "days": 365,
+        "return": -0.17693098646877947
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -0.0005590116671445516,
+      0.002170516471510255
+    ],
+    "days": 730,
+    "invested_day_fraction": 0.7465753424657534,
+    "max_drawdown": -0.3151560436718326,
+    "selected_asset_day_quote_volume_median": 115958594.8008,
+    "selected_asset_day_quote_volume_min": 5695921.6869,
+    "selection_counts": {
+      "AVAXUSDT": 17,
+      "DOTUSDT": 12,
+      "NEARUSDT": 16
+    },
+    "sharpe_zero_rf": 0.6613391129897094,
+    "total_return": 0.44317306327915373,
+    "turnover": 2.827311092375107
+  },
+  "evaluation": {
+    "annualized_return": 0.17777899342268433,
+    "annualized_volatility": 0.293890149206136,
+    "by_year": {
+      "2023": {
+        "days": 365,
+        "return": 0.37678524134954894
+      },
+      "2024": {
+        "days": 366,
+        "return": 0.007989716948932912
+      }
+    },
+    "daily_mean_block_bootstrap_95pct": [
+      -0.0006519528368808031,
+      0.002011765135197567
+    ],
+    "days": 731,
+    "invested_day_fraction": 0.66484268125855,
+    "max_drawdown": -0.2706654633198071,
+    "selected_asset_day_quote_volume_median": 49031686.9042,
+    "selected_asset_day_quote_volume_min": 3738325.4014,
+    "selection_counts": {
+      "AVAXUSDT": 14,
+      "DOTUSDT": 12,
+      "NEARUSDT": 16
+    },
+    "sharpe_zero_rf": 0.7026557734566637,
+    "total_return": 0.3877853657273975,
+    "turnover": 3.128881760255573
+  },
+  "evaluation_confirmation_compounded_return": 0.11557926554437548,
+  "formal_product_strategy_comparison": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "generated_at": "2026-07-20T04:58:52Z",
+  "product_effects": "NONE",
+  "scope": "AVAX/DOT/NEAR spot monthly equal-vote 60/90/120-day positive-momentum ensemble, maximum 0.5x"
+}

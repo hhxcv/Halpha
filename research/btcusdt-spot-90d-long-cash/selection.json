@@ -1,0 +1,8 @@
+{
+  "content_digest": "a58db457d07c0bcddfa9957079bc68699ce44a92f36d64ef1201c15b416d8b5a",
+  "development_content_digest": "39b42e3a6c4848f8f4147406cd234589531e5ea45383bb0325c0c0e840f87a2b",
+  "fixed_rule": "BTCUSDT_SPOT_POSITIVE_90D_0P5X",
+  "generated_at": "2026-07-20T05:34:50Z",
+  "holdout_authorized": true,
+  "qualification_status": "PASSED_DEVELOPMENT_GATE"
+}

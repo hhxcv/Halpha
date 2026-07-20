@@ -1,0 +1,322 @@
+{
+  "archives": [
+    {
+      "bytes": 20403,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-01.zip.CHECKSUM",
+      "month": "2021-01",
+      "sha256": "55076ba5b979033323bdf20e61cbffe591a103bdcf87f91303be3a121b926984",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-01.zip"
+    },
+    {
+      "bytes": 18354,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-02.zip.CHECKSUM",
+      "month": "2021-02",
+      "sha256": "a8c8e5b6fdbb2bda1edeb58a0bd5537fc37064b89e2765317cefaa62301fa5e5",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-02.zip"
+    },
+    {
+      "bytes": 20138,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-03.zip.CHECKSUM",
+      "month": "2021-03",
+      "sha256": "d17f331d6ee5ecd2dc5cd7536dde8b49b23d428205fd5b8b1bfc243f1c2f2a27",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-03.zip"
+    },
+    {
+      "bytes": 19654,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-04.zip.CHECKSUM",
+      "month": "2021-04",
+      "sha256": "3ac1dba45c515cf7f6e7a27cbf455b836e02d82988827a37574c47a8629bc590",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-04.zip"
+    },
+    {
+      "bytes": 20820,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-05.zip.CHECKSUM",
+      "month": "2021-05",
+      "sha256": "d733ad7f2adaf78c18481258eb3a124f0929762ca2a434f6547e1307979b8211",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-05.zip"
+    },
+    {
+      "bytes": 19828,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-06.zip.CHECKSUM",
+      "month": "2021-06",
+      "sha256": "23bc64ae36e9cfc76995b366aab601b30e4c062dc0072473f3a57eff5b3bcabc",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-06.zip"
+    },
+    {
+      "bytes": 20386,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-07.zip.CHECKSUM",
+      "month": "2021-07",
+      "sha256": "2bc68b0e6af0ef7f73efd7f347526026be15540794f58854b88a64d7d404d224",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-07.zip"
+    },
+    {
+      "bytes": 20430,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-08.zip.CHECKSUM",
+      "month": "2021-08",
+      "sha256": "5b0b4bc9967c93a7767b6ed8b1e10d668834c1a1414afb3b6b4e3155240febe8",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-08.zip"
+    },
+    {
+      "bytes": 19760,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-09.zip.CHECKSUM",
+      "month": "2021-09",
+      "sha256": "68f3d08da1a3e4ab1c6aacdecd7aa9ecea825d7f8702db2ce1e3644749594804",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-09.zip"
+    },
+    {
+      "bytes": 20324,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-10.zip.CHECKSUM",
+      "month": "2021-10",
+      "sha256": "f8ce71d5dfb516be19726b7ff97ab034a6b68939ab55d9cb7326f989a9df96a2",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-10.zip"
+    },
+    {
+      "bytes": 19671,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-11.zip.CHECKSUM",
+      "month": "2021-11",
+      "sha256": "b4697f53db5a30f4b3d403c977173780a6d8e0253afadc2ead1c05e621f8b3b8",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-11.zip"
+    },
+    {
+      "bytes": 20345,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2021-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-12.zip.CHECKSUM",
+      "month": "2021-12",
+      "sha256": "9aed2cbd84f5dab179ad05e2c0add8e5627e3e3ca572e1f57071efbd6aac1a10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2021-12.zip"
+    },
+    {
+      "bytes": 20400,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-01.zip.CHECKSUM",
+      "month": "2022-01",
+      "sha256": "43ec53a4f3a4f5b101ec5c612c44b51156d8bda68b48372b9a992c1ac9741529",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-01.zip"
+    },
+    {
+      "bytes": 18601,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-02.zip.CHECKSUM",
+      "month": "2022-02",
+      "sha256": "3eaf4bbb4028d41cf1a8c34c6c33f9c19b1eee42f10a3b581e33208e3a1cd351",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-02.zip"
+    },
+    {
+      "bytes": 20350,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-03.zip.CHECKSUM",
+      "month": "2022-03",
+      "sha256": "b0bcb049ffc77afa6e56f863f8ac0a2ee10458a47e003aff7e268ab6930e89a4",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-03.zip"
+    },
+    {
+      "bytes": 19527,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-04.zip.CHECKSUM",
+      "month": "2022-04",
+      "sha256": "165f8d105b4cd60a1e8a233adba8eccacf1df5161d27767b841deaf466907f71",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-04.zip"
+    },
+    {
+      "bytes": 20367,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-05.zip.CHECKSUM",
+      "month": "2022-05",
+      "sha256": "e5ab57077bc9d55cacb6c05d04991864bcb5836595659fd2c6cb93fca6072e7a",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-05.zip"
+    },
+    {
+      "bytes": 19911,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-06.zip.CHECKSUM",
+      "month": "2022-06",
+      "sha256": "2e6d6bcd790a0c307db49daa752249fbe69ea6449b272ed0e567f23cb47758ad",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-06.zip"
+    },
+    {
+      "bytes": 20591,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-07.zip.CHECKSUM",
+      "month": "2022-07",
+      "sha256": "1f32ba6dab44879c1ca6988133649a3d2c5c913ce160b87a107649c38beb604d",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-07.zip"
+    },
+    {
+      "bytes": 20680,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-08.zip.CHECKSUM",
+      "month": "2022-08",
+      "sha256": "3569c6ebb7c10f4468bfb732a60b207361881cc237ece99d3945a4f5b6625ad8",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-08.zip"
+    },
+    {
+      "bytes": 19984,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-09.zip.CHECKSUM",
+      "month": "2022-09",
+      "sha256": "dece1008747e17171216548b26f5beae4479294ac0a5e804e4573d4198f11557",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-09.zip"
+    },
+    {
+      "bytes": 20330,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-10.zip.CHECKSUM",
+      "month": "2022-10",
+      "sha256": "4e02a54d4057e262b5dfa95267dd0bdef759b639a73702c827e34ee51ba2ab4f",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-10.zip"
+    },
+    {
+      "bytes": 19793,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-11.zip.CHECKSUM",
+      "month": "2022-11",
+      "sha256": "d8339b2d5fb2a495b1a3e84213cbc3b36b14e60783002d24f570265af1723c70",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-11.zip"
+    },
+    {
+      "bytes": 20040,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2022-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-12.zip.CHECKSUM",
+      "month": "2022-12",
+      "sha256": "c428b745304560690f0246fe086404aa26511a8e1e2fbfb916688127713fae08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2022-12.zip"
+    },
+    {
+      "bytes": 20176,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-01.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-01.zip.CHECKSUM",
+      "month": "2023-01",
+      "sha256": "93b3b2a0863ef6bc788bbf133d6776bec43e625a308c882f39f9730e87b25be5",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-01.zip"
+    },
+    {
+      "bytes": 18402,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-02.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-02.zip.CHECKSUM",
+      "month": "2023-02",
+      "sha256": "13111a3a7dc1b4da65489225a95d7c72e837078c1acc3d5679b6cd61edb0019c",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-02.zip"
+    },
+    {
+      "bytes": 20348,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-03.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-03.zip.CHECKSUM",
+      "month": "2023-03",
+      "sha256": "e20892cd12dba205127153438e559fdd14cf6a37f628ab1560db4981c8e29eef",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-03.zip"
+    },
+    {
+      "bytes": 19615,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-04.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-04.zip.CHECKSUM",
+      "month": "2023-04",
+      "sha256": "24c6859d79bd1502a35b87b02a67fa27a029ebc382dd829e71afb1b258c66529",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-04.zip"
+    },
+    {
+      "bytes": 20063,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-05.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-05.zip.CHECKSUM",
+      "month": "2023-05",
+      "sha256": "031f8d21ac39c5c15078ca75f414e5986843cd67f963efac2131aa18b4fcaeee",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-05.zip"
+    },
+    {
+      "bytes": 19521,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-06.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-06.zip.CHECKSUM",
+      "month": "2023-06",
+      "sha256": "59f441363468873e4e298fff12e0b0ea97cc1c3f65134a099f10e3682b56ed9f",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-06.zip"
+    },
+    {
+      "bytes": 19908,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-07.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-07.zip.CHECKSUM",
+      "month": "2023-07",
+      "sha256": "234be9b730b765c3f9a6c67f89049d191dd0c4753f299b09782ecd3ea02244f5",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-07.zip"
+    },
+    {
+      "bytes": 19670,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-08.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-08.zip.CHECKSUM",
+      "month": "2023-08",
+      "sha256": "9767a4da19ae8f3d853a4bd9ff742193e079627a279655212dbec33b3ba80900",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-08.zip"
+    },
+    {
+      "bytes": 18952,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-09.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-09.zip.CHECKSUM",
+      "month": "2023-09",
+      "sha256": "1e53bb6eafca5b71486f0ca8353adf0615c993cc1c04cd42538e9fd8f2ec1325",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-09.zip"
+    },
+    {
+      "bytes": 19917,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-10.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-10.zip.CHECKSUM",
+      "month": "2023-10",
+      "sha256": "44bcbee6078575d319e2773f6cc32056ce67ea0f0edadec4833be61709209bc7",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-10.zip"
+    },
+    {
+      "bytes": 19508,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-11.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-11.zip.CHECKSUM",
+      "month": "2023-11",
+      "sha256": "695da21c9be113616238dd0f5ffe6a58421648aeac41c9443983c2ef09a42864",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-11.zip"
+    },
+    {
+      "bytes": 20258,
+      "cache_relative_path": "klines-2h/ETHUSDT-2h-2023-12.zip",
+      "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-12.zip.CHECKSUM",
+      "month": "2023-12",
+      "sha256": "ac0ceaf1433f2f1b5cd1c79fdc02191610c5c575fbf069c5a2c151db17d36b14",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-2023-12.zip"
+    }
+  ],
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-2h-extreme-reversal",
+  "content_identity": "83420cc3465abf9b13c8a046bf11d09508d47d36abd6ec7c9824308f2bf6b977",
+  "contract": "USDⓈ-M linear perpetual settled in USDT",
+  "exchange_symbol": "ETHUSDT",
+  "funding_snapshot": {
+    "bytes": 260039,
+    "cache_relative_path": "funding-2021-01_2023-12.json",
+    "first_funding_time": 1609459200002,
+    "last_funding_time": 1704038400000,
+    "pages": 4,
+    "records": 3285,
+    "request_security": "NONE_PUBLIC_MARKET_DATA",
+    "requested_end_exclusive_ms": 1704067200000,
+    "requested_start_ms": 1609459200000,
+    "sha256": "1ff53eea88046aaab6258fd5a3b5bbb53d46918731139f00b499a6d4440af40a",
+    "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+  },
+  "generated_at": "2026-07-20T03:19:44Z",
+  "instrument": "ETHUSDT-PERP",
+  "interval": "2h",
+  "requested_end_month": "2023-12",
+  "requested_start_month": "2021-01",
+  "retrieval_rule": {
+    "archive": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/2h/ETHUSDT-2h-YYYY-MM.zip",
+    "archive_integrity": "Verify adjacent official .CHECKSUM SHA-256 before use",
+    "funding": "GET https://fapi.binance.com/fapi/v1/fundingRate with symbol=ETHUSDT, ascending pagination"
+  },
+  "schema_version": 1,
+  "timezone": "UTC",
+  "venue": "BINANCE_USDM"
+}

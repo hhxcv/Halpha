@@ -1,0 +1,241 @@
+{
+  "archives": {
+    "XRPUSDT": [
+      {
+        "bytes": 5218,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2025-09.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-09.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-09",
+        "sha256": "197c220ff7054b27e3cd06fda466b64f203c4895434ec56712c9abec96928654",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-09.zip"
+      },
+      {
+        "bytes": 5180,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2025-09.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-09.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-09",
+        "sha256": "8827e54b7d09d8737160162eae948ed57578ff0bb3a28ab268bf2b91bb29bd0d",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-09.zip"
+      },
+      {
+        "bytes": 5447,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2025-10.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-10.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-10",
+        "sha256": "4487af8f826e1509983d79960bb2642c2a9ddcf0edcd664efdb3be5558178968",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-10.zip"
+      },
+      {
+        "bytes": 5351,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2025-10.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-10.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-10",
+        "sha256": "ef1f85419826eed6f31fbece8a708749a374f7cfcd1646d3f79c1f490aa0555c",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-10.zip"
+      },
+      {
+        "bytes": 5268,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2025-11.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-11.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-11",
+        "sha256": "6c211e227bf8a343928e6b95bc13b57359c6bc10b3a280371de635a10b9fc029",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-11.zip"
+      },
+      {
+        "bytes": 5226,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2025-11.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-11.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-11",
+        "sha256": "bf34d7337e09ee6adf2458985dd9c27b6cdcee13563c0b96df9d051c5ad14da4",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-11.zip"
+      },
+      {
+        "bytes": 5276,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2025-12.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-12.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2025-12",
+        "sha256": "04c9eca73299ed09e678931815e077d1a59f379c9f43f05c2a6a1f52271c3b91",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-12.zip"
+      },
+      {
+        "bytes": 5271,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2025-12.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-12.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2025-12",
+        "sha256": "479c6f113043afd5c9632b734145aef312832c2b1822f7195954a0fd8b9cd7bd",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2025-12.zip"
+      },
+      {
+        "bytes": 5355,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2026-01.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-01.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-01",
+        "sha256": "fb3d8e75b84b8e7ff56513134e635011894cbe157ac5204515bf25778624315f",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-01.zip"
+      },
+      {
+        "bytes": 5316,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2026-01.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-01.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-01",
+        "sha256": "6c8f5baeadda4f59567e608873e1dd9da1e26a4199bdd95a23d21725e975ddc4",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-01.zip"
+      },
+      {
+        "bytes": 4903,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2026-02.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-02.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-02",
+        "sha256": "fb1731a25257d50498da98e7df2d662828e5b28c2d2361d74901240d6b681387",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-02.zip"
+      },
+      {
+        "bytes": 4856,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2026-02.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-02.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-02",
+        "sha256": "80e378b8f7a9022f495cf601a93294a03e1b1a3ae5334ae65d61c1200fa6b940",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-02.zip"
+      },
+      {
+        "bytes": 5302,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2026-03.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-03.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-03",
+        "sha256": "48a1d4f580642416b1d803570b216aff296db0e206d3ab54fe7997892b4d69e2",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-03.zip"
+      },
+      {
+        "bytes": 5256,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2026-03.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-03.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-03",
+        "sha256": "e772f8070980efd99e60ef17fd7820a5369a6b66416f99ba4e0431f98b79aa23",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-03.zip"
+      },
+      {
+        "bytes": 5061,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2026-04.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-04.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-04",
+        "sha256": "de1a1338f3bee7446a30d83ec016cfc0006ac5528cc9874f0fe589ecd581346f",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-04.zip"
+      },
+      {
+        "bytes": 5023,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2026-04.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-04.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-04",
+        "sha256": "9016c9f703975434578399f3c04616ea98fb7a56c0907d39d30b12a748eaf96f",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-04.zip"
+      },
+      {
+        "bytes": 5204,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2026-05.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-05.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-05",
+        "sha256": "068a7ac71dea6d8e6a4c8e90289bae6e7b027f213e31a52c3745fdba54133108",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-05.zip"
+      },
+      {
+        "bytes": 5172,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2026-05.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-05.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-05",
+        "sha256": "4d6b5097195fb8c0bb49e91c879c58d9d89675afa01dab6f8c8dd44e0b803c84",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-05.zip"
+      },
+      {
+        "bytes": 5136,
+        "cache_relative_path": "XRPUSDT/spot/XRPUSDT-8h-2026-06.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-06.zip.CHECKSUM",
+        "market": "spot",
+        "month": "2026-06",
+        "sha256": "8d862efd7dd04eb778859816b80a75e2c0a999a5f07e7e5f09fb1349a1c223bf",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-06.zip"
+      },
+      {
+        "bytes": 5103,
+        "cache_relative_path": "XRPUSDT/futures/XRPUSDT-8h-2026-06.zip",
+        "checksum_url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-06.zip.CHECKSUM",
+        "market": "futures",
+        "month": "2026-06",
+        "sha256": "3e0721b6b340e736d842eb006097c3b7cfd986aa7df3d58570916d1cbbb4bb40",
+        "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/8h/XRPUSDT-8h-2026-06.zip"
+      }
+    ]
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\xrpusdt-single-pair-continuous-cash-carry",
+  "content_identity": "58d21e5e84f7c04d62d53cc8fd478a7da9435ee46f3a829825978cb6bd837198",
+  "funding_snapshots": {
+    "XRPUSDT": {
+      "bytes": 72257,
+      "cache_relative_path": "XRPUSDT/funding-2025-09_2026-06.json",
+      "pages": 1,
+      "records": 909,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_end_exclusive_ms": 1782864000000,
+      "requested_start_ms": 1756684800000,
+      "sha256": "86ebcbeb28763a3520110029df3f059127377f1aa193050544243b70b6fc9481",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate"
+    }
+  },
+  "generated_at": "2026-07-20T07:14:57Z",
+  "interval": "8h",
+  "kline_backfills": {
+    "XRPUSDT": {
+      "futures": {
+        "bytes": 4,
+        "cache_relative_path": "XRPUSDT/futures/kline-backfill-2025-09_2026-06.json",
+        "market": "futures",
+        "open_times_ms": [],
+        "pages": 1,
+        "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+        "records": 0,
+        "request_security": "NONE_PUBLIC_MARKET_DATA",
+        "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+        "url": "https://fapi.binance.com/fapi/v1/klines"
+      },
+      "spot": {
+        "bytes": 4,
+        "cache_relative_path": "XRPUSDT/spot/kline-backfill-2025-09_2026-06.json",
+        "market": "spot",
+        "open_times_ms": [],
+        "pages": 1,
+        "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+        "records": 0,
+        "request_security": "NONE_PUBLIC_MARKET_DATA",
+        "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+        "url": "https://data-api.binance.vision/api/v3/klines"
+      }
+    }
+  },
+  "requested_end_month": "2026-06",
+  "requested_start_month": "2025-09",
+  "schema_version": 1,
+  "spot_timestamp_rule": "Normalize values above 1e14 from microseconds to milliseconds",
+  "symbols": [
+    "XRPUSDT"
+  ],
+  "timezone": "UTC",
+  "universe": "xrp",
+  "venue": "BINANCE"
+}

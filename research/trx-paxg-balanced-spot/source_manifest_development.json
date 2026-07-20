@@ -1,0 +1,485 @@
+{
+  "archives": {
+    "PAXGUSDT": [
+      {
+        "bytes": 1997,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-01.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-01.zip.CHECKSUM",
+        "month": "2021-01",
+        "sha256": "5fee390c1b37256b346ee66717762a3e561a2a3b34209be20715185d788fd619",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-01.zip"
+      },
+      {
+        "bytes": 1843,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-02.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-02.zip.CHECKSUM",
+        "month": "2021-02",
+        "sha256": "34b0aaf86ffb3a41c24a74cbc083aa6528fa8e6fa0fe40f8b2d47a7b9762827d",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-02.zip"
+      },
+      {
+        "bytes": 1998,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-03.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-03.zip.CHECKSUM",
+        "month": "2021-03",
+        "sha256": "d9a2167587b0b7b69bdc7b293c9f9870dcf78f840619b08e8cbce8fab2b6866b",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-03.zip"
+      },
+      {
+        "bytes": 1961,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-04.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-04.zip.CHECKSUM",
+        "month": "2021-04",
+        "sha256": "9de24fa6066c4d15c5e7739591d11dde1843d8eca0944612a9bac3f92d82355b",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-04.zip"
+      },
+      {
+        "bytes": 2048,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-05.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-05.zip.CHECKSUM",
+        "month": "2021-05",
+        "sha256": "cbb37cc3516a1328b4d71f4539627fa610c0b282505335353612b25acb064f1c",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-05.zip"
+      },
+      {
+        "bytes": 1949,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-06.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-06.zip.CHECKSUM",
+        "month": "2021-06",
+        "sha256": "464b6c9bb8c501544688e165bac975c475e2e4c99ca63c6b14e1d43b37f05ea8",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-06.zip"
+      },
+      {
+        "bytes": 1989,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-07.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-07.zip.CHECKSUM",
+        "month": "2021-07",
+        "sha256": "cc47949cee0e0dc80a06cb4ab9eb64ad81eb44b267fa9d47c5a25a068cc31eef",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-07.zip"
+      },
+      {
+        "bytes": 1964,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-08.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-08.zip.CHECKSUM",
+        "month": "2021-08",
+        "sha256": "ac844032f77dcaa2f168a0a7db03040b75cc2d3fa32e837fe5976423fd46f687",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-08.zip"
+      },
+      {
+        "bytes": 1672,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-09.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-09.zip.CHECKSUM",
+        "month": "2021-09",
+        "sha256": "6897447f905414bbc8ed48aed39d2b8940b1d359ed7eaaf12e9f6e4265fcf817",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-09.zip"
+      },
+      {
+        "bytes": 1622,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-10.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-10.zip.CHECKSUM",
+        "month": "2021-10",
+        "sha256": "715a8882f3c97ce110f3c155308dc65a9aa0a111d98dedd9891832b87433a820",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-10.zip"
+      },
+      {
+        "bytes": 1630,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-11.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-11.zip.CHECKSUM",
+        "month": "2021-11",
+        "sha256": "b66556007bd71dc8fd96d81def4244213f0e1121841c75d77b8fdabc86891956",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-11.zip"
+      },
+      {
+        "bytes": 1654,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2021-12.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-12.zip.CHECKSUM",
+        "month": "2021-12",
+        "sha256": "336e0086c7accd14bf1b3f78c7beac4dc377c94ed735fdadc7a39ba90fe0dbc2",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2021-12.zip"
+      },
+      {
+        "bytes": 1657,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-01.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-01.zip.CHECKSUM",
+        "month": "2022-01",
+        "sha256": "a574b1fd542b3907b2620914580030d1a0b5ddb6109ff2f81f0c931726086259",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-01.zip"
+      },
+      {
+        "bytes": 1595,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-02.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-02.zip.CHECKSUM",
+        "month": "2022-02",
+        "sha256": "4ca3b11b61c5931199587e8b7abf9d036c3aeb6402e1df8c3f418eec164e9903",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-02.zip"
+      },
+      {
+        "bytes": 1709,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-03.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-03.zip.CHECKSUM",
+        "month": "2022-03",
+        "sha256": "01700bbe49a22f653582e053ebe0282cf5b5ca5ef53505365147178e7ea7fb1a",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-03.zip"
+      },
+      {
+        "bytes": 1614,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-04.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-04.zip.CHECKSUM",
+        "month": "2022-04",
+        "sha256": "f93893618ffb1d423fa55017c73861d279f87e8515260d2dd3e8c2546dc28db0",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-04.zip"
+      },
+      {
+        "bytes": 1665,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-05.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-05.zip.CHECKSUM",
+        "month": "2022-05",
+        "sha256": "ad186a60baa21e24dff870661d9b17cd41f495b93b6c6da113f40b1e70231c95",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-05.zip"
+      },
+      {
+        "bytes": 1612,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-06.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-06.zip.CHECKSUM",
+        "month": "2022-06",
+        "sha256": "e43c0f016db6596b1b637b13ea86d29126c1f365793ab514e7dfe73e206f5433",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-06.zip"
+      },
+      {
+        "bytes": 1673,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-07.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-07.zip.CHECKSUM",
+        "month": "2022-07",
+        "sha256": "d44d263be42da3ebd6afc6f0b7c3b762cd5d542ce3194cf7720c8feed163493d",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-07.zip"
+      },
+      {
+        "bytes": 1630,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-08.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-08.zip.CHECKSUM",
+        "month": "2022-08",
+        "sha256": "c7cdcd3b33b288dcbe1f117f2da7fe44c7b183ae1fba7f60a433e49b75e192a2",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-08.zip"
+      },
+      {
+        "bytes": 1590,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-09.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-09.zip.CHECKSUM",
+        "month": "2022-09",
+        "sha256": "2ee121a6372ef48da83b1bf370b792e79e01d4467866674997950f6a7c8ee65a",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-09.zip"
+      },
+      {
+        "bytes": 1620,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-10.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-10.zip.CHECKSUM",
+        "month": "2022-10",
+        "sha256": "9730233939aeb48737312e3f5354fea61b42ff56ad60e99cee864007513cc97f",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-10.zip"
+      },
+      {
+        "bytes": 1596,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-11.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-11.zip.CHECKSUM",
+        "month": "2022-11",
+        "sha256": "6e407f786efaf0d929661736638df2891c6fc699aca327fc0f6d0fc1c416543a",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-11.zip"
+      },
+      {
+        "bytes": 1599,
+        "cache_relative_path": "PAXGUSDT/klines-1d/PAXGUSDT-1d-2022-12.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-12.zip.CHECKSUM",
+        "month": "2022-12",
+        "sha256": "bcff9b0bbdb0596b0e781cb5372d9a338100c190a2369cd18c9bb514dc2a1d40",
+        "symbol": "PAXGUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/PAXGUSDT/1d/PAXGUSDT-1d-2022-12.zip"
+      }
+    ],
+    "TRXUSDT": [
+      {
+        "bytes": 1972,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-01.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-01.zip.CHECKSUM",
+        "month": "2021-01",
+        "sha256": "8a3f8f2fa2e57e172d8a6ec16aa466fb3a568880b601b6455c46d1b7fc74b1e5",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-01.zip"
+      },
+      {
+        "bytes": 1820,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-02.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-02.zip.CHECKSUM",
+        "month": "2021-02",
+        "sha256": "fbd80e4a08895c1b56912566d2d634eed60c4e38fb8def3011479bfc1fd575ce",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-02.zip"
+      },
+      {
+        "bytes": 2004,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-03.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-03.zip.CHECKSUM",
+        "month": "2021-03",
+        "sha256": "cb78b1ecf28c5d8227a9bb8c9249f28f0fee780f8436969621a2d2f4df477402",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-03.zip"
+      },
+      {
+        "bytes": 2003,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-04.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-04.zip.CHECKSUM",
+        "month": "2021-04",
+        "sha256": "6e0be7b4f264f174bc7713c0ba483f6a7f28ffa6daf2b241ca9b428ffcf96f53",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-04.zip"
+      },
+      {
+        "bytes": 2059,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-05.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-05.zip.CHECKSUM",
+        "month": "2021-05",
+        "sha256": "7dd853063d5e331f473b545534c6bf515168ef10c069813ebf2171f2d91a5934",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-05.zip"
+      },
+      {
+        "bytes": 1929,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-06.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-06.zip.CHECKSUM",
+        "month": "2021-06",
+        "sha256": "42dbd26776269aa64f191505254cf7d3550351cf68d9ae0d3fa31a5c1f4cb5f7",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-06.zip"
+      },
+      {
+        "bytes": 1943,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-07.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-07.zip.CHECKSUM",
+        "month": "2021-07",
+        "sha256": "b6b053f953df26b921879ac2ab1e74486ed61db6d0562f54db2ee9e09193b038",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-07.zip"
+      },
+      {
+        "bytes": 1991,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-08.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-08.zip.CHECKSUM",
+        "month": "2021-08",
+        "sha256": "294c49d62620c2c4f24b3d5c0ac42a4ee5b6342abf3a4f6c824c07b0a11b2896",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-08.zip"
+      },
+      {
+        "bytes": 1948,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-09.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-09.zip.CHECKSUM",
+        "month": "2021-09",
+        "sha256": "e4a38c152fc176b21e6c3c41c1c924c64094f47adcd01aabc121b77a794122f0",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-09.zip"
+      },
+      {
+        "bytes": 1988,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-10.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-10.zip.CHECKSUM",
+        "month": "2021-10",
+        "sha256": "48c4d33c8958037f49e8587d3d1e6599f4462748ff81dc7aba7eab7cef92d75f",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-10.zip"
+      },
+      {
+        "bytes": 1962,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-11.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-11.zip.CHECKSUM",
+        "month": "2021-11",
+        "sha256": "be4c97437388065a40e1e4fbc767e512306b32695ebf0d2c132e8b6efaf49dd3",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-11.zip"
+      },
+      {
+        "bytes": 2015,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2021-12.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-12.zip.CHECKSUM",
+        "month": "2021-12",
+        "sha256": "b51697918cd70c26d65b16d3d938f8ee6a99b9a274c5cb1876eb0a734c717f15",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2021-12.zip"
+      },
+      {
+        "bytes": 1987,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-01.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-01.zip.CHECKSUM",
+        "month": "2022-01",
+        "sha256": "1a2a8dabef04a730fe58dbbba9e65ef9747f1c3ffa73ca8a6cbc65cb2bd75ee7",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-01.zip"
+      },
+      {
+        "bytes": 1785,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-02.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-02.zip.CHECKSUM",
+        "month": "2022-02",
+        "sha256": "0b42fe186cfc171ca740bd5a61adaba5bc8f62f4305961c1f9a148cfb2a420f5",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-02.zip"
+      },
+      {
+        "bytes": 1956,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-03.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-03.zip.CHECKSUM",
+        "month": "2022-03",
+        "sha256": "d77365f0edb98d3df7c4d5a1a0ed3461ad49c75437cad85571bcaf2c2d1025ec",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-03.zip"
+      },
+      {
+        "bytes": 1912,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-04.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-04.zip.CHECKSUM",
+        "month": "2022-04",
+        "sha256": "7f1d17cae356abea96c3ecc80943a8d1349eb7b8b9143bd6094625eeef8694b5",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-04.zip"
+      },
+      {
+        "bytes": 2022,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-05.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-05.zip.CHECKSUM",
+        "month": "2022-05",
+        "sha256": "dd2b6761000218690dfaad47541ea08c0ece9f64307e0cf0e7c01ef588fb4856",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-05.zip"
+      },
+      {
+        "bytes": 1941,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-06.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-06.zip.CHECKSUM",
+        "month": "2022-06",
+        "sha256": "841a42d33525fd3baeab7e185a3074200354d2517c62c211adb3f7be4e19a1a8",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-06.zip"
+      },
+      {
+        "bytes": 1921,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-07.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-07.zip.CHECKSUM",
+        "month": "2022-07",
+        "sha256": "f358cfe3bb57735b9b0cb4b81c0a0396f00c821170eb99ddd09052b8e59928f5",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-07.zip"
+      },
+      {
+        "bytes": 1906,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-08.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-08.zip.CHECKSUM",
+        "month": "2022-08",
+        "sha256": "e9816bf21f8092c76c9596b2b9533fefc8b704aa84fb37c1045f8da1efe5a1c8",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-08.zip"
+      },
+      {
+        "bytes": 1841,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-09.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-09.zip.CHECKSUM",
+        "month": "2022-09",
+        "sha256": "76f6c85fb3a930fcdaac2788ddd945cd29a8503c6cbef6d05936fb869dda5a62",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-09.zip"
+      },
+      {
+        "bytes": 1898,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-10.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-10.zip.CHECKSUM",
+        "month": "2022-10",
+        "sha256": "11d361efc45301c56b50432acf8428e17e5f5df98365199e9ad8e89921e1939b",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-10.zip"
+      },
+      {
+        "bytes": 1886,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-11.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-11.zip.CHECKSUM",
+        "month": "2022-11",
+        "sha256": "4d5707ed2caf7a7f0a00ce8d057609a8f3beb6e31306dc722947e65079dbdd2f",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-11.zip"
+      },
+      {
+        "bytes": 1890,
+        "cache_relative_path": "TRXUSDT/klines-1d/TRXUSDT-1d-2022-12.zip",
+        "checksum_url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-12.zip.CHECKSUM",
+        "month": "2022-12",
+        "sha256": "d34cb466aea3675941ecf9e147890731629120d3daa5ab6d17cd0679d4f93702",
+        "symbol": "TRXUSDT",
+        "url": "https://data.binance.vision/data/spot/monthly/klines/TRXUSDT/1d/TRXUSDT-1d-2022-12.zip"
+      }
+    ]
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trx-paxg-balanced-spot",
+  "content_identity": "062b2d56bfe9e1ac7b316efa70212133c588393d6fdebaa7a5946fd2e9201ccc",
+  "generated_at": "2026-07-20T07:59:32Z",
+  "interval": "1d",
+  "kline_backfills": {
+    "PAXGUSDT": {
+      "archive_missing_records": 0,
+      "bytes": 4,
+      "cache_relative_path": "PAXGUSDT/kline-backfill-2021-01_2022-12.json",
+      "open_times_ms": [],
+      "pages": 1,
+      "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+      "records": 0,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_end_exclusive_ms": 1672531200000,
+      "requested_start_ms": 1609459200000,
+      "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "symbol": "PAXGUSDT",
+      "url": "https://data-api.binance.vision/api/v3/klines"
+    },
+    "TRXUSDT": {
+      "archive_missing_records": 0,
+      "bytes": 4,
+      "cache_relative_path": "TRXUSDT/kline-backfill-2021-01_2022-12.json",
+      "open_times_ms": [],
+      "pages": 1,
+      "policy": "fill_only_timestamps_absent_from_checksum-verified_monthly_archives",
+      "records": 0,
+      "request_security": "NONE_PUBLIC_MARKET_DATA",
+      "requested_end_exclusive_ms": 1672531200000,
+      "requested_start_ms": 1609459200000,
+      "sha256": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "symbol": "TRXUSDT",
+      "url": "https://data-api.binance.vision/api/v3/klines"
+    }
+  },
+  "requested_end_month": "2022-12",
+  "requested_start_month": "2021-01",
+  "schema_version": 1,
+  "symbols": [
+    "TRXUSDT",
+    "PAXGUSDT"
+  ],
+  "timezone": "UTC",
+  "venue": "BINANCE_SPOT"
+}

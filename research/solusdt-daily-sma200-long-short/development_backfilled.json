@@ -1,0 +1,221 @@
+{
+  "content_digest": "f0c9a0087b167896e038b5048c5aad680ef449524292971caeea7197a3148d4b",
+  "continuous_half_long": {
+    "base": {
+      "annualized_return": 1.5551863752358868,
+      "annualized_volatility": 0.6812271581734639,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 11.802282670321263
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.6339613857137039
+        },
+        "2023": {
+          "days": 365,
+          "return": 2.5600281703981116
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        0.0007785484134165669,
+        0.005779930260808043
+      ],
+      "days": 1095,
+      "exposure_mean_abs": 0.5,
+      "long_fraction": 1.0,
+      "max_drawdown": -0.7306480680863794,
+      "max_episode_adverse_on_capital": -0.005085421790866129,
+      "sharpe_zero_rf": 1.7125622352366374,
+      "short_fraction": 0.0,
+      "total_return": 15.682754127853581,
+      "turnover": 1.0
+    },
+    "favorable": {
+      "annualized_return": 1.555996022280417,
+      "annualized_volatility": 0.6812526592560765,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 11.808036848116071
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.6339613857137039
+        },
+        "2023": {
+          "days": 365,
+          "return": 2.561812469091718
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        0.0008554779312834837,
+        0.005765766005750647
+      ],
+      "days": 1095,
+      "exposure_mean_abs": 0.5,
+      "long_fraction": 1.0,
+      "max_drawdown": -0.7306480680863789,
+      "max_episode_adverse_on_capital": -0.005085421790866129,
+      "sharpe_zero_rf": 1.712987424244501,
+      "short_fraction": 0.0,
+      "total_return": 15.69861765517231,
+      "turnover": 1.0
+    },
+    "stress": {
+      "annualized_return": 1.5543765987567828,
+      "annualized_volatility": 0.6812019005782004,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 11.796528492526418
+        },
+        "2022": {
+          "days": 365,
+          "return": -0.6339613857137039
+        },
+        "2023": {
+          "days": 365,
+          "return": 2.5582438717045055
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        0.0008088224781439296,
+        0.005799737333093461
+      ],
+      "days": 1095,
+      "exposure_mean_abs": 0.5,
+      "long_fraction": 1.0,
+      "max_drawdown": -0.7306480680863793,
+      "max_episode_adverse_on_capital": -0.005085421790866129,
+      "sharpe_zero_rf": 1.712136402411911,
+      "short_fraction": 0.0,
+      "total_return": 15.666898116897599,
+      "turnover": 1.0
+    }
+  },
+  "data_quality": {
+    "days": 1095,
+    "duplicates": 0,
+    "expected_days": 1095,
+    "gaps": 0,
+    "invalid_ohlc": 0,
+    "status": "PASS"
+  },
+  "funding_rate_sum": -0.08106339000000001,
+  "generated_at": "2026-07-20T03:58:05Z",
+  "manifest_content_identity": "a99c312ad205dcf217dec7200e9b134b2a83ed33909cd8f93ac3a8108a4e563a",
+  "period": {
+    "end_exclusive": "2024-01-01T00:00:00Z",
+    "start": "2021-01-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "exposure": 0.5,
+    "positions": "next UTC day +0.5 long above prior SMA200, else -0.5 short",
+    "sma_days": 200,
+    "turnover_costs": {
+      "base": 0.0016,
+      "favorable": 0.0006,
+      "stress": 0.0026
+    }
+  },
+  "schema_version": 1,
+  "strategy": {
+    "base": {
+      "annualized_return": 0.38702096883971193,
+      "annualized_volatility": 0.5424531866695648,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 1.3706467596238716
+        },
+        "2022": {
+          "days": 365,
+          "return": 0.38484414607113115
+        },
+        "2023": {
+          "days": 365,
+          "return": -0.18720441794622467
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0005262413781685967,
+        0.003288624800249038
+      ],
+      "days": 1095,
+      "exposure_mean_abs": 0.408675799086758,
+      "long_fraction": 0.3461187214611872,
+      "max_drawdown": -0.7187984183417537,
+      "max_episode_adverse_on_capital": -0.09715639810426535,
+      "sharpe_zero_rf": 0.8823426163087553,
+      "short_fraction": 0.4712328767123288,
+      "total_return": 1.6683886224409807,
+      "turnover": 19.0
+    },
+    "favorable": {
+      "annualized_return": 0.3958354201478844,
+      "annualized_volatility": 0.5424428302860113,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 1.3767437855333573
+        },
+        "2022": {
+          "days": 365,
+          "return": 0.3861923051338745
+        },
+        "2023": {
+          "days": 365,
+          "return": -0.17453855559334708
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0005661070789570749,
+        0.0032559737484805043
+      ],
+      "days": 1095,
+      "exposure_mean_abs": 0.408675799086758,
+      "long_fraction": 0.3461187214611872,
+      "max_drawdown": -0.7148290979363395,
+      "max_episode_adverse_on_capital": -0.09715639810426535,
+      "sharpe_zero_rf": 0.8940350396532566,
+      "short_fraction": 0.4712328767123288,
+      "total_return": 1.719585041886679,
+      "turnover": 19.0
+    },
+    "stress": {
+      "annualized_return": 0.37825366711815156,
+      "annualized_volatility": 0.5424747182554849,
+      "by_year": {
+        "2021": {
+          "days": 365,
+          "return": 1.364559736536814
+        },
+        "2022": {
+          "days": 365,
+          "return": 0.38349598700838317
+        },
+        "2023": {
+          "days": 365,
+          "return": -0.19968809717315583
+        }
+      },
+      "daily_mean_block_bootstrap_95pct": [
+        -0.0005581699692066116,
+        0.0032434473286783658
+      ],
+      "days": 1095,
+      "exposure_mean_abs": 0.408675799086758,
+      "long_fraction": 0.3461187214611872,
+      "max_drawdown": -0.7228829528861633,
+      "max_episode_adverse_on_capital": -0.09715639810426535,
+      "sharpe_zero_rf": 0.870632703652152,
+      "short_fraction": 0.4712328767123288,
+      "total_return": 1.618107471322801,
+      "turnover": 19.0
+    }
+  },
+  "study_code_sha256": "57a08da1d3706167496749ce6585f91dccc448d874169e8ac457565ddccc54f6"
+}

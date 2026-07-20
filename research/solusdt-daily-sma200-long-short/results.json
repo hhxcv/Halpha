@@ -1,0 +1,46 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_SOLUSDT_DAILY_SMA200_LONG_SHORT_0P5X",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "development": {
+    "data_quality": {
+      "days": 1095,
+      "expected_days": 1095,
+      "gaps": 0,
+      "status": "PASS"
+    },
+    "base_total_return": 1.6683886224409807,
+    "base_by_year": {
+      "2021": 1.3706467596238716,
+      "2022": 0.38484414607113115,
+      "2023": -0.18720441794622467
+    },
+    "base_daily_mean_block_bootstrap_95pct": [
+      -0.0005262413781685967,
+      0.003288624800249038
+    ],
+    "base_max_drawdown": -0.7187984183417537,
+    "continuous_half_long_base_max_drawdown": -0.7306480680863794,
+    "max_episode_adverse_on_capital": -0.09715639810426535,
+    "turnover": 19.0,
+    "favorable_total_return": 1.719585041886679,
+    "stress_total_return": 1.618107471322801
+  },
+  "failed_conditions": [
+    "2023 base compounded return was not positive",
+    "30-day circular-block bootstrap lower bound of daily mean was not positive"
+  ],
+  "holdout": {
+    "evaluation_2024_2025": "UNOPENED_NOT_DOWNLOADED",
+    "confirmation_2026_h1": "UNOPENED_NOT_DOWNLOADED"
+  },
+  "data_identity": {
+    "manifest_content_identity": "a99c312ad205dcf217dec7200e9b134b2a83ed33909cd8f93ac3a8108a4e563a",
+    "official_rest_backfill_records": 5,
+    "official_rest_backfill_sha256": "6ce36c95cfa8138f3e70a7ccd047da029fdb20e4dd86fe3f8fcd13826451ef0b"
+  },
+  "development_content_digest": "f0c9a0087b167896e038b5048c5aad680ef449524292971caeea7197a3148d4b",
+  "selection_content_digest": "20501fcc3fa37fd870b5f071b66cc16eb93a97e7208172b856a29040906c8b1d",
+  "formal_product_strategy_comparison": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "product_effects": "NONE"
+}

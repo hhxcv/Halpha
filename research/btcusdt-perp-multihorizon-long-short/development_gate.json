@@ -1,0 +1,9 @@
+{
+  "content_digest": "5b26b2f03082855ecf3aab69cde9effefb36fb898464ece181b1d7b107f37af0",
+  "fixed_rule": "BTCUSDT_PERP_MONTHLY_60_90_180_DIRECTION_ENSEMBLE_MAX_0P25X",
+  "generated_at": "2026-07-20T06:05:42Z",
+  "holdout_authorized": true,
+  "input_content_digest": "149a523c9106de4894c987999091a4f2560873c26a41e5f7308cf30e279732ef",
+  "phase": "development",
+  "qualification_status": "PASSED_DEVELOPMENT_GATE"
+}

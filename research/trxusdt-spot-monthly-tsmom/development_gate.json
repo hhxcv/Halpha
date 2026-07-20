@@ -1,0 +1,9 @@
+{
+  "content_digest": "2eb098673a8e05e54e6d686a5f18c875257a27badc3bd5518441430e8d4f46fe",
+  "development_content_digest": "4043ccb11f51d1caab4d100cb169af8b48f8e418eae338c767b05cc19c96297b",
+  "fixed_rule": "TRXUSDT_POSITIVE_180D_MONTHLY_0P5X",
+  "generated_at": "2026-07-20T07:34:32Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP",
+  "stress_return_after_4pct_annual_hurdle": 0.43721000544698607
+}

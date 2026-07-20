@@ -1,0 +1,20 @@
+{
+  "candidate_id": "RESEARCH_BTCUSDT_SPOT_POSITIVE_90D_0P5X",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "development_gate": "PASSED_DEVELOPMENT_GATE",
+  "evaluation_gate": "FAILED_EVALUATION_GATE_STOP",
+  "development_content_digest": "39b42e3a6c4848f8f4147406cd234589531e5ea45383bb0325c0c0e840f87a2b",
+  "evaluation_content_digest": "de6f908badbbcbbd9db7864e531f08804cc42b5adea0753b8a3b4846cfd87248",
+  "development_90d_base_total_return": 0.22951769692956803,
+  "development_90d_max_drawdown": -0.2706880877984188,
+  "evaluation_90d_base_total_return": 0.7312598998797735,
+  "evaluation_90d_stress_total_return": 0.7236740605398881,
+  "evaluation_90d_max_drawdown": -0.14703289284411203,
+  "evaluation_60d_base_total_return": 0.6096807172750214,
+  "evaluation_180d_base_total_return": 0.7005655160257305,
+  "evaluation_btc_half_total_return": 1.5552385287204413,
+  "evaluation_btc_half_max_drawdown": -0.13529197410919402,
+  "failed_condition": "evaluation strategy max drawdown is 1.174 percentage points deeper than the pre-registered BTC 0.5x benchmark",
+  "confirmation_opened": false,
+  "product_effects": "NONE"
+}

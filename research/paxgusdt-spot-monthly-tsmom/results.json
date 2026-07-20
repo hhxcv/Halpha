@@ -1,0 +1,32 @@
+{
+  "conclusion": "DOES_NOT_SUPPORT",
+  "reason": "The pre-registered 180-day rule lost money under base and stress costs in development, with both calendar years and both diagnostic lookbacks negative; sequential holdouts remained unopened.",
+  "development": {
+    "data_quality": "PASS",
+    "base_total_return": -0.0843132386336144,
+    "stress_total_return": -0.09526819443630796,
+    "max_drawdown": -0.0843132386336144,
+    "turnover": 4.003011563085147,
+    "lookback_90_base_total_return": -0.03456502520106297,
+    "lookback_270_base_total_return": -0.0324378342702466,
+    "passive_half_base_total_return": -0.028856389893789136,
+    "passive_half_max_drawdown": -0.11203598750574095,
+    "content_digest": "3c5895e7a3b3511d9b055512f37764597b4a984a942c13a32873a9f066e7f365"
+  },
+  "development_gate": {
+    "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP",
+    "holdout_authorized": false,
+    "content_digest": "799e9fe6bf25c4990ab3198aebcd61a7192f2841a56e99191f3bff2094ba652a"
+  },
+  "evaluation": "NOT_ACQUIRED_OR_OPENED",
+  "confirmation": "NOT_ACQUIRED_OR_OPENED",
+  "source_manifest_sha256": "f1d8600b3e2c57f2caee8cfb6adec3ab90f960826d8d1b35fa88411c3f2cb0d5",
+  "source_content_identity": "8d719cdf714c8e3159503750c5497a503e4bc0c78cf30a319dd9ff260bebf2fc",
+  "reproduction": {
+    "directory": "D:/projects/Codex/CodexHome/research-data/halpha/paxgusdt-spot-monthly-tsmom-repro",
+    "files": 2,
+    "bytes": 13161,
+    "content_digests_match": true
+  },
+  "product_effects": "NONE"
+}

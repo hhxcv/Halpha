@@ -1,0 +1,641 @@
+{
+  "cash_benchmark_return": 0.0,
+  "content_digest": "149a523c9106de4894c987999091a4f2560873c26a41e5f7308cf30e279732ef",
+  "continuous_quarter_long_benchmark": {
+    "base": {
+      "annualized_return": -0.10208165809389902,
+      "annualized_volatility": 0.15207691044996333,
+      "by_year": {
+        "2021": {
+          "intervals": 551,
+          "return": 0.0807127459448258
+        },
+        "2022": {
+          "intervals": 1095,
+          "return": -0.2121505806247449
+        },
+        "2023": {
+          "intervals": 1,
+          "return": -0.001128563432813423
+        }
+      },
+      "cost_pnl_on_initial_capital": -0.0015404150086056091,
+      "funding_pnl_on_initial_capital": -0.0321897643425208,
+      "interval_mean_block_bootstrap_95pct": [
+        -0.0003119912998089843,
+        0.00015100162894481238
+      ],
+      "intervals": 1647,
+      "max_drawdown": -0.2916033651010964,
+      "position_sign_counts": {
+        "negative_rebalances": 0,
+        "positive_rebalances": 18,
+        "zero_rebalances": 0
+      },
+      "price_pnl_on_initial_capital": -0.11579181406323345,
+      "rebalance_count": 18,
+      "rebalance_records_digest": "5508be8a6de47e3539277ca35ea2bcd384232d05055e63f728a8b3147b5984d6",
+      "returns_digest": "af7c02e1dca9be6b0ad5b4072196ccaebe851fdedb317bec8c03637d24ad9358",
+      "sharpe_zero_rf": -0.6319598340121549,
+      "total_return": -0.14952199341435424,
+      "turnover": 0.9967695704849372,
+      "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025925
+    },
+    "favorable": {
+      "annualized_return": -0.10160541152262104,
+      "annualized_volatility": 0.1520661260862637,
+      "by_year": {
+        "2021": {
+          "intervals": 551,
+          "return": 0.08106226043698306
+        },
+        "2022": {
+          "intervals": 1095,
+          "return": -0.21193045497618923
+        },
+        "2023": {
+          "intervals": 1,
+          "return": -0.0009339321676736789
+        }
+      },
+      "cost_pnl_on_initial_capital": -0.0007704591392105705,
+      "funding_pnl_on_initial_capital": -0.03220057409747162,
+      "interval_mean_block_bootstrap_95pct": [
+        -0.0003171739608759253,
+        0.00013549351212257494
+      ],
+      "intervals": 1647,
+      "max_drawdown": -0.2913766399957687,
+      "position_sign_counts": {
+        "negative_rebalances": 0,
+        "positive_rebalances": 18,
+        "zero_rebalances": 0
+      },
+      "price_pnl_on_initial_capital": -0.11587238864406338,
+      "rebalance_count": 18,
+      "rebalance_records_digest": "619f72fb6931cd23560929b1f3d0bdb5f49436893f307e387714907c48d17279",
+      "returns_digest": "86260cb93747d61fab5254703fafe8193f96e52d36430b47a84ae7b8e714cee0",
+      "sharpe_zero_rf": -0.6285289226258911,
+      "total_return": -0.14884342188075506,
+      "turnover": 0.9967695704849374,
+      "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025924
+    },
+    "stress": {
+      "annualized_return": -0.10279565680705383,
+      "annualized_volatility": 0.15209382275275812,
+      "by_year": {
+        "2021": {
+          "intervals": 551,
+          "return": 0.08018859590528349
+        },
+        "2022": {
+          "intervals": 1095,
+          "return": -0.21248066691782674
+        },
+        "2023": {
+          "intervals": 1,
+          "return": -0.0014205103305231503
+        }
+      },
+      "cost_pnl_on_initial_capital": -0.0026944058059057306,
+      "funding_pnl_on_initial_capital": -0.032173554504921764,
+      "interval_mean_block_bootstrap_95pct": [
+        -0.00030828989437405756,
+        0.0001364459822651044
+      ],
+      "intervals": 1647,
+      "max_drawdown": -0.2919433320028252,
+      "position_sign_counts": {
+        "negative_rebalances": 0,
+        "positive_rebalances": 18,
+        "zero_rebalances": 0
+      },
+      "price_pnl_on_initial_capital": -0.11567102171320458,
+      "rebalance_count": 18,
+      "rebalance_records_digest": "f62c8be43a89274a3d5b5a98158317e15ed0d2f02414071c64bc11d637a0d62e",
+      "returns_digest": "d106118d9806ecee495314a8f550e6f58d1a9369c8df6a46b8dab1d332432385",
+      "sharpe_zero_rf": -0.6371022068055174,
+      "total_return": -0.1505389820240275,
+      "turnover": 0.9967695704849382,
+      "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025923
+    }
+  },
+  "data_quality": {
+    "funding_events_used": 1647,
+    "funding_interval_boundary": "actual event timestamps normalized only when within 1 second of the nearest 8h boundary; no aggregation",
+    "invalid_ohlc_rows": 0,
+    "missing_funding_settlements": 0,
+    "missing_futures_rows": 0,
+    "missing_spot_rows": 0,
+    "phase_intervals": 1647,
+    "required_spot_rows": 2189,
+    "status": "PASS",
+    "unexpected_non_8h_funding_events": 0
+  },
+  "generated_at": "2026-07-20T06:05:30Z",
+  "manifest_content_identity": "f434978bd47792c0e74ab94dc5f0f8ad9a7a4a82618833a56602ee7802d5abd5",
+  "period": {
+    "end_exclusive": "2023-01-01T00:00:00Z",
+    "start": "2021-07-01T00:00:00Z"
+  },
+  "phase": "development",
+  "rules": {
+    "ensemble_component_weight": 0.08333333333333333,
+    "funding": "actual event rate normalized within 1 second to its 8h boundary; positive rate debits longs and credits shorts",
+    "instrument": "BTCUSDT USD-M linear perpetual",
+    "lookbacks_days": [
+      60,
+      90,
+      180
+    ],
+    "max_absolute_notional_weight": 0.25,
+    "rebalance": "first 8h boundary of each UTC month",
+    "signal_source": "BTCUSDT spot previous completed 8h close",
+    "turnover_costs": {
+      "base": 0.0016,
+      "favorable": 0.0008,
+      "stress": 0.0028
+    }
+  },
+  "schema_version": 1,
+  "source_manifest_sha256": "0bbdd5c539701e48cc8625954b68b9b0b8728df653523168ffbed093839b1ef1",
+  "strategy": {
+    "180": {
+      "base": {
+        "annualized_return": 0.029585162416573274,
+        "annualized_volatility": 0.15251812890440392,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.06744915649396865
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.12001474768217091
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.0003435796067896568
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.004217014844447238,
+        "funding_pnl_on_initial_capital": 0.008081552615608736,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00018561941637323002,
+          0.00026124199518030345
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.24992045030626608,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.040965018750658534,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "a9bde13dcde4a9f70113a63ed6094cf4e69ea672d6c6cbeb5895929022d45669",
+        "returns_digest": "d0521f1ab689d7c5f346d0c04c2378f8cdcf4fb1844218bd725bf2f0ae3a65e7",
+        "sharpe_zero_rf": 0.2673748060671916,
+        "total_return": 0.04482955652181797,
+        "turnover": 2.6565786298628584,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.056680007500259234
+      },
+      "favorable": {
+        "annualized_return": 0.03104165434101258,
+        "annualized_volatility": 0.15251389530508977,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.06634412500315845
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.12085626075812117
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.0005346196151043703
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.002110379293960115,
+        "funding_pnl_on_initial_capital": 0.008093803665420845,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.000195357687916064,
+          0.0002791814573492951
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.2491910125681316,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.04107008474942182,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "be858064712cfcd048cca2fc8bdfa76bf1d8ae1a37b63d844f00ea419530fb3b",
+        "returns_digest": "75d21a8f1f53c93d6ac1432ecfe2be0e47800fd9af48dfe1127cde34af2191e2",
+        "sharpe_zero_rf": 0.2766471020642383,
+        "total_return": 0.0470535091208808,
+        "turnover": 2.656578629862858,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025924
+      },
+      "stress": {
+        "annualized_return": 0.027403421110804516,
+        "annualized_volatility": 0.15252994839930337,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.06910508622235179
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.11875333256375131
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 5.701959431814174e-05
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.007369961211369629,
+        "funding_pnl_on_initial_capital": 0.008063208025630004,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00019720682153556672,
+          0.0002685975854409073
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.25101384265682947,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.040807922829332,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "db6cf528e2b0dc9933bd878e0f8a662cbd887c3eec641af3e16d72c86cc271c6",
+        "returns_digest": "508d6e88c322e418b32e5542e897b9362b6598a6e0cc2d888dfa35c856e6e060",
+        "sharpe_zero_rf": 0.25345823891340946,
+        "total_return": 0.041501169643597846,
+        "turnover": 2.6565786298628593,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025924
+      }
+    },
+    "60": {
+      "base": {
+        "annualized_return": -0.004036702059933783,
+        "annualized_volatility": 0.15051784481356528,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.015428440506201402
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.009162972094806765
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.00034357960678987887
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.007725953185636045,
+        "funding_pnl_on_initial_capital": -0.012659224178631625,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.0002221497406987119,
+          0.00023692791931327845
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.1544408655220867,
+        "position_sign_counts": {
+          "negative_rebalances": 10,
+          "positive_rebalances": 8,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.014319716930696134,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "a1cb4945eea8eb89dfda76727a5d81545eb55f58ec90878b8958727289b725d3",
+        "returns_digest": "981a0d99e6a6f00df640b7386a68afa0e1d6322baa54f729018384b934236dfa",
+        "sharpe_zero_rf": 0.04843493807475329,
+        "total_return": -0.006065460433584247,
+        "turnover": 4.851865601918229,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.09161927096110306
+      },
+      "favorable": {
+        "annualized_return": -0.001461869713528019,
+        "annualized_volatility": 0.15051289501587725,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.01469413177988299
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.012141377438259715
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.0005346196151041482
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.003869888562708509,
+        "funding_pnl_on_initial_capital": -0.01265653131188099,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00021504116659579466,
+          0.0002353882944352861
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.15334446086523912,
+        "position_sign_counts": {
+          "negative_rebalances": 10,
+          "positive_rebalances": 8,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.01432841801557893,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "e0eda68cd490920b371cfbaa27667edbc73f63c4b571c78ea4bacd720880bfb6",
+        "returns_digest": "2b3164941ed39f031078a9445b43c2b289eb92429b0c14c86f1042bbd2f504c8",
+        "sharpe_zero_rf": 0.06558570410778053,
+        "total_return": -0.0021980018590164185,
+        "turnover": 4.851865601918229,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.09161927096110298
+      },
+      "stress": {
+        "annualized_return": -0.007888171361994711,
+        "annualized_volatility": 0.15053632211644682,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.01652932940287255
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.004709784390184879
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 5.7019594318363787e-05
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.013484227121872753,
+        "funding_pnl_on_initial_capital": -0.012663204915461768,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.0002181395264314174,
+          0.0002343309393453382
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.1560835294041869,
+        "position_sign_counts": {
+          "negative_rebalances": 10,
+          "positive_rebalances": 8,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.014306378656750593,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "21bfba3220ea79efa39b3a8cba0fef23b4bedd8771a779ce92a0b8f84a9d210b",
+        "returns_digest": "2f2c63caa6b304966cf55b6c767bf684040d72923873673781e7a49ccc77ed63",
+        "sharpe_zero_rf": 0.022709236470648597,
+        "total_return": -0.01184105338058472,
+        "turnover": 4.851865601918229,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.09161927096110306
+      }
+    },
+    "90": {
+      "base": {
+        "annualized_return": 0.10177490465464212,
+        "annualized_volatility": 0.15020682770244892,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.07470464694526113
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.24992147115882712
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.00034357960678987887
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.005075047970190873,
+        "funding_pnl_on_initial_capital": -0.005480712942114194,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00012471461236744757,
+          0.00031592071614523575
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.14231255488661165,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.16749965566055774,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "f6b62057a6790fcb30a7b38e1891da3aac590467a1e0485af4162c33e67fb419",
+        "returns_digest": "35fc764d3c170df4e8f8c5a58b33a172c5986c5bf76efa795fa50f21dfbe3d44",
+        "sharpe_zero_rf": 0.7204213622990002,
+        "total_return": 0.15694389474826087,
+        "turnover": 3.109612389869378,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.09161927096110306
+      },
+      "favorable": {
+        "annualized_return": 0.1035994919264418,
+        "annualized_volatility": 0.15020239177050992,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.07400147687278869
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.25184558240140853
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.0005346196151041482
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.002540433462725814,
+        "funding_pnl_on_initial_capital": -0.0054814453880851375,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00012842541483867295,
+          0.00033188808090174035
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.1418980508946498,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.16784877422380137,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "3feb02fb33397ab759334e31011fcae423a89c5e672e97748d3ffec5000129ce",
+        "returns_digest": "c674dc231f851a45bd95e944b37eb7ac6189da468e1484a878540594632d25e3",
+        "sharpe_zero_rf": 0.7314553881734658,
+        "total_return": 0.15982689537298556,
+        "turnover": 3.109612389869378,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.09161927096110298
+      },
+      "stress": {
+        "annualized_return": 0.09904265344828511,
+        "annualized_volatility": 0.15021964259804957,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.07575880845971927
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.24703973395179513
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 5.7019594318363787e-05
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.008866084155513747,
+        "funding_pnl_on_initial_capital": -0.005479602602273416,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.0001230187048603734,
+          0.0003230225691939924
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.14293424357476847,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.1669768951801197,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "7b11c9abef053dc38ac3cc5ecff0db84bf93905282d5294ddbf701111b07de55",
+        "returns_digest": "3e59a7c64cd01ce7ecb1a9cbc78c26bc0e814c297225ce4810476e691ce6d174",
+        "sharpe_zero_rf": 0.7038426773341945,
+        "total_return": 0.15263120842232158,
+        "turnover": 3.109612389869378,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.09161927096110306
+      }
+    },
+    "ensemble": {
+      "base": {
+        "annualized_return": 0.04860233915528789,
+        "annualized_volatility": 0.11218606684188243,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.046750008169863744
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.12627627538505348
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.0003435796067896568
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.003299807252269905,
+        "funding_pnl_on_initial_capital": -0.003883350728073504,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00012440389241701,
+          0.00022514212732538324
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.13070885868927307,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.08117488320637173,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "1c748e58813e6f3432a4ac118ffdfb08ec13c9baf3ac3bbcecd9a9e76fbf6491",
+        "returns_digest": "c2c8237cec20c0ad7756c095e0d31f78ae5dcf462315f6fe86851896998ee03a",
+        "sharpe_zero_rf": 0.47916197442905717,
+        "total_return": 0.07399172522602981,
+        "turnover": 2.075204826122496,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025925
+      },
+      "favorable": {
+        "annualized_return": 0.04976062351166499,
+        "annualized_volatility": 0.11218935277328855,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.046420625654479575
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.12754301988859185
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 0.0005346196151043703
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.0016511812584231644,
+        "funding_pnl_on_initial_capital": -0.003878187336527902,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00012426362697215022,
+          0.00022157894080515015
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.13034017901338424,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.0813059600030455,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "55a74f3de14ac9df45ff22304a99553df25b498dbdf0ff99b2e79567f09b24dd",
+        "returns_digest": "91fcf985705c780f1ccd1c32588f0094b94a461188bbc3ffe26bd2d2dec76122",
+        "sharpe_zero_rf": 0.48899207846572473,
+        "total_return": 0.07577659140809834,
+        "turnover": 2.0752048261224956,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025925
+      },
+      "stress": {
+        "annualized_return": 0.0468669985364103,
+        "annualized_volatility": 0.11218375903017547,
+        "by_year": {
+          "2021": {
+            "intervals": 551,
+            "return": -0.04724393681647143
+          },
+          "2022": {
+            "intervals": 1095,
+            "return": 0.12437848315782563
+          },
+          "2023": {
+            "intervals": 1,
+            "return": 5.701959431814174e-05
+          }
+        },
+        "cost_pnl_on_initial_capital": -0.005767962974199021,
+        "funding_pnl_on_initial_capital": -0.0038910809206432564,
+        "interval_mean_block_bootstrap_95pct": [
+          -0.00012351170308237965,
+          0.00021731239242716948
+        ],
+        "intervals": 1647,
+        "max_drawdown": -0.13126171316162727,
+        "position_sign_counts": {
+          "negative_rebalances": 13,
+          "positive_rebalances": 5,
+          "zero_rebalances": 0
+        },
+        "price_pnl_on_initial_capital": 0.08097854375691668,
+        "rebalance_count": 18,
+        "rebalance_records_digest": "2baa6e4d42683262b959b52e85a2ac7893eedd53a03340864044aa8c672f566c",
+        "returns_digest": "161e72408f626966e37e38c732bae7834d45a5e522834727463445a1510f1e8b",
+        "sharpe_zero_rf": 0.46440488790322487,
+        "total_return": 0.07131949986208075,
+        "turnover": 2.0752048261224965,
+        "worst_8h_intrabar_adverse_on_then_nav": -0.05668000750025924
+      }
+    }
+  },
+  "study_code_sha256": "a5d379e5d276cec91318c32eb5a17ffe1d5f055403499ae2e5db09a8093cdc23"
+}

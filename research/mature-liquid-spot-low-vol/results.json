@@ -1,0 +1,19 @@
+{
+  "candidate_id": "RESEARCH_MATURE_LIQUID_SPOT_BOTTOM3_REALIZED_VOL_90D_0P5X",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "development_content_digest": "14a585655efc3073f596b03387291fbdc43f6fe55e7021d734f5e6cfb825c7f3",
+  "development_gate": "FAILED_DEVELOPMENT_GATE_STOP",
+  "failed_condition": "90d base maximum drawdown -0.363565826448089 is not greater than -0.35",
+  "main_90d_base_total_return": 1.6677767994393435,
+  "main_90d_stress_total_return": 1.6436590017687114,
+  "main_90d_max_drawdown": -0.363565826448089,
+  "main_90d_turnover": 9.071896225618493,
+  "robustness_60d_base_total_return": 1.0738372450616152,
+  "robustness_180d_base_total_return": 1.1151968040483267,
+  "benchmark_base_total_return": 1.2357150320772923,
+  "benchmark_base_max_drawdown": -0.5112979616801939,
+  "evaluation_opened": false,
+  "confirmation_opened": false,
+  "formal_product_strategy_comparison": "NOT_RUN_NO_COMPARABLE_INSTRUMENT_OR_ACTIVATION_REPLAY",
+  "product_effects": "NONE"
+}

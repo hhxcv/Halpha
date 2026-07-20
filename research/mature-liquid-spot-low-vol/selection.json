@@ -1,0 +1,8 @@
+{
+  "content_digest": "f269cfb1e22ebb68ce7df3fe11315d8563badd4589e8687a9d729fa457f91779",
+  "development_content_digest": "14a585655efc3073f596b03387291fbdc43f6fe55e7021d734f5e6cfb825c7f3",
+  "fixed_rule": "MATURE_LIQUID_SPOT_BOTTOM3_REALIZED_VOL_90D_0P5X",
+  "generated_at": "2026-07-20T05:13:26Z",
+  "holdout_authorized": false,
+  "qualification_status": "FAILED_DEVELOPMENT_GATE_STOP"
+}

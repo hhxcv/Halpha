@@ -1,0 +1,18 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 on BTCUSDT-PERP",
+  "candidate_id": "RESEARCH_BTC_ETH_SPOT_POSITIVE_TOP1_90D_0P5X",
+  "created_at": "2026-07-20T19:30:00+08:00",
+  "question": "Can a monthly BTC/ETH spot rule that holds the stronger asset only when its own 90-day return is positive earn cost-adjusted returns across development, evaluation and confirmation with lower drawdown than a 0.5x two-asset allocation?",
+  "symbols": ["BTCUSDT", "ETHUSDT"],
+  "primary_lookback_days": 90,
+  "robustness_lookback_days": [60, 180],
+  "maximum_gross": 0.5,
+  "turnover_costs": {"favorable": 0.0006, "base": 0.0016, "stress": 0.0026},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"], "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"], "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]},
+  "development_gate": "data PASS; 90d base/stress >0; max drawdown >-35% and below benchmark; 60d/180d base >0; >=6 invested months; turnover <=30",
+  "evaluation_gate": "90d base/stress >0; max drawdown >-30% and below benchmark; 60d/180d base >0; >=6 invested months",
+  "confirmation_gate": "90d base/stress >=0; max drawdown >-25% and below benchmark; 60d/180d base >=0; evaluation+confirmation compounded >0",
+  "holdout_release_rule": "fetch evaluation only after development pass; confirmation only after evaluation pass",
+  "study_code_sha256": "eb0aedbed2b4fff7561b7f05e45c4de71b07eb43f1324aa07afddc4facbfcdae"
+}

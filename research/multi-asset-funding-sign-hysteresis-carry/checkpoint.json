@@ -1,0 +1,19 @@
+{
+  "baseline_commit": "de6b3052f28fe547730e89e58186d4ab397884b1",
+  "candidate_id": "RESEARCH_MULTI_ASSET_FUNDING_SIGN_HYSTERESIS_CARRY",
+  "created_at": "2026-07-20T19:00:00+08:00",
+  "inherited_exposed_result": "3bp two-event parent: base +69.06%, max drawdown -1.77%, only 5 episodes; holdouts unopened",
+  "question": "Can a threshold-free two-positive-in/two-nonpositive-out funding-sign hysteresis rule produce sufficiently many profitable cash-and-carry episodes after basis and two-leg costs?",
+  "development_evaluation_symbols": ["DOGEUSDT", "XRPUSDT", "ADAUSDT"],
+  "confirmation_symbols": ["LTCUSDT", "LINKUSDT"],
+  "entry": "flat; current and previous settled funding >0; choose highest current rate",
+  "exit": "after counting the second consecutive settled funding <=0; sample-end forced exit",
+  "capital": "two fully funded units, equal initial spot long and perpetual short",
+  "combined_transition_costs": {"favorable": 0.0016, "base": 0.0024, "stress": 0.0040},
+  "periods": {"development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"], "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"], "confirmation": ["2021-01-01T00:00:00Z", "2026-01-01T00:00:00Z"]},
+  "development_gate": "complete alignment; base/stress >0; >=10 episodes and >=100 active; episode median >0; win rate >=50%; max drawdown >-10%",
+  "evaluation_gate": "base/stress >0; >=5 episodes and >=50 active; episode median >=0; win rate >=50%; max drawdown >-10%",
+  "confirmation_gate": "base/stress >0; >=10 episodes and >=100 active; both symbols selected; episode median >=0; win rate >=50%; max drawdown >-10%",
+  "holdout_release_rule": "reuse exposed development only after checkpoint; evaluation then confirmation opened sequentially on pass",
+  "study_code_sha256": "eb42537a6c7e2f7f354388a6393eb81f12be73b2def0dc6b81101a70cabbffba"
+}
