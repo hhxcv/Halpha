@@ -1,0 +1,76 @@
+{
+  "all_records": 4520,
+  "conclusion": "SUPPORTS_WITHIN_SCOPE",
+  "counts_by_activity_tier_currently_trading": {
+    "A1_TOP_10PCT_PROVISIONAL_24H": 160,
+    "A2_10_TO_40PCT_PROVISIONAL_24H": 481,
+    "A3_40_TO_80PCT_PROVISIONAL_24H": 643,
+    "A4_BOTTOM_20PCT_PROVISIONAL_24H": 322,
+    "UNRATED_REQUIRES_QUOTE_CONVERSION_OR_ACTIVITY_PROXY": 503
+  },
+  "counts_by_economic_exposure_currently_trading": {
+    "CRYPTO_ANCHOR": 48,
+    "CRYPTO_NATIVE": 1871,
+    "STABLE_OR_FIAT_RELATIVE": 40,
+    "TOKENIZED_COMMODITY": 14,
+    "TRADFI_DERIVATIVE_COMMODITY": 8,
+    "TRADFI_DERIVATIVE_EQUITY_OR_FUND": 126,
+    "TRADFI_DERIVATIVE_PREMARKET": 2
+  },
+  "counts_by_economic_exposure_source_currently_trading": {
+    "CURRENT_INSTRUMENT_OFFICIAL_METADATA": 136,
+    "DEFAULT_CRYPTO_NATIVE_AFTER_EXPLICIT_EXCLUSIONS": 1871,
+    "EXPLICIT_BTC_ETH_MODELING_ROLE": 48,
+    "EXPLICIT_ISSUER_AND_REFERENCE_MAPPING": 14,
+    "EXPLICIT_STABLE_OR_FIAT_MAPPING": 40
+  },
+  "counts_by_market_all": {
+    "BINANCE_COIN_M": 30,
+    "BINANCE_SPOT": 3649,
+    "BINANCE_USD_M": 841
+  },
+  "counts_by_market_currently_trading": {
+    "BINANCE_COIN_M": 30,
+    "BINANCE_SPOT": 1366,
+    "BINANCE_USD_M": 713
+  },
+  "counts_by_market_integrity_review_currently_trading": {
+    "ENHANCED_DUE_DILIGENCE": 729,
+    "FORENSIC_EVIDENCE_REQUIRED_FOR_INTEGRITY_CLAIMS": 214,
+    "STANDARD_DUE_DILIGENCE": 1166
+  },
+  "counts_by_research_bucket_currently_trading": {
+    "CRYPTO_ALT_HIGHER_ACTIVITY_PROVISIONAL": 505,
+    "CRYPTO_ALT_LOWER_ACTIVITY_PROVISIONAL": 263,
+    "CRYPTO_ALT_MARKET_QUALITY_UNRATED": 464,
+    "CRYPTO_ALT_MID_ACTIVITY_PROVISIONAL": 594,
+    "CRYPTO_ALT_NEW_OR_EVENT_DRIVEN": 45,
+    "CRYPTO_ANCHOR_REFERENCE": 48,
+    "STABLE_OR_FIAT_RELATIVE": 40,
+    "TOKENIZED_COMMODITY": 14,
+    "TRADFI_COMMODITY_PERP": 8,
+    "TRADFI_EQUITY_OR_FUND_PERP": 126,
+    "TRADFI_PREMARKET_PERP": 2
+  },
+  "csv": {
+    "bytes": 3383646,
+    "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+    "rows_excluding_header": 4520,
+    "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc"
+  },
+  "currently_trading_records": 2109,
+  "important_limitations": [
+    "The 24-hour activity tier is a provisional discovery tag, not a liquidity or market-quality conclusion.",
+    "Market-integrity review levels are due-diligence requirements and never findings of manipulation.",
+    "Spot exchangeInfo has no authoritative asset taxonomy or onboard date.",
+    "Current exchangeInfo is not a historical point-in-time universe and cannot by itself remove survivorship bias.",
+    "TradFi exchangeInfo does not reliably distinguish a single stock from an ETF or leveraged reference product; each study must verify the official reference contract.",
+    "Stable/fiat asset membership is a small explicit research mapping and must be reviewed when Binance adds a new quote or reference asset.",
+    "Binance underlyingSubType mixes asset themes with contract markers; classification removes known non-economic markers but preserves the official raw field and its source.",
+    "Non-dollar-like quote instruments remain market-quality-unrated until quote conversion and 30-90 day evidence are supplied; they are not inferred to be thin or speculative.",
+    "Dollar-like quote volume is only an approximate USD activity proxy and each study must stress quote-asset parity and depeg periods."
+  ],
+  "scope": "Binance Spot, USD-M and COIN-M instruments returned by official public exchangeInfo endpoints",
+  "snapshot_id": "2026-07-21T064230Z",
+  "snapshot_time_utc": "2026-07-21T06:42:30Z"
+}

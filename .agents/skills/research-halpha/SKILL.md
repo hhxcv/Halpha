@@ -62,6 +62,10 @@ research/<question>/
 
 Reuse mature libraries already justified by the study. Add a dependency only when the exact experiment needs it and record how to reproduce the environment. Do not create a research database, service, scheduler, generic CLI suite, persistent worker, task registry, universal schema, custom sandbox or optimization platform without a demonstrated repeated bottleneck and a current consumer.
 
+When current L4 selects VectorBT and the question can be represented by arrays or bars, prefer its native indicators, parameter broadcasting, splitters, portfolio simulation and returns analysis over per-study implementations of those foundations. Use `Portfolio.from_signals` for simple state-compatible signals, `Portfolio.from_orders` for explicit order arrays, and `Portfolio.from_order_func` only when the required path dependence still fits VectorBT's documented model. If intrabar ordering, order-book state, venue behavior, margin or execution feedback can change the conclusion, use a conservative labeled proxy for exploration or route the study to NautilusTrader or another mature component instead of forcing VectorBT to be the execution truth.
+
+Before viewing ranked batch results, fix the strategy family, asset universe, parameter ranges, comparison metric, cost cases and intended trial count. Save the full configuration-to-result table or its durable external identity, including failed and manually inspected variants; do not turn a large search into a sequence of unrecorded one-off scripts or retain only the winning column.
+
 Keep generated bulk data out of Git when appropriate, but record its source, immutable identity or retrieval rule and expected location.
 
 Before first revealing outcomes from an interval intended as untouched evaluation, save a lightweight checkpoint in the existing study materials. Record the fixed question, search scope, development or selection gate, input identity, code or method identity, allowed fixes, and the rule for opening the interval. Use a short note, snapshot or hash as appropriate; do not require a fixed manifest, schema or new tracking system.
@@ -80,6 +84,8 @@ When a nontrivial implementation or interpretation problem could affect the stud
 
 Read [Research Method and Evidence](references/research-method-and-evidence.md) in full when the result may influence product strategy selection or capital use, when many candidates or parameters are searched, or when holdout, walk-forward, robustness or previously viewed data affect the claim.
 
+For comparative evidence or product consideration, use the least sufficient independent-time design: an untouched final interval for a fixed rule, or rolling/expanding walk-forward when the rule includes repeated re-selection. Use VectorBT's splitters when they match the time contract. When many comparable trials were searched and Sharpe is meaningful, report a selection-bias-aware statistic such as VectorBT's Deflated Sharpe Ratio; disclose the actual total search and justify the independent or effective trial count used by the statistic, including a sensitivity bound when correlation makes it uncertain. Use PBO, purging or embargo only when overlapping labels, broad selection and enough observations make them decision-relevant. None of these checks rescues weak economics, missing costs or a revealed holdout.
+
 ### 6. Reproduce and Report Honestly
 
 Rerun the final command from recorded inputs where proportionate. Check that reported metrics, tables and plots derive from the saved result rather than manual transcription. Verify that small inputs, commands, results and any recorded hashes remain available. For external bulk data, verify and record its source identity or retrieval rule, expected location and whether a local cache is durable or reacquirable. State unmodeled items and any environment limitation.
@@ -95,7 +101,11 @@ Explain the scope, strongest support, strongest counterevidence, costs, sensitiv
 
 ### 7. Hand Off Without Product Effect
 
-Research completion does not update the product strategy, trading plan, funds, credentials, build identity or real-account trading state. Only a project-owner selection can start a product change. When selected and authorized, reimplement or review the strategy in the product path, then use `develop-halpha` for affected product tests and runtime validation; never dynamically load research code as a product fallback.
+Research completion does not update the product strategy, trading plan, funds, credentials, build identity or real-account trading state. Only a project-owner selection can start a product change.
+
+For a result intended for possible selection, keep a framework-neutral handoff in the existing study materials: fixed strategy identity and parameters; instruments, bar or event inputs and warmup; decision and fill timing; sizing, entry, exit, protection and unknown/no-action rules; assumed costs and unsupported facts; and a compact deterministic input-to-decision trace. The trace describes signals, target exposure or strategy proposals, not VectorBT object state or simulated fills.
+
+When selected and authorized, reimplement or review the fixed decision logic in the product path without importing VectorBT or the research workspace. Use `develop-halpha` to compare the product logic with the handoff trace on identical normalized inputs, then qualify event, order, fill, funding, margin and online/offline behavior in NautilusTrader using the same public data identity where proportionate. Unexplained decision differences block the handoff; expected execution-result differences are recorded and judged under NautilusTrader. Never dynamically load research code as a product fallback.
 
 ## Delivery
 

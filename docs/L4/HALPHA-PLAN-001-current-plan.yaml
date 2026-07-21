@@ -1,7 +1,7 @@
 document_id: HALPHA-PLAN-001
 level: L4
 language: zh-CN
-as_of: 2026-07-20
+as_of: 2026-07-21
 
 current_summary: >-
   Halpha 在现有 Windows 10 单机上持续完善最小交易闭环。开发每次选择一个可验证的小结果，
@@ -38,7 +38,7 @@ current_facts:
   source:
     repository: 当前 Git 工作区
     identity_rule: 构建或验证时直接读取提交、分支和工作树；本计划不抄写易失真的 SHA
-    checked_at: 2026-07-20
+    checked_at: 2026-07-21
   evidence_limit: >-
     历史测试和观察只说明当时输入；当前实现仍在连续修改，因此不把历史结果表述为当前产品闭环或真实账户交易能力。
   persistence:
@@ -72,6 +72,7 @@ component_sources:
   python_locks:
     - requirements/runtime.txt
     - requirements/dev.txt
+  independent_research_python_lock: research/requirements.txt
   frontend_lock: frontend/package-lock.json
   project_metadata: pyproject.toml
   runtime_configuration: config/*.toml
@@ -128,3 +129,28 @@ independent_research:
   selection_mode: AI_AUTONOMOUS_WITHIN_RESEARCH_BOUNDARY
   question_record: 对应 research/** 研究材料
   product_effects: NONE_UNTIL_OWNER_SELECTS_RESULT
+  environment:
+    python: 3.13.14
+    lock: research/requirements.txt
+    isolation: 与产品虚拟环境、依赖锁、运行时和构建身份分离
+  primary_framework:
+    name: vectorbt
+    version: 1.1.0
+    role: 适合数组或 bar 信号表达的问题的批量候选筛选、敏感性比较、初步组合模拟和分析
+    product_runtime_dependency: false
+    execution_semantics_authority: false
+  product_quant_core:
+    name: NautilusTrader
+    role: 唯一产品量化交易核心，以及候选进入产品后的事件、订单、成交与在线离线一致性验证
+  qualification:
+    checked_at: 2026-07-21
+    host: Windows 10 Pro 22H2 x64
+    result: vectorbt 1.1.0 在 Python 3.13.14 完成参数广播、rolling split、DSR、时间移位和费用滑点验证
+    isolation_reason: vectorbt 1.1.0 要求 pandas 3.x，产品当前因 NautilusTrader 兼容边界锁定 pandas 2.3.3
+    evidence: research/README.md、research/verify_vectorbt.py
+  handoff:
+    owner_selection_required: true
+    research_output: 框架无关的固定策略说明、小型输入与确定性决策轨迹
+    product_implementation: 在产品路径重新实现或审查纯策略逻辑，不导入 VectorBT 或研究目录
+    product_acceptance: 相同规范输入的决策一致性检查，以及 NautilusTrader 事件与执行语义验证
+    shared_runtime_or_cache: false

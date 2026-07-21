@@ -1,0 +1,12 @@
+{
+  "active_coin_m_with_comparable_usd_face_activity_proxy": 30,
+  "active_crypto_native_unrated_due_quote_conversion": 464,
+  "active_other_or_unclassified": 0,
+  "csv_sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+  "currently_trading_rows": 2109,
+  "market_integrity_review_is_due_diligence_not_a_finding": true,
+  "raw_sources_verified": 9,
+  "rows": 4520,
+  "status": "PASS",
+  "unique_market_symbol_keys": 4520
+}

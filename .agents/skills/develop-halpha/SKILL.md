@@ -56,6 +56,7 @@ Exhaust supported capabilities in existing dependencies before adding one. Do no
 3. Add only tests, migrations, configuration and diagnostics that the changed behavior needs.
 4. Keep secrets out of code, documents, ordinary logs, browsers and test artifacts. Never cause a real account or capital change without explicit authorization.
 5. Do not bypass environment isolation, durable action identity, the unique exchange-changing execution role, fact reconciliation, protection, stop or takeover behavior.
+6. For an owner-selected research candidate, read its framework-neutral handoff and current `HALPHA-ALP-002`/`HALPHA-ALP-003`. Implement or review the fixed decision logic in the product path without importing VectorBT, a Notebook, the research workspace or its cache; preserve the research fixture as evidence input, not a product runtime dependency.
 
 ### 6. Validate Proportionately
 
@@ -64,6 +65,7 @@ Exhaust supported capabilities in existing dependencies before adding one. Do no
 - **Executable UX:** inspect the affected route, states and viewports in a real browser when visual or interaction behavior changed.
 - **L4 or real-account-action-state change:** run the general documentation validator and the small governance validator.
 - **Core trading change:** exercise normal behavior, the critical counterexample, duplicate/retry and stop or rollback in the closest authorized environment.
+- **Selected strategy handoff:** first compare the product decision with the research handoff trace on identical normalized inputs and cutoffs, then use NautilusTrader to validate event, order, fill, funding, margin and online/offline behavior. Separate unexplained decision drift from expected execution-model differences; do not enable the strategy while either remains unresolved.
 
 Treat targeted checks as iteration feedback, not final suite evidence. At the natural outcome boundary, run the complete relevant repository suites, including separately configured browser or qualification suites when they can exercise the affected path, and report skips and checks not run.
 
