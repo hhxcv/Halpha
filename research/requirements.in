@@ -1,3 +1,4 @@
 # Independent research dependencies. They do not enter the product runtime or build.
 # Compile only with Python 3.13.14 and pip-tools.
 vectorbt==1.1.0
+statsmodels==0.14.6

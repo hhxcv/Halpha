@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>BTC 市场关联监测</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">独立研究 · 非交易系统</p>
+          <h1>BTC 市场关联监测</h1>
+        </div>
+        <dl class="facts">
+          <div><dt>数据截止</dt><dd id="cutoff">—</dd></div>
+          <div><dt>下次检查</dt><dd id="next-refresh">—</dd></div>
+          <div><dt>宇宙快照</dt><dd id="universe-time">—</dd></div>
+          <div><dt>状态</dt><dd id="status" class="status">载入中</dd></div>
+        </dl>
+        <button id="refresh-button" class="refresh-button" type="button">立即检查</button>
+      </header>
+
+      <section class="cards" aria-label="摘要指标">
+        <article><span>合格对象</span><strong id="eligible">—</strong><small id="coverage">当前名单</small></article>
+        <article><span>统计显著</span><strong id="significant">—</strong><small>BY-FDR q≤0.05</small></article>
+        <article><span>强关联</span><strong id="strong">—</strong><small>|ρ|≥0.50 + 跨窗同号</small></article>
+        <article><span>中位 BTC β</span><strong id="median-beta">—</strong><small>365 日主窗口</small></article>
+      </section>
+
+      <section class="grid-main">
+        <article class="panel scatter-panel">
+          <div class="panel-head">
+            <div><p class="kicker">全覆盖视图</p><h2>相关性 × BTC β</h2></div>
+            <p id="scatter-scope">点大小 = 对 BTC 波动倍数</p>
+          </div>
+          <div id="scatter" class="chart" aria-label="Pearson 相关性与 BTC beta 散点图"></div>
+        </article>
+        <aside class="panel method-panel">
+          <div class="panel-head"><div><p class="kicker">解释边界</p><h2>口径与证据</h2></div></div>
+          <ul>
+            <li><b>已闭合 UTC 日线</b><span>不混入当日未完成 bar</span></li>
+            <li><b>365 日主窗口</b><span>最少 120 个共同日收益</span></li>
+            <li><b>HAC + BY-FDR</b><span>时间依赖与全币种多重检验</span></li>
+            <li><b>跨源锚点核对</b><span>Coin Metrics 日收盘只作稳健性检查</span></li>
+          </ul>
+          <p class="boundary">关联 ≠ 因果、领先关系、预测、策略或 Alpha。</p>
+        </aside>
+        <article class="panel rolling-panel">
+          <div class="panel-head">
+            <div><p class="kicker">时变性</p><h2><span id="selected-symbol">ETHUSDT</span> · 90 日滚动相关</h2></div>
+            <p id="rolling-scope">点击散点或表格切换</p>
+          </div>
+          <div id="rolling" class="chart rolling-chart" aria-label="90 日滚动 Pearson 相关图"></div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-head table-title">
+          <div><p class="kicker">完整结果，不只保留最佳项</p><h2>显著关联对象</h2></div>
+          <div class="filters">
+            <label><span>搜索</span><input id="search" type="search" placeholder="ETH / SOL / DOGE"></label>
+            <label class="check"><input id="strong-only" type="checkbox"><span>仅强关联</span></label>
+            <label><span>每页</span><select id="page-size"><option>25</option><option selected>50</option><option>100</option></select></label>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr id="table-head"></tr></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <footer class="table-footer"><span id="table-count">—</span><div><button id="prev-page" type="button">上一页</button><span id="page-label">—</span><button id="next-page" type="button">下一页</button></div></footer>
+      </section>
+
+      <section class="lower-grid">
+        <article class="panel compact"><div class="panel-head"><div><p class="kicker">独立价格来源</p><h2>跨源核对</h2></div></div><div id="crosschecks" class="evidence-list"></div></article>
+        <article class="panel compact"><div class="panel-head"><div><p class="kicker">不可静默丢失</p><h2>数据与失败状态</h2></div></div><div id="failures" class="evidence-list"></div></article>
+        <article class="panel compact"><div class="panel-head"><div><p class="kicker">结论限制</p><h2>使用前须知</h2></div></div><ul id="warnings" class="warnings"></ul></article>
+      </section>
+    </main>
+    <script src="/plotly.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

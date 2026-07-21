@@ -1,9 +1,9 @@
 ---
 name: research-halpha
-description: Select, run, and review Halpha strategy research for one valuable falsifiable question under research/**. Use when choosing a research direction from current project gaps, surveying current external research or mature methods, investigating a market mechanism, backtesting or comparing a strategy, resolving a difficult research problem, evaluating costs, robustness or economic evidence, reviewing earlier research, or preparing a selected result for product consideration. Keep research independent from product runtime and real-account trading, scale evidence to the claim, preserve failed attempts, and avoid duplicate or infrastructure-first work.
+description: Select, run, and review one valuable falsifiable Halpha market, mechanism, predictive, or strategy question under research/**. Use when analyzing market data or relationships, comparing instruments or regimes, investigating an economic mechanism, testing predictability, backtesting or comparing a strategy, evaluating costs or robustness, reviewing earlier research, or preparing a selected strategy result for product consideration. Route descriptive, comparative/mechanism, predictive, and strategy-candidate studies to different evidence standards; keep research independent from product runtime and real-account trading, preserve failed attempts, and avoid duplicate or infrastructure-first work.
 ---
 
-# Halpha Strategy Research
+# Halpha Market and Strategy Research
 
 ## Authority and Boundary
 
@@ -37,8 +37,11 @@ State:
 - the decision this result may inform;
 - one falsifiable question and the result that would count against it;
 - the comparison baseline;
+- one primary research kind based on the strongest intended claim: `DESCRIPTIVE`, `COMPARATIVE_OR_MECHANISM`, `PREDICTIVE`, or `STRATEGY_CANDIDATE`;
 - the intended claim strength: exploration, comparative evidence or product consideration;
 - the current data boundary and known previously viewed periods.
+
+Research kind routes the evidence and is not a maturity score. Use `DESCRIPTIVE` for facts bounded to the observed sample, including side-by-side sample statistics for multiple objects when no stable or generalizable difference is claimed. Use `COMPARATIVE_OR_MECHANISM` when a difference or ranking is intended to generalize beyond the observed sample, or when testing a possible mechanism; without an identification design it remains non-causal. Use `PREDICTIVE` when current inputs are claimed to inform a later outcome; use `STRATEGY_CANDIDATE` when fixed information becomes an actionable decision. Apply the highest relevant kind when a question mixes claims. Expanding a viewed descriptive result into a comparative, predictive or tradable claim requires an explicit question and evidence-gate update before opening new evaluation evidence.
 
 If the user request already defines the question, do not create another approval step, but still complete the prior-art survey. If a missing choice would materially change the result, keep only that choice unresolved; do not replace it with a generic research platform.
 
@@ -62,9 +65,9 @@ research/<question>/
 
 Reuse mature libraries already justified by the study. Add a dependency only when the exact experiment needs it and record how to reproduce the environment. Do not create a research database, service, scheduler, generic CLI suite, persistent worker, task registry, universal schema, custom sandbox or optimization platform without a demonstrated repeated bottleneck and a current consumer.
 
-When current L4 selects VectorBT and the question can be represented by arrays or bars, prefer its native indicators, parameter broadcasting, splitters, portfolio simulation and returns analysis over per-study implementations of those foundations. Use `Portfolio.from_signals` for simple state-compatible signals, `Portfolio.from_orders` for explicit order arrays, and `Portfolio.from_order_func` only when the required path dependence still fits VectorBT's documented model. If intrabar ordering, order-book state, venue behavior, margin or execution feedback can change the conclusion, use a conservative labeled proxy for exploration or route the study to NautilusTrader or another mature component instead of forcing VectorBT to be the execution truth.
+When current L4 selects VectorBT and the question can be represented by arrays or bars, prefer its native indicators, parameter broadcasting, splitters and returns analysis over per-study implementations of those foundations. Use Pandas, SciPy, statsmodels or another mature statistical library when correlation, regression, inference or another specialized method is the actual problem; add only the dependency the study needs. Do not create a Portfolio when no strategy action exists. For strategy work, use `Portfolio.from_signals` for simple state-compatible signals, `Portfolio.from_orders` for explicit order arrays, and `Portfolio.from_order_func` only when the required path dependence still fits VectorBT's documented model. If intrabar ordering, order-book state, venue behavior, margin or execution feedback can change a tradable conclusion, use a conservative labeled proxy for exploration or route the study to NautilusTrader or another mature component instead of forcing VectorBT to be the execution truth.
 
-Before viewing ranked batch results, fix the strategy family, asset universe, parameter ranges, comparison metric, cost cases and intended trial count. Save the full configuration-to-result table or its durable external identity, including failed and manually inspected variants; do not turn a large search into a sequence of unrecorded one-off scripts or retain only the winning column.
+Before viewing ranked batch results, fix the hypothesis or strategy family, asset universe, windows, transformations, parameters or models, comparison metric, applicable cost cases and intended trial count. Save the full configuration-to-result table or its durable external identity, including failed and manually inspected variants; do not turn a large search into a sequence of unrecorded one-off scripts or retain only the winning statistic or column.
 
 Keep generated bulk data out of Git when appropriate, but record its source, immutable identity or retrieval rule and expected location.
 
@@ -74,6 +77,13 @@ Before first revealing outcomes from an interval intended as untouched evaluatio
 
 Include only assumptions applicable to the decision, such as fees, funding, spread, slippage, latency, liquidity, capacity, position sizing and execution timing. Compare against a meaningful simple baseline and the strongest plausible alternative explanation.
 
+Route the minimum evidence by research kind:
+
+- For `DESCRIPTIVE`, fix the sample, definitions and estimator; report observations, missingness, outlier sensitivity, alternative definitions and uncertainty that preserves material time dependence. Side-by-side statistics for multiple objects remain descriptive when no stable or generalizable difference is claimed. Do not require a holdout, costs or a backtest for a claim explicitly bounded to the observed sample, and do not infer causality, predictability or tradability.
+- For `COMPARATIVE_OR_MECHANISM`, fix the objects, metrics and grouping; test subperiod, regime and reasonable-definition stability and the strongest alternative explanation when a difference or ranking is intended to generalize, or when studying a possible mechanism. Without a proportionate identification design, report association or mechanism-consistent evidence rather than causality.
+- For `PREDICTIVE`, fix available inputs, prediction time, target, baseline and metric; use an untouched time interval or forward-only evaluation, and account for leakage and the full feature, model, window and metric search with a proportionate multiple-comparison or selection-bias method.
+- For `STRATEGY_CANDIDATE`, fix signal and next actionable time; add applicable fees, funding, spread/slippage, liquidity, capacity, sizing and execution limits. Route execution-sensitive semantics to a suitable mature component.
+
 Use the current product strategy as a comparison only when an exact replay or a bounded, explicitly labeled proxy is both fair and decision-relevant. Do not build a research-side second product implementation merely to force the comparison. If a comparable replay is unavailable or disproportionate, state that comparison as unknown or not run.
 
 Preserve all material attempts, parameter searches, failures and condition changes. Never report only the best run. Mark exploratory tuning and later evaluation separately, and prevent overlap or future information from silently crossing the boundary.
@@ -82,9 +92,9 @@ If the fixed development gate fails, stop by default and preserve the untouched 
 
 When a nontrivial implementation or interpretation problem could affect the study, search current original research, official documentation, source code and documented issues before inventing a workaround. Check versions, assumptions and context; record the useful lead, what was tried and why it applies or does not apply. If no reliable answer is available, preserve the unknown or weaken the claim rather than guessing past it.
 
-Read [Research Method and Evidence](references/research-method-and-evidence.md) in full when the result may influence product strategy selection or capital use, when many candidates or parameters are searched, or when holdout, walk-forward, robustness or previously viewed data affect the claim.
+Read [Research Method and Evidence](references/research-method-and-evidence.md) in full when the study is not a simple fixed-sample description, when the result may influence product strategy selection or capital use, when many hypotheses, assets, metrics, models, candidates or parameters are searched, or when holdout, walk-forward, robustness or previously viewed data affect the claim.
 
-For comparative evidence or product consideration, use the least sufficient independent-time design: an untouched final interval for a fixed rule, or rolling/expanding walk-forward when the rule includes repeated re-selection. Use VectorBT's splitters when they match the time contract. When many comparable trials were searched and Sharpe is meaningful, report a selection-bias-aware statistic such as VectorBT's Deflated Sharpe Ratio; disclose the actual total search and justify the independent or effective trial count used by the statistic, including a sensitivity bound when correlation makes it uncertain. Use PBO, purging or embargo only when overlapping labels, broad selection and enough observations make them decision-relevant. None of these checks rescues weak economics, missing costs or a revealed holdout.
+For predictive research, strategy candidates, or comparative/mechanism claims intended to generalize beyond the observed sample, use the least sufficient independent-time design: an untouched final interval for a fixed method, or rolling/expanding walk-forward when the method includes repeated re-selection. Use VectorBT's splitters when they match the time contract. Apply an error-rate, false-discovery or selection-bias method appropriate to the searched metric and dependency structure. When Sharpe is meaningful, this can include VectorBT's Deflated Sharpe Ratio; disclose the actual total search and justify the independent or effective trial count, including a sensitivity bound when correlation makes it uncertain. Use PBO, purging or embargo only when overlapping labels, broad selection and enough observations make them decision-relevant. None of these checks rescues weak economics, missing applicable costs or a revealed holdout.
 
 ### 6. Reproduce and Report Honestly
 
@@ -97,18 +107,18 @@ Conclude with exactly one bounded result:
 - `INSUFFICIENT_EVIDENCE`
 - `CANNOT_DETERMINE`
 
-Explain the scope, strongest support, strongest counterevidence, costs, sensitivity, known leakage or exposure, and what new evidence could change the conclusion. A profitable backtest, model score or single live outcome never proves future Alpha.
+Explain the scope, strongest support, strongest counterevidence, applicable costs or other real constraints, sensitivity, known leakage or exposure, and what new evidence could change the conclusion. A historical association, profitable backtest, model score or single live outcome never proves causality, stable predictability or future Alpha.
 
-### 7. Hand Off Without Product Effect
+### 7. Hand Off a Selected Strategy Without Product Effect
 
 Research completion does not update the product strategy, trading plan, funds, credentials, build identity or real-account trading state. Only a project-owner selection can start a product change.
 
-For a result intended for possible selection, keep a framework-neutral handoff in the existing study materials: fixed strategy identity and parameters; instruments, bar or event inputs and warmup; decision and fill timing; sizing, entry, exit, protection and unknown/no-action rules; assumed costs and unsupported facts; and a compact deterministic input-to-decision trace. The trace describes signals, target exposure or strategy proposals, not VectorBT object state or simulated fills.
+Only a `STRATEGY_CANDIDATE` intended for possible owner selection needs a framework-neutral handoff in the existing study materials: fixed strategy identity and parameters; instruments, bar or event inputs and warmup; decision and fill timing; sizing, entry, exit, protection and unknown/no-action rules; assumed costs and unsupported facts; and a compact deterministic input-to-decision trace. The trace describes signals, target exposure or strategy proposals, not VectorBT object state or simulated fills. Descriptive, comparative/mechanism and predictive results may inform later questions but are not product strategy handoffs by themselves.
 
 When selected and authorized, reimplement or review the fixed decision logic in the product path without importing VectorBT or the research workspace. Use `develop-halpha` to compare the product logic with the handoff trace on identical normalized inputs, then qualify event, order, fill, funding, margin and online/offline behavior in NautilusTrader using the same public data identity where proportionate. Unexplained decision differences block the handoff; expected execution-result differences are recorded and judged under NautilusTrader. Never dynamically load research code as a product fallback.
 
 ## Delivery
 
-Report the question, data boundary, exact artifacts and command, actual attempts, conclusion, counterevidence, reproducibility result and remaining unknowns. Distinguish newly created evidence from earlier files and say what was not run. Report whether the research artifacts are Git-tracked and how external caches are retained; describe untracked artifacts only as retained in the current worktree, not as durable Git history.
+Report the research kind, strongest claim, question, data boundary, exact artifacts and command, actual attempts, conclusion, counterevidence, reproducibility result and remaining unknowns. Distinguish newly created evidence from earlier files and say what was not run or did not apply. Report whether the research artifacts are Git-tracked and how external caches are retained; describe untracked artifacts only as retained in the current worktree, not as durable Git history.
 
 Do not claim quality from experiment count, framework size or procedural formality.
