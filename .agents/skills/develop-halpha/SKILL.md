@@ -1,6 +1,6 @@
 ---
 name: develop-halpha
-description: Guide Halpha implementation, testing, refactoring, dependency checks, builds, runtime configuration, direct operational validation, product-closure audits, and design-to-code traceability. Use when developing or modifying Halpha code, migrations, builds, configuration, tests, or runtime checks; auditing actual business progress, runtime reachability, mechanism or dependency complexity, and the next smallest useful slice; or handling implementation evidence that exposes a suspected L0–L4 design error or conflict.
+description: Guide Halpha implementation, test design and suite audits, refactoring, dependency checks, builds, runtime configuration, direct operational validation, product-closure audits, and design-to-code traceability. Use when developing or modifying Halpha code, migrations, builds, configuration, tests, fixtures, or runtime checks; reviewing test value, coverage, critical paths, over-testing, or suite reliability; auditing actual business progress, runtime reachability, mechanism or dependency complexity, and the next smallest useful slice; or handling implementation evidence that exposes a suspected L0–L4 design error or conflict.
 ---
 
 # Halpha Development
@@ -11,7 +11,7 @@ Use the current files in `docs/L0`–`docs/L4` for product semantics and the cur
 
 Read [Design Navigation](references/design-navigation.md) in full for every development task. If implementation evidence conflicts with design, also read [Design Inconsistency Protocol](references/design-inconsistency.md). Use `write-halpha-docs` for formal document changes.
 
-For progress, readiness, next-step or mechanism-complexity audits, read [Product Closure Audit](references/product-closure-audit.md) in full. Do not count documentation, a class, a passing unit test or a qualification utility as a product capability until its actual runtime consumer and user-visible result are established.
+For progress, readiness, next-step, mechanism-complexity or test-value audits, read [Product Closure Audit](references/product-closure-audit.md) in full. Do not count documentation, a class, a passing unit test or a qualification utility as a product capability until its actual runtime consumer and user-visible result are established.
 
 Use the least process that preserves correctness. Early, local and reversible work defaults to ordinary Git, direct tests and a short handoff. Add process only for current irreversible effects, real-account trading actions, meaningful concurrency, repeated failures or a decision that actually consumes extra evidence.
 
@@ -45,7 +45,9 @@ Do not turn the contract into a new status model, approval chain or evidence obj
 
 ### 4. Reuse Before Building
 
-Check a component only when adding, replacing or materially changing it. Verify the current pinned choice against first-party contracts and the target machine to the depth needed by the decision. Prefer direct use, then a small adapter, then the smallest Halpha supplement; explicitly leave a capability unsupported when its maintenance cost exceeds current value. Keep one implementation and one source of truth.
+Before designing or implementing a new capability, apply the dependency-selection order owned by HALPHA-ENG-001: use the current pinned components directly, then assess another mature component, then use supported composition, extension, bounded customization or a thin adapter, and choose a complete Halpha implementation only after those options cannot meet the current result. Check a component only when adding, replacing or materially changing it. Verify the current pinned choice against first-party contracts and the target machine to the depth needed by the decision.
+
+Exhaust supported capabilities in existing dependencies before adding one. Do not introduce a large component for a small capability when its transitive, configuration, testing, runtime, upgrade, recovery and exit costs exceed a bounded Halpha implementation. For high-stability, high-performance or complex foundations, especially the quantitative trading core, understand and reuse the mature framework's relevant design and extension points instead of rebuilding its foundation. Keep one implementation and one source of truth; explicitly leave a capability unsupported when its maintenance cost exceeds current value.
 
 ### 5. Implement the Authorized Result
 
@@ -62,6 +64,17 @@ Check a component only when adding, replacing or materially changing it. Verify 
 - **Executable UX:** inspect the affected route, states and viewports in a real browser when visual or interaction behavior changed.
 - **L4 or real-account-action-state change:** run the general documentation validator and the small governance validator.
 - **Core trading change:** exercise normal behavior, the critical counterexample, duplicate/retry and stop or rollback in the closest authorized environment.
+
+Treat targeted checks as iteration feedback, not final suite evidence. At the natural outcome boundary, run the complete relevant repository suites, including separately configured browser or qualification suites when they can exercise the affected path, and report skips and checks not run.
+
+#### Keep Tests Valuable
+
+- Start from a current user result, authority boundary or failure mode. Use the lowest-cost layer that proves it, and add a direct-consumer or integration check when behavior crosses a process, persistence, framework or browser boundary. Test count and blanket coverage are not goals.
+- Before adding or retaining a case, find the production consumer and existing coverage. Extend an existing scenario when it proves the same risk; delete a test with a mechanism that has no current consumer instead of preserving self-validating code.
+- Assert durable semantics such as state transitions, reason codes, persisted identities, authoritative facts and accessible roles. Avoid exact source text, private call topology, file-membership lists and whole UI sentences unless that representation is itself the contract.
+- Classify a failure from direct evidence as a product regression, fixture or interface drift, or a stale expectation before changing code or relaxing an assertion.
+- Keep mutating fixtures on isolated environments, databases and ports. Match current interfaces, replace external dependencies with deterministic bounded providers, exclude real credentials and exchange-changing effects, clean up on success and failure, and never point them at an active Demo or live product instance.
+- Treat fixture, tool and qualification success as evidence for only the path they exercise; do not use it to claim product closure or replace the closest authorized runtime check.
 
 Use elapsed observation only when a current release, deployment or real-capital decision needs behavior that direct tests cannot establish. Waiting remains read-only and creates no permanent role or project state. When evidence arrives, verify its source, inputs, time and scope before using it.
 

@@ -371,13 +371,3 @@ class ForwardObservationEvidence:
             }
         )
         self._closed = True
-
-
-def percentile_five(values: list[Decimal]) -> Decimal | None:
-    """Return the conservative nearest-rank fifth percentile."""
-
-    if not values:
-        return None
-    ordered = sorted(values)
-    index = max(0, (len(ordered) * 5 + 99) // 100 - 1)
-    return ordered[index]

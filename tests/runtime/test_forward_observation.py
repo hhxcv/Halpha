@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
 import json
 from types import SimpleNamespace
 
@@ -14,7 +13,6 @@ from halpha.executor.forward_observation import (
     ForwardObservationEvidence,
     ForwardObservationError,
     ForwardObservationSpec,
-    percentile_five,
     require_forward_observation_source_identity,
 )
 from halpha.planning.registry import OneShotParameters
@@ -223,8 +221,3 @@ def test_forward_observation_runtime_rejects_frozen_source_drift(
         match="FORWARD_OBSERVATION_SOURCE_IDENTITY_DRIFT",
     ):
         require_forward_observation_source_identity(tmp_path, spec)
-
-
-def test_percentile_five_uses_conservative_nearest_rank() -> None:
-    assert percentile_five([]) is None
-    assert percentile_five([Decimal(value) for value in ("5", "1", "3", "2", "4")]) == Decimal("1")
