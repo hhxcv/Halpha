@@ -2,7 +2,7 @@
 
 ## 状态与边界
 
-- 研究目录：`research/btcusdt-next-funding-carry/`
+- 研究目录：`research/studies/legacy/2026/btcusdt-next-funding-carry/`
 - 稳定产品基准提交：`de6b3052f28fe547730e89e58186d4ab397884b1`
 - 固定正式策略身份：`ONE_SHOT_DONCHIAN_ATR_BREAKOUT` `1.0.0`
 - 正式策略实现摘要（该提交）：`66299533bb4a7fb56efe52e2ffb9fad281d4b29f0fe9cdb47049115d3323d32e`

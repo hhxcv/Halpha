@@ -14,7 +14,7 @@
 
 ## 继承证据、候选与选择
 
-`research/binance-positive-funding-cash-carry/` 固定 3 bp 在 BTC 开发 +23.13%、BTC 评价 +5.35%、BNB 确认 +9.04%，但 BTC 2025 无交易、BNB 后四年小负，结论 `INSUFFICIENT_EVIDENCE`。它说明方向对冲与阈值有潜力，也说明单次高 funding 入场会产生许多不足以覆盖 round trip 的短 episode。
+`research/studies/legacy/2026/binance-positive-funding-cash-carry/` 固定 3 bp 在 BTC 开发 +23.13%、BTC 评价 +5.35%、BNB 确认 +9.04%，但 BTC 2025 无交易、BNB 后四年小负，结论 `INSUFFICIENT_EVIDENCE`。它说明方向对冲与阈值有潜力，也说明单次高 funding 入场会产生许多不足以覆盖 round trip 的短 episode。
 
 | 候选 | 未解决差异 | 个人/小资金适配 | 取舍 |
 |---|---|---|---|

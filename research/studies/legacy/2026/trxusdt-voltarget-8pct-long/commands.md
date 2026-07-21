@@ -3,12 +3,12 @@
 以下命令从仓库根目录在 PowerShell 中执行。开发与评估是已披露的校准证据；只有确认阶段是全新留出证据。命令只使用公开现货日线数据，不接触产品运行时或账户。
 
 ```powershell
-$q = 'research/trxusdt-voltarget-8pct-long'
+$q = 'research/studies/legacy/2026/trxusdt-voltarget-8pct-long'
 $developmentCache = 'D:/projects/Codex/CodexHome/research-data/halpha/trxusdt-spot-monthly-tsmom'
 $evaluationCache = 'D:/projects/Codex/CodexHome/research-data/halpha/trxusdt-voltarget-monthly-tsmom'
 $confirmationCache = 'D:/projects/Codex/CodexHome/research-data/halpha/trxusdt-voltarget-8pct-long'
-$developmentManifest = 'research/trxusdt-spot-monthly-tsmom/source_manifest_development.json'
-$evaluationManifest = 'research/trxusdt-voltarget-monthly-tsmom/source_manifest_evaluation.json'
+$developmentManifest = 'research/studies/legacy/2026/trxusdt-spot-monthly-tsmom/source_manifest_development.json'
+$evaluationManifest = 'research/studies/legacy/2026/trxusdt-voltarget-monthly-tsmom/source_manifest_evaluation.json'
 
 python "$q/study.py" analyze --cache-dir $developmentCache --manifest $developmentManifest --phase development --output "$q/development.json"
 python "$q/study.py" analyze --cache-dir $evaluationCache --manifest $evaluationManifest --phase evaluation --output "$q/evaluation.json"

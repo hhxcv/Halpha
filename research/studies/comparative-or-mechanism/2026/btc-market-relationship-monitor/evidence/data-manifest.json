@@ -1,6 +1,6 @@
 {
-  "source_manifest_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btc-market-relationship-monitor\\snapshots\\2026-07-21T105121Z\\source-manifest.json",
-  "source_manifest_sha256": "d0db492cc504bde73dde5dda8ff9524786cba5695cac098cab6c185ee62462a5",
+  "source_manifest_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btc-market-relationship-monitor\\snapshots\\2026-07-21T122958Z\\source-manifest.json",
+  "source_manifest_sha256": "4e4313870e682689d3e42b6a986ddc65f14fc6a3c77757b87374428f6a554793",
   "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btc-market-relationship-monitor",
   "universe": {
     "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",

@@ -2,7 +2,7 @@
   "question": "Which current Binance Spot USDT crypto assets are significantly and strongly associated with BTC?",
   "research_type": "COMPARATIVE_OR_MECHANISM",
   "method_version": "1.0.0",
-  "generated_at_utc": "2026-07-21T10:52:12.774Z",
+  "generated_at_utc": "2026-07-21T12:30:50.454Z",
   "data_cutoff_utc": "2026-07-20T23:59:59.999Z",
   "universe": {
     "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",

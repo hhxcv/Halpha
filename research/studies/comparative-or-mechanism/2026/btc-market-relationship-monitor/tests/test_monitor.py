@@ -105,6 +105,16 @@ class MonitorTests(unittest.TestCase):
         self.assertLess(events.index("server_bound"), events.index("refresh_started"))
         self.assertEqual(events[-1], "server_closed")
 
+    def test_live_results_fall_back_to_fixed_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            live = Path(directory) / "live"
+            state = monitor.MonitorState(Path(directory), live, 900, 1)
+            self.assertEqual(state.result_path("summary.json"), monitor.EVIDENCE_DIR / "summary.json")
+            live.mkdir()
+            current = live / "summary.json"
+            current.write_text("{}", encoding="utf-8")
+            self.assertEqual(state.result_path("summary.json"), current)
+
 
 if __name__ == "__main__":
     unittest.main()

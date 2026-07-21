@@ -10,9 +10,9 @@
 
 ```powershell
 $cache = 'D:/projects/Codex/CodexHome/research-data/halpha/binance-positive-funding-cash-carry'
-$manifest = 'research/binance-positive-funding-cash-carry/source_manifest_btc_evaluation.json'
-python research/btcusdt-continuous-cash-carry/study.py analyze --cache-dir $cache --source-manifest $manifest --phase development --output research/btcusdt-continuous-cash-carry/development.json
-python research/btcusdt-continuous-cash-carry/study.py qualify-development --input research/btcusdt-continuous-cash-carry/development.json --output research/btcusdt-continuous-cash-carry/development_gate.json
+$manifest = 'research/studies/legacy/2026/binance-positive-funding-cash-carry/source_manifest_btc_evaluation.json'
+python research/studies/legacy/2026/btcusdt-continuous-cash-carry/study.py analyze --cache-dir $cache --source-manifest $manifest --phase development --output research/studies/legacy/2026/btcusdt-continuous-cash-carry/development.json
+python research/studies/legacy/2026/btcusdt-continuous-cash-carry/study.py qualify-development --input research/studies/legacy/2026/btcusdt-continuous-cash-carry/development.json --output research/studies/legacy/2026/btcusdt-continuous-cash-carry/development_gate.json
 ```
 
 后一阶段必须传入前一门控文件且其中 `holdout_authorized=true`。缓存留在 Git 外，研究目录记录 manifest 内容身份、SHA-256、文件数、字节数和官方重取来源。

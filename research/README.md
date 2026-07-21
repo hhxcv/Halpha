@@ -2,7 +2,35 @@
 
 更新于 2026-07-21。下述 32 个历史问题共同采用产品基准提交 `de6b3052f28fe547730e89e58186d4ab397884b1` 和当时正式策略身份 `ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 / BTCUSDT-PERP`；新问题必须在自身材料中另行记录开题时的当前产品基准与策略身份，不能沿用这里的历史值。
 
-当前共有 33 个完成问题：4 个 `SUPPORTS_WITHIN_SCOPE`、12 个 `DOES_NOT_SUPPORT`、17 个 `INSUFFICIENT_EVIDENCE`。每个子目录保留 checkpoint、来源、数据身份、代码/命令、实际尝试、门、结果与限制；大型公开数据和重演输出在 `D:/projects/Codex/CodexHome/research-data/halpha/`。机器可读查重清单见 `catalog.json`，其中保存每个最终结果文件 SHA-256；历史默认基准只适用于未单独覆盖身份的旧条目。
+截至 2026-07-21 的冻结快照共有 33 个完成问题：4 个 `SUPPORTS_WITHIN_SCOPE`、12 个 `DOES_NOT_SUPPORT`、17 个 `INSUFFICIENT_EVIDENCE`。每个问题目录保留 checkpoint、来源、数据身份、代码/命令、实际尝试、门、结果与限制；大型公开数据和重演输出在 `D:/projects/Codex/CodexHome/research-data/halpha/`。历史完整性快照见 `catalog-2026-07-21.json`，其中保存每个最终结果文件 SHA-256；它不再承担新研究登记、状态管理或实时计数。
+
+## 目录契约
+
+具体问题统一放在 `studies/<research-kind>/<opening-year>/<question-slug>/`。物理目录只表达主要研究类型与开题年份；机制、对象、场所、数据区间、父问题和结论由问题自己的 README/checkpoint 记录并通过文本检索发现。
+
+```text
+research/
+├─ README.md
+├─ requirements.in
+├─ requirements.txt
+├─ verify_vectorbt.py
+├─ market-universe/
+└─ studies/
+   ├─ legacy/2026/<historical-question>/
+   ├─ descriptive/<year>/<question>/
+   ├─ comparative-or-mechanism/<year>/<question>/
+   ├─ predictive/<year>/<question>/
+   └─ strategy-candidate/<year>/<question>/
+```
+
+- `legacy/2026/` 保存研究类型分流建立前的 32 个历史问题；只迁移物理路径，不追认类型、不改写证据或结论。
+- 已经查看结果后扩大主张时，新建更高门槛的问题并引用父问题，不移动旧问题冒充原始预注册。
+- 不按 `active/completed/failed/supported` 建目录；结论不是工作流状态，一个问题也不因状态变化反复移动。
+- 不按币种或主观策略主题建唯一归属；多资产和多机制问题通过自身身份说明与 `rg` 查找。
+- `requirements*`、`verify_vectorbt.py` 和 `market-universe/` 是稳定公共入口，保持在 research 根。
+- 持续监控的固定 cutoff 证据进入问题目录 `evidence/`；反复刷新的最新状态和大型缓存放在 Git 外，不持续修改已完成证据。
+
+`studies/` 的具体开题、命名和迁移规则见其 README。
 
 ## 研究类型与证据分流
 
@@ -38,7 +66,7 @@ research/.venv/Scripts/python.exe research/verify_vectorbt.py
 
 ## 方法审计与新研究用法
 
-2026-07-21 对此前 32 个完成问题的审计发现：31 个已经同时保留 attempts、checkpoint、results 和 study/README，现有留出、失败留存、成本压力和数据身份原则应继续保留；但当时的研究没有实际使用 VectorBT，跨问题的总搜索范围、完整候选分布和选择偏差尚未系统记录，支持候选也没有框架无关的决策轨迹可直接核对产品实现。旧研究不批量迁移或改写历史结果，新方法只用于新问题或真正需要重演的旧问题。
+2026-07-21 对此前 32 个完成问题的审计发现：31 个已经同时保留 attempts、checkpoint、results 和 study/README，现有留出、失败留存、成本压力和数据身份原则应继续保留；但当时的研究没有实际使用 VectorBT，跨问题的总搜索范围、完整候选分布和选择偏差尚未系统记录，支持候选也没有框架无关的决策轨迹可直接核对产品实现。本次仅把这些问题机械移动到 `studies/legacy/2026/`，没有重演、重新分类或改写历史结果；新方法只用于新问题或真正需要重演的旧问题。
 
 新研究采用最小但更深入的路径：
 
@@ -56,7 +84,7 @@ research/.venv/Scripts/python.exe research/verify_vectorbt.py
 
 `market-universe/` 保存 Binance Spot、USDⓈ-M 和 COIN-M 官方公开接口的当前完整快照、Git 外原始响应身份、临时活动筛选与分类研究方法。它把原生加密、stable/fiat-relative、tokenized commodity、TradFi commodity/equity/fund/pre-market perpetual 分开，并按对象身份、工具结构、30–90 日市场质量、历史时点和策略证据五道门指引研究；24 小时档位只用于发现候选，不是产品白名单、主流/长期流动性结论或操纵认定。每个具体问题仍须在 checkpoint 中固定当时采用的 universe 版本和筛选规则。
 
-## 三个已支持候选
+## 2026-07-21 已支持候选快照
 
 1. `mature-alt-continuous-cash-carry-basket`：DOGE/XRP/ADA 等资本连续 fully-funded cash-and-carry 六腿篮子。全新 2024–2025-08 确认 base/stress +14.09%/+13.93%，stress 扣 4% 年化门后 +7.25%，回撤 -0.37%。限制：资金与六腿门槛最高；确认止于 2025-08，后续 XRP/SOL 单对研究显示 2025 后 funding 明显压缩，因此不能视为当前收益保证。
 2. `trxusdt-voltarget-8pct-long`：TRX 现货 always-long，60 日已实现波动目标 8%、月度、最大 0.5x。全新 2025–2026-06 确认 base/stress +6.95%/+6.65%，stress 扣门后 +0.58%，回撤 -7.21%。限制：只有确认阶段全新、资本门后余量薄、单币/治理/场所风险集中；这是 risk-managed beta，不是 Alpha。
@@ -66,6 +94,15 @@ research/.venv/Scripts/python.exe research/verify_vectorbt.py
 
 ## 查重原则
 
-- 开题前先查 `catalog.json` 与相近目录；同一资产/机制的仓位缩放、阈值或回看期变体必须声明父问题和已暴露数据。
+- 开题前按机制、对象/场所、数据时期、问题和结论扫描 `studies/**`；同一资产/机制的仓位缩放、阈值或回看期变体必须声明父问题和已暴露数据。冻结 catalog 只用于核对迁移前 33 个结果身份，不替代当前目录扫描。
 - `DOES_NOT_SUPPORT` 不因换一个近邻参数而重开；`INSUFFICIENT_EVIDENCE` 只在出现真正新数据、独立机制或明确运营简化问题时继续。
 - 以后若需产品化，必须由项目所有者明确选中并另开产品任务；先补最小订单、实时 spread/同步成交、保证金/强平、场所/发行人风险和小额 shadow/paper evidence。
+
+常用查重命令：
+
+```powershell
+rg -n "funding|carry" research/studies
+rg -n "COMPARATIVE_OR_MECHANISM|PREDICTIVE|STRATEGY_CANDIDATE" research/studies
+rg -n "DOES_NOT_SUPPORT|INSUFFICIENT_EVIDENCE" research/studies
+rg -n "BTCUSDT|Binance" research/studies
+```

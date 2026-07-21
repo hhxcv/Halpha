@@ -15,9 +15,9 @@
 
 ```powershell
 $cache = 'D:/projects/Codex/CodexHome/research-data/halpha/binance-positive-funding-cash-carry'
-$manifest = 'research/binance-positive-funding-cash-carry/source_manifest_btc_evaluation.json'
-python research/btcusdt-perp-multihorizon-long-short/study.py analyze --cache-dir $cache --source-manifest $manifest --phase development --output research/btcusdt-perp-multihorizon-long-short/development.json
-python research/btcusdt-perp-multihorizon-long-short/study.py qualify-development --input research/btcusdt-perp-multihorizon-long-short/development.json --output research/btcusdt-perp-multihorizon-long-short/development_gate.json
+$manifest = 'research/studies/legacy/2026/binance-positive-funding-cash-carry/source_manifest_btc_evaluation.json'
+python research/studies/legacy/2026/btcusdt-perp-multihorizon-long-short/study.py analyze --cache-dir $cache --source-manifest $manifest --phase development --output research/studies/legacy/2026/btcusdt-perp-multihorizon-long-short/development.json
+python research/studies/legacy/2026/btcusdt-perp-multihorizon-long-short/study.py qualify-development --input research/studies/legacy/2026/btcusdt-perp-multihorizon-long-short/development.json --output research/studies/legacy/2026/btcusdt-perp-multihorizon-long-short/development_gate.json
 ```
 
 仅当前一门的 JSON 中 `holdout_authorized=true` 时，才可把该文件作为 `--authorization` 运行下一阶段。大型原始数据不复制；锁定 manifest、官方 URL、逐文件 SHA-256、总文件数和字节数使其可核验与重取。
