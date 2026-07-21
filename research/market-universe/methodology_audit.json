@@ -1,0 +1,110 @@
+{
+  "conclusion": "SUPPORTS_WITHIN_SCOPE",
+  "current_profile": {
+    "activity_tiers": {
+      "A1_TOP_10PCT_PROVISIONAL_24H": 160,
+      "A2_10_TO_40PCT_PROVISIONAL_24H": 481,
+      "A3_40_TO_80PCT_PROVISIONAL_24H": 643,
+      "A4_BOTTOM_20PCT_PROVISIONAL_24H": 322,
+      "UNRATED_REQUIRES_QUOTE_CONVERSION_OR_ACTIVITY_PROXY": 503
+    },
+    "coin_m_face_activity_proxy_crosscheck": {
+      "matched_tickers": 30,
+      "max_relative_difference_vs_base_volume_x_weighted_average_price": 0.0001786122375218163,
+      "median_relative_difference_vs_base_volume_x_weighted_average_price": 1.261226748407075e-08
+    },
+    "crypto_native_unrated_pending_quote_conversion": 464,
+    "default_crypto_native_taxonomy_rows": 1871,
+    "economic_exposure_source": {
+      "CURRENT_INSTRUMENT_OFFICIAL_METADATA": 136,
+      "DEFAULT_CRYPTO_NATIVE_AFTER_EXPLICIT_EXCLUSIONS": 1871,
+      "EXPLICIT_BTC_ETH_MODELING_ROLE": 48,
+      "EXPLICIT_ISSUER_AND_REFERENCE_MAPPING": 14,
+      "EXPLICIT_STABLE_OR_FIAT_MAPPING": 40
+    },
+    "market_integrity_review": {
+      "ENHANCED_DUE_DILIGENCE": 729,
+      "FORENSIC_EVIDENCE_REQUIRED_FOR_INTEGRITY_CLAIMS": 214,
+      "STANDARD_DUE_DILIGENCE": 1166
+    },
+    "nulls_by_market": {
+      "BINANCE_COIN_M": {
+        "missing_activity_proxy": 0,
+        "missing_onboard_date": 0,
+        "missing_top_of_book_spread": 0,
+        "rows": 30
+      },
+      "BINANCE_SPOT": {
+        "missing_activity_proxy": 502,
+        "missing_onboard_date": 1366,
+        "missing_top_of_book_spread": 1,
+        "rows": 1366
+      },
+      "BINANCE_USD_M": {
+        "missing_activity_proxy": 1,
+        "missing_onboard_date": 0,
+        "missing_top_of_book_spread": 0,
+        "rows": 713
+      }
+    },
+    "research_buckets": {
+      "CRYPTO_ALT_HIGHER_ACTIVITY_PROVISIONAL": 505,
+      "CRYPTO_ALT_LOWER_ACTIVITY_PROVISIONAL": 263,
+      "CRYPTO_ALT_MARKET_QUALITY_UNRATED": 464,
+      "CRYPTO_ALT_MID_ACTIVITY_PROVISIONAL": 594,
+      "CRYPTO_ALT_NEW_OR_EVENT_DRIVEN": 45,
+      "CRYPTO_ANCHOR_REFERENCE": 48,
+      "STABLE_OR_FIAT_RELATIVE": 40,
+      "TOKENIZED_COMMODITY": 14,
+      "TRADFI_COMMODITY_PERP": 8,
+      "TRADFI_EQUITY_OR_FUND_PERP": 126,
+      "TRADFI_PREMARKET_PERP": 2
+    },
+    "tradfi_equity_or_fund_pending_reference_identity": 126
+  },
+  "input": {
+    "all_rows": 4520,
+    "csv_sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+    "currently_trading_rows": 2109,
+    "snapshot_id": "2026-07-21T064230Z"
+  },
+  "intended_use": "current-instrument discovery and research-method routing only",
+  "invariants": {
+    "coin_m_face_activity_proxy_crosschecks_raw_ticker_fields": true,
+    "coin_m_has_comparable_usd_face_activity_proxy": true,
+    "csv_hash_reconciles": true,
+    "current_market_symbol_key_unique": true,
+    "no_discovery_bucket_claims_liquidity_or_speculation": true,
+    "summary_active_count_reconciles": true,
+    "summary_row_count_reconciles": true,
+    "tradfi_equity_fund_requires_identity_gate": true,
+    "unconverted_quote_activity_does_not_imply_thinness": true
+  },
+  "not_supported_uses": [
+    "historical point-in-time cross-sectional universe",
+    "long-term liquidity or capacity conclusion",
+    "manipulation finding",
+    "strategy profitability or Alpha conclusion",
+    "automatic product eligibility"
+  ],
+  "pre_revision_evidence": {
+    "active_non_dollar_like_or_uncomparable_rows": 590,
+    "coin_m_non_anchor_rows_then_labeled_crypto_speculative_or_thin": 24,
+    "coin_m_rows_missing_quote_volume": 30,
+    "csv_sha256": "d4284afb113b8bf7f8569d3f81c20dd7e83669b1b77c5c06e9353865b647bcb3",
+    "rows_then_labeled_crypto_speculative_or_thin": 534,
+    "smallest_forced_percentile_group_rows": 3,
+    "spot_rows_missing_onboard_date": 1366,
+    "spot_rows_then_labeled_crypto_liquid_alt": 304
+  },
+  "remaining_material_limits": [
+    "The snapshot is current-state only; point-in-time membership and delisting history are absent.",
+    "Activity tiers use one rolling 24-hour window and one top-of-book snapshot; each study must confirm 30-90 day persistence, costs and intended-order-size impact.",
+    "Spot exchangeInfo has no onboard date and no authoritative economic taxonomy.",
+    "Default CRYPTO_NATIVE exposure is an explicit exclusion-based fallback, not official asset taxonomy.",
+    "TradFi equity/fund instruments remain blocked until the reference product type and corporate-action treatment are verified.",
+    "Market-integrity review levels define evidence requirements and cannot establish manipulation."
+  ],
+  "status": "PASS_WITH_SCOPE_LIMITS",
+  "validation_rating": "READY_FOR_DISCOVERY_ROUTING_WITH_CAVEATS_NOT_READY_AS_A_HISTORICAL_RESEARCH_UNIVERSE"
+}

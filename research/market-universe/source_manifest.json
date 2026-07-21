@@ -1,0 +1,137 @@
+{
+  "generation_mode": "RAW_CACHE_REPLAY",
+  "normalized_outputs": [
+    {
+      "bytes": 3383646,
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+      "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc"
+    },
+    {
+      "bytes": 3638,
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\summary.json",
+      "sha256": "61bf01708b7cae430ea46d63711a48ea51132e01c645335f456987ce6a9f78b3"
+    }
+  ],
+  "raw_cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z",
+  "snapshot_id": "2026-07-21T064230Z",
+  "snapshot_time_utc": "2026-07-21T06:42:30Z",
+  "sources": [
+    {
+      "bytes": 17360427,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_spot-exchange_info.json",
+      "market": "BINANCE_SPOT",
+      "name": "exchange_info",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:42:32 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "aeedbf4bbb3cb4e6be55eb8876dd653a9844c37aa6f9530c76bcccc38befe0d0",
+      "url": "https://api.binance.com/api/v3/exchangeInfo"
+    },
+    {
+      "bytes": 1869198,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_spot-ticker_24h.json",
+      "market": "BINANCE_SPOT",
+      "name": "ticker_24h",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:42:38 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "ea30b6c9ee09284feb62a321808e1b842a2e78cfb288d42a28fb23a1fece2d1c",
+      "url": "https://api.binance.com/api/v3/ticker/24hr"
+    },
+    {
+      "bytes": 420555,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_spot-book_ticker.json",
+      "market": "BINANCE_SPOT",
+      "name": "book_ticker",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:42:43 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "e65f51a4e496fa16cbe71c3a8dfe7ecdcb24cf32d225b7dcb195cf1fa44f7210",
+      "url": "https://api.binance.com/api/v3/ticker/bookTicker"
+    },
+    {
+      "bytes": 1037897,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_usd_m-exchange_info.json",
+      "market": "BINANCE_USD_M",
+      "name": "exchange_info",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:42:48 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "aba5ca634c11a9ce4b3e40a99fae8fd1e1b86c306f98ae0e346f701f7c2e45e3",
+      "url": "https://fapi.binance.com/fapi/v1/exchangeInfo"
+    },
+    {
+      "bytes": 264603,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_usd_m-ticker_24h.json",
+      "market": "BINANCE_USD_M",
+      "name": "ticker_24h",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:42:53 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "7c9b463e301078ca724a3ffb06fec95f0927585b8601abc8c4cdbac26a5cffa3",
+      "url": "https://fapi.binance.com/fapi/v1/ticker/24hr"
+    },
+    {
+      "bytes": 108059,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_usd_m-book_ticker.json",
+      "market": "BINANCE_USD_M",
+      "name": "book_ticker",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:42:59 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "6f420460a52e9756e0f8a5ddeea6677f3380cd763433e88790619a121834b67b",
+      "url": "https://fapi.binance.com/fapi/v1/ticker/bookTicker"
+    },
+    {
+      "bytes": 35676,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_coin_m-exchange_info.json",
+      "market": "BINANCE_COIN_M",
+      "name": "exchange_info",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:43:04 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "f110ed571176f4c05ea3e34dd0ad0dad83b812158afb71f042af0515f09c13c4",
+      "url": "https://dapi.binance.com/dapi/v1/exchangeInfo"
+    },
+    {
+      "bytes": 11066,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_coin_m-ticker_24h.json",
+      "market": "BINANCE_COIN_M",
+      "name": "ticker_24h",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:43:09 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "b6daa686f9a07cabfa4609aa47627738d701e96c9fb9aa48b89d951a8606ff72",
+      "url": "https://dapi.binance.com/dapi/v1/ticker/24hr"
+    },
+    {
+      "bytes": 4875,
+      "cache_path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\market-universe\\2026-07-21T064230Z\\binance_coin_m-book_ticker.json",
+      "market": "BINANCE_COIN_M",
+      "name": "book_ticker",
+      "response_headers": {
+        "date": "Tue, 21 Jul 2026 06:43:14 GMT",
+        "etag": "",
+        "last_modified": ""
+      },
+      "sha256": "02d84848c827b8395b637b4ecb3d3e0f483b315865fae4703f6df6a6fb6f439a",
+      "url": "https://dapi.binance.com/dapi/v1/ticker/bookTicker"
+    }
+  ]
+}
