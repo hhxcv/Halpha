@@ -35,15 +35,9 @@ class ExecutionActionState(StrEnum):
     READY = "READY"
     NOT_SUBMITTED = "NOT_SUBMITTED"
     SUBMITTING = "SUBMITTING"
-    SUBMITTED_UNKNOWN = "SUBMITTED_UNKNOWN"
-    ACKNOWLEDGED = "ACKNOWLEDGED"
-    WORKING = "WORKING"
-    PARTIALLY_FILLED = "PARTIALLY_FILLED"
-    FILLED = "FILLED"
-    CANCELLED = "CANCELLED"
-    REJECTED = "REJECTED"
-    EXPIRED = "EXPIRED"
-    RECONCILED = "RECONCILED"
+    UNKNOWN = "UNKNOWN"
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
     HANDED_OVER = "HANDED_OVER"
 
 
@@ -162,15 +156,9 @@ class ExecutionAction(VenueModel):
 
         called_states = {
             ExecutionActionState.SUBMITTING,
-            ExecutionActionState.SUBMITTED_UNKNOWN,
-            ExecutionActionState.ACKNOWLEDGED,
-            ExecutionActionState.WORKING,
-            ExecutionActionState.PARTIALLY_FILLED,
-            ExecutionActionState.FILLED,
-            ExecutionActionState.CANCELLED,
-            ExecutionActionState.REJECTED,
-            ExecutionActionState.EXPIRED,
-            ExecutionActionState.RECONCILED,
+            ExecutionActionState.UNKNOWN,
+            ExecutionActionState.OPEN,
+            ExecutionActionState.CLOSED,
         }
         if self.state in called_states:
             if self.request_digest is None or self.call_started_at is None:
@@ -183,7 +171,7 @@ class ExecutionAction(VenueModel):
         if self.call_completed_at is not None:
             if self.call_started_at is None or self.call_completed_at < self.call_started_at:
                 raise ValueError("CALL_COMPLETION_INVALID")
-        if self.state is ExecutionActionState.SUBMITTED_UNKNOWN:
+        if self.state is ExecutionActionState.UNKNOWN:
             if self.unknown_reason is None or self.next_query_at is None:
                 raise ValueError("SUBMISSION_UNKNOWN_EVIDENCE_REQUIRED")
         elif self.unknown_reason is not None or self.next_query_at is not None:
@@ -193,7 +181,7 @@ class ExecutionAction(VenueModel):
                 raise ValueError("NOT_SUBMITTED_REASON_REQUIRED")
         elif self.not_submitted_reason is not None:
             raise ValueError("NOT_SUBMITTED_REASON_FORBIDDEN")
-        if self.state is ExecutionActionState.RECONCILED and self.closure_evidence_digest is None:
+        if self.state is ExecutionActionState.CLOSED and self.closure_evidence_digest is None:
             raise ValueError("CLOSURE_UNPROVEN")
         if execution_action_state_digest(self) != self.state_digest:
             raise ValueError("EXECUTION_ACTION_STATE_DIGEST_INVALID")

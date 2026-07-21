@@ -20,10 +20,10 @@ from halpha.venue_integration.models import (
 )
 from halpha.venue_integration.transitions import (
     ExecutionActionConflict,
-    apply_venue_outcome,
     begin_submission,
     build_execution_action,
     mark_not_submitted,
+    mark_action_open,
     mark_submission_unknown,
     reconcile_action,
     resolve_existing_action,
@@ -279,7 +279,7 @@ def test_submitting_crash_becomes_query_only_unknown_and_never_returns_ready() -
         next_query_at=NOW + timedelta(seconds=10),
         observed_at=NOW + timedelta(seconds=2),
     )
-    assert unknown.state is ExecutionActionState.SUBMITTED_UNKNOWN
+    assert unknown.state is ExecutionActionState.UNKNOWN
     assert mark_submission_unknown(
         unknown,
         reason="IGNORED_REPLAY",
@@ -340,15 +340,14 @@ def test_authoritative_fact_advances_original_action_and_reconciliation_needs_cl
         payload={"status": "FILLED", "venue_order_ref": "12345"},
         action=submitting,
     )
-    filled = apply_venue_outcome(
+    opened = mark_action_open(
         submitting,
-        target=ExecutionActionState.FILLED,
         venue_order_refs=("12345",),
         venue_fact_refs=(fact.venue_fact_id,),
         observed_at=NOW + timedelta(seconds=2),
     )
-    reconciled = reconcile_action(
-        filled,
+    closed = reconcile_action(
+        opened,
         closure_evidence={
             "order_terminal": True,
             "fills_complete": True,
@@ -358,8 +357,8 @@ def test_authoritative_fact_advances_original_action_and_reconciliation_needs_cl
         venue_fact_refs=(fact.venue_fact_id,),
         observed_at=NOW + timedelta(seconds=3),
     )
-    assert reconciled.state is ExecutionActionState.RECONCILED
-    assert reconciled.closure_evidence_digest is not None
+    assert closed.state is ExecutionActionState.CLOSED
+    assert closed.closure_evidence_digest is not None
 
     with pytest.raises(ValueError, match="VENUE_FACT_ATTRIBUTION_INVALID"):
         build_venue_fact(

@@ -8,7 +8,7 @@ from halpha.capital.models import CapDecision, RiskClass
 from halpha.domain_values import content_digest
 from halpha.planning.models import PlanEvent, ProposedAction, ProposedActionKind
 from halpha.planning.registry import Direction
-from halpha.venue_integration.facts import build_venue_fact
+from halpha.venue_integration.facts import build_venue_fact, latest_execution_status
 from halpha.venue_integration.models import (
     ExecutionActionState,
     VenueFactKind,
@@ -16,7 +16,6 @@ from halpha.venue_integration.models import (
 )
 from halpha.venue_integration.service import ExecutionApplicationService
 from halpha.venue_integration.transitions import (
-    apply_venue_outcome,
     begin_submission,
     build_execution_action,
     mark_submission_unknown,
@@ -184,8 +183,8 @@ def test_startup_recovery_makes_submitting_query_only_and_preserves_existing_unk
     )
 
     assert tuple(action.state for action in recovered) == (
-        ExecutionActionState.SUBMITTED_UNKNOWN,
-        ExecutionActionState.SUBMITTED_UNKNOWN,
+        ExecutionActionState.UNKNOWN,
+        ExecutionActionState.UNKNOWN,
     )
     assert recovered[0].unknown_reason == "EXECUTOR_RESTART_AFTER_SUBMITTING"
     assert recovered[0].request_digest == submitting.request_digest
@@ -231,34 +230,36 @@ def test_user_takeover_hands_over_only_ready_actions_and_never_retries_unknown()
 
     states = {action.execution_action_id: action.state for action in results}
     assert states[ready.execution_action_id] is ExecutionActionState.HANDED_OVER
-    assert states[unknown.execution_action_id] is ExecutionActionState.SUBMITTED_UNKNOWN
+    assert states[unknown.execution_action_id] is ExecutionActionState.UNKNOWN
 
 
 def test_late_acknowledgement_is_retained_without_regressing_working_state() -> None:
     submitting = _submitting_action()
-    acknowledged = apply_venue_outcome(
-        submitting,
-        target=ExecutionActionState.ACKNOWLEDGED,
-        venue_order_refs=("12345",),
-        venue_fact_refs=("10000000-0000-0000-0000-000000000010",),
-        observed_at=NOW + timedelta(seconds=2),
-    )
-    working = apply_venue_outcome(
-        acknowledged,
-        target=ExecutionActionState.WORKING,
-        venue_order_refs=("12345",),
-        venue_fact_refs=("10000000-0000-0000-0000-000000000011",),
-        observed_at=NOW + timedelta(seconds=3),
-    )
-    late_ack = build_venue_fact(
-        venue_fact_id="10000000-0000-0000-0000-000000000012",
-        environment_id=working.environment_id,
+    working_fact = build_venue_fact(
+        venue_fact_id="10000000-0000-0000-0000-000000000011",
+        environment_id=submitting.environment_id,
         venue_ref="BINANCE",
-        account_ref=working.account_ref,
+        account_ref=submitting.account_ref,
         instrument_ref="BTCUSDT-PERP",
         kind=VenueFactKind.ORDER_STATE,
         source_class=VenueFactSourceClass.VENUE_STREAM,
-        source_object_id=working.client_order_id or "",
+        source_object_id=submitting.client_order_id or "",
+        source_sequence="working",
+        source_time=NOW + timedelta(seconds=3),
+        received_at=NOW + timedelta(seconds=3),
+        cutoff=NOW + timedelta(seconds=3),
+        payload={"status": "WORKING", "venue_order_ref": "12345"},
+        action=submitting,
+    )
+    late_ack = build_venue_fact(
+        venue_fact_id="10000000-0000-0000-0000-000000000012",
+        environment_id=submitting.environment_id,
+        venue_ref="BINANCE",
+        account_ref=submitting.account_ref,
+        instrument_ref="BTCUSDT-PERP",
+        kind=VenueFactKind.ORDER_STATE,
+        source_class=VenueFactSourceClass.VENUE_STREAM,
+        source_object_id=submitting.client_order_id or "",
         source_sequence="late-ack",
         source_time=NOW + timedelta(seconds=2),
         received_at=NOW + timedelta(seconds=4),
@@ -267,9 +268,9 @@ def test_late_acknowledgement_is_retained_without_regressing_working_state() -> 
             "status": "ACKNOWLEDGED",
             "venue_order_ref": "12345",
         },
-        action=working,
+        action=submitting,
     )
-    actions = FakeActionRepository((working,))
+    actions = FakeActionRepository((submitting,))
     facts = FakeFactRepository()
     service = ExecutionApplicationService(
         actions,  # type: ignore[arg-type]
@@ -281,16 +282,22 @@ def test_late_acknowledgement_is_retained_without_regressing_working_state() -> 
         account_ref="demo-owner",
     )
 
+    opened = service.apply_venue_fact(
+        fact=working_fact,
+        observed_at=working_fact.received_at,
+    )
     updated = service.apply_venue_fact(
         fact=late_ack,
         observed_at=NOW + timedelta(seconds=4),
     )
 
+    assert opened is not None
     assert updated is not None
-    assert updated.state is ExecutionActionState.WORKING
-    assert updated.state_version == working.state_version + 1
+    assert updated.state is ExecutionActionState.OPEN
+    assert updated.state_version == opened.state_version + 1
     assert late_ack.venue_fact_id in updated.venue_fact_refs
     assert facts.facts[late_ack.venue_fact_id] is late_ack
+    assert latest_execution_status(tuple(facts.facts.values())) == "WORKING"
 
 
 def test_same_venue_version_reobserved_later_is_idempotent() -> None:

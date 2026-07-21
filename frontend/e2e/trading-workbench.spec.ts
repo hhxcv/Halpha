@@ -100,7 +100,7 @@ test("the workbench exposes unknown, protection gap, max loss, exit, takeover, c
   await page.getByRole("tab", { name: /全部激活/ }).click();
   await expect(page.getByText("未发生交易").first()).toBeVisible();
   await expect(page.getByText("待评价").first()).toBeVisible();
-  await page.getByRole("table", { name: "交易与复盘记录" }).getByRole("button", { name: "复盘" }).first().click();
+  await page.getByRole("table", { name: "交易与复盘记录" }).locator("tbody tr").first().click();
   await expect(page.getByRole("heading", { name: "交易价格回看" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "机器为何交易" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "我的结论" })).toBeVisible();

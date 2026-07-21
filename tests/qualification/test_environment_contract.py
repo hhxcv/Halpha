@@ -567,7 +567,7 @@ def test_write_retry_and_order_unknown_failure_semantics() -> None:
     }
     assert all(evidence["fixed_source_contract"].values())
     assert evidence["required_halpha_interpretation"] == {
-        "write_timeout_or_crash": "SUBMITTED_UNKNOWN",
+        "write_timeout_or_crash": "UNKNOWN",
         "automatic_resubmit_same_identity": False,
         "next_action": "QUERY_ORIGINAL_UUID32_ONLY",
         "single_not_found_proves_not_submitted": False,

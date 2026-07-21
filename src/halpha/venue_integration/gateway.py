@@ -112,10 +112,8 @@ class PersistedActionGate:
         self._require_identity(action)
         if action.state not in {
             ExecutionActionState.SUBMITTING,
-            ExecutionActionState.SUBMITTED_UNKNOWN,
-            ExecutionActionState.ACKNOWLEDGED,
-            ExecutionActionState.WORKING,
-            ExecutionActionState.PARTIALLY_FILLED,
+            ExecutionActionState.UNKNOWN,
+            ExecutionActionState.OPEN,
         }:
             raise RuntimeError("NOT_SUBMITTED")
         return self._client.query_order(action)

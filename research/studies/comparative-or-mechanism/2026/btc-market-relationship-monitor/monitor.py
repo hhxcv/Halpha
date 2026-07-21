@@ -10,7 +10,6 @@ import argparse
 import csv
 import gzip
 import hashlib
-import io
 import json
 import math
 import os
@@ -44,6 +43,8 @@ APP_DIR = QUESTION_DIR / "app"
 DEFAULT_CACHE_ROOT = Path(
     "D:/projects/Codex/CodexHome/research-data/halpha/btc-market-relationship-monitor"
 )
+EXTERNAL_SERVICE_REGISTRY_ENV = "HALPHA_EXTERNAL_SERVICE_REGISTRY"
+EXTERNAL_SERVICE_REGISTRY_SCHEMA = 1
 BINANCE_URL = "https://data-api.binance.vision/api/v3/klines"
 COIN_METRICS_URL = "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics"
 COIN_METRICS_FIELD = "PriceUSD"
@@ -67,6 +68,46 @@ ANCHOR_CROSSCHECK = {
     "SUIUSDT": "sui",
     "DOGEUSDT": "doge",
 }
+
+
+def external_service_registry_directory() -> Path:
+    override = os.environ.get(EXTERNAL_SERVICE_REGISTRY_ENV)
+    if override:
+        return Path(override).expanduser().resolve()
+    local_data = os.environ.get("LOCALAPPDATA")
+    if local_data:
+        return Path(local_data) / "Halpha" / "external-services"
+    return Path.home() / ".local" / "share" / "Halpha" / "external-services"
+
+
+def register_external_service(service_id: str, pid: int, listener: str) -> Path:
+    directory = external_service_registry_directory()
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / f"{service_id}.json"
+    temporary = directory / f".{service_id}.{pid}.tmp"
+    temporary.write_text(
+        json.dumps(
+            {
+                "schema_version": EXTERNAL_SERVICE_REGISTRY_SCHEMA,
+                "service_id": service_id,
+                "pid": pid,
+                "listeners": [listener],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    os.replace(temporary, target)
+    return target
+
+
+def unregister_external_service(path: Path, pid: int) -> None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return
+    if payload.get("pid") == pid:
+        path.unlink(missing_ok=True)
 
 
 def utc_now() -> datetime:
@@ -883,24 +924,37 @@ def serve(
     # immediately. The public-data refresh can take around a minute for the
     # current universe and must not make the local page appear unavailable.
     server = ThreadingHTTPServer((host, port), make_handler(state))
-    if not no_initial_refresh:
-        threading.Thread(target=state.run_refresh, daemon=True).start()
-
-    def background() -> None:
-        while True:
-            state.next_attempt = iso_z(utc_now() + timedelta(seconds=refresh_seconds))
-            time.sleep(refresh_seconds)
-            state.run_refresh()
-
-    threading.Thread(target=background, daemon=True).start()
-    print(f"BTC relationship monitor: http://{host}:{port}")
-    print("Metrics use closed daily bars; polling does not create intraday metric changes.")
+    bound_host, bound_port = server.server_address[:2]
+    pid = os.getpid()
+    registration_path: Path | None = None
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
+        registration_path = register_external_service(
+            f"btc-market-relationship-monitor-{bound_port}",
+            pid,
+            f"{bound_host}:{bound_port}",
+        )
+        if not no_initial_refresh:
+            threading.Thread(target=state.run_refresh, daemon=True).start()
+
+        def background() -> None:
+            while True:
+                state.next_attempt = iso_z(utc_now() + timedelta(seconds=refresh_seconds))
+                time.sleep(refresh_seconds)
+                state.run_refresh()
+
+        threading.Thread(target=background, daemon=True).start()
+        print(f"BTC relationship monitor: http://{bound_host}:{bound_port}")
+        print("Metrics use closed daily bars; polling does not create intraday metric changes.")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
     finally:
-        server.server_close()
+        try:
+            server.server_close()
+        finally:
+            if registration_path is not None:
+                unregister_external_service(registration_path, pid)
 
 
 def parse_args() -> argparse.Namespace:

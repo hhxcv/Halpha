@@ -102,7 +102,7 @@ class PostgreSQLExecutionActionRepository:
             + """
               WHERE environment_id = %s AND action_kind = 'CANCEL'
                 AND cancel_target ->> 'client_order_id' = %s
-                AND state IN ('SUBMITTING', 'SUBMITTED_UNKNOWN', 'ACKNOWLEDGED')
+                AND state IN ('SUBMITTING', 'UNKNOWN', 'OPEN')
               ORDER BY created_at DESC, execution_action_id DESC
               LIMIT 1
             """,
@@ -127,7 +127,7 @@ class PostgreSQLExecutionActionRepository:
             FROM halpha.execution_action
             WHERE environment_id = %s AND activation_id = %s
               AND action_kind = 'ENTRY'
-              AND state NOT IN ('NOT_SUBMITTED', 'RECONCILED', 'HANDED_OVER')
+              AND state NOT IN ('NOT_SUBMITTED', 'CLOSED', 'HANDED_OVER')
             LIMIT 1
             """,
             (self._environment_id, activation_id),

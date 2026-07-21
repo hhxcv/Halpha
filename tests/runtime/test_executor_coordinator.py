@@ -29,27 +29,29 @@ def _action(kind: ExecutionActionKind, state: ExecutionActionState):
     return SimpleNamespace(action_kind=kind, state=state)
 
 
+def _order_fact(status: str):
+    return SimpleNamespace(kind=VenueFactKind.ORDER_STATE, payload={"status": status})
+
+
 def test_working_protection_projects_working() -> None:
     assert (
         _protection_projection_state(
             _action(
                 ExecutionActionKind.PROTECTION,
-                ExecutionActionState.WORKING,
-            )
+                ExecutionActionState.OPEN,
+            ),
+            _order_fact("WORKING"),
         )
         is ProtectionState.WORKING
     )
 
 
 def test_terminal_unfilled_protection_projects_gap() -> None:
-    for state in (
-        ExecutionActionState.CANCELLED,
-        ExecutionActionState.REJECTED,
-        ExecutionActionState.EXPIRED,
-    ):
+    for status in ("CANCELLED", "REJECTED", "EXPIRED"):
         assert (
             _protection_projection_state(
-                _action(ExecutionActionKind.PROTECTION, state)
+                _action(ExecutionActionKind.PROTECTION, ExecutionActionState.OPEN),
+                _order_fact(status),
             )
             is ProtectionState.GAP
         )
@@ -58,7 +60,8 @@ def test_terminal_unfilled_protection_projects_gap() -> None:
 def test_non_protection_or_non_projectable_state_has_no_projection() -> None:
     assert (
         _protection_projection_state(
-            _action(ExecutionActionKind.ENTRY, ExecutionActionState.WORKING)
+            _action(ExecutionActionKind.ENTRY, ExecutionActionState.OPEN),
+            _order_fact("WORKING"),
         )
         is None
     )
@@ -66,8 +69,9 @@ def test_non_protection_or_non_projectable_state_has_no_projection() -> None:
         _protection_projection_state(
             _action(
                 ExecutionActionKind.PROTECTION,
-                ExecutionActionState.SUBMITTED_UNKNOWN,
-            )
+                ExecutionActionState.UNKNOWN,
+            ),
+            SimpleNamespace(kind=VenueFactKind.COMMISSION, payload={}),
         )
         is None
     )
@@ -247,7 +251,7 @@ def test_exact_uuid_absence_closes_only_an_unknown_action() -> None:
     observed_at = datetime(2026, 7, 20, 5, 40, tzinfo=UTC)
     unknown = SimpleNamespace(
         execution_action_id="entry-action-unknown",
-        state=ExecutionActionState.SUBMITTED_UNKNOWN,
+        state=ExecutionActionState.UNKNOWN,
     )
     recorded: list[dict[str, object]] = []
     coordinator = object.__new__(HalphaCoordinator)
@@ -282,7 +286,7 @@ def test_cancelled_target_fact_reconciles_its_open_cancel_action() -> None:
     target = SimpleNamespace(
         activation_id="activation-demo-001",
         action_kind=ExecutionActionKind.PROTECTION,
-        state=ExecutionActionState.CANCELLED,
+        state=ExecutionActionState.OPEN,
     )
     cancel = SimpleNamespace(execution_action_id="cancel-action-001")
     fact = SimpleNamespace(

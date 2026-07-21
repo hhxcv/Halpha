@@ -14,6 +14,11 @@ const semanticColors = {
   info: { main: "#526AA8", text: "#3A4F82", soft: "#F0F4FF", border: "#CBD6F3", contrast: "#FFFFFF" },
 } as const;
 
+const marketColors = {
+  up: "#00805A",
+  down: "#C93434",
+} as const;
+
 const colors = {
   accent: "#FFD43B",
   accentHover: "#FFDF5A",
@@ -67,12 +72,12 @@ export const theme = createTheme({
           "--halpha-semantic-warning": semanticColors.warning.text,
           "--halpha-semantic-error": semanticColors.error.text,
           "--halpha-semantic-info": semanticColors.info.text,
-          "--halpha-market-up": semanticColors.success.text,
-          "--halpha-market-down": semanticColors.error.text,
+          "--halpha-market-up": marketColors.up,
+          "--halpha-market-down": marketColors.down,
         },
         ':root[data-halpha-market-color-scheme="RED_UP_GREEN_DOWN"]': {
-          "--halpha-market-up": semanticColors.error.text,
-          "--halpha-market-down": semanticColors.success.text,
+          "--halpha-market-up": marketColors.down,
+          "--halpha-market-down": marketColors.up,
         },
         body: {
           minWidth: 320,
@@ -84,8 +89,8 @@ export const theme = createTheme({
           fontFamily: '"JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
           fontVariantNumeric: "tabular-nums",
         },
-        ".market-tone-up": { color: "var(--halpha-market-up) !important", fontWeight: 750 },
-        ".market-tone-down": { color: "var(--halpha-market-down) !important", fontWeight: 750 },
+        ".market-tone-up": { color: "var(--halpha-market-up) !important", fontWeight: 800 },
+        ".market-tone-down": { color: "var(--halpha-market-down) !important", fontWeight: 800 },
         "::selection": { backgroundColor: "#FFE98A", color: colors.text },
         "*:focus-visible": { outline: `3px solid rgba(255, 212, 59, .42)`, outlineOffset: 2 },
         "button, input, select, textarea": { letterSpacing: 0 },
@@ -286,7 +291,14 @@ export const theme = createTheme({
         input: { paddingBlock: 10 },
       },
     },
-    MuiInputLabel: { styleOverrides: { root: { color: colors.textSecondary } } },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          color: colors.textSecondary,
+          "&.Mui-focused": { color: colors.accentText },
+        },
+      },
+    },
     MuiMenuItem: {
       styleOverrides: {
         root: {

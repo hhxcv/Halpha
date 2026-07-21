@@ -255,6 +255,55 @@ const evaluationResultLabels: Record<string, string> = {
   NOT_APPLICABLE: "不适用",
 };
 
+type ReviewPnlFilter = "ALL" | "PROFIT" | "LOSS" | "BREAKEVEN" | "UNKNOWN";
+
+type ReviewListFilters = {
+  strategyId: string;
+  instrumentRef: string;
+  direction: string;
+  pnl: ReviewPnlFilter;
+  primaryResult: string;
+  ownerConclusion: string;
+};
+
+const emptyReviewListFilters: ReviewListFilters = {
+  strategyId: "ALL",
+  instrumentRef: "ALL",
+  direction: "ALL",
+  pnl: "ALL",
+  primaryResult: "ALL",
+  ownerConclusion: "ALL",
+};
+
+const pnlFilterLabels: Record<ReviewPnlFilter, string> = {
+  ALL: "全部盈亏",
+  PROFIT: "盈利",
+  LOSS: "亏损",
+  BREAKEVEN: "持平",
+  UNKNOWN: "盈亏未知",
+};
+
+function reviewPnlClass(review: Record<string, unknown>): Exclude<ReviewPnlFilter, "ALL"> {
+  const result = recordOf(recordOf(review.account_result).trade_result);
+  const netPnl = finiteNumber(result.net_pnl);
+  if (result.calculation_complete !== true || result.closed !== true || netPnl === null) return "UNKNOWN";
+  if (netPnl > 0) return "PROFIT";
+  if (netPnl < 0) return "LOSS";
+  return "BREAKEVEN";
+}
+
+function reviewMatchesFilters(review: Record<string, unknown>, filters: ReviewListFilters): boolean {
+  const context = recordOf(review.trade_context);
+  return (
+    (filters.strategyId === "ALL" || valueOf(context, "strategy_id", "") === filters.strategyId)
+    && (filters.instrumentRef === "ALL" || valueOf(context, "instrument_ref", "") === filters.instrumentRef)
+    && (filters.direction === "ALL" || valueOf(context, "direction", "") === filters.direction)
+    && (filters.pnl === "ALL" || reviewPnlClass(review) === filters.pnl)
+    && (filters.primaryResult === "ALL" || valueOf(review, "primary_result", "") === filters.primaryResult)
+    && (filters.ownerConclusion === "ALL" || reviewConclusion(review) === filters.ownerConclusion)
+  );
+}
+
 const gateStateLabels: Record<string, string> = {
   OPEN: "已开启",
   CLOSED: "已关闭",
@@ -299,15 +348,9 @@ const actionStateLabels: Record<string, string> = {
   READY: "待提交",
   NOT_SUBMITTED: "未提交",
   SUBMITTING: "正在提交",
-  SUBMITTED_UNKNOWN: "结果未决",
-  ACKNOWLEDGED: "交易所已确认",
-  WORKING: "工作中",
-  PARTIALLY_FILLED: "部分成交",
-  FILLED: "已成交",
-  CANCELLED: "已撤销",
-  REJECTED: "已拒绝",
-  EXPIRED: "已过期",
-  RECONCILED: "已核对闭合",
+  UNKNOWN: "结果未决",
+  OPEN: "责任开放",
+  CLOSED: "已核对闭合",
   HANDED_OVER: "已交接",
 };
 
@@ -1146,11 +1189,11 @@ function ActivationRoute() {
   const newRiskStopped = stopped.includes("NEW_RISK");
   const openEntryActions = actions.filter((action) =>
     valueOf(action, "action_kind") === "ENTRY"
-    && !["NOT_SUBMITTED", "RECONCILED", "HANDED_OVER"].includes(valueOf(action, "state"))
+    && !["NOT_SUBMITTED", "CLOSED", "HANDED_OVER"].includes(valueOf(action, "state"))
   );
   const hasOpenEntryResponsibility = openEntryActions.length > 0;
   const unknownEntryCount = openEntryActions.filter(
-    (action) => valueOf(action, "state") === "SUBMITTED_UNKNOWN"
+    (action) => valueOf(action, "state") === "UNKNOWN"
   ).length;
   const channelLookback = Number(parameters.channel_lookback_15m) || 20;
   const market = useQuery({
@@ -1421,7 +1464,7 @@ function ActivationRoute() {
           { label: "交易金额", value: `${valueOf(capital, "max_notional")} USDT` },
           { label: "损失风控计数", value: `${valueOf(capital, "activation_loss")} / ${valueOf(capital, "max_allowed_loss")} USDT`, note: "用于停止新增风险，不等于当前盈亏" },
           { label: "已归属手续费", value: `${valueOf(tradeResult, "commission", "0")} USDT`, note: tradeResult.commission_complete === true ? "当前成交手续费已齐全" : fillCount > 0 ? "仍有成交手续费待核对" : "尚无成交" },
-          { label: "执行动作", value: String(actions.length), note: actions.some((item) => valueOf(item, "state") === "SUBMITTED_UNKNOWN") ? "存在结果未决，只查询原 UUID" : "按持久身份展示" },
+          { label: "执行动作", value: String(actions.length), note: actions.some((item) => valueOf(item, "state") === "UNKNOWN") ? "存在结果未决，只查询原 UUID" : "按持久身份展示" },
           { label: "交易所事实", value: String(facts.length), note: "订单状态不能推定持仓" },
           { label: "控制回执", value: String(receipts.length), note: receipts.some((item) => valueOf(item, "state") === "PROCESSING") ? "仍有命令效果待确认" : "没有处理中回执" },
           { label: "停止范围", value: stopScopeDisplay },
@@ -1454,7 +1497,7 @@ function ActivationRoute() {
             const cancelTargetId = valueOf(recordOf(action.cancel_target), "client_order_id", "");
             const orderIdentity = clientOrderId || (actionKind === "CANCEL" && cancelTargetId ? `目标 ${cancelTargetId}` : "未提供订单身份");
             return (
-              <Box key={actionId} sx={{ ...surfaceFrameSx, p: 2, borderColor: valueOf(action, "state") === "SUBMITTED_UNKNOWN" ? "warning.main" : "divider" }}>
+              <Box key={actionId} sx={{ ...surfaceFrameSx, p: 2, borderColor: valueOf(action, "state") === "UNKNOWN" ? "warning.main" : "divider" }}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between" }}>
                   <Typography sx={{ fontWeight: 750 }}>{translatedLabel(actionKindLabels, actionKind)} · {translatedLabel(actionStateLabels, valueOf(action, "state"))}</Typography>
                 </Stack>
@@ -1529,6 +1572,7 @@ function ReviewsPage() {
   const navigate = useNavigate();
   const { marketColorScheme } = useOutletContext<FrameContext>();
   const [filter, setFilter] = useState<"TRADED" | "DRAFT" | "ALL">("TRADED");
+  const [listFilters, setListFilters] = useState<ReviewListFilters>(emptyReviewListFilters);
   const [visibleCount, setVisibleCount] = useState(20);
   const query = useQuery({ queryKey: ["reviews"], queryFn: getReviews, refetchInterval: 30_000 });
   const strategiesQuery = useQuery({ queryKey: ["strategies"], queryFn: getStrategies });
@@ -1538,11 +1582,15 @@ function ReviewsPage() {
     return (Number.isFinite(rightCutoff) ? rightCutoff : 0) - (Number.isFinite(leftCutoff) ? leftCutoff : 0);
   });
   const tradedReviews = reviews.filter((review) => ["COMPLETED", "PARTIAL"].includes(valueOf(review, "primary_result")));
-  const visibleReviews = filter === "DRAFT"
+  const scopeReviews = filter === "DRAFT"
     ? reviews.filter((review) => valueOf(review, "status") === "DRAFT")
     : filter === "TRADED"
       ? tradedReviews
       : reviews;
+  const visibleReviews = scopeReviews.filter((review) => reviewMatchesFilters(review, listFilters));
+  const strategyOptions = [...new Set(reviews.map((review) => valueOf(recordOf(review.trade_context), "strategy_id", "")).filter(Boolean))].sort();
+  const instrumentOptions = [...new Set(reviews.map((review) => valueOf(recordOf(review.trade_context), "instrument_ref", "")).filter(Boolean))].sort();
+  const activeFilterCount = Object.values(listFilters).filter((value) => value !== "ALL").length;
   const reliableTrades = tradedReviews.filter((review) => {
     const result = recordOf(recordOf(review.account_result).trade_result);
     return result.calculation_complete === true && result.closed === true && finiteNumber(result.net_pnl) !== null;
@@ -1563,7 +1611,10 @@ function ReviewsPage() {
     cumulative += finiteNumber(result.net_pnl) ?? 0;
     return { at: valueOf(result, "last_fill_time", valueOf(review, "fact_cutoff")), value: cumulative };
   });
-  useEffect(() => { setVisibleCount(20); }, [filter]);
+  useEffect(() => { setVisibleCount(20); }, [filter, listFilters]);
+  const updateListFilter = <Key extends keyof ReviewListFilters>(key: Key, value: ReviewListFilters[Key]) => {
+    setListFilters((current) => ({ ...current, [key]: value }));
+  };
   const shownReviews = visibleReviews.slice(0, visibleCount);
   const remaining = Math.max(0, visibleReviews.length - visibleCount);
   return (
@@ -1599,6 +1650,43 @@ function ReviewsPage() {
         <Tab value="ALL" label={`全部激活（${reviews.length}）`} />
       </Tabs>
 
+      <Box component="section" aria-label="交易记录联合筛选" sx={{ ...surfaceFrameSx, p: 1.25, mb: 1.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(150px, 1fr))", lg: "repeat(6, minmax(130px, 1fr))" }, gap: 1 }}>
+          <TextField select size="small" label="策略" value={listFilters.strategyId} onChange={(event) => updateListFilter("strategyId", event.target.value)}>
+            <MenuItem value="ALL">全部策略</MenuItem>
+            {strategyOptions.map((strategyId) => {
+              const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
+              return <MenuItem key={strategyId} value={strategyId}>{strategy?.display_name ?? strategyId}</MenuItem>;
+            })}
+          </TextField>
+          <TextField select size="small" label="交易对象" value={listFilters.instrumentRef} onChange={(event) => updateListFilter("instrumentRef", event.target.value)}>
+            <MenuItem value="ALL">全部交易对象</MenuItem>
+            {instrumentOptions.map((instrumentRef) => <MenuItem key={instrumentRef} value={instrumentRef}>{instrumentRef}</MenuItem>)}
+          </TextField>
+          <TextField select size="small" label="方向" value={listFilters.direction} onChange={(event) => updateListFilter("direction", event.target.value)}>
+            <MenuItem value="ALL">全部方向</MenuItem>
+            {Object.entries(directionLabels).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+          </TextField>
+          <TextField select size="small" label="盈亏" value={listFilters.pnl} onChange={(event) => updateListFilter("pnl", event.target.value as ReviewPnlFilter)}>
+            {(Object.entries(pnlFilterLabels) as Array<[ReviewPnlFilter, string]>).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+          </TextField>
+          <TextField select size="small" label="交易结果" value={listFilters.primaryResult} onChange={(event) => updateListFilter("primaryResult", event.target.value)}>
+            <MenuItem value="ALL">全部结果</MenuItem>
+            {Object.entries(reviewResultLabels).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+          </TextField>
+          <TextField select size="small" label="人工结论" value={listFilters.ownerConclusion} onChange={(event) => updateListFilter("ownerConclusion", event.target.value)}>
+            <MenuItem value="ALL">全部结论</MenuItem>
+            {Object.entries(evaluationResultLabels).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+          </TextField>
+        </Box>
+        <Stack direction="row" spacing={1.5} sx={{ mt: 1, alignItems: "center", justifyContent: "space-between" }}>
+          <Typography variant="caption" color="text.secondary">
+            条件同时满足 · 匹配 {visibleReviews.length} / {scopeReviews.length} 条{activeFilterCount > 0 ? ` · 已选 ${activeFilterCount} 项` : ""}
+          </Typography>
+          <Button size="small" variant="text" disabled={activeFilterCount === 0} onClick={() => setListFilters(emptyReviewListFilters)}>重置筛选</Button>
+        </Stack>
+      </Box>
+
       <TableContainer className="table-scroll" role="region" aria-label="交易与复盘记录横向滚动区域" tabIndex={0} sx={{ ...surfaceFrameSx, overflowX: "auto" }}>
         <Table size="small" aria-label="交易与复盘记录" sx={{ minWidth: 1120, "& th": { whiteSpace: "nowrap" }, "& td": { verticalAlign: "top" } }}>
           <TableHead>
@@ -1623,11 +1711,26 @@ function ReviewsPage() {
               const strategyId = valueOf(context, "strategy_id");
               const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
               const resultAvailable = result.calculation_complete === true && result.closed === true && finiteNumber(result.net_pnl) !== null;
+              const reviewId = valueOf(review, "review_id");
+              const closedAt = formatUserVisibleTime(valueOf(result, "last_fill_time", valueOf(review, "fact_cutoff")));
+              const openReview = () => navigate(`/reviews/${reviewId}`);
               return (
-                <TableRow key={valueOf(review, "review_id")} hover>
+                <TableRow
+                  key={reviewId}
+                  hover
+                  tabIndex={0}
+                  aria-label={`查看 ${valueOf(context, "instrument_ref")} ${translatedLabel(directionLabels, valueOf(context, "direction"))} ${closedAt} 复盘`}
+                  onClick={openReview}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openReview();
+                    }
+                  }}
+                  sx={{ cursor: "pointer" }}
+                >
                   <TableCell className="mono">
-                    {formatUserVisibleTime(valueOf(result, "last_fill_time", valueOf(review, "fact_cutoff")))}
-                    <Button size="small" variant="text" sx={{ display: "block", minHeight: 24, p: 0, mt: 0.25 }} onClick={() => navigate(`/reviews/${valueOf(review, "review_id")}`)}>复盘</Button>
+                    {closedAt}
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>{valueOf(context, "instrument_ref")}</Typography>

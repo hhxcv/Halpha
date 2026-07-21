@@ -1,5 +1,5 @@
 import importlib.util
-import math
+import json
 import sys
 import tempfile
 import threading
@@ -81,12 +81,16 @@ class MonitorTests(unittest.TestCase):
     def test_server_binds_before_initial_refresh(self):
         events = []
         refresh_started = threading.Event()
+        registration_seen = []
 
         class FakeServer:
             def __init__(self, address, handler):
+                self.server_address = address
                 events.append("server_bound")
 
             def serve_forever(self):
+                paths = list(registry.glob("*.json"))
+                registration_seen.append(json.loads(paths[0].read_text(encoding="utf-8")))
                 self.started_in_time = refresh_started.wait(timeout=1)
 
             def server_close(self):
@@ -98,12 +102,28 @@ class MonitorTests(unittest.TestCase):
             return {}
 
         with tempfile.TemporaryDirectory() as directory:
-            with patch.object(monitor, "ThreadingHTTPServer", FakeServer), patch.object(monitor, "refresh", fake_refresh):
+            registry = Path(directory) / "registry"
+            with patch.object(monitor, "ThreadingHTTPServer", FakeServer), patch.object(monitor, "refresh", fake_refresh), patch.object(monitor, "external_service_registry_directory", return_value=registry):
                 monitor.serve("127.0.0.1", 8766, Path(directory), 900, 1, False)
 
         self.assertTrue(refresh_started.is_set())
         self.assertLess(events.index("server_bound"), events.index("refresh_started"))
         self.assertEqual(events[-1], "server_closed")
+        self.assertEqual(registration_seen[0]["service_id"], "btc-market-relationship-monitor-8766")
+        self.assertEqual(registration_seen[0]["listeners"], ["127.0.0.1:8766"])
+        self.assertFalse(registry.exists() and list(registry.glob("*.json")))
+
+    def test_unregister_does_not_remove_a_new_process_registration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            registry = Path(directory)
+            with patch.object(monitor, "external_service_registry_directory", return_value=registry):
+                path = monitor.register_external_service("sample-service", 10, "127.0.0.1:9000")
+                monitor.register_external_service("sample-service", 11, "127.0.0.1:9000")
+                monitor.unregister_external_service(path, 10)
+
+            payload = json.loads(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["pid"], 11)
 
     def test_live_results_fall_back_to_fixed_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
