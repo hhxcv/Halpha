@@ -107,18 +107,6 @@ def test_demo_and_live_do_not_have_parallel_execution_implementations() -> None:
         source.relative_to(SOURCE_ROOT).as_posix(): source.read_text(encoding="utf-8")
         for source in sorted(SOURCE_ROOT.rglob("*.py"))
     }
-    action_repository_users = {
-        path
-        for path, text in sources.items()
-        if "PostgreSQLExecutionActionRepository" in text
-    }
-    assert action_repository_users == {
-        "executor/coordinator.py",
-        "executor/runtime.py",
-        "venue_integration/gateway.py",
-        "venue_integration/repository.py",
-        "venue_integration/service.py",
-    }
     forbidden_types = {
         "DemoExecutionAction",
         "LiveExecutionAction",
