@@ -39,7 +39,7 @@ from halpha.planning.transitions import (
     proposed_take_profits_from_fill,
     venue_source_identity,
 )
-from halpha.venue_integration.facts import build_venue_fact
+from halpha.venue_integration.facts import build_venue_fact, order_is_working
 from halpha.venue_integration.gateway import (
     PersistedActionGate,
     VenueDefinitelyNotSubmitted,
@@ -78,16 +78,16 @@ class ProcessExecutionResult:
 
 def _protection_projection_state(
     action: ExecutionAction,
+    fact: VenueFact,
 ) -> ProtectionState | None:
     if action.action_kind is not ExecutionActionKind.PROTECTION:
         return None
-    if action.state is ExecutionActionState.WORKING:
+    if fact.kind is not VenueFactKind.ORDER_STATE:
+        return None
+    status = str(fact.payload.get("status", "")).upper()
+    if status in {"WORKING", "NEW", "ACCEPTED", "ACKNOWLEDGED"}:
         return ProtectionState.WORKING
-    if action.state in {
-        ExecutionActionState.CANCELLED,
-        ExecutionActionState.REJECTED,
-        ExecutionActionState.EXPIRED,
-    }:
+    if status in {"CANCELLED", "CANCELED", "REJECTED", "EXPIRED"}:
         return ProtectionState.GAP
     return None
 
@@ -326,7 +326,7 @@ class HalphaCoordinator:
                 execution_action_id,
                 for_update=True,
             )
-            if action.state is not ExecutionActionState.SUBMITTED_UNKNOWN:
+            if action.state is not ExecutionActionState.UNKNOWN:
                 return action
             return self._execution.record_definitely_not_submitted(
                 execution_action_id,
@@ -367,7 +367,7 @@ class HalphaCoordinator:
                 self._gate.query_original_identity(action.execution_action_id)
             except Exception:
                 # A query transport failure is not evidence about venue state.
-                # The action remains SUBMITTED_UNKNOWN for a later same-UUID query.
+                # The action remains UNKNOWN for a later same-UUID query.
                 continue
         return unresolved
 
@@ -440,7 +440,7 @@ class HalphaCoordinator:
                     observed_at=observed_at,
                 )
                 projection = (
-                    _protection_projection_state(updated)
+                    _protection_projection_state(updated, fact)
                     if updated is not None
                     else None
                 )
@@ -675,7 +675,7 @@ class HalphaCoordinator:
                 observed_at=observed_at,
             )
             projection = (
-                _protection_projection_state(updated)
+                _protection_projection_state(updated, fact)
                 if updated is not None
                 else None
             )
@@ -811,7 +811,9 @@ class HalphaCoordinator:
             )
             if (
                 protection.action_kind is not ExecutionActionKind.PROTECTION
-                or protection.state is not ExecutionActionState.WORKING
+                or not order_is_working(
+                    self._fact_repository.list_for_action(protection_action_id)
+                )
             ):
                 raise ValueError("PROTECTION_UNKNOWN")
             activation = self._planning.get_activation(

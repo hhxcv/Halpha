@@ -42,9 +42,9 @@ current_facts:
   evidence_limit: >-
     历史测试和观察只说明当时输入；当前实现仍在连续修改，因此不把历史结果表述为当前产品闭环或真实账户交易能力。
   persistence:
-    migration_head: 20260720_0009
+    migration_head: 20260721_0010
     demo_database_at_head: true
-    live_database_at_head: true
+    live_database_at_head: false
     product_record_family_count: 10
 
 target_runtime:
@@ -64,6 +64,18 @@ target_runtime:
   topology:
     database: PostgreSQL
     processes: [halpha-app, halpha-executor]
+    windows_tasks: ['\Halpha\App', '\Halpha\Executor', '\Halpha\Backup']
+    lifecycle_control_cli: halpha-control
+    lifecycle_default_config: config/halpha.toml
+    lifecycle_generated_output_language: ASCII_ENGLISH
+    lifecycle_pass_through_text: SOURCE_PRESERVED
+    lifecycle_inventory_scope: 当前仓库及所有已登记 Git 工作树中的项目进程树、TCP 监听、外部主动登记和 Windows Halpha 任务
+    product_start_group: [app, executor]
+    auxiliary_start_rule: backup 只能显式单独启动，不随 product 启动
+    external_service_registry: '%LOCALAPPDATA%\Halpha\external-services 或 HALPHA_EXTERNAL_SERVICE_REGISTRY 覆盖路径'
+    external_service_registration: PRODUCER_WRITES_JSON_AND_PID_LISTENER_IS_VERIFIED
+    external_service_control: STATUS_ONLY
+    direct_product_long_running_start: PROHIBITED
     exchange_change_paths_per_environment: 1
     web: 127.0.0.1 本地 Web
     notification: EMAIL_ONLY
@@ -124,7 +136,7 @@ real_account_trading:
   current_activation_id: null
   execution_actions_created: false
   exchange_changes_observed: false
-  database_current: true
+  database_current: false
   unique_executor_confirmed: false
   facts_current: false
 

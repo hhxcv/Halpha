@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from halpha.capital.models import RiskClass
+from halpha.venue_integration.facts import latest_execution_status
 from halpha.venue_integration.models import (
     VenueFactAttributionClass,
     VenueFactKind,
     VenueFactSourceClass,
 )
 from halpha.venue_integration.nautilus_events import NautilusExecutionEventNormalizer
-from halpha.venue_integration.service import _state_from_fact
 from halpha.venue_integration.transitions import begin_submission
 from tests.venue_integration.test_execution_action import NOW, _action, _cap_decision
 
@@ -68,7 +68,7 @@ def test_order_accepted_maps_to_attributed_working_order_fact() -> None:
     assert fact.source_class is VenueFactSourceClass.VENUE_STREAM
     assert fact.attribution_class is VenueFactAttributionClass.HALPHA_EXECUTION
     assert fact.payload["status"] == "WORKING"
-    assert _state_from_fact(fact).value == "WORKING"
+    assert latest_execution_status((fact,)) == "WORKING"
 
 
 def test_fill_maps_trade_and_actual_commission_without_synthesizing_terminal_state() -> None:
@@ -98,7 +98,7 @@ def test_fill_maps_trade_and_actual_commission_without_synthesizing_terminal_sta
     assert result.facts[0].payload["leaves_quantity"] == "0.000"
     assert result.facts[0].payload["last_quantity"] == "0.001"
     assert result.facts[1].payload["amount"] == "0.03 USDT"
-    assert _state_from_fact(result.facts[0]).value == "FILLED"
+    assert latest_execution_status((result.facts[0],)) == "FILLED"
 
 
 def test_fill_with_missing_or_invalid_leaves_quantity_stays_partial() -> None:
@@ -124,7 +124,7 @@ def test_fill_with_missing_or_invalid_leaves_quantity_stays_partial() -> None:
         received_at=NOW,
     )
 
-    assert _state_from_fact(result.facts[0]).value == "PARTIALLY_FILLED"
+    assert latest_execution_status((result.facts[0],)) == "PARTIALLY_FILLED"
 
 
 def test_unknown_client_identity_stays_external_unclaimed() -> None:

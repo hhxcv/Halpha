@@ -87,7 +87,7 @@ const reviews: JsonRecord[] = [
     input_refs: {},
     open_responsibilities: {},
     evaluations: { owner_conclusion: { result: "ISSUE_FOUND", reason: "突破后回落", evidence_refs: [] } },
-    trade_context: { instrument_ref: "BTCUSDT-PERP", direction: "LONG", strategy_id: "ONE_SHOT_DONCHIAN_ATR_BREAKOUT", trade_amount: "100" },
+    trade_context: { instrument_ref: "ETHUSDT-PERP", direction: "LONG", strategy_id: "MEAN_REVERSION_TEST", trade_amount: "100" },
     account_result: { trade_result: tradeResult({ entry: "101", exit: "100", netPnl: "-0.9", grossPnl: "-0.8", commission: "0.1", firstFillTime: "2026-07-21T00:10:00Z", lastFillTime: "2026-07-21T00:15:30Z" }) },
   },
   {
@@ -107,6 +107,33 @@ const reviews: JsonRecord[] = [
 ];
 
 async function mockProfessionalReviews(page: Page) {
+  await page.route("**/api/v1/market-window**", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const interval = requestUrl.searchParams.get("interval") === "15m" ? "15m" : "1m";
+    const intervalMs = interval === "15m" ? 15 * 60_000 : 60_000;
+    const requestedStart = Date.parse(requestUrl.searchParams.get("start_at") ?? "");
+    const startAt = Number.isFinite(requestedStart) ? requestedStart : Date.parse("2026-07-20T23:56:00Z");
+    const bars = Array.from({ length: 48 }, (_value, index) => {
+      const open = 99.4 + index * 0.07;
+      const close = open + (index % 3 === 0 ? -0.12 : 0.16);
+      return {
+        open_at: new Date(startAt + index * intervalMs).toISOString(),
+        close_at: new Date(startAt + (index + 1) * intervalMs).toISOString(),
+        open: open.toFixed(2),
+        high: (Math.max(open, close) + 0.18).toFixed(2),
+        low: (Math.min(open, close) - 0.16).toFixed(2),
+        close: close.toFixed(2),
+        volume: String(100 + index),
+      };
+    });
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({
+      instrument_ref: "BTCUSDT-PERP",
+      interval,
+      source: "PLAYWRIGHT_FIXTURE",
+      source_cutoff: bars.at(-1)?.close_at,
+      bars,
+    }) });
+  });
   await page.route("**/api/v1/reviews**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/v1/reviews") {
@@ -135,8 +162,8 @@ async function mockProfessionalReviews(page: Page) {
       activation: { activation_id: "activation-professional-3", updated_at: "2026-07-21T00:28:00Z" },
       strategy: { strategy_ref: "ONE_SHOT_DONCHIAN_ATR_BREAKOUT@1" },
       execution_actions: [
-        { action_kind: "PROTECTION", state: "RECONCILED", action_terms: { trigger_price: "98.5" } },
-        { action_kind: "TAKE_PROFIT", state: "RECONCILED", action_terms: { trigger_price: "102.5" } },
+        { action_kind: "PROTECTION", state: "CLOSED", action_terms: { trigger_price: "98.5" } },
+        { action_kind: "TAKE_PROFIT", state: "CLOSED", action_terms: { trigger_price: "102.5" } },
         { action_kind: "TAKE_PROFIT", state: "NOT_SUBMITTED", action_terms: { trigger_price: "104" } },
       ],
     }) });
@@ -148,6 +175,50 @@ async function assertAccessible(page: Page, testInfo: TestInfo, name: string) {
   await testInfo.attach(`${name}-axe.json`, { body: Buffer.from(JSON.stringify(violations, null, 2)), contentType: "application/json" });
   expect(violations).toEqual([]);
 }
+
+async function chooseFilter(page: Page, label: string, option: string) {
+  await page.getByRole("combobox", { name: label, exact: true }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+  await page.getByRole("listbox").waitFor({ state: "detached" });
+  await expect(page.locator('[role="option"]')).toHaveCount(0);
+}
+
+test("review records support conjunctive strategy, instrument, direction, pnl, result and conclusion filters", async ({ page }, testInfo) => {
+  await mockProfessionalReviews(page);
+  await page.goto("/reviews");
+
+  await chooseFilter(page, "策略", "MEAN_REVERSION_TEST");
+  await chooseFilter(page, "交易对象", "ETHUSDT-PERP");
+  await chooseFilter(page, "方向", "做多");
+  await chooseFilter(page, "盈亏", "亏损");
+  await chooseFilter(page, "交易结果", "已完成交易");
+  await chooseFilter(page, "人工结论", "发现问题");
+
+  const table = page.getByRole("table", { name: "交易与复盘记录" });
+  await expect(table.locator("tbody tr")).toHaveCount(1);
+  await expect(table).toContainText("ETHUSDT-PERP");
+  await expect(table).toContainText("-0.90 USDT");
+  await expect(page.getByText("条件同时满足 · 匹配 1 / 3 条 · 已选 6 项", { exact: true })).toBeVisible();
+  const layout = await page.evaluate(() => ({ clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
+  expect(layout.scrollWidth).toBe(layout.clientWidth);
+  await assertAccessible(page, testInfo, `review-filters-${testInfo.project.name}`);
+  const filterScreenshot = testInfo.outputPath(`review-filters-${testInfo.project.name}.png`);
+  await page.screenshot({ path: filterScreenshot, fullPage: true });
+  await testInfo.attach(`review-filters-${testInfo.project.name}.png`, { path: filterScreenshot, contentType: "image/png" });
+
+  await chooseFilter(page, "方向", "做空");
+  await expect(page.getByText("当前筛选下没有复盘记录。")).toBeVisible();
+  await expect(table.locator("tbody tr")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "重置筛选" }).click();
+  await expect(table.locator("tbody tr")).toHaveCount(3);
+  await expect(page.getByText("条件同时满足 · 匹配 3 / 3 条", { exact: true })).toBeVisible();
+  const keyboardReviewRow = table.locator("tbody tr").first();
+  await keyboardReviewRow.focus();
+  await expect(keyboardReviewRow).toBeFocused();
+  await page.keyboard.press(" ");
+  await expect(page.getByRole("heading", { name: "交易价格回看" })).toBeVisible();
+});
 
 test("review workbench exposes recent performance and one visual trade narrative", async ({ page }, testInfo) => {
   await mockProfessionalReviews(page);
@@ -161,7 +232,7 @@ test("review workbench exposes recent performance and one visual trade narrative
   await page.screenshot({ path: listScreenshot, fullPage: true });
   await testInfo.attach(`review-list-${testInfo.project.name}.png`, { path: listScreenshot, contentType: "image/png" });
 
-  await page.getByRole("table", { name: "交易与复盘记录" }).getByRole("button", { name: "复盘" }).first().click();
+  await page.getByRole("table", { name: "交易与复盘记录" }).locator("tbody tr").first().click();
   await expect(page.getByRole("heading", { name: "交易价格回看" })).toBeVisible();
   await expect(page.getByRole("group", { name: /1m K 线图/ })).toBeVisible();
   await page.getByRole("button", { name: "15 分钟" }).click();

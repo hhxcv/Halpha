@@ -58,6 +58,10 @@ from halpha.venue_integration.models import (
     VenueFactKind,
     VenueFactSourceClass,
 )
+from halpha.venue_integration.nautilus_account import (
+    BinanceAccountContractError,
+    query_single_asset_mode,
+)
 
 from .responsibilities import ProductRiskReductionFacts
 
@@ -195,6 +199,19 @@ def _account_margin_state(
     except ValueError:
         raise ProductPreSubmitRejected("ACCOUNT_LEVERAGE_UNKNOWN") from None
     return margin_mode, leverage, current_effective
+
+
+def _require_supported_account_mode(
+    hedge_mode: object,
+    *,
+    single_asset_mode: bool,
+) -> None:
+    """Require the one-way/single-asset contract used by Halpha order profiles."""
+
+    if bool(getattr(hedge_mode, "dualSidePosition", True)):
+        raise ProductPreSubmitRejected("ACCOUNT_POSITION_MODE_UNSUPPORTED")
+    if not single_asset_mode:
+        raise ProductPreSubmitRejected("ACCOUNT_MULTI_ASSET_MODE_UNSUPPORTED")
 
 
 def _top_of_book(book_tickers: object, symbol: str) -> tuple[Decimal, Decimal]:
@@ -490,7 +507,7 @@ class ProductPreSubmitFactProvider:
         observed_at = datetime.now(UTC)
         if (
             action.action_kind is not ExecutionActionKind.ENTRY
-            or action.state is not ExecutionActionState.SUBMITTED_UNKNOWN
+            or action.state is not ExecutionActionState.UNKNOWN
             or action.client_order_id is None
             or action.call_started_at is None
             or Decimal(str((observed_at - action.call_started_at).total_seconds()))
@@ -533,6 +550,8 @@ class ProductPreSubmitFactProvider:
             (
                 account_info,
                 symbol_configs,
+                hedge_mode,
+                single_asset_mode,
                 positions,
                 book_tickers,
                 mark_snapshot,
@@ -544,6 +563,12 @@ class ProductPreSubmitFactProvider:
                         account_api.query_futures_account_info(recv_window="5000"),
                         account_api.query_futures_symbol_config(
                             symbol=symbol,
+                            recv_window="5000",
+                        ),
+                        account_api.query_futures_hedge_mode(recv_window="5000"),
+                        query_single_asset_mode(
+                            client,
+                            self._node.kernel.clock,
                             recv_window="5000",
                         ),
                         account_api.query_futures_position_risk(recv_window="5000"),
@@ -563,6 +588,8 @@ class ProductPreSubmitFactProvider:
             )
         except ProductPreSubmitRejected:
             raise
+        except BinanceAccountContractError as exc:
+            raise ProductPreSubmitRejected(str(exc)) from None
         except Exception as exc:
             raise ProductPreSubmitRejected(
                 f"ACCOUNT_FACT_QUERY_FAILED_{type(exc).__name__.upper()}"
@@ -570,6 +597,10 @@ class ProductPreSubmitFactProvider:
         checked_at = datetime.now(UTC)
         if Decimal(str((checked_at - started_at).total_seconds())) > MAX_QUERY_WINDOW_SECONDS:
             raise ProductPreSubmitRejected("ACCOUNT_FACT_QUERY_STALE")
+        _require_supported_account_mode(
+            hedge_mode,
+            single_asset_mode=single_asset_mode,
+        )
         margin_mode, leverage, current_effective = _account_margin_state(
             account_info,
             symbol_configs,
@@ -646,6 +677,8 @@ class ProductPreSubmitFactProvider:
             (
                 account_info,
                 symbol_configs,
+                hedge_mode,
+                single_asset_mode,
                 positions,
                 exchange_info,
                 commission,
@@ -659,6 +692,12 @@ class ProductPreSubmitFactProvider:
                         account_api.query_futures_account_info(recv_window="5000"),
                         account_api.query_futures_symbol_config(
                             symbol=symbol,
+                            recv_window="5000",
+                        ),
+                        account_api.query_futures_hedge_mode(recv_window="5000"),
+                        query_single_asset_mode(
+                            client,
+                            self._node.kernel.clock,
                             recv_window="5000",
                         ),
                         account_api.query_futures_position_risk(recv_window="5000"),
@@ -683,6 +722,8 @@ class ProductPreSubmitFactProvider:
             )
         except ProductPreSubmitRejected:
             raise
+        except BinanceAccountContractError as exc:
+            raise ProductPreSubmitRejected(str(exc)) from None
         except Exception as exc:
             raise ProductPreSubmitRejected(
                 f"ACCOUNT_FACT_QUERY_FAILED_{type(exc).__name__.upper()}"
@@ -695,6 +736,10 @@ class ProductPreSubmitFactProvider:
             raise ProductPreSubmitRejected("SOURCE_BAR_STALE")
         if checked_at >= proposal.valid_until:
             raise ProductPreSubmitRejected("PROPOSAL_EXPIRED")
+        _require_supported_account_mode(
+            hedge_mode,
+            single_asset_mode=single_asset_mode,
+        )
         margin_mode, leverage, current_effective = _account_margin_state(
             account_info,
             symbol_configs,

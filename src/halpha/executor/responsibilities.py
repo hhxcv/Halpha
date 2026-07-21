@@ -17,6 +17,7 @@ from halpha.planning.transitions import (
     proposed_take_profits_from_fill,
     venue_source_identity,
 )
+from halpha.venue_integration.facts import order_is_working, terminal_order_status
 from halpha.venue_integration.models import (
     ExecutionAction,
     ExecutionActionKind,
@@ -227,7 +228,7 @@ class ProductResponsibilityBoundary:
         self._last_fallback_sync[activation_id] = now
         facts = await self._fact_provider(activation)
         for action in actions:
-            if action.state is ExecutionActionState.SUBMITTED_UNKNOWN:
+            if action.state is ExecutionActionState.UNKNOWN:
                 definitely_absent = False
                 if (
                     action.action_kind is ExecutionActionKind.ENTRY
@@ -288,7 +289,11 @@ class ProductResponsibilityBoundary:
                         await self._protect_fill(fact)
             elif (
                 action.action_kind is ExecutionActionKind.PROTECTION
-                and action.state is ExecutionActionState.WORKING
+                and order_is_working(
+                    self._coordinator.list_venue_facts_for_action(
+                        action.execution_action_id
+                    )
+                )
             ):
                 await self._create_take_profits(action.execution_action_id)
 
@@ -329,7 +334,9 @@ class ProductResponsibilityBoundary:
 
     async def _create_take_profits(self, protection_action_id: str) -> None:
         protection = self._coordinator.get_execution_action(protection_action_id)
-        if protection.state is not ExecutionActionState.WORKING:
+        if not order_is_working(
+            self._coordinator.list_venue_facts_for_action(protection_action_id)
+        ):
             return
         context = protection.action_terms.get("execution_context")
         quantity = protection.action_terms.get("quantity")
@@ -458,12 +465,12 @@ class ProductResponsibilityBoundary:
             if (
                 target.action_kind
                 not in {ExecutionActionKind.PROTECTION, ExecutionActionKind.TAKE_PROFIT}
-                or target.state
-                not in {
-                    ExecutionActionState.ACKNOWLEDGED,
-                    ExecutionActionState.WORKING,
-                    ExecutionActionState.PARTIALLY_FILLED,
-                }
+                or target.state is not ExecutionActionState.OPEN
+                or not order_is_working(
+                    self._coordinator.list_venue_facts_for_action(
+                        target.execution_action_id
+                    )
+                )
                 or target.client_order_id is None
             ):
                 continue
@@ -540,43 +547,33 @@ class ProductResponsibilityBoundary:
         closure_fact_refs = {position_fact.venue_fact_id}
         for action in actions:
             if action.state in {
-                ExecutionActionState.RECONCILED,
+                ExecutionActionState.CLOSED,
                 ExecutionActionState.NOT_SUBMITTED,
                 ExecutionActionState.HANDED_OVER,
             }:
                 continue
-            if action.state not in {
-                ExecutionActionState.FILLED,
-                ExecutionActionState.CANCELLED,
-                ExecutionActionState.REJECTED,
-                ExecutionActionState.EXPIRED,
-            }:
+            if action.state is not ExecutionActionState.OPEN:
                 return
             action_facts = self._coordinator.list_venue_facts_for_action(
                 action.execution_action_id
             )
             fact_refs = tuple(fact.venue_fact_id for fact in action_facts)
             kinds = {fact.kind for fact in action_facts}
-            if VenueFactKind.ORDER_STATE not in kinds:
+            terminal_status = terminal_order_status(action_facts)
+            if terminal_status is None:
                 return
-            if action.state is ExecutionActionState.FILLED and not {
-                VenueFactKind.FILL,
-                VenueFactKind.COMMISSION,
-            }.issubset(kinds):
+            fills_complete = terminal_status != "FILLED" or VenueFactKind.FILL in kinds
+            fees_complete = _fills_have_commissions(action_facts)
+            if not fills_complete or not fees_complete:
                 return
             closure_fact_refs.update(fact_refs)
             self._coordinator.reconcile_execution_action(
                 action.execution_action_id,
                 closure_evidence={
                     "order_terminal": True,
-                    "fills_complete": (
-                        action.state is not ExecutionActionState.FILLED
-                        or VenueFactKind.FILL in kinds
-                    ),
-                    "fees_complete": (
-                        action.state is not ExecutionActionState.FILLED
-                        or VenueFactKind.COMMISSION in kinds
-                    ),
+                    "terminal_order_status": terminal_status,
+                    "fills_complete": fills_complete,
+                    "fees_complete": fees_complete,
                     "position_effect_known": True,
                     "position_fact_ref": position_fact.venue_fact_id,
                 },
@@ -590,7 +587,7 @@ class ProductResponsibilityBoundary:
         if any(
             action.state
             not in {
-                ExecutionActionState.RECONCILED,
+                ExecutionActionState.CLOSED,
                 ExecutionActionState.NOT_SUBMITTED,
                 ExecutionActionState.HANDED_OVER,
             }
@@ -663,6 +660,23 @@ class ProductResponsibilityBoundary:
             if not task.done():
                 task.cancel()
         self._tasks.clear()
+
+
+def _fills_have_commissions(facts: tuple[VenueFact, ...]) -> bool:
+    fills = tuple(fact for fact in facts if fact.kind is VenueFactKind.FILL)
+    if any(fact.payload.get("trade_id") is None for fact in fills):
+        return False
+    fill_trade_ids = {
+        str(fact.payload.get("trade_id"))
+        for fact in fills
+    }
+    commission_trade_ids = {
+        str(fact.payload.get("trade_id"))
+        for fact in facts
+        if fact.kind is VenueFactKind.COMMISSION
+        and fact.payload.get("trade_id") is not None
+    }
+    return fill_trade_ids.issubset(commission_trade_ids)
 
 
 def _stable_id(environment_id: str, kind: str, source_identity: str) -> str:

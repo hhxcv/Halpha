@@ -12,6 +12,9 @@ CLIENT_ID_MIGRATION = (
 NOT_SUBMITTED_REASON_MIGRATION = (
     ROOT / "migrations" / "versions" / "20260718_0006_execution_not_submitted_reason.py"
 )
+RESPONSIBILITY_STATE_MIGRATION = (
+    ROOT / "migrations" / "versions" / "20260721_0010_simplify_execution_action_states.py"
+)
 
 
 def _source() -> str:
@@ -134,3 +137,80 @@ def test_not_submitted_reason_downgrade_restores_the_legacy_state_digest(
         }
     ]
     assert [item[0] for item in operations] == ["constraint", "column"]
+
+
+def test_responsibility_state_migration_rewrites_technical_states_and_digests(
+    monkeypatch,
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "simplify_execution_action_states_migration",
+        RESPONSIBILITY_STATE_MIGRATION,
+    )
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    legacy_states = {
+        "SUBMITTED_UNKNOWN": "UNKNOWN",
+        "ACKNOWLEDGED": "OPEN",
+        "WORKING": "OPEN",
+        "PARTIALLY_FILLED": "OPEN",
+        "FILLED": "OPEN",
+        "CANCELLED": "OPEN",
+        "REJECTED": "OPEN",
+        "EXPIRED": "OPEN",
+        "RECONCILED": "CLOSED",
+    }
+    rows = tuple(
+        {
+            "execution_action_id": f"action-{index}",
+            "environment_id": "demo-main",
+            "state": state,
+            "state_version": 3,
+            "state_digest": "legacy-digest",
+        }
+        for index, state in enumerate(legacy_states)
+    )
+
+    class Rows:
+        def mappings(self):
+            return rows
+
+    class Connection:
+        def __init__(self) -> None:
+            self.updates = []
+
+        def execute(self, _statement, parameters=None):
+            if parameters is None:
+                return Rows()
+            self.updates.append(parameters)
+            return None
+
+    connection = Connection()
+    constraints = []
+    monkeypatch.setattr(migration.op, "get_bind", lambda: connection)
+    monkeypatch.setattr(migration.op, "drop_constraint", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        migration.op,
+        "create_check_constraint",
+        lambda *args, **kwargs: constraints.append((args, kwargs)),
+    )
+
+    migration.upgrade()
+
+    assert migration.revision == "20260721_0010"
+    assert migration.down_revision == "20260720_0009"
+    assert migration._UPGRADE_STATE == legacy_states
+    assert [update["state"] for update in connection.updates] == list(
+        legacy_states.values()
+    )
+    assert all(update["state_version"] == 4 for update in connection.updates)
+    for row, update in zip(rows, connection.updates, strict=True):
+        expected = dict(row)
+        expected.pop("state_digest")
+        expected["state"] = legacy_states[row["state"]]
+        expected["state_version"] = 4
+        assert update["state_digest"] == migration._digest(expected)
+    state_constraint = next(item for item in constraints if item[0][0] == "ck_execution_action_state")
+    assert state_constraint[0][2] == (
+        "state IN ('READY','NOT_SUBMITTED','SUBMITTING','UNKNOWN','OPEN','CLOSED','HANDED_OVER')"
+    )

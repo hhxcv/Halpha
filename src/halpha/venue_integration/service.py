@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from halpha.capital.models import CapDecision
-from halpha.domain_values import DomainValidationError, content_digest, decimal_from_string
+from halpha.domain_values import content_digest
 from halpha.planning.models import PlanEvent
 from halpha.venue_integration.models import (
     ExecutionAction,
@@ -20,31 +20,32 @@ from halpha.venue_integration.repository import (
 )
 from halpha.venue_integration.transitions import (
     absorb_venue_observation,
-    apply_venue_outcome,
     begin_submission,
     build_execution_action,
     defer_unknown_query,
     hand_over_ready_action,
     mark_not_submitted,
+    mark_action_open,
     mark_submission_unknown,
     reconcile_action,
     resolve_existing_action,
-    venue_target_is_stale,
 )
 
 
-_ORDER_STATE_MAP = {
-    "ACKNOWLEDGED": ExecutionActionState.ACKNOWLEDGED,
-    "ACCEPTED": ExecutionActionState.ACKNOWLEDGED,
-    "WORKING": ExecutionActionState.WORKING,
-    "NEW": ExecutionActionState.WORKING,
-    "PARTIALLY_FILLED": ExecutionActionState.PARTIALLY_FILLED,
-    "FILLED": ExecutionActionState.FILLED,
-    "CANCELLED": ExecutionActionState.CANCELLED,
-    "CANCELED": ExecutionActionState.CANCELLED,
-    "REJECTED": ExecutionActionState.REJECTED,
-    "EXPIRED": ExecutionActionState.EXPIRED,
-}
+_SUPPORTED_ORDER_STATUSES = frozenset(
+    {
+        "ACKNOWLEDGED",
+        "ACCEPTED",
+        "WORKING",
+        "NEW",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "CANCELLED",
+        "CANCELED",
+        "REJECTED",
+        "EXPIRED",
+    }
+)
 
 
 def _same_source_content(left: VenueFact, right: VenueFact) -> bool:
@@ -134,7 +135,7 @@ class ExecutionApplicationService:
         action = self._actions.get(execution_action_id, for_update=True)
         if action.state in {
             ExecutionActionState.SUBMITTING,
-            ExecutionActionState.SUBMITTED_UNKNOWN,
+            ExecutionActionState.UNKNOWN,
         }:
             raise RuntimeError("SUBMISSION_RESULT_UNKNOWN")
         prepared = begin_submission(
@@ -156,7 +157,7 @@ class ExecutionApplicationService:
         unresolved = self._actions.list_by_states(
             (
                 ExecutionActionState.SUBMITTING.value,
-                ExecutionActionState.SUBMITTED_UNKNOWN.value,
+                ExecutionActionState.UNKNOWN.value,
             ),
             for_update=True,
         )
@@ -203,7 +204,7 @@ class ExecutionApplicationService:
     ) -> ExecutionAction | None:
         action = self._actions.get(execution_action_id, for_update=True)
         if (
-            action.state is not ExecutionActionState.SUBMITTED_UNKNOWN
+            action.state is not ExecutionActionState.UNKNOWN
             or action.next_query_at is None
             or action.next_query_at > observed_at
         ):
@@ -261,12 +262,8 @@ class ExecutionApplicationService:
         venue_order_ref = fact.payload.get("venue_order_ref")
         venue_order_refs = (str(venue_order_ref),) if venue_order_ref else ()
         venue_fact_refs = (fact.venue_fact_id,)
-        target = _state_from_fact(fact)
-        if (
-            target is None
-            or target is action.state
-            or venue_target_is_stale(action.state, target)
-        ):
+        opens_action = _execution_fact_opens_action(fact)
+        if not opens_action or action.state is ExecutionActionState.OPEN:
             updated = absorb_venue_observation(
                 action,
                 venue_order_refs=venue_order_refs,
@@ -276,9 +273,8 @@ class ExecutionApplicationService:
             if updated is not action:
                 self._actions.update(updated, expected_version=action.state_version)
             return updated
-        updated = apply_venue_outcome(
+        updated = mark_action_open(
             action,
-            target=target,
             venue_order_refs=venue_order_refs,
             venue_fact_refs=venue_fact_refs,
             observed_at=observed_at,
@@ -316,11 +312,10 @@ class ExecutionApplicationService:
             raise ValueError("CANCEL_TARGET_INVALID")
         if action.state in {
             ExecutionActionState.SUBMITTING,
-            ExecutionActionState.SUBMITTED_UNKNOWN,
+            ExecutionActionState.UNKNOWN,
         }:
-            acknowledged = apply_venue_outcome(
+            opened = mark_action_open(
                 action,
-                target=ExecutionActionState.ACKNOWLEDGED,
                 venue_order_refs=(
                     str(target_fact.payload["venue_order_ref"]),
                 )
@@ -329,8 +324,8 @@ class ExecutionApplicationService:
                 venue_fact_refs=(target_fact.venue_fact_id,),
                 observed_at=observed_at,
             )
-            self._actions.update(acknowledged, expected_version=action.state_version)
-            action = acknowledged
+            self._actions.update(opened, expected_version=action.state_version)
+            action = opened
         reconciled = reconcile_action(
             action,
             closure_evidence={
@@ -377,7 +372,7 @@ class ExecutionApplicationService:
     ) -> str:
         actions = self._actions.list_for_activation(activation_id)
         closed_states = {
-            ExecutionActionState.RECONCILED,
+            ExecutionActionState.CLOSED,
             ExecutionActionState.NOT_SUBMITTED,
             ExecutionActionState.HANDED_OVER,
         }
@@ -410,26 +405,12 @@ class ExecutionApplicationService:
         )
 
 
-def _state_from_fact(fact: VenueFact) -> ExecutionActionState | None:
+def _execution_fact_opens_action(fact: VenueFact) -> bool:
     if fact.kind is VenueFactKind.ORDER_STATE:
         status = str(fact.payload.get("status", "")).upper()
-        target = _ORDER_STATE_MAP.get(status)
-        if target is None:
+        if status not in _SUPPORTED_ORDER_STATUSES:
             raise ValueError("VENUE_ORDER_STATE_UNSUPPORTED")
-        return target
+        return True
     if fact.kind is VenueFactKind.FILL:
-        leaves_quantity = fact.payload.get("leaves_quantity")
-        if isinstance(leaves_quantity, str):
-            try:
-                parsed = decimal_from_string(
-                    leaves_quantity,
-                    code="VENUE_LEAVES_QUANTITY_INVALID",
-                    non_negative=True,
-                )
-            except DomainValidationError:
-                pass
-            else:
-                if parsed == 0:
-                    return ExecutionActionState.FILLED
-        return ExecutionActionState.PARTIALLY_FILLED
-    return None
+        return True
+    return False

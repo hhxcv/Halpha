@@ -21,7 +21,7 @@ ENVIRONMENTS = {
     "demo": {"database": "halpha_demo", "profile": "BINANCE_DEMO", "kind": "DEMO"},
     "live": {"database": "halpha_live", "profile": "BINANCE_LIVE", "kind": "LIVE"},
 }
-HEAD = "20260720_0009"
+HEAD = "20260721_0010"
 
 
 def _reference(profile: str, role: str) -> tuple[str, str]:

@@ -42,7 +42,7 @@
 | SUIUSDT | 0.793 | 0.811 | 1.609 | 0.629 | 2.029 | +1.2% | +5.5% | -5.8% | 0.808 / 0.830 |
 | DOGEUSDT | 0.763 | 0.789 | 1.341 | 0.582 | 1.758 | -4.2% | -15.0% | -11.3% | 0.814 / 0.798 |
 
-WBTCUSDT 的 Pearson 为 0.9997，但这是 wrapped BTC 的机械暴露，不能当作独立市场规律发现。完整 385 个显著对象和 238 个强关联对象分别保存在 `output/significant-associations.csv` 与 `output/strong-associations.csv`，没有只保留排名靠前的对象。
+WBTCUSDT 的 Pearson 为 0.9997，但这是 wrapped BTC 的机械暴露，不能当作独立市场规律发现。完整 385 个显著对象和 238 个强关联对象分别保存在 `evidence/significant-associations.csv` 与 `evidence/strong-associations.csv`，没有只保留排名靠前的对象。
 
 ## 独立与外部核对
 
@@ -62,19 +62,19 @@ WBTCUSDT 的 Pearson 为 0.9997，但这是 wrapped BTC 的机械暴露，不能
 
 ```powershell
 # 在线刷新：更新公开数据、产物和不可覆盖 source manifest
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py refresh
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py refresh
 
 # 固定缓存离线重算
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py refresh --offline
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py refresh --offline
 
 # 独立结果/数据质量检查
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/validate_results.py
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/validate_results.py
 
 # 启动独立本地页面；立即显示持久快照，后台刷新公开数据
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py serve
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py serve --port 8766
 ```
 
-在线与离线运行的统计内容身份 SHA-256 均为 `581d0b3361cdfb4d404b24cd49aef04d2b69da258c6f46930a0133134e9055fb`。完整 CSV 的哈希刻意不同，因为 `fetch_status` 保留本次是在线抓取还是离线缓存重演；`output/validation.json` 同时记录内容身份、产物哈希、独立重算和数据质量检查。
+在线与离线运行的统计内容身份 SHA-256 均为 `581d0b3361cdfb4d404b24cd49aef04d2b69da258c6f46930a0133134e9055fb`。完整 CSV 的哈希刻意不同，因为 `fetch_status` 保留本次是在线抓取还是离线缓存重演；`evidence/validation.json` 同时记录内容身份、产物哈希、独立重算和数据质量检查。
 
 ## 仍未知
 

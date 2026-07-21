@@ -65,63 +65,19 @@ _ALLOWED_TRANSITIONS: dict[ExecutionActionState, frozenset[ExecutionActionState]
     ExecutionActionState.SUBMITTING: frozenset(
         {
             ExecutionActionState.NOT_SUBMITTED,
-            ExecutionActionState.SUBMITTED_UNKNOWN,
-            ExecutionActionState.ACKNOWLEDGED,
-            ExecutionActionState.WORKING,
-            ExecutionActionState.PARTIALLY_FILLED,
-            ExecutionActionState.FILLED,
-            ExecutionActionState.CANCELLED,
-            ExecutionActionState.REJECTED,
-            ExecutionActionState.EXPIRED,
+            ExecutionActionState.UNKNOWN,
+            ExecutionActionState.OPEN,
         }
     ),
-    ExecutionActionState.SUBMITTED_UNKNOWN: frozenset(
+    ExecutionActionState.UNKNOWN: frozenset(
         {
             ExecutionActionState.NOT_SUBMITTED,
-            ExecutionActionState.ACKNOWLEDGED,
-            ExecutionActionState.WORKING,
-            ExecutionActionState.PARTIALLY_FILLED,
-            ExecutionActionState.FILLED,
-            ExecutionActionState.CANCELLED,
-            ExecutionActionState.REJECTED,
-            ExecutionActionState.EXPIRED,
+            ExecutionActionState.OPEN,
         }
     ),
-    ExecutionActionState.ACKNOWLEDGED: frozenset(
-        {
-            ExecutionActionState.SUBMITTED_UNKNOWN,
-            ExecutionActionState.WORKING,
-            ExecutionActionState.PARTIALLY_FILLED,
-            ExecutionActionState.FILLED,
-            ExecutionActionState.CANCELLED,
-            ExecutionActionState.REJECTED,
-            ExecutionActionState.EXPIRED,
-            ExecutionActionState.RECONCILED,
-        }
-    ),
-    ExecutionActionState.WORKING: frozenset(
-        {
-            ExecutionActionState.SUBMITTED_UNKNOWN,
-            ExecutionActionState.PARTIALLY_FILLED,
-            ExecutionActionState.FILLED,
-            ExecutionActionState.CANCELLED,
-            ExecutionActionState.EXPIRED,
-        }
-    ),
-    ExecutionActionState.PARTIALLY_FILLED: frozenset(
-        {
-            ExecutionActionState.SUBMITTED_UNKNOWN,
-            ExecutionActionState.FILLED,
-            ExecutionActionState.CANCELLED,
-            ExecutionActionState.EXPIRED,
-        }
-    ),
-    ExecutionActionState.FILLED: frozenset({ExecutionActionState.RECONCILED}),
-    ExecutionActionState.CANCELLED: frozenset({ExecutionActionState.RECONCILED}),
-    ExecutionActionState.REJECTED: frozenset({ExecutionActionState.RECONCILED}),
-    ExecutionActionState.EXPIRED: frozenset({ExecutionActionState.RECONCILED}),
+    ExecutionActionState.OPEN: frozenset({ExecutionActionState.CLOSED}),
     ExecutionActionState.NOT_SUBMITTED: frozenset(),
-    ExecutionActionState.RECONCILED: frozenset(),
+    ExecutionActionState.CLOSED: frozenset(),
     ExecutionActionState.HANDED_OVER: frozenset(),
 }
 
@@ -372,11 +328,11 @@ def mark_submission_unknown(
     next_query_at: datetime,
     observed_at: datetime,
 ) -> ExecutionAction:
-    if action.state is ExecutionActionState.SUBMITTED_UNKNOWN:
+    if action.state is ExecutionActionState.UNKNOWN:
         return action
     return _transition(
         action,
-        target=ExecutionActionState.SUBMITTED_UNKNOWN,
+        target=ExecutionActionState.UNKNOWN,
         observed_at=observed_at,
         updates={"unknown_reason": reason, "next_query_at": next_query_at},
     )
@@ -390,7 +346,7 @@ def defer_unknown_query(
 ) -> ExecutionAction:
     """Rate-limit another query without changing the unresolved responsibility."""
 
-    if action.state is not ExecutionActionState.SUBMITTED_UNKNOWN:
+    if action.state is not ExecutionActionState.UNKNOWN:
         raise ExecutionActionConflict("EXECUTION_ACTION_TRANSITION_INVALID")
     values = action.model_dump(mode="python", exclude={"state_digest"})
     values.update(
@@ -404,26 +360,16 @@ def defer_unknown_query(
     return ExecutionAction(**values)
 
 
-def apply_venue_outcome(
+def mark_action_open(
     action: ExecutionAction,
     *,
-    target: ExecutionActionState,
     venue_order_refs: tuple[str, ...],
     venue_fact_refs: tuple[str, ...],
     observed_at: datetime,
 ) -> ExecutionAction:
-    if target in {
-        ExecutionActionState.READY,
-        ExecutionActionState.SUBMITTING,
-        ExecutionActionState.SUBMITTED_UNKNOWN,
-        ExecutionActionState.NOT_SUBMITTED,
-        ExecutionActionState.RECONCILED,
-        ExecutionActionState.HANDED_OVER,
-    }:
-        raise ExecutionActionConflict("EXECUTION_ACTION_TRANSITION_INVALID")
     return _transition(
         action,
-        target=target,
+        target=ExecutionActionState.OPEN,
         observed_at=observed_at,
         updates={
             "call_completed_at": observed_at,
@@ -433,32 +379,6 @@ def apply_venue_outcome(
             "next_query_at": None,
         },
     )
-
-
-def venue_target_is_stale(
-    current: ExecutionActionState,
-    target: ExecutionActionState,
-) -> bool:
-    """Identify an authoritative but out-of-order nonterminal observation."""
-
-    progress = {
-        ExecutionActionState.ACKNOWLEDGED: 1,
-        ExecutionActionState.WORKING: 2,
-        ExecutionActionState.PARTIALLY_FILLED: 3,
-    }
-    target_rank = progress.get(target)
-    if target_rank is None:
-        return False
-    current_rank = progress.get(current)
-    if current_rank is not None:
-        return target_rank < current_rank
-    return current in {
-        ExecutionActionState.FILLED,
-        ExecutionActionState.CANCELLED,
-        ExecutionActionState.REJECTED,
-        ExecutionActionState.EXPIRED,
-        ExecutionActionState.RECONCILED,
-    }
 
 
 def absorb_venue_observation(
@@ -502,17 +422,7 @@ def reconcile_action(
     venue_fact_refs: tuple[str, ...],
     observed_at: datetime,
 ) -> ExecutionAction:
-    reconcilable = action.state in {
-        ExecutionActionState.FILLED,
-        ExecutionActionState.CANCELLED,
-        ExecutionActionState.REJECTED,
-        ExecutionActionState.EXPIRED,
-    } or (
-        action.action_kind is ExecutionActionKind.CANCEL
-        and action.state is ExecutionActionState.ACKNOWLEDGED
-        and closure_evidence.get("target_order_terminal") is True
-    )
-    if not reconcilable:
+    if action.state is not ExecutionActionState.OPEN:
         raise ValueError("CLOSURE_UNPROVEN")
     closure_digest = content_digest(
         {
@@ -528,7 +438,7 @@ def reconcile_action(
     )
     return _transition(
         action,
-        target=ExecutionActionState.RECONCILED,
+        target=ExecutionActionState.CLOSED,
         observed_at=observed_at,
         updates={
             "closure_evidence_digest": closure_digest,

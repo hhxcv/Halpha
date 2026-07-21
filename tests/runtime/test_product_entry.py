@@ -21,9 +21,11 @@ from halpha.executor.product_entry import (
     ProductProposalBoundary,
     _conservative_entry_price,
     _query_current_mark_price,
+    _require_supported_account_mode,
     _require_flat_entry_scope,
     instrument_rules_payload,
 )
+from halpha.venue_integration.nautilus_account import query_single_asset_mode
 from halpha.planning.registry import Direction
 from halpha.planning.strategies.one_shot import (
     EntryRiskContext,
@@ -171,6 +173,42 @@ def test_current_mark_query_requires_the_requested_symbol_and_positive_value() -
     assert int(observed_at.timestamp() * 1000) == 1_784_357_200_000
 
 
+def test_single_asset_mode_uses_the_shared_nautilus_signed_client() -> None:
+    class Clock:
+        def timestamp_ms(self) -> int:
+            return 1_784_357_200_000
+
+    class Client:
+        async def sign_request(self, **kwargs):
+            assert kwargs["url_path"] == "/fapi/v1/multiAssetsMargin"
+            assert kwargs["payload"] == {
+                "timestamp": "1784357200000",
+                "recvWindow": "5000",
+            }
+            return b'{"multiAssetsMargin":false}'
+
+    assert asyncio.run(query_single_asset_mode(Client(), Clock())) is True
+
+
+@pytest.mark.parametrize(
+    ("dual_side", "single_asset", "reason_code"),
+    (
+        (True, True, "ACCOUNT_POSITION_MODE_UNSUPPORTED"),
+        (False, False, "ACCOUNT_MULTI_ASSET_MODE_UNSUPPORTED"),
+    ),
+)
+def test_unsupported_account_modes_fail_closed(
+    dual_side: bool,
+    single_asset: bool,
+    reason_code: str,
+) -> None:
+    with pytest.raises(ProductPreSubmitRejected, match=reason_code):
+        _require_supported_account_mode(
+            SimpleNamespace(dualSidePosition=dual_side),
+            single_asset_mode=single_asset,
+        )
+
+
 def test_old_unknown_entry_is_closed_only_on_exact_binance_absence(
     monkeypatch,
 ) -> None:
@@ -209,7 +247,7 @@ def test_old_unknown_entry_is_closed_only_on_exact_binance_absence(
     )
     action = SimpleNamespace(
         action_kind=ExecutionActionKind.ENTRY,
-        state=ExecutionActionState.SUBMITTED_UNKNOWN,
+        state=ExecutionActionState.UNKNOWN,
         client_order_id="a" * 32,
         call_started_at=datetime.now(UTC) - timedelta(minutes=2),
         action_terms={"instrument_ref": "BTCUSDT-PERP"},
@@ -233,7 +271,7 @@ def test_recent_unknown_entry_is_not_declared_absent_without_query(monkeypatch) 
     )
     action = SimpleNamespace(
         action_kind=ExecutionActionKind.ENTRY,
-        state=ExecutionActionState.SUBMITTED_UNKNOWN,
+        state=ExecutionActionState.UNKNOWN,
         client_order_id="a" * 32,
         call_started_at=datetime.now(UTC) - timedelta(seconds=5),
         action_terms={"instrument_ref": "BTCUSDT-PERP"},

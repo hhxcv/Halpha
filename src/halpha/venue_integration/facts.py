@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from halpha.domain_values import content_digest
@@ -14,6 +16,63 @@ from halpha.venue_integration.models import (
     VenueFactSourceClass,
     venue_fact_content_digest,
 )
+
+
+TERMINAL_ORDER_STATUSES = frozenset(
+    {"FILLED", "CANCELLED", "REJECTED", "EXPIRED"}
+)
+
+
+def latest_execution_status(facts: Iterable[VenueFact]) -> str | None:
+    """Project technical order status from authoritative Nautilus facts.
+
+    The durable execution action deliberately does not copy Nautilus' order
+    lifecycle. Consumers that need the current technical status derive it from
+    the original order and fill observations.
+    """
+
+    observations: list[tuple[tuple[datetime, datetime, datetime, str], str]] = []
+    for fact in facts:
+        status: str | None = None
+        if fact.kind is VenueFactKind.ORDER_STATE:
+            value = str(fact.payload.get("status", "")).upper()
+            status = {
+                "ACCEPTED": "WORKING",
+                "ACKNOWLEDGED": "WORKING",
+                "NEW": "WORKING",
+                "CANCELED": "CANCELLED",
+            }.get(value, value)
+        elif fact.kind is VenueFactKind.FILL:
+            try:
+                leaves = Decimal(str(fact.payload.get("leaves_quantity")))
+            except (InvalidOperation, TypeError, ValueError):
+                status = "PARTIALLY_FILLED"
+            else:
+                status = "FILLED" if leaves == 0 else "PARTIALLY_FILLED"
+        if status:
+            observations.append(
+                (
+                    (
+                        fact.source_time or fact.cutoff,
+                        fact.cutoff,
+                        fact.received_at,
+                        fact.venue_fact_id,
+                    ),
+                    status,
+                )
+            )
+    if not observations:
+        return None
+    return max(observations)[1]
+
+
+def order_is_working(facts: Iterable[VenueFact]) -> bool:
+    return latest_execution_status(facts) in {"WORKING", "PARTIALLY_FILLED"}
+
+
+def terminal_order_status(facts: Iterable[VenueFact]) -> str | None:
+    status = latest_execution_status(facts)
+    return status if status in TERMINAL_ORDER_STATUSES else None
 
 
 def build_venue_fact(

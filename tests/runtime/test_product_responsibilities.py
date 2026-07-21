@@ -112,6 +112,31 @@ def _action(
     )
 
 
+def _venue_fact(
+    fact_id: str,
+    kind: VenueFactKind,
+    *,
+    status: str | None = None,
+    trade_id: str | None = None,
+    leaves_quantity: str = "0",
+) -> SimpleNamespace:
+    payload: dict[str, object] = {}
+    if status is not None:
+        payload["status"] = status
+    if trade_id is not None:
+        payload["trade_id"] = trade_id
+    if kind is VenueFactKind.FILL:
+        payload["leaves_quantity"] = leaves_quantity
+    return SimpleNamespace(
+        venue_fact_id=fact_id,
+        kind=kind,
+        payload=payload,
+        source_time=NOW,
+        cutoff=NOW,
+        received_at=NOW,
+    )
+
+
 class _Coordinator:
     def __init__(self, activation: PlanActivation) -> None:
         self.activation = activation
@@ -203,11 +228,12 @@ class _Coordinator:
         if action_ref is None:
             return None
         action = self.actions[action_ref]
-        fact_status = getattr(fact, "payload", {}).get("status")
-        if fact_status == "WORKING":
-            action.state = ExecutionActionState.WORKING
-        elif fact_status == "CANCELLED":
-            action.state = ExecutionActionState.CANCELLED
+        self.facts[action_ref] = (*self.facts.get(action_ref, ()), fact)
+        if getattr(fact, "kind", None) in {
+            VenueFactKind.ORDER_STATE,
+            VenueFactKind.FILL,
+        }:
+            action.state = ExecutionActionState.OPEN
         return action
 
     def create_position_exit(self, **kwargs: object) -> SimpleNamespace:
@@ -245,7 +271,7 @@ class _Coordinator:
     ) -> SimpleNamespace:
         self.reconciliations.append({"action_id": action_id, **kwargs})
         action = self.actions[action_id]
-        action.state = ExecutionActionState.RECONCILED
+        action.state = ExecutionActionState.CLOSED
         return action
 
     def close_activation(self, **kwargs: object) -> str:
@@ -288,7 +314,7 @@ def test_running_responsibility_uses_framework_events_between_bounded_fallback_p
         coordinator.actions["working-protection"] = _action(
             "working-protection",
             ExecutionActionKind.PROTECTION,
-            state=ExecutionActionState.WORKING,
+            state=ExecutionActionState.OPEN,
             terms={"quantity": "0.01"},
             client_order_id="a" * 32,
         )
@@ -319,7 +345,7 @@ def test_risk_reduction_fill_triggers_immediate_framework_event_sync() -> None:
         take_profit = _action(
             "take-profit-action",
             ExecutionActionKind.TAKE_PROFIT,
-            state=ExecutionActionState.FILLED,
+            state=ExecutionActionState.OPEN,
             terms={"quantity": "0.005"},
             client_order_id="b" * 32,
         )
@@ -370,7 +396,7 @@ def test_entry_fill_creates_and_submits_one_reduce_only_protection() -> None:
         entry = _action(
             "entry-action",
             ExecutionActionKind.ENTRY,
-            state=ExecutionActionState.FILLED,
+            state=ExecutionActionState.OPEN,
             terms={},
         )
 
@@ -402,7 +428,7 @@ def test_sync_queries_unknown_action_by_original_identity() -> None:
         unknown = _action(
             "entry-action-unknown",
             ExecutionActionKind.ENTRY,
-            state=ExecutionActionState.SUBMITTED_UNKNOWN,
+            state=ExecutionActionState.UNKNOWN,
             terms={},
             client_order_id="0123456789abcdef0123456789abcdef",
         )
@@ -428,18 +454,21 @@ def test_unknown_cancel_uses_framework_original_identity_query() -> None:
         target = _action(
             "protection-action",
             ExecutionActionKind.PROTECTION,
-            state=ExecutionActionState.WORKING,
+            state=ExecutionActionState.OPEN,
             terms={"quantity": "0.01"},
             client_order_id="a" * 32,
         )
         cancel = _action(
             "cancel-action-unknown",
             ExecutionActionKind.CANCEL,
-            state=ExecutionActionState.SUBMITTED_UNKNOWN,
+            state=ExecutionActionState.UNKNOWN,
             terms={"action_profile": "CANCEL_ORDER"},
             cancel_target={"client_order_id": "a" * 32, "endpoint": "ALGO"},
         )
         coordinator.actions[target.execution_action_id] = target
+        coordinator.facts[target.execution_action_id] = (
+            _venue_fact("protection-working", VenueFactKind.ORDER_STATE, status="WORKING"),
+        )
         coordinator.actions[cancel.execution_action_id] = cancel
         boundary = ProductResponsibilityBoundary(
             loop=asyncio.get_running_loop(),
@@ -455,7 +484,7 @@ def test_unknown_cancel_uses_framework_original_identity_query() -> None:
 
     assert coordinator.unknown_queries == [("cancel-action-unknown", NOW)]
     assert coordinator.applied_facts == []
-    assert coordinator.actions["protection-action"].state is ExecutionActionState.WORKING
+    assert coordinator.actions["protection-action"].state is ExecutionActionState.OPEN
 
 
 def test_sync_closes_unknown_entry_only_after_exact_uuid_is_proved_absent() -> None:
@@ -464,7 +493,7 @@ def test_sync_closes_unknown_entry_only_after_exact_uuid_is_proved_absent() -> N
         unknown = _action(
             "entry-action-absent",
             ExecutionActionKind.ENTRY,
-            state=ExecutionActionState.SUBMITTED_UNKNOWN,
+            state=ExecutionActionState.UNKNOWN,
             terms={},
             client_order_id="0123456789abcdef0123456789abcdef",
         )
@@ -496,7 +525,7 @@ def test_working_protection_creates_and_submits_two_fixed_take_profits() -> None
         protection = _action(
             "protection-action",
             ExecutionActionKind.PROTECTION,
-            state=ExecutionActionState.WORKING,
+            state=ExecutionActionState.OPEN,
             terms={
                 "quantity": "0.01",
                 "execution_context": {
@@ -507,6 +536,9 @@ def test_working_protection_creates_and_submits_two_fixed_take_profits() -> None
             },
         )
         coordinator.actions[protection.execution_action_id] = protection
+        coordinator.facts[protection.execution_action_id] = (
+            _venue_fact("protection-working", VenueFactKind.ORDER_STATE, status="WORKING"),
+        )
         boundary = ProductResponsibilityBoundary(
             loop=asyncio.get_running_loop(),
             coordinator=coordinator,
@@ -620,11 +652,14 @@ def test_flat_exiting_activation_cancels_remaining_algo_protection() -> None:
         protection = _action(
             "protection-action",
             ExecutionActionKind.PROTECTION,
-            state=ExecutionActionState.WORKING,
+            state=ExecutionActionState.OPEN,
             terms={"quantity": "0.01"},
             client_order_id="a" * 32,
         )
         coordinator.actions[protection.execution_action_id] = protection
+        coordinator.facts[protection.execution_action_id] = (
+            _venue_fact("protection-working", VenueFactKind.ORDER_STATE, status="WORKING"),
+        )
         boundary = ProductResponsibilityBoundary(
             loop=asyncio.get_running_loop(),
             coordinator=coordinator,
@@ -655,23 +690,34 @@ def test_running_activation_cancels_sibling_orders_after_stop_flattens_position(
         stop = _action(
             "protection-action",
             ExecutionActionKind.PROTECTION,
-            state=ExecutionActionState.FILLED,
+            state=ExecutionActionState.OPEN,
             terms={"quantity": "0.01"},
             client_order_id="a" * 32,
         )
         coordinator.actions[stop.execution_action_id] = stop
         coordinator.facts[stop.execution_action_id] = (
-            SimpleNamespace(venue_fact_id="stop-fill", kind=VenueFactKind.FILL),
+            _venue_fact(
+                "stop-fill",
+                VenueFactKind.FILL,
+                trade_id="stop-trade",
+            ),
         )
         for index in (1, 2):
             take_profit = _action(
                 f"take-profit-{index}",
                 ExecutionActionKind.TAKE_PROFIT,
-                state=ExecutionActionState.WORKING,
+                state=ExecutionActionState.OPEN,
                 terms={"quantity": "0.005"},
                 client_order_id=str(index) * 32,
             )
             coordinator.actions[take_profit.execution_action_id] = take_profit
+            coordinator.facts[take_profit.execution_action_id] = (
+                _venue_fact(
+                    f"take-profit-{index}-working",
+                    VenueFactKind.ORDER_STATE,
+                    status="WORKING",
+                ),
+            )
         boundary = ProductResponsibilityBoundary(
             loop=asyncio.get_running_loop(),
             coordinator=coordinator,
@@ -704,22 +750,29 @@ def test_partial_take_profit_keeps_remaining_protection_while_position_exists() 
         take_profit = _action(
             "take-profit-filled",
             ExecutionActionKind.TAKE_PROFIT,
-            state=ExecutionActionState.FILLED,
+            state=ExecutionActionState.OPEN,
             terms={"quantity": "0.005"},
             client_order_id="1" * 32,
         )
         coordinator.actions[take_profit.execution_action_id] = take_profit
         coordinator.facts[take_profit.execution_action_id] = (
-            SimpleNamespace(venue_fact_id="take-profit-fill", kind=VenueFactKind.FILL),
+            _venue_fact(
+                "take-profit-fill",
+                VenueFactKind.FILL,
+                trade_id="take-profit-trade",
+            ),
         )
         protection = _action(
             "protection-action",
             ExecutionActionKind.PROTECTION,
-            state=ExecutionActionState.WORKING,
+            state=ExecutionActionState.OPEN,
             terms={"quantity": "0.01"},
             client_order_id="a" * 32,
         )
         coordinator.actions[protection.execution_action_id] = protection
+        coordinator.facts[protection.execution_action_id] = (
+            _venue_fact("protection-working", VenueFactKind.ORDER_STATE, status="WORKING"),
+        )
         boundary = ProductResponsibilityBoundary(
             loop=asyncio.get_running_loop(),
             coordinator=coordinator,
@@ -753,19 +806,26 @@ def test_flat_terminal_actions_are_reconciled_and_activation_closes() -> None:
             coordinator.actions[action_id] = _action(
                 action_id,
                 kind,
-                state=ExecutionActionState.FILLED,
+                state=ExecutionActionState.OPEN,
                 terms={},
             )
-            coordinator.facts[action_id] = tuple(
-                SimpleNamespace(
-                    venue_fact_id=f"{action_id}-{fact_kind.value}",
-                    kind=fact_kind,
-                )
-                for fact_kind in (
+            trade_id = f"{action_id}-trade"
+            coordinator.facts[action_id] = (
+                _venue_fact(
+                    f"{action_id}-ORDER_STATE",
                     VenueFactKind.ORDER_STATE,
+                    status="FILLED",
+                ),
+                _venue_fact(
+                    f"{action_id}-FILL",
                     VenueFactKind.FILL,
+                    trade_id=trade_id,
+                ),
+                _venue_fact(
+                    f"{action_id}-COMMISSION",
                     VenueFactKind.COMMISSION,
-                )
+                    trade_id=trade_id,
+                ),
             )
         position_fact = SimpleNamespace(
             action_ref=None,
@@ -808,20 +868,26 @@ def test_running_entry_fill_does_not_close_before_risk_reduction_fill(
         entry = _action(
             "entry-action",
             ExecutionActionKind.ENTRY,
-            state=ExecutionActionState.FILLED,
+            state=ExecutionActionState.OPEN,
             terms={},
         )
         coordinator.actions[entry.execution_action_id] = entry
-        coordinator.facts[entry.execution_action_id] = tuple(
-            SimpleNamespace(
-                venue_fact_id=f"entry-action-{fact_kind.value}",
-                kind=fact_kind,
-            )
-            for fact_kind in (
+        coordinator.facts[entry.execution_action_id] = (
+            _venue_fact(
+                "entry-action-ORDER_STATE",
                 VenueFactKind.ORDER_STATE,
+                status="FILLED",
+            ),
+            _venue_fact(
+                "entry-action-FILL",
                 VenueFactKind.FILL,
+                trade_id="entry-trade",
+            ),
+            _venue_fact(
+                "entry-action-COMMISSION",
                 VenueFactKind.COMMISSION,
-            )
+                trade_id="entry-trade",
+            ),
         )
         position_fact = SimpleNamespace(
             action_ref=None,

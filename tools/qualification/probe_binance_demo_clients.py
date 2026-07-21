@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: E402
+
 import argparse
 import asyncio
 import calendar
@@ -62,7 +64,14 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import TraderId
 from nautilus_trader.trading.config import StrategyConfig
 
-from tools.qualification.nautilus_fixtures import MarketDataQualificationStrategy
+from halpha.venue_integration.nautilus_account import (
+    MULTI_ASSET_MARGIN_PATH,
+    query_single_asset_mode,
+)
+
+from tools.qualification.nautilus_fixtures import (
+    MarketDataQualificationStrategy,
+)
 
 
 EXPECTED_BACKEND = "keyring.backends.Windows.WinVaultKeyring"
@@ -103,7 +112,7 @@ FUNDING_INCOME_FIELDS = frozenset(
     {"symbol", "incomeType", "income", "asset", "info", "time", "tranId", "tradeId"},
 )
 READ_ONLY_GET_WHITELIST = frozenset(
-    {"/fapi/v1/multiAssetsMargin", FUNDING_INCOME_PATH},
+    {FUNDING_INCOME_PATH},
 )
 
 
@@ -453,28 +462,6 @@ def _build_configuration(
         exec_clients={BINANCE: exec_client},
     )
     return node, provider, data_client, exec_client
-
-
-async def _query_single_asset_mode(shared_http_client, clock) -> bool:
-    path = "/fapi/v1/multiAssetsMargin"
-    if path not in READ_ONLY_GET_WHITELIST:
-        raise QualificationError("READ_ONLY_GET_NOT_WHITELISTED")
-    raw = await shared_http_client.sign_request(
-        http_method=HttpMethod.GET,
-        url_path=path,
-        payload={
-            "timestamp": str(clock.timestamp_ms()),
-            "recvWindow": "5000",
-        },
-        ratelimiter_keys=[f"binance:{path}", "binance:global"],
-    )
-    try:
-        decoded = json.loads(raw)
-    except (TypeError, ValueError):
-        raise QualificationError("MULTI_ASSET_MODE_RESPONSE_NOT_JSON") from None
-    if not isinstance(decoded, dict) or type(decoded.get("multiAssetsMargin")) is not bool:
-        raise QualificationError("MULTI_ASSET_MODE_RESPONSE_SCHEMA_MISMATCH")
-    return not decoded["multiAssetsMargin"]
 
 
 def _parse_finite_decimal_text(value: object, field: str) -> Decimal:
@@ -1070,14 +1057,14 @@ async def _observe_running_node(
                     errors.append(f"ACCOUNT_CACHE_LEVERAGE_MISSING:{instrument_id}")
             evidence["account_cache"]["leverages"] = cache_leverages
 
-        single_asset_mode = await _query_single_asset_mode(
+        single_asset_mode = await query_single_asset_mode(
             shared_http_client,
             node.kernel.clock,
         )
         evidence["read_only_get_supplement"] = {
             "client": "SHARED_CACHED_NAUTILUS_BINANCE_HTTP_CLIENT",
             "method": "GET",
-            "path": "/fapi/v1/multiAssetsMargin",
+            "path": MULTI_ASSET_MARGIN_PATH,
             "reason": "NAUTILUS_ACCOUNT_SCHEMA_OMITS_MULTI_ASSETS_MARGIN",
             "write_methods_exposed": False,
         }

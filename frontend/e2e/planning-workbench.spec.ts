@@ -24,9 +24,23 @@ test("planning and limited-control surfaces preserve authority and failure bound
   await assertAccessible(page, testInfo, "overview");
 
   await page.goto("/plans/new");
-  await expect(page.getByRole("heading", { name: "新建策略计划" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "选择策略" })).toBeVisible();
   await expect(page.getByText("DEMO", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("筛选策略")).toBeVisible();
+  await expect(page.getByLabel("支持方向")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "排序" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "配置策略计划" })).toHaveCount(0);
+  await page.getByLabel("筛选策略").fill("Donchian");
+  await expect(page.getByText("单次 Donchian 突破与 ATR 风险退出", { exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "排序" }).click();
+  await page.getByRole("option", { name: "策略版本（新到旧）" }).click();
+  await page.getByRole("button", { name: "展开介绍" }).click();
+  await expect(page.getByText("价值逻辑", { exact: true })).toBeVisible();
+  await assertAccessible(page, testInfo, "strategy-selection");
+  await page.getByRole("button", { name: "配置策略" }).click();
+  await expect(page.getByRole("heading", { name: "配置策略计划" })).toBeVisible();
   await expect(page.getByRole("button", { name: "保存计划" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "重新选择策略" })).toBeVisible();
   await expect(page.getByLabel("交易对象")).toHaveValue("BTCUSDT-PERP");
   await expect(page.getByLabel("交易金额（USDT）")).toHaveValue("500");
   await expect(page.getByText("高级策略参数（可保持默认）")).toBeVisible();

@@ -42,8 +42,10 @@ research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026
 启动独立只读页面（默认仅绑定 `127.0.0.1:8766`，避开当前核心本地端口；立即显示上次已验证快照并在后台刷新，以后每 15 分钟检查；日线指标只在新 UTC 日线闭合后变化）：
 
 ```powershell
-research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py serve
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py serve --port 8766
 ```
+
+该页面属于独立研究边界，由研究环境自行启停，不随 `start product` 启动，交易内核也不引用或控制它。服务绑定成功后会主动向通用外部服务登记目录写入 PID 和监听信息；仓库根目录的 `halpha-control status` 交叉核验后显示 `external:btc-market-relationship-monitor-8766` 和 `External Registration`，但不取得启停权。前台运行时用 `Ctrl+C` 停止，登记会随正常退出删除；`halpha-control stop all` 不会停止它。
 
 离线重算已缓存数据：
 

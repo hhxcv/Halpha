@@ -22,9 +22,9 @@ from halpha.outcomes.trade_result import summarize_trade_result
 
 
 TERMINAL_ACTION_STATES = frozenset(
-    {"NOT_SUBMITTED", "RECONCILED", "HANDED_OVER"}
+    {"NOT_SUBMITTED", "CLOSED", "HANDED_OVER"}
 )
-UNKNOWN_ACTION_STATES = frozenset({"SUBMITTING", "SUBMITTED_UNKNOWN"})
+UNKNOWN_ACTION_STATES = frozenset({"SUBMITTING", "UNKNOWN"})
 
 
 def review_id_for_activation(environment_id: str, activation_id: str) -> str:
@@ -252,7 +252,7 @@ class OutcomeApplicationService:
             primary_result = PrimaryResult.RESULT_UNKNOWN
         elif open_action_refs:
             primary_result = PrimaryResult.PARTIAL
-        elif not actions or (states <= {"NOT_SUBMITTED", "RECONCILED"} and not has_fill):
+        elif not actions or (states <= {"NOT_SUBMITTED", "CLOSED"} and not has_fill):
             primary_result = PrimaryResult.NO_ACTION
         else:
             primary_result = PrimaryResult.COMPLETED
