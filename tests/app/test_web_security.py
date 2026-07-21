@@ -1,18 +1,26 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from halpha.app.planning_api import PostgreSQLPlanningApi
+from halpha.public_market import (
+    MarketBar,
+    MarketContext,
+    MarketContextProvider,
+    MarketWindow,
+)
 from halpha.app.projection import ProjectionUnavailable
 from halpha.app.secrets import AppSecrets
 from halpha.app.web import create_app
 from halpha.capital.repository import CapitalConflict
 from halpha.configuration import load_settings
+from halpha.planning.registry import Direction, OneShotParameters
 from halpha.user_workbench.repository import CommandConflict
 
 
@@ -26,9 +34,11 @@ class FakeProjection:
         *,
         available: bool = True,
         activations: list[dict[str, Any]] | None = None,
+        executor_status: str = "READY",
     ) -> None:
         self.available = available
         self.activations = activations or []
+        self.projected_executor_status = executor_status
 
     def overview(self) -> dict[str, Any]:
         if not self.available:
@@ -58,11 +68,75 @@ class FakeProjection:
             "activations": self.activations,
         }
 
+    def executor_status(self, product_build_id: str) -> dict[str, Any]:
+        return {
+            "status": self.projected_executor_status,
+            "checked_at": "2026-07-17T00:00:01Z",
+            "product_build_consistent": (
+                True
+                if self.projected_executor_status == "READY"
+                else False
+                if self.projected_executor_status == "BUILD_MISMATCH"
+                else None
+            ),
+            "product_build_id": product_build_id,
+        }
+
+
+class FakeMarketContext:
+    async def fetch(self, instrument_ref: str, lookback: int) -> MarketContext:
+        return MarketContext(
+            instrument_ref=instrument_ref,
+            source="BINANCE_DEMO_PUBLIC",
+            source_cutoff=datetime(2026, 7, 20, tzinfo=UTC),
+            latest_closed_1m_at=datetime(2026, 7, 20, tzinfo=UTC),
+            latest_closed_15m_at=datetime(2026, 7, 20, tzinfo=UTC),
+            channel_lookback_15m=lookback,
+            bid_price="100",
+            ask_price="101",
+            reference_price="100.5",
+            latest_close_1m="100.25",
+            latest_volume_1m="12.5",
+            latest_trade_count_1m=8,
+            latest_close_15m="100",
+            channel_upper="102",
+            channel_lower="98",
+            atr_14="2",
+            long_breakout_gap_pct="1.492537313432835820895522388",
+            short_breakout_gap_pct="2.48756218905472636815920398",
+        )
+
+    async def fetch_window(
+        self,
+        instrument_ref: str,
+        interval: Literal["1m", "15m"],
+        start_at: datetime,
+        end_at: datetime,
+    ) -> MarketWindow:
+        return MarketWindow(
+            instrument_ref=instrument_ref,
+            interval=interval,
+            source="BINANCE_DEMO_PUBLIC",
+            source_cutoff=end_at,
+            bars=(
+                MarketBar(
+                    open_at=start_at,
+                    close_at=end_at,
+                    open="100",
+                    high="102",
+                    low="99",
+                    close="101",
+                    volume="12.5",
+                ),
+            ),
+        )
+
 
 def make_client(
     tmp_path: Path,
     *,
     projection: FakeProjection | None = None,
+    market_context_provider: MarketContextProvider | None = None,
 ) -> TestClient:
     settings = load_settings(ROOT / "config" / "halpha.example.toml")
     app = create_app(
@@ -73,6 +147,7 @@ def make_client(
         ),
         repo_root=ROOT,
         projection=projection or FakeProjection(),
+        market_context_provider=market_context_provider,
         static_dist=tmp_path / "missing-dist",
     )
     return TestClient(app, base_url=ORIGIN)
@@ -99,20 +174,55 @@ def test_read_surface_is_available_without_login(tmp_path: Path) -> None:
 
 
 def test_strategy_and_status_reads_need_no_session(tmp_path: Path) -> None:
-    client = make_client(tmp_path)
+    client = make_client(
+        tmp_path,
+        market_context_provider=FakeMarketContext(),
+    )
 
     strategies = client.get("/api/v1/strategies")
     schema = client.get(
         "/api/v1/strategies/ONE_SHOT_DONCHIAN_ATR_BREAKOUT/schema"
     )
     status = client.get("/api/v1/settings/status")
+    market = client.get(
+        "/api/v1/market-context?instrument_ref=BTCUSDT-PERP&channel_lookback_15m=20"
+    )
+    market_window = client.get(
+        "/api/v1/market-window",
+        params={
+            "instrument_ref": "BTCUSDT-PERP",
+            "interval": "1m",
+            "start_at": "2026-07-20T00:00:00Z",
+            "end_at": "2026-07-20T00:01:00Z",
+        },
+    )
+    naive_market_window = client.get(
+        "/api/v1/market-window",
+        params={
+            "instrument_ref": "BTCUSDT-PERP",
+            "interval": "1m",
+            "start_at": "2026-07-20T00:00:00",
+            "end_at": "2026-07-20T00:01:00",
+        },
+    )
 
     assert strategies.status_code == 200
     assert strategies.json()[0]["strategy_id"] == "ONE_SHOT_DONCHIAN_ATR_BREAKOUT"
+    assert "Donchian 通道" in strategies.json()[0]["value_logic"]
+    assert "15 分钟通道突破" in strategies.json()[0]["applicable_scenarios"]
+    assert "ATR 止损和两档止盈" in strategies.json()[0]["execution_behavior"]
     assert schema.status_code == 200
     assert schema.json()["additionalProperties"] is False
     assert status.status_code == 200
     assert status.json()["runtime_real_write_gate"] == "CLOSED"
+    assert status.json()["executor_status"] == "READY"
+    assert status.json()["app_executor_product_build_consistent"] is True
+    assert market.status_code == 200
+    assert market.json()["reference_price"] == "100.5"
+    assert market_window.status_code == 200
+    assert market_window.json()["bars"][0]["close"] == "101"
+    assert naive_market_window.status_code == 422
+    assert naive_market_window.json()["detail"]["code"] == "MARKET_WINDOW_TIMEZONE_REQUIRED"
 
 
 def test_csrf_host_origin_and_authorization_boundaries(tmp_path: Path) -> None:
@@ -146,20 +256,23 @@ def test_operations_remains_usable_without_static_dist_or_password(
     missing_static = client.get("/overview", follow_redirects=False)
 
     assert operations.status_code == 200
-    assert "SAME-PROCESS LIMITED ENTRY" in operations.text
-    assert "A Receipt is not a venue result" in operations.text
-    assert "No non-completed activation exists" in operations.text
+    assert "故障接管" in operations.text
+    assert "当前环境没有未结束的策略运行" in operations.text
+    assert "命令被接受不代表 Binance 已经撤单、保护或平仓" in operations.text
+    assert 'href="https://demo.binance.com/"' in operations.text
     assert "password" not in operations.text.lower()
     assert "sign out" not in operations.text.lower()
     assert "halpha_csrf" in client.cookies
     assert script.status_code == 200
     assert "Idempotency-Key" in script.text
+    assert "stop-new-risk" in script.text
+    assert "RESUME_ACTIVATION" not in script.text
     assert "password" not in script.text.lower()
     assert missing_static.status_code == 503
     assert client.get("/login").status_code == 404
 
 
-def test_operations_projects_stable_recovery_state_and_three_controls(
+def test_operations_projects_only_core_fallback_facts_and_controls(
     tmp_path: Path,
 ) -> None:
     activation = {
@@ -172,18 +285,8 @@ def test_operations_projects_stable_recovery_state_and_three_controls(
         "pause_reason": "WRITER_CONTINUITY_LOST",
         "state_version": 2,
         "protection_state": "WORKING",
-        "plan_valid_until": "2026-07-18T00:00:00+00:00",
         "latest_venue_cutoff": "2026-07-17T00:00:00+00:00",
-        "max_margin": "100",
-        "max_notional": "500",
-        "max_allowed_loss": "25",
-        "quote_asset": "USDT",
-        "activation_loss": "3",
-        "max_loss_reached": False,
         "stopped_categories": ["NEW_RISK"],
-        "execution_actions": [],
-        "venue_facts": [],
-        "receipts": [],
     }
     client = make_client(
         tmp_path,
@@ -194,11 +297,15 @@ def test_operations_projects_stable_recovery_state_and_three_controls(
 
     assert operations.status_code == 200
     assert "WRITER_CONTINUITY_LOST" in operations.text
-    assert "NEW_RISK</dt><dd class=\"stopped\">STOPPED" in operations.text
+    assert "新增风险</dt><dd class=\"stopped\">已停止" in operations.text
     assert operations.text.count('class="control-button"') == 3
-    assert 'data-intent="RESUME_ACTIVATION"' in operations.text
+    assert 'data-intent="STOP_NEW_RISK"' in operations.text
     assert 'data-intent="EXIT_STRATEGY"' in operations.text
     assert 'data-intent="USER_TAKEOVER"' in operations.text
+    assert 'data-intent="RESUME_ACTIVATION"' not in operations.text
+    assert "2026-07-17 08:00:00 UTC+8" in operations.text
+    assert "<table" not in operations.text
+    assert "show-more" not in operations.text
 
 
 def test_unavailable_database_is_truthful_and_fail_closed(tmp_path: Path) -> None:
@@ -213,7 +320,8 @@ def test_unavailable_database_is_truthful_and_fail_closed(tmp_path: Path) -> Non
     assert status.status_code == 200
     assert status.json()["database_available"] is False
     assert status.json()["database_reason_code"] == "DATABASE_UNAVAILABLE"
-    assert "Database</dt><dd>UNKNOWN" in operations.text
+    assert "数据库</dt><dd>不可用" in operations.text
+    assert "所有控制保持关闭" in operations.text
 
 
 def test_security_headers_and_openapi_have_no_auth_contract(tmp_path: Path) -> None:
@@ -254,3 +362,78 @@ def test_domain_conflicts_are_stable_http_409(
 
     assert response.status_code == 409
     assert response.json()["detail"]["code"] == code
+
+
+def test_validation_errors_are_sanitized_to_one_stable_code(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def raise_validation(_self: PostgreSQLPlanningApi, _plan_id: str) -> dict[str, Any]:
+        OneShotParameters(
+            direction=Direction.LONG,
+            take_profit_1_r="0.75",
+            take_profit_2_r="1.5",
+        )
+        raise AssertionError("validation should have failed")
+
+    monkeypatch.setattr(PostgreSQLPlanningApi, "get_plan", raise_validation)
+    response = make_client(tmp_path).get(
+        "/api/v1/plans/00000000-0000-0000-0000-000000000000"
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == {"code": "PARAMETER_OUT_OF_RANGE"}
+
+
+def test_activation_preview_projects_executor_readiness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        PostgreSQLPlanningApi,
+        "activation_preview",
+        lambda _self, plan_version_id: {"plan_version_id": plan_version_id},
+    )
+    client = make_client(
+        tmp_path,
+        projection=FakeProjection(executor_status="STARTING"),
+    )
+    token = csrf(client)
+
+    response = client.post(
+        "/api/v1/plan-versions/plan-version-001/activation-preview",
+        headers={"Origin": ORIGIN, "X-CSRFToken": token},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["executor_status"] == "STARTING"
+    assert response.json()["executor_status_checked_at"] == "2026-07-17T00:00:01Z"
+
+
+def test_activation_rejects_before_mutation_when_executor_is_not_ready(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        PostgreSQLPlanningApi,
+        "activate",
+        lambda *_args, **_kwargs: pytest.fail("activation must not be created"),
+    )
+    client = make_client(
+        tmp_path,
+        projection=FakeProjection(executor_status="UNAVAILABLE"),
+    )
+    token = csrf(client)
+
+    response = client.post(
+        "/api/v1/activations",
+        json={"plan_version_id": "plan-version-001"},
+        headers={
+            "Origin": ORIGIN,
+            "X-CSRFToken": token,
+            "Idempotency-Key": "executor-unavailable-001",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == {"code": "EXECUTOR_NOT_READY"}

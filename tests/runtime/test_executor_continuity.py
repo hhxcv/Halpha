@@ -12,6 +12,7 @@ from halpha.executor.continuity import (
     PostgreSQLExecutorContinuityGuard,
 )
 from halpha.planning.service import PlanningApplicationService
+from halpha.planning.repository import PostgreSQLPlanningRepository
 
 
 class FakeConnection:
@@ -88,3 +89,28 @@ def test_app_spa_and_notification_sources_do_not_import_executor_guard() -> None
         root / "app" / "notifications.py",
     ):
         assert "executor.continuity" not in source.read_text(encoding="utf-8")
+
+
+def test_empty_activation_is_reactivated_without_fake_reconciliation() -> None:
+    statements: list[str] = []
+
+    class Cursor:
+        rowcount = 2
+
+    class RecordingConnection:
+        @staticmethod
+        def execute(statement: str, _parameters: object) -> Cursor:
+            statements.append(" ".join(statement.split()))
+            return Cursor()
+
+    observed_at = datetime(2026, 7, 20, 4, tzinfo=UTC)
+    count = PostgreSQLPlanningRepository(
+        RecordingConnection(),  # type: ignore[arg-type]
+        "binance-demo-primary",
+    ).pause_all_open_for_writer_continuity_loss(observed_at)
+
+    assert count == 2
+    assert "has_entry_fill OR pending_action_digest IS NOT NULL OR EXISTS" in statements[0]
+    assert "run_state = 'ACTIVE'" in statements[1]
+    assert "has_entry_fill = FALSE" in statements[1]
+    assert "NOT EXISTS" in statements[1]

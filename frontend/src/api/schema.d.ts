@@ -141,6 +141,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/market-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Market Context */
+        get: operations["market_context_api_v1_market_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/market-window": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Market Window */
+        get: operations["market_window_api_v1_market_window_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/overview": {
         parameters: {
             query?: never;
@@ -405,10 +439,105 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * EvaluationResult
+         * @enum {string}
+         */
+        EvaluationResult: "AS_EXPECTED" | "ISSUE_FOUND" | "UNKNOWN" | "NOT_APPLICABLE";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** MarketBar */
+        MarketBar: {
+            /** Close */
+            close: string;
+            /**
+             * Close At
+             * Format: date-time
+             */
+            close_at: string;
+            /** High */
+            high: string;
+            /** Low */
+            low: string;
+            /** Open */
+            open: string;
+            /**
+             * Open At
+             * Format: date-time
+             */
+            open_at: string;
+            /** Volume */
+            volume: string;
+        };
+        /** MarketContext */
+        MarketContext: {
+            /** Ask Price */
+            ask_price: string;
+            /** Atr 14 */
+            atr_14: string;
+            /** Bid Price */
+            bid_price: string;
+            /** Channel Lookback 15M */
+            channel_lookback_15m: number;
+            /** Channel Lower */
+            channel_lower: string;
+            /** Channel Upper */
+            channel_upper: string;
+            /** Instrument Ref */
+            instrument_ref: string;
+            /** Latest Close 15M */
+            latest_close_15m: string;
+            /** Latest Close 1M */
+            latest_close_1m: string;
+            /**
+             * Latest Closed 15M At
+             * Format: date-time
+             */
+            latest_closed_15m_at: string;
+            /**
+             * Latest Closed 1M At
+             * Format: date-time
+             */
+            latest_closed_1m_at: string;
+            /** Latest Trade Count 1M */
+            latest_trade_count_1m: number;
+            /** Latest Volume 1M */
+            latest_volume_1m: string;
+            /** Long Breakout Gap Pct */
+            long_breakout_gap_pct: string;
+            /** Reference Price */
+            reference_price: string;
+            /** Short Breakout Gap Pct */
+            short_breakout_gap_pct: string;
+            /** Source */
+            source: string;
+            /**
+             * Source Cutoff
+             * Format: date-time
+             */
+            source_cutoff: string;
+        };
+        /** MarketWindow */
+        MarketWindow: {
+            /** Bars */
+            bars: components["schemas"]["MarketBar"][];
+            /** Instrument Ref */
+            instrument_ref: string;
+            /**
+             * Interval
+             * @enum {string}
+             */
+            interval: "1m" | "15m";
+            /** Source */
+            source: string;
+            /**
+             * Source Cutoff
+             * Format: date-time
+             */
+            source_cutoff: string;
         };
         /** OverviewResponse */
         OverviewResponse: {
@@ -463,14 +592,14 @@ export interface components {
         };
         /** ReviewCompletionPayload */
         ReviewCompletionPayload: {
-            /** Evaluations */
-            evaluations: {
-                [key: string]: {
-                    [key: string]: unknown;
-                };
-            };
+            conclusion: components["schemas"]["EvaluationResult"];
             /** Expected Version */
             expected_version: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
         };
         /** ReviewRefreshPayload */
         ReviewRefreshPayload: {
@@ -505,6 +634,10 @@ export interface components {
             environment_id: string;
             /** Environment Kind */
             environment_kind: string;
+            /** Executor Status */
+            executor_status: string;
+            /** Executor Status Checked At */
+            executor_status_checked_at: string;
             /** Live Write Gate Violations */
             live_write_gate_violations: string[];
             /** Port */
@@ -845,6 +978,72 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    market_context_api_v1_market_context_get: {
+        parameters: {
+            query?: {
+                instrument_ref?: string;
+                channel_lookback_15m?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketContext"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    market_window_api_v1_market_window_get: {
+        parameters: {
+            query: {
+                instrument_ref: string;
+                start_at: string;
+                end_at: string;
+                interval?: "1m" | "15m";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketWindow"];
                 };
             };
             /** @description Validation Error */

@@ -41,35 +41,35 @@ class PostgreSQLCommandRepository:
         ).fetchone()
         if row is None:
             return None
-        command = Command(
-            command_id=str(row[0]),
-            environment_id=str(row[1]),
-            owner_scope=str(row[2]),
-            idempotency_key=str(row[3]),
-            target_kind=str(row[4]),
-            target_ref=str(row[5]),
-            expected_version=int(row[6]),
-            intent=ControlIntent(str(row[7])),
-            scope=dict(row[8]),
-            parameters=dict(row[9]),
-            submitted_at=row[10],
-            content_digest=str(row[11]),
-        )
-        receipt = Receipt(
-            receipt_id=str(row[12]),
-            environment_id=command.environment_id,
-            command_id=command.command_id,
-            processing_owner=str(row[13]),
-            state=ReceiptState(str(row[14])),
-            state_version=int(row[15]),
-            reason_code=str(row[16]) if row[16] is not None else None,
-            result=dict(row[17]) if row[17] is not None else None,
-            pending_responsibility_refs=tuple(row[18]),
-            content_digest=str(row[19]),
-            created_at=row[20],
-            updated_at=row[21],
-        )
-        return command, receipt
+        return _command_and_receipt(row)
+
+    def list_processing_for_target(
+        self,
+        target_ref: str,
+        *,
+        for_update: bool = False,
+    ) -> tuple[tuple[Command, Receipt], ...]:
+        suffix = " FOR UPDATE OF c, r" if for_update else ""
+        rows = self._connection.execute(
+            """
+            SELECT c.command_id, c.environment_id, c.owner_scope, c.idempotency_key,
+                   c.target_kind, c.target_ref, c.expected_version, c.intent,
+                   c.scope, c.parameters, c.submitted_at, c.content_digest,
+                   r.receipt_id, r.processing_owner, r.state, r.state_version,
+                   r.reason_code, r.result, r.pending_responsibility_refs,
+                   r.content_digest, r.created_at, r.updated_at
+            FROM halpha.command c
+            JOIN halpha.receipt r
+              ON r.environment_id = c.environment_id AND r.command_id = c.command_id
+            WHERE c.environment_id = %s
+              AND c.target_kind = 'PLAN_ACTIVATION'
+              AND c.target_ref = %s
+              AND r.state = 'PROCESSING'
+            ORDER BY c.submitted_at, c.command_id
+            """ + suffix,
+            (self._environment_id, target_ref),
+        ).fetchall()
+        return tuple(_command_and_receipt(row) for row in rows)
 
     def insert(self, command: Command, receipt: Receipt) -> None:
         self._connection.execute(
@@ -142,3 +142,35 @@ class PostgreSQLCommandRepository:
         )
         if cursor.rowcount != 1:
             raise CommandConflict("VERSION_CONFLICT")
+
+
+def _command_and_receipt(row: tuple[Any, ...]) -> tuple[Command, Receipt]:
+    command = Command(
+        command_id=str(row[0]),
+        environment_id=str(row[1]),
+        owner_scope=str(row[2]),
+        idempotency_key=str(row[3]),
+        target_kind=str(row[4]),
+        target_ref=str(row[5]),
+        expected_version=int(row[6]),
+        intent=ControlIntent(str(row[7])),
+        scope=dict(row[8]),
+        parameters=dict(row[9]),
+        submitted_at=row[10],
+        content_digest=str(row[11]),
+    )
+    receipt = Receipt(
+        receipt_id=str(row[12]),
+        environment_id=command.environment_id,
+        command_id=command.command_id,
+        processing_owner=str(row[13]),
+        state=ReceiptState(str(row[14])),
+        state_version=int(row[15]),
+        reason_code=str(row[16]) if row[16] is not None else None,
+        result=dict(row[17]) if row[17] is not None else None,
+        pending_responsibility_refs=tuple(row[18]),
+        content_digest=str(row[19]),
+        created_at=row[20],
+        updated_at=row[21],
+    )
+    return command, receipt

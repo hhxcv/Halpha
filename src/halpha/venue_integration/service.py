@@ -23,6 +23,7 @@ from halpha.venue_integration.transitions import (
     apply_venue_outcome,
     begin_submission,
     build_execution_action,
+    defer_unknown_query,
     hand_over_ready_action,
     mark_not_submitted,
     mark_submission_unknown,
@@ -44,6 +45,25 @@ _ORDER_STATE_MAP = {
     "REJECTED": ExecutionActionState.REJECTED,
     "EXPIRED": ExecutionActionState.EXPIRED,
 }
+
+
+def _same_source_content(left: VenueFact, right: VenueFact) -> bool:
+    """Ignore only local observation time when one venue version is re-read."""
+
+    fields = (
+        "environment_id",
+        "venue_ref",
+        "account_ref",
+        "instrument_ref",
+        "kind",
+        "source_class",
+        "source_object_id",
+        "source_sequence",
+        "source_time",
+        "schema_version",
+        "payload",
+    )
+    return all(getattr(left, field) == getattr(right, field) for field in fields)
 
 
 class ExecutionApplicationService:
@@ -174,6 +194,28 @@ class ExecutionApplicationService:
             self._actions.update(updated, expected_version=action.state_version)
         return updated
 
+    def prepare_due_unknown_query(
+        self,
+        execution_action_id: str,
+        *,
+        next_query_at: datetime,
+        observed_at: datetime,
+    ) -> ExecutionAction | None:
+        action = self._actions.get(execution_action_id, for_update=True)
+        if (
+            action.state is not ExecutionActionState.SUBMITTED_UNKNOWN
+            or action.next_query_at is None
+            or action.next_query_at > observed_at
+        ):
+            return None
+        updated = defer_unknown_query(
+            action,
+            next_query_at=next_query_at,
+            observed_at=observed_at,
+        )
+        self._actions.update(updated, expected_version=action.state_version)
+        return updated
+
     def record_definitely_not_submitted(
         self,
         execution_action_id: str,
@@ -198,7 +240,10 @@ class ExecutionApplicationService:
     ) -> ExecutionAction | None:
         existing = self._facts.find_by_source(fact)
         if existing is not None:
-            if existing.content_digest != fact.content_digest:
+            if (
+                existing.content_digest != fact.content_digest
+                and not _same_source_content(existing, fact)
+            ):
                 raise ValueError("FACT_CONFLICT")
             fact = existing
         else:
@@ -326,8 +371,6 @@ class ExecutionApplicationService:
         position_zero: bool,
         open_order_refs: tuple[str, ...],
         external_activity_conflict: bool,
-        fees_complete: bool,
-        funding_complete: bool,
         user_takeover: bool,
         handover_command_ref: str | None,
         fact_refs: tuple[str, ...],
@@ -348,8 +391,6 @@ class ExecutionApplicationService:
         if user_takeover:
             if handover_command_ref is None:
                 raise ValueError("CLOSURE_UNPROVEN")
-        elif not fees_complete or not funding_complete:
-            raise ValueError("CLOSURE_UNPROVEN")
         return content_digest(
             {
                 "environment_id": self._environment_id,
@@ -358,8 +399,6 @@ class ExecutionApplicationService:
                 "position_zero": position_zero,
                 "open_order_refs": open_order_refs,
                 "external_activity_conflict": external_activity_conflict,
-                "fees_complete": fees_complete,
-                "funding_complete": funding_complete,
                 "user_takeover": user_takeover,
                 "handover_command_ref": handover_command_ref,
                 "fact_refs": fact_refs,

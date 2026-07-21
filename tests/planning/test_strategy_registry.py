@@ -58,7 +58,10 @@ def _bars(count: int = 20) -> tuple[IndicatorBar, ...]:
 def test_static_registry_and_schema_are_build_bound() -> None:
     definition = describe_strategy(ONE_SHOT_STRATEGY_ID)
     schema = strategy_parameter_schema(ONE_SHOT_STRATEGY_ID)
-    assert definition.strategy_version == "1.0.0"
+    assert definition.strategy_version == "1.0.1"
+    assert "Donchian 通道" in definition.value_logic
+    assert "15 分钟通道突破" in definition.applicable_scenarios
+    assert "ATR 止损和两档止盈" in definition.execution_behavior
     assert definition.implementation_digest == source_file_sha256(
         ROOT / "src/halpha/planning/strategies/one_shot.py"
     )
@@ -77,6 +80,17 @@ def test_parameter_validation_is_authoritative_and_exact() -> None:
     normalized = validate_parameters(ONE_SHOT_STRATEGY_ID, _parameters())
     assert normalized["initial_stop_atr_multiple"] == "1.5"
     assert normalized["take_profit_1_fraction"] == "0.5"
+    assert normalized["entry_valid_minutes"] == 60
+    assert normalized["max_hold_bars_15m"] == 4
+    assert validate_parameters(
+        ONE_SHOT_STRATEGY_ID,
+        _parameters(channel_lookback_15m=4),
+    )["channel_lookback_15m"] == 4
+    with pytest.raises(ValidationError):
+        validate_parameters(
+            ONE_SHOT_STRATEGY_ID,
+            _parameters(channel_lookback_15m=3),
+        )
     with pytest.raises(ValidationError):
         validate_parameters(ONE_SHOT_STRATEGY_ID, _parameters(extra="not allowed"))
     with pytest.raises(ValidationError):
@@ -118,6 +132,19 @@ def test_native_indicator_boundary_uses_qualified_classes() -> None:
             lookback=20,
             bars=tuple(reversed(_bars())),
         )
+
+
+def test_native_indicator_boundary_supports_short_donchian_with_atr_warmup() -> None:
+    snapshot = native_donchian_atr_snapshot(
+        instrument_id="BTCUSDT-PERP.BINANCE",
+        lookback=4,
+        bars=_bars(15),
+    )
+
+    assert snapshot.initialized is True
+    assert snapshot.upper == "116"
+    assert snapshot.lower == "109"
+    assert float(snapshot.atr) > 0
 
 
 def test_one_shot_logic_is_deterministic_and_consumes_only_explicit_state() -> None:
@@ -175,6 +202,52 @@ def test_one_shot_logic_is_deterministic_and_consumes_only_explicit_state() -> N
     assert consumed.reason_code == "ENTRY_OPPORTUNITY_CONSUMED"
     assert paused.proposal is None
     assert paused.reason_code == "NEW_RISK_NOT_ALLOWED"
+
+
+def test_demo_immediate_entry_uses_the_same_one_shot_proposal_path() -> None:
+    now = datetime(2026, 7, 17, 8, tzinfo=UTC)
+    snapshot = native_donchian_atr_snapshot(
+        instrument_id="BTCUSDT-PERP.BINANCE",
+        lookback=20,
+        bars=_bars(),
+    )
+    evaluation = EntryEvaluationInput(
+        activation_id="activation-demo-check",
+        instrument_id="BTCUSDT-PERP.BINANCE",
+        source_identity="activation-demo-check:bar:1",
+        source_cutoff=now,
+        input_digest="c" * 64,
+        decision_at=now,
+        valid_until=now + timedelta(seconds=30),
+        confirmation_closes=("110",),
+        indicators=snapshot,
+        reference_price="110",
+        reference_source="BACKTEST_LAST_BAR_PROXY",
+        max_allowed_loss="100",
+        max_notional="1000",
+        max_margin="200",
+        effective_leverage="5",
+        taker_fee_rate="0.0006",
+        rules=InstrumentQuantityRules(
+            step_size="0.001",
+            price_tick_size="0.1",
+            min_quantity="0.001",
+            max_market_quantity="100",
+            min_notional="5",
+        ),
+    )
+
+    result = OneShotDonchianAtrLogic(
+        OneShotParameters(
+            direction="LONG",
+            demo_immediate_entry=True,
+        )
+    ).evaluate_entry(evaluation, ActivationStrategyState())
+
+    assert result.proposal is not None
+    assert result.proposal.rule_id == "DEMO_ORDER_FLOW_CHECK"
+    assert result.proposal.reason_code == "DEMO_ORDER_FLOW_CHECK_REQUESTED"
+    assert result.proposal.action_profile == "ENTRY_MARKET"
 
 
 def test_pure_strategy_source_has_no_framework_or_venue_write_dependency() -> None:

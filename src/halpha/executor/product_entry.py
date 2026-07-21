@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 import json
 from typing import Any, Protocol
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from nautilus_trader.adapters.binance import (
     BinanceAccountType,
@@ -19,6 +19,7 @@ from nautilus_trader.adapters.binance.common.enums import (
     BinanceEnvironment,
     BinanceKeyType,
 )
+from nautilus_trader.adapters.binance.http.error import BinanceClientError
 from nautilus_trader.adapters.binance.futures.http.account import (
     BinanceFuturesAccountHttpAPI,
 )
@@ -49,7 +50,14 @@ from halpha.planning.strategies.one_shot import (
     InstrumentQuantityRules,
     StrategyProposal,
 )
-from halpha.venue_integration.models import ExecutionActionState
+from halpha.venue_integration.facts import build_venue_fact
+from halpha.venue_integration.models import (
+    ExecutionAction,
+    ExecutionActionKind,
+    ExecutionActionState,
+    VenueFactKind,
+    VenueFactSourceClass,
+)
 
 from .responsibilities import ProductRiskReductionFacts
 
@@ -58,6 +66,7 @@ MAX_STREAM_FACT_AGE_NS = 3_000_000_000
 MAX_PRELIMINARY_STREAM_FACT_AGE_NS = 15_000_000_000
 MAX_QUERY_WINDOW_SECONDS = Decimal("5")
 MAX_SOURCE_BAR_AGE_SECONDS = Decimal("65")
+ENTRY_ORDER_ABSENCE_DELAY_SECONDS = Decimal("60")
 MARK_PRICE_PATH = "/fapi/v1/premiumIndex"
 
 
@@ -147,6 +156,72 @@ class _QuoteValue:
     ts_event: int
 
 
+MAX_ENTRY_SPREAD_BPS = Decimal("10")
+
+
+def _conservative_entry_price(
+    direction: Direction,
+    *,
+    mark: Decimal,
+    bid: Decimal,
+    ask: Decimal,
+) -> str:
+    book_price = ask if direction is Direction.LONG else bid
+    value = (
+        max(mark, book_price)
+        if direction is Direction.LONG
+        else min(mark, book_price)
+    )
+    return canonical_decimal(value)
+
+
+def _account_margin_state(
+    account_info: object,
+    symbol_configs: object,
+    symbol: str,
+) -> tuple[str, str, Decimal]:
+    if not bool(getattr(account_info, "canTrade", False)):
+        raise ProductPreSubmitRejected("ACCOUNT_TRADING_DISABLED")
+    symbol_config = next(
+        (item for item in symbol_configs if item.symbol == symbol),
+        None,
+    )
+    if symbol_config is None:
+        raise ProductPreSubmitRejected("SYMBOL_CONFIGURATION_UNKNOWN")
+    margin_mode = str(symbol_config.marginType).upper()
+    leverage = canonical_decimal(Decimal(str(symbol_config.leverage)))
+    try:
+        current_effective = effective_leverage(margin_mode, leverage)
+    except ValueError:
+        raise ProductPreSubmitRejected("ACCOUNT_LEVERAGE_UNKNOWN") from None
+    return margin_mode, leverage, current_effective
+
+
+def _top_of_book(book_tickers: object, symbol: str) -> tuple[Decimal, Decimal]:
+    book = next(
+        (item for item in book_tickers if item.symbol == symbol),
+        None,
+    )
+    if book is None:
+        raise ProductPreSubmitRejected("TOP_OF_BOOK_UNKNOWN")
+    bid = Decimal(str(book.bidPrice))
+    ask = Decimal(str(book.askPrice))
+    if bid <= 0 or ask <= 0 or bid > ask:
+        raise ProductPreSubmitRejected("TOP_OF_BOOK_INVALID")
+    return bid, ask
+
+
+def _fresh_mark(
+    mark_snapshot: tuple[Decimal, datetime],
+    checked_at: datetime,
+) -> Decimal:
+    mark, mark_time = mark_snapshot
+    mark_age = Decimal(str((checked_at - mark_time).total_seconds()))
+    if mark_age < Decimal("-2") or mark_age > MAX_QUERY_WINDOW_SECONDS:
+        raise ProductPreSubmitRejected("MARK_PRICE_STALE")
+    return mark
+
+
 class LiveEntryFactTracker:
     """Keep only the latest same-event quote and mark facts for pre-submit freshness."""
 
@@ -202,8 +277,16 @@ class LiveEntryFactTracker:
             age = cutoff_ns - timestamp
             if age < 0 or age > max_age_ns:
                 raise ProductPreSubmitRejected("STREAM_FACTS_STALE")
-        book_price = quote.ask if direction is Direction.LONG else quote.bid
-        return canonical_decimal(max(mark.value, book_price))
+        midpoint = (quote.bid + quote.ask) / Decimal("2")
+        spread_bps = (quote.ask - quote.bid) / midpoint * Decimal("10000")
+        if spread_bps > MAX_ENTRY_SPREAD_BPS:
+            raise ProductPreSubmitRejected("ENTRY_SPREAD_TOO_WIDE")
+        return _conservative_entry_price(
+            direction,
+            mark=mark.value,
+            bid=quote.bid,
+            ask=quote.ask,
+        )
 
     def fresh_mark(
         self,
@@ -330,6 +413,48 @@ class ProductPreSubmitFactProvider:
         self._api_key = api_key
         self._api_secret = api_secret
         self._proxy_url = proxy_url
+        self._client: object | None = None
+
+    def _binance_client(self) -> object:
+        if self._client is None:
+            environment = (
+                BinanceEnvironment.DEMO
+                if self._profile == "BINANCE_DEMO"
+                else BinanceEnvironment.LIVE
+            )
+            self._client = get_cached_binance_http_client(
+                clock=self._node.kernel.clock,
+                account_type=BinanceAccountType.USDT_FUTURES,
+                api_key=self._api_key.get_secret_value(),
+                api_secret=self._api_secret.get_secret_value(),
+                key_type=BinanceKeyType.HMAC,
+                base_url=None,
+                environment=environment,
+                is_us=False,
+                proxy_url=self._proxy_url,
+            )
+        return self._client
+
+    def _account_api(self, client: object) -> BinanceFuturesAccountHttpAPI:
+        return BinanceFuturesAccountHttpAPI(
+            client,
+            self._node.kernel.clock,
+            BinanceAccountType.USDT_FUTURES,
+        )
+
+    @staticmethod
+    def _market_api(client: object) -> BinanceFuturesMarketHttpAPI:
+        return BinanceFuturesMarketHttpAPI(
+            client,
+            BinanceAccountType.USDT_FUTURES,
+        )
+
+    def _wallet_api(self, client: object) -> BinanceFuturesWalletHttpAPI:
+        return BinanceFuturesWalletHttpAPI(
+            client,
+            self._node.kernel.clock,
+            BinanceAccountType.USDT_FUTURES,
+        )
 
     async def __call__(self, proposal: StrategyProposal) -> ProductAccountFacts:
         try:
@@ -356,39 +481,64 @@ class ProductPreSubmitFactProvider:
                 f"ACCOUNT_FACT_INVALID_{type(exc).__name__.upper()}"
             ) from None
 
+    async def entry_order_is_definitely_absent(
+        self,
+        action: ExecutionAction,
+    ) -> bool:
+        """Confirm an old unknown entry is absent by its original Binance UUID."""
+
+        observed_at = datetime.now(UTC)
+        if (
+            action.action_kind is not ExecutionActionKind.ENTRY
+            or action.state is not ExecutionActionState.SUBMITTED_UNKNOWN
+            or action.client_order_id is None
+            or action.call_started_at is None
+            or Decimal(str((observed_at - action.call_started_at).total_seconds()))
+            < ENTRY_ORDER_ABSENCE_DELAY_SECONDS
+        ):
+            return False
+        client = self._binance_client()
+        account_api = self._account_api(client)
+        symbol = _binance_symbol(f"{action.action_terms['instrument_ref']}.BINANCE")
+        try:
+            await asyncio.wait_for(
+                account_api.query_order(
+                    symbol=symbol,
+                    orig_client_order_id=action.client_order_id,
+                    recv_window="5000",
+                ),
+                timeout=float(MAX_QUERY_WINDOW_SECONDS),
+            )
+        except BinanceClientError as exc:
+            message = getattr(exc, "message", None)
+            if isinstance(message, dict) and message.get("code") == -2013:
+                return True
+            raise ProductPreSubmitRejected("ENTRY_ORDER_QUERY_REJECTED") from None
+        except Exception as exc:
+            raise ProductPreSubmitRejected(
+                f"ENTRY_ORDER_QUERY_FAILED_{type(exc).__name__.upper()}"
+            ) from None
+        return False
+
     async def _load_risk_reduction_facts(
         self,
         activation: PlanActivation,
     ) -> ProductRiskReductionFacts:
-        environment = (
-            BinanceEnvironment.DEMO
-            if self._profile == "BINANCE_DEMO"
-            else BinanceEnvironment.LIVE
-        )
-        client = get_cached_binance_http_client(
-            clock=self._node.kernel.clock,
-            account_type=BinanceAccountType.USDT_FUTURES,
-            api_key=self._api_key.get_secret_value(),
-            api_secret=self._api_secret.get_secret_value(),
-            key_type=BinanceKeyType.HMAC,
-            base_url=None,
-            environment=environment,
-            is_us=False,
-            proxy_url=self._proxy_url,
-        )
-        account_api = BinanceFuturesAccountHttpAPI(
-            client,
-            self._node.kernel.clock,
-            BinanceAccountType.USDT_FUTURES,
-        )
-        market_api = BinanceFuturesMarketHttpAPI(
-            client,
-            BinanceAccountType.USDT_FUTURES,
-        )
+        client = self._binance_client()
+        account_api = self._account_api(client)
+        market_api = self._market_api(client)
         symbol = _binance_symbol(f"{activation.instrument_ref}.BINANCE")
         started_at = datetime.now(UTC)
         try:
-            account_info, symbol_configs, positions, book_tickers, mark_snapshot = (
+            (
+                account_info,
+                symbol_configs,
+                positions,
+                book_tickers,
+                mark_snapshot,
+                open_orders,
+                open_algo_orders,
+            ) = (
                 await asyncio.wait_for(
                     asyncio.gather(
                         account_api.query_futures_account_info(recv_window="5000"),
@@ -399,6 +549,14 @@ class ProductPreSubmitFactProvider:
                         account_api.query_futures_position_risk(recv_window="5000"),
                         market_api.query_ticker_book(symbol=symbol),
                         _query_current_mark_price(client, symbol),
+                        account_api.query_open_orders(
+                            symbol=symbol,
+                            recv_window="5000",
+                        ),
+                        account_api.query_open_algo_orders(
+                            symbol=symbol,
+                            recv_window="5000",
+                        ),
                     ),
                     timeout=float(MAX_QUERY_WINDOW_SECONDS),
                 )
@@ -412,40 +570,50 @@ class ProductPreSubmitFactProvider:
         checked_at = datetime.now(UTC)
         if Decimal(str((checked_at - started_at).total_seconds())) > MAX_QUERY_WINDOW_SECONDS:
             raise ProductPreSubmitRejected("ACCOUNT_FACT_QUERY_STALE")
-        if not bool(account_info.canTrade):
-            raise ProductPreSubmitRejected("ACCOUNT_TRADING_DISABLED")
-        symbol_config = next(
-            (item for item in symbol_configs if item.symbol == symbol),
-            None,
+        margin_mode, leverage, current_effective = _account_margin_state(
+            account_info,
+            symbol_configs,
+            symbol,
         )
-        if symbol_config is None:
-            raise ProductPreSubmitRejected("SYMBOL_CONFIGURATION_UNKNOWN")
-        margin_mode = str(symbol_config.marginType).upper()
-        leverage = canonical_decimal(Decimal(str(symbol_config.leverage)))
-        try:
-            current_effective = effective_leverage(margin_mode, leverage)
-        except ValueError:
-            raise ProductPreSubmitRejected("ACCOUNT_LEVERAGE_UNKNOWN") from None
-        book = next(
-            (item for item in book_tickers if item.symbol == symbol),
-            None,
-        )
-        if book is None:
-            raise ProductPreSubmitRejected("TOP_OF_BOOK_UNKNOWN")
-        bid = Decimal(str(book.bidPrice))
-        ask = Decimal(str(book.askPrice))
-        if bid <= 0 or ask <= 0 or bid > ask:
-            raise ProductPreSubmitRejected("TOP_OF_BOOK_INVALID")
-        mark, mark_time = mark_snapshot
-        mark_age = Decimal(str((checked_at - mark_time).total_seconds()))
-        if mark_age < Decimal("-2") or mark_age > MAX_QUERY_WINDOW_SECONDS:
-            raise ProductPreSubmitRejected("MARK_PRICE_STALE")
+        bid, ask = _top_of_book(book_tickers, symbol)
+        mark = _fresh_mark(mark_snapshot, checked_at)
         conservative_price = max(mark, bid, ask)
-        current_abs = _symbol_abs_position(symbol=symbol, positions=positions)
+        signed_position = _symbol_position(symbol=symbol, positions=positions)
+        if (
+            activation.direction is Direction.LONG
+            and signed_position < 0
+        ) or (
+            activation.direction is Direction.SHORT
+            and signed_position > 0
+        ):
+            raise ProductPreSubmitRejected("POSITION_DIRECTION_CONFLICT")
+        current_abs = abs(signed_position)
         activation_notional = current_abs * conservative_price
         account_notional = sum(
             (_position_notional(item) for item in positions),
             Decimal("0"),
+        )
+        position_fact = build_venue_fact(
+            venue_fact_id=str(uuid4()),
+            environment_id=activation.environment_id,
+            venue_ref="BINANCE",
+            account_ref=activation.account_ref,
+            instrument_ref=activation.instrument_ref,
+            kind=VenueFactKind.POSITION_STATE,
+            source_class=VenueFactSourceClass.VENUE_QUERY,
+            source_object_id=f"{symbol}:POSITION_RISK",
+            source_sequence=str(int(checked_at.timestamp() * 1_000_000)),
+            source_time=None,
+            received_at=checked_at,
+            cutoff=checked_at,
+            payload={
+                "query_path": "/fapi/v2/positionRisk",
+                "read_only": True,
+                "symbol": symbol,
+                "position_quantity": canonical_decimal(signed_position),
+                "position_abs_quantity": canonical_decimal(current_abs),
+                "mark_price": canonical_decimal(mark),
+            },
         )
         return ProductRiskReductionFacts(
             checked_at=checked_at,
@@ -459,42 +627,19 @@ class ProductPreSubmitFactProvider:
                 activation_notional / current_effective
             ),
             current_abs_position=canonical_decimal(current_abs),
+            position_fact=position_fact,
+            open_order_client_ids=_client_order_ids(open_orders),
+            open_algo_client_ids=_client_algo_order_ids(open_algo_orders),
         )
 
     async def _load_facts(self, proposal: StrategyProposal) -> ProductAccountFacts:
         context = proposal.entry_risk_context
         if context is None:
             raise ProductPreSubmitRejected("ENTRY_RISK_CONTEXT_UNKNOWN")
-        environment = (
-            BinanceEnvironment.DEMO
-            if self._profile == "BINANCE_DEMO"
-            else BinanceEnvironment.LIVE
-        )
-        client = get_cached_binance_http_client(
-            clock=self._node.kernel.clock,
-            account_type=BinanceAccountType.USDT_FUTURES,
-            api_key=self._api_key.get_secret_value(),
-            api_secret=self._api_secret.get_secret_value(),
-            key_type=BinanceKeyType.HMAC,
-            base_url=None,
-            environment=environment,
-            is_us=False,
-            proxy_url=self._proxy_url,
-        )
-        account_api = BinanceFuturesAccountHttpAPI(
-            client,
-            self._node.kernel.clock,
-            BinanceAccountType.USDT_FUTURES,
-        )
-        market_api = BinanceFuturesMarketHttpAPI(
-            client,
-            BinanceAccountType.USDT_FUTURES,
-        )
-        wallet_api = BinanceFuturesWalletHttpAPI(
-            client,
-            self._node.kernel.clock,
-            BinanceAccountType.USDT_FUTURES,
-        )
+        client = self._binance_client()
+        account_api = self._account_api(client)
+        market_api = self._market_api(client)
+        wallet_api = self._wallet_api(client)
         symbol = _binance_symbol(proposal.instrument_id)
         started_at = datetime.now(UTC)
         try:
@@ -550,21 +695,11 @@ class ProductPreSubmitFactProvider:
             raise ProductPreSubmitRejected("SOURCE_BAR_STALE")
         if checked_at >= proposal.valid_until:
             raise ProductPreSubmitRejected("PROPOSAL_EXPIRED")
-        if not bool(account_info.canTrade):
-            raise ProductPreSubmitRejected("ACCOUNT_TRADING_DISABLED")
-
-        symbol_config = next(
-            (item for item in symbol_configs if item.symbol == symbol),
-            None,
+        margin_mode, leverage, current_effective = _account_margin_state(
+            account_info,
+            symbol_configs,
+            symbol,
         )
-        if symbol_config is None:
-            raise ProductPreSubmitRejected("SYMBOL_CONFIGURATION_UNKNOWN")
-        margin_mode = str(symbol_config.marginType).upper()
-        leverage = canonical_decimal(Decimal(str(symbol_config.leverage)))
-        try:
-            current_effective = effective_leverage(margin_mode, leverage)
-        except ValueError:
-            raise ProductPreSubmitRejected("ACCOUNT_LEVERAGE_UNKNOWN") from None
         if current_effective != Decimal(context.sizing_effective_leverage):
             raise ProductPreSubmitRejected("EFFECTIVE_LEVERAGE_DRIFT")
 
@@ -575,23 +710,14 @@ class ProductPreSubmitFactProvider:
         if rules_digest != context.instrument_rules_digest:
             raise ProductPreSubmitRejected("INSTRUMENT_RULES_DRIFT")
 
-        cutoff_ns = int(checked_at.timestamp() * 1_000_000_000)
-        book = next(
-            (item for item in book_tickers if item.symbol == symbol),
-            None,
+        bid, ask = _top_of_book(book_tickers, symbol)
+        mark = _fresh_mark(mark_snapshot, checked_at)
+        conservative_price = _conservative_entry_price(
+            proposal.direction,
+            mark=mark,
+            bid=bid,
+            ask=ask,
         )
-        if book is None:
-            raise ProductPreSubmitRejected("TOP_OF_BOOK_UNKNOWN")
-        bid = Decimal(str(book.bidPrice))
-        ask = Decimal(str(book.askPrice))
-        if bid <= 0 or ask <= 0 or bid > ask:
-            raise ProductPreSubmitRejected("TOP_OF_BOOK_INVALID")
-        mark, mark_time = mark_snapshot
-        mark_age = Decimal(str((checked_at - mark_time).total_seconds()))
-        if mark_age < Decimal("-2") or mark_age > MAX_QUERY_WINDOW_SECONDS:
-            raise ProductPreSubmitRejected("MARK_PRICE_STALE")
-        book_price = ask if proposal.direction is Direction.LONG else bid
-        conservative_price = canonical_decimal(max(mark, book_price))
         boundary = Decimal(context.entry_extension_boundary)
         reference = Decimal(conservative_price)
         if (
@@ -890,11 +1016,11 @@ def _position_notional(position: object) -> Decimal:
     )
 
 
-def _symbol_abs_position(*, symbol: str, positions: object) -> Decimal:
+def _symbol_position(*, symbol: str, positions: object) -> Decimal:
     try:
         return sum(
             (
-                abs(Decimal(str(getattr(item, "positionAmt"))))
+                Decimal(str(getattr(item, "positionAmt")))
                 for item in positions
                 if str(getattr(item, "symbol")) == symbol
             ),
@@ -902,6 +1028,32 @@ def _symbol_abs_position(*, symbol: str, positions: object) -> Decimal:
         )
     except (AttributeError, InvalidOperation, TypeError, ValueError):
         raise ProductPreSubmitRejected("POSITION_FACT_INVALID") from None
+
+
+def _symbol_abs_position(*, symbol: str, positions: object) -> Decimal:
+    return abs(_symbol_position(symbol=symbol, positions=positions))
+
+
+def _client_order_ids(orders: object) -> tuple[str, ...]:
+    try:
+        return tuple(
+            str(getattr(order, "clientOrderId"))
+            for order in orders
+            if getattr(order, "clientOrderId", None) is not None
+        )
+    except TypeError:
+        raise ProductPreSubmitRejected("OPEN_ORDER_FACT_INVALID") from None
+
+
+def _client_algo_order_ids(orders: object) -> tuple[str, ...]:
+    try:
+        return tuple(
+            str(getattr(order, "clientAlgoId"))
+            for order in orders
+            if getattr(order, "clientAlgoId", None) is not None
+        )
+    except TypeError:
+        raise ProductPreSubmitRejected("OPEN_ALGO_ORDER_FACT_INVALID") from None
 
 
 def _require_flat_entry_scope(

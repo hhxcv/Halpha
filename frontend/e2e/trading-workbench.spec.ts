@@ -77,12 +77,9 @@ test("the workbench exposes unknown, protection gap, max loss, exit, takeover, c
 
   await page.goto(`/activations/${gap!.activation_id}`);
   await expect(page.getByRole("heading", { name: "激活运行与控制" })).toBeVisible();
-  await expect(page.getByText("场所原生保护尚未证明为 WORKING")).toBeVisible();
-  await expect(page.getByText("计划已触发停止新增风险")).toBeVisible();
-  await expect(page.getByText("ENTRY · SUBMITTED_UNKNOWN")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "交易所原生保护尚未证明为工作中" })).toBeVisible();
   await expect(page.getByRole("alert", { name: "" }).filter({ hasText: "WORKBENCH_UNKNOWN_RESULT" })).toBeVisible();
-  await expect(page.getByText("RUNNING / 50 USDT")).toBeVisible();
-  await expect(page.getByText("计划已触发停止新增风险。系统不得再开仓或加仓；退出、保护与核对仍需完成。")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "计划已触发停止新增风险" })).toBeVisible();
   await assertAccessible(page, testInfo, "trading-gap-unknown-max-loss");
   await testInfo.attach("trading-gap-unknown-max-loss.png", {
     body: await page.screenshot({ fullPage: true }),
@@ -90,32 +87,34 @@ test("the workbench exposes unknown, protection gap, max loss, exit, takeover, c
   });
 
   await page.goto(`/activations/${exiting!.activation_id}`);
-  await expect(page.getByText("EXITING", { exact: true })).toBeVisible();
+  await expect(page.getByText("正在退出", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("策略行为只作次要验证")).toBeVisible();
 
   await page.goto(`/activations/${takeover!.activation_id}`);
-  await expect(page.getByText("用户接管已持久化")).toBeVisible();
-  await expect(page.getByText("接管或闭合后不再提供机器写恢复或其他控制")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "用户接管已持久化" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Halpha 不再提交新的待执行动作" })).toBeVisible();
   await assertAccessible(page, testInfo, "trading-user-takeover");
 
   await page.goto("/reviews");
-  await expect(page.getByRole("heading", { name: "激活复盘" })).toBeVisible();
-  await expect(page.getByText("NO_ACTION · DRAFT")).toBeVisible();
-  await page.getByRole("button", { name: "查看证据与评价" }).first().click();
-  await expect(page.getByRole("heading", { name: "一次激活复盘" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "系统机制证据" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "策略行为证据" })).toBeVisible();
-  await expect(page.getByText("模拟成交质量、收益或胜率不能无条件外推到 LIVE")).toBeVisible();
+  await expect(page.getByRole("table", { name: "交易与复盘记录" })).toBeVisible();
+  await page.getByRole("tab", { name: /全部激活/ }).click();
+  await expect(page.getByText("未发生交易").first()).toBeVisible();
+  await expect(page.getByText("待评价").first()).toBeVisible();
+  await page.getByRole("table", { name: "交易与复盘记录" }).getByRole("button", { name: "复盘" }).first().click();
+  await expect(page.getByRole("heading", { name: "交易价格回看" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "机器为何交易" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "我的结论" })).toBeVisible();
+  await expect(page.getByText("图表不替代持久成交事实", { exact: false })).toBeVisible();
   await assertAccessible(page, testInfo, "trading-review");
 
   await page.goto("/operations");
-  await expect(page.getByRole("heading", { name: "Recovery operations" })).toBeVisible();
-  await page.locator("article.activation").filter({ hasText: "BTCUSDT-PERP" }).getByText("Execution actions and attributed venue facts").click();
-  await expect(page.getByText("SUBMITTED_UNKNOWN")).toBeVisible();
-  await expect(page.getByText("REACHED", { exact: true })).toBeVisible();
-  await expect(page.getByText("GAP", { exact: true })).toBeVisible();
-  await expect(page.getByText("EXIT CLOSURE PENDING").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "故障接管" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开 Binance 官方入口" })).toBeVisible();
+  await expect(page.locator("article.activation").filter({ hasText: "BTCUSDT-PERP" }).getByText("GAP", { exact: true })).toBeVisible();
+  await expect(page.getByText("EXITING", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("USER_TAKEOVER", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("恢复激活", { exact: false })).toHaveCount(0);
+  await expect(page.locator("table")).toHaveCount(0);
   await assertAccessible(page, testInfo, "trading-operations");
 
   await assertNoDocumentOverflow(page, testInfo, "trading-operations");
@@ -148,6 +147,8 @@ test("the workbench renders the synthetic LIVE strategy-start target state witho
     authority_class: "LIVE_REAL_CAPITAL",
     product_build_id: "a".repeat(64),
     app_executor_product_build_consistent: true,
+    executor_status: "READY",
+    executor_status_checked_at: "2026-07-21T00:00:00Z",
     configured_runtime_real_write_gate: "CLOSED",
     runtime_real_write_gate: "CLOSED",
     live_write_gate_violations: [],
@@ -170,6 +171,8 @@ test("the workbench renders the synthetic LIVE strategy-start target state witho
       account_ref: "synthetic-live-target-account",
       product_build_id: "a".repeat(64),
       product_build_consistent: true,
+      executor_status: "READY",
+      executor_status_checked_at: "2026-07-21T00:00:00Z",
       configured_runtime_real_write_gate: "CLOSED",
       runtime_real_write_gate: "CLOSED",
       live_activation_eligible: true,
@@ -188,10 +191,12 @@ test("the workbench renders the synthetic LIVE strategy-start target state witho
   });
 
   await page.goto(`/plans/${planVersionId}/activate`);
-  await expect(page.getByText("REAL WRITE · CLOSED")).toBeVisible();
+  await expect(page.getByText("LIVE", { exact: true })).toBeVisible();
+  await expect(page.getByText("DEMO", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("真实账户交易 · 已关闭")).toBeVisible();
   await expect(page.getByRole("heading", { name: "确认启动策略" })).toBeVisible();
   await expect(page.getByText("策略计划中的交易金额就是本次边界", { exact: false })).toBeVisible();
-  const submit = page.getByRole("button", { name: "启动 REAL 策略" });
+  const submit = page.getByRole("button", { name: "启动真实账户策略" });
   await expect(submit).toBeEnabled();
   await assertAccessible(page, testInfo, "trading-synthetic-live-closed");
   await assertNoDocumentOverflow(page, testInfo, "trading-synthetic-live-closed");
@@ -203,19 +208,35 @@ test("the workbench renders the synthetic LIVE strategy-start target state witho
 
   projectedStatus = {
     ...projectedStatus,
+    executor_status: "STARTING",
+    app_executor_product_build_consistent: null,
+  };
+  projectedPreview = {
+    ...projectedPreview,
+    executor_status: "STARTING",
+  };
+  await page.reload();
+  await expect(page.getByText("执行器尚未完成连接、启动核对和历史预热", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "执行器未就绪，不能启动" })).toBeDisabled();
+
+  projectedStatus = {
+    ...projectedStatus,
+    executor_status: "READY",
+    app_executor_product_build_consistent: true,
     configured_runtime_real_write_gate: "OPEN",
     runtime_real_write_gate: "OPEN",
   };
   projectedPreview = {
     ...projectedPreview,
+    executor_status: "READY",
     configured_runtime_real_write_gate: "OPEN",
     runtime_real_write_gate: "OPEN",
     live_activation_eligible: false,
   };
   await page.reload();
-  await expect(page.getByText("REAL WRITE · OPEN")).toBeVisible();
-  await expect(page.getByText("当前产品版本或交易所变更请求配置不一致；当前不能启动 REAL 策略。")).toBeVisible();
-  await expect(page.getByRole("button", { name: "启动 REAL 策略" })).toBeDisabled();
+  await expect(page.getByText("真实账户交易 · 已开启")).toBeVisible();
+  await expect(page.getByText("当前产品版本或交易所变更请求配置不一致；当前不能启动真实账户策略。")).toBeVisible();
+  await expect(page.getByRole("button", { name: "启动真实账户策略" })).toBeDisabled();
   await assertAccessible(page, testInfo, "trading-synthetic-live-open");
   await assertNoDocumentOverflow(page, testInfo, "trading-synthetic-live-open");
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -238,20 +259,20 @@ test("the workbench rejects a stale control submission instead of applying a new
     page.goto(`/activations/${staleControl!.activation_id}`),
     stalePage.goto(`/activations/${staleControl!.activation_id}`),
   ]);
-  await expect(page.getByText("RUNNING", { exact: true })).toBeVisible();
-  await expect(stalePage.getByText("RUNNING", { exact: true })).toBeVisible();
+  await expect(page.getByText("XRPUSDT-PERP / 做多", { exact: true })).toBeVisible();
+  await expect(stalePage.getByText("XRPUSDT-PERP / 做多", { exact: true })).toBeVisible();
   await stalePage.route(
     new RegExp(`/api/v1/activations/${staleControl!.activation_id}$`),
     (route) => route.abort(),
   );
 
   await page.getByRole("button", { name: "退出策略" }).click();
-  await page.getByRole("button", { name: "确认提交 EXIT_STRATEGY" }).click();
-  await expect(page.getByText("命令已持久化并返回 PROCESSING Receipt")).toBeVisible();
+  await page.getByRole("button", { name: "确认退出策略" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "命令已生效，当前执行责任已经核对" })).toBeVisible();
 
   await stalePage.getByRole("button", { name: "用户接管" }).click();
-  await stalePage.getByRole("button", { name: "确认提交 USER_TAKEOVER" }).click();
-  await expect(stalePage.getByText("命令被拒绝：PLAN_VERSION_CONFLICT")).toBeVisible();
+  await stalePage.getByRole("button", { name: "确认用户接管" }).click();
+  await expect(stalePage.getByRole("alert").filter({ hasText: "PLAN_VERSION_CONFLICT" })).toBeVisible();
   await assertAccessible(stalePage, testInfo, "trading-stale-control-rejected");
   await stalePage.close();
 });

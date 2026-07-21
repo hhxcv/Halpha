@@ -185,11 +185,69 @@ class HalphaCoordinator:
     ) -> tuple[ExecutionAction, ...]:
         return self._action_repository.list_for_activation(activation_id)
 
+    def has_open_entry_responsibility(self, activation_id: str) -> bool:
+        return self._action_repository.has_open_entry_responsibility(activation_id)
+
+    def new_risk_allowed(self, activation_id: str) -> bool:
+        with self._connection.transaction():
+            return self._capital.new_risk_allowed(activation_id)
+
     def list_venue_facts_for_action(
         self,
         execution_action_id: str,
     ) -> tuple[VenueFact, ...]:
         return self._fact_repository.list_for_action(execution_action_id)
+
+    def expire_empty_entry_window(
+        self,
+        *,
+        activation_id: str,
+        observed_at: datetime,
+    ) -> tuple[PlanActivation, PlanEvent]:
+        """Close one expired activation when it never created venue responsibility."""
+
+        with self._connection.transaction():
+            expired, event = self._planning.expire_entry_deadline(
+                activation_id=activation_id,
+                plan_event_id=str(uuid4()),
+                observed_at=observed_at,
+            )
+            if (
+                expired.has_entry_fill
+                or expired.pending_action_digest is not None
+                or self._action_repository.list_for_activation(activation_id)
+            ):
+                return expired, event
+            result_ref = review_id_for_activation(
+                self._environment_id,
+                activation_id,
+            )
+            closure_digest = content_digest(
+                {
+                    "environment_id": self._environment_id,
+                    "activation_id": activation_id,
+                    "reason": "ENTRY_WINDOW_EXPIRED",
+                    "plan_event_id": event.plan_event_id,
+                    "entry_deadline": event.source_cutoff,
+                    "has_entry_fill": False,
+                    "execution_action_count": 0,
+                }
+            )
+            completed = self._planning.complete_with_execution_closure(
+                activation_id=activation_id,
+                closure_digest=closure_digest,
+                result_ref=result_ref,
+                observed_at=observed_at,
+            )
+            OutcomeApplicationService(
+                self._connection,
+                self._environment_id,
+            ).update_activation_review(
+                activation_id,
+                fact_cutoff=event.source_cutoff,
+                observed_at=observed_at,
+            )
+            return completed, event
 
     def get_entry_sizing_boundary(self, activation_id: str) -> ActivationCapitalBoundary:
         with self._connection.transaction():
@@ -254,6 +312,28 @@ class HalphaCoordinator:
                 observed_at=observed_at,
             )
 
+    def record_unknown_action_not_submitted(
+        self,
+        execution_action_id: str,
+        *,
+        reason_code: str,
+        observed_at: datetime,
+    ) -> ExecutionAction:
+        """Close only an unresolved action proven absent by its original identity."""
+
+        with self._connection.transaction():
+            action = self._action_repository.get(
+                execution_action_id,
+                for_update=True,
+            )
+            if action.state is not ExecutionActionState.SUBMITTED_UNKNOWN:
+                return action
+            return self._execution.record_definitely_not_submitted(
+                execution_action_id,
+                reason_code=reason_code,
+                observed_at=observed_at,
+            )
+
     def reconcile_execution_action(
         self,
         execution_action_id: str,
@@ -291,6 +371,29 @@ class HalphaCoordinator:
                 continue
         return unresolved
 
+    def query_unknown_action_if_due(
+        self,
+        execution_action_id: str,
+        *,
+        observed_at: datetime,
+    ) -> bool:
+        """Query one unresolved action by its original UUID at a limited rate."""
+
+        with self._connection.transaction():
+            action = self._execution.prepare_due_unknown_query(
+                execution_action_id,
+                next_query_at=observed_at + timedelta(seconds=10),
+                observed_at=observed_at,
+            )
+        if action is None:
+            return False
+        try:
+            self._gate.query_original_identity(action.execution_action_id)
+        except Exception:
+            # Query transport failure does not change the unresolved responsibility.
+            pass
+        return True
+
     def build_nautilus_event_normalizer(
         self,
         *,
@@ -326,7 +429,7 @@ class HalphaCoordinator:
             if normalized.result_unknown and action is not None:
                 self._execution.record_submission_unknown(
                     action.execution_action_id,
-                    reason="NAUTILUS_CANCEL_RESULT_UNKNOWN",
+                    reason=normalized.unknown_reason or "VENUE_RESULT_UNKNOWN",
                     next_query_at=observed_at + timedelta(seconds=10),
                     observed_at=observed_at,
                 )
@@ -395,10 +498,18 @@ class HalphaCoordinator:
             raise RuntimeError("LIVE_WRITE_ACTIVATION_SCOPE_MISMATCH")
         self._require_current_live_write_gate(proposal.activation_id)
         with self._connection.transaction():
+            # The activation lock serializes entry creation. An unknown order is
+            # already an open responsibility even before a fill reaches TRADEPLAN.
+            self._planning.get_activation(proposal.activation_id, for_update=True)
             event = self._planning.consume_strategy_proposal(
                 plan_event_id=plan_event_id,
                 proposal=proposal,
                 action_check=action_check,
+                entry_responsibility_open=(
+                    self._action_repository.has_open_entry_responsibility(
+                        proposal.activation_id
+                    )
+                ),
                 created_at=created_at,
             )
             if not bool(event.capital_decision.get("accepted")):
@@ -575,6 +686,23 @@ class HalphaCoordinator:
                     pending_action_digest=None,
                     observed_at=observed_at,
                 )
+            if (
+                fact.kind is VenueFactKind.ORDER_STATE
+                and fact.payload.get("status") == "CANCELLED"
+            ):
+                target_client_order_id = fact.payload.get("client_order_id")
+                if isinstance(target_client_order_id, str):
+                    cancel_action = (
+                        self._action_repository.find_open_cancel_for_target(
+                            target_client_order_id
+                        )
+                    )
+                    if cancel_action is not None:
+                        self._execution.reconcile_cancel_from_target_fact(
+                            cancel_action.execution_action_id,
+                            target_fact=fact,
+                            observed_at=observed_at,
+                        )
             return updated
 
     def create_protection_for_fill(
@@ -849,12 +977,9 @@ class HalphaCoordinator:
         position_zero: bool,
         open_order_refs: tuple[str, ...],
         external_activity_conflict: bool,
-        fees_complete: bool,
-        funding_complete: bool,
         user_takeover: bool,
         handover_command_ref: str | None,
         fact_refs: tuple[str, ...],
-        result_ref: str,
         observed_at: datetime,
     ) -> str:
         """Bind closure/release atomically, then derive OUT without rollback coupling."""
@@ -866,8 +991,6 @@ class HalphaCoordinator:
                 position_zero=position_zero,
                 open_order_refs=open_order_refs,
                 external_activity_conflict=external_activity_conflict,
-                fees_complete=fees_complete,
-                funding_complete=funding_complete,
                 user_takeover=user_takeover,
                 handover_command_ref=handover_command_ref,
                 fact_refs=fact_refs,

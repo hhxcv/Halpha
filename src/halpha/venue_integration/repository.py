@@ -118,6 +118,22 @@ class PostgreSQLExecutionActionRepository:
         ).fetchall()
         return tuple(_action_from_row(row) for row in rows)
 
+    def has_open_entry_responsibility(self, activation_id: str) -> bool:
+        """Return whether an entry may still have changed venue or exposure."""
+
+        row = self._connection.execute(
+            """
+            SELECT 1
+            FROM halpha.execution_action
+            WHERE environment_id = %s AND activation_id = %s
+              AND action_kind = 'ENTRY'
+              AND state NOT IN ('NOT_SUBMITTED', 'RECONCILED', 'HANDED_OVER')
+            LIMIT 1
+            """,
+            (self._environment_id, activation_id),
+        ).fetchone()
+        return row is not None
+
     def list_by_states(
         self,
         states: tuple[str, ...],

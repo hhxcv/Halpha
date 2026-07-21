@@ -16,6 +16,7 @@ bind = "127.0.0.1"
 port = 8765
 workers = 1
 reload = false
+public_market_proxy_url = "http://127.0.0.1:7897"
 
 [app.database_credential_reference]
 service = "Halpha/PostgreSQL/BINANCE_LIVE/App"
@@ -54,9 +55,6 @@ postgresql_bin_directory = "D:/Environment/PostgreSQL/17.10/bin"
 log_root = "logs"
 backup_root = "backups/postgresql"
 temporary_root = "tmp/backup"
-evidence_catalog_root = "build/evidence/catalog"
-evidence_raw_root = "build/evidence/raw"
-evidence_report_root = "build/evidence/reports"
 backup_retention_count = 14
 backup_schedule_local = "02:30"
 

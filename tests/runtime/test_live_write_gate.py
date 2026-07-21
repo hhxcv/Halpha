@@ -13,7 +13,6 @@ from halpha.live_write_gate import (
     assert_live_write_gate_directory_security,
     assert_live_write_gate_security,
     evaluate_live_write_gate,
-    require_live_write_gate_binding_provisionable,
     require_live_write_gate_open,
     require_live_write_gate_precheck,
 )

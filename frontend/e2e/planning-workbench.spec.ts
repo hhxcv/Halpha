@@ -18,14 +18,16 @@ async function assertAccessible(page: Page, testInfo: TestInfo, name: string) {
 test("planning and limited-control surfaces preserve authority and failure boundaries", async ({ page }, testInfo) => {
   await page.goto("/overview");
   await expect(page).toHaveURL(/\/overview$/);
-  await expect(page.getByText("REAL WRITE · CLOSED")).toBeVisible();
+  await expect(page.getByText("DEMO", { exact: true })).toBeVisible();
+  await expect(page.getByText("真实账户交易", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("刷新于", { exact: false })).toBeVisible();
   await assertAccessible(page, testInfo, "overview");
 
   await page.goto("/plans/new");
   await expect(page.getByRole("heading", { name: "新建策略计划" })).toBeVisible();
-  await expect(page.getByText("DEMO 主要验证交易闭环和安全机制")).toBeVisible();
+  await expect(page.getByText("DEMO", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "保存计划" })).toBeVisible();
-  await expect(page.getByLabel("Instrument")).toHaveValue("BTCUSDT-PERP");
+  await expect(page.getByLabel("交易对象")).toHaveValue("BTCUSDT-PERP");
   await expect(page.getByLabel("交易金额（USDT）")).toHaveValue("500");
   await expect(page.getByText("高级策略参数（可保持默认）")).toBeVisible();
   await assertAccessible(page, testInfo, "new-plan");
@@ -36,36 +38,42 @@ test("planning and limited-control surfaces preserve authority and failure bound
   await page.getByRole("button", { name: "保存计划" }).click();
   await expect(page).toHaveURL(/\/plans$/);
   await expect(page.getByRole("heading", { name: "策略计划" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /当前计划/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /历史计划/ })).toBeVisible();
+  await expect(page.getByText("了解当前可用策略", { exact: false })).toHaveCount(0);
   await expect(page.getByText("BTCUSDT-PERP").first()).toBeVisible();
+  await page.getByText("策略详情", { exact: true }).first().click();
+  await expect(page.getByText("价值逻辑", { exact: true }).first()).toBeVisible();
 
   await page.goto("/operations");
-  await expect(page.getByRole("heading", { name: "Recovery operations" })).toBeVisible();
-  await expect(page.getByText("REAL WRITE · CLOSED")).toBeVisible();
-  const activation = page.locator("article.activation").filter({ hasText: "RECOVERY DECISION REQUIRED" }).first();
+  await expect(page.getByRole("heading", { name: "故障接管" })).toBeVisible();
+  await expect(page.getByText("DEMO", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开 Binance 官方入口" })).toBeVisible();
+  const activation = page.locator("article.activation").filter({ hasText: "WRITER_CONTINUITY_LOST" }).first();
   await expect(activation).toBeVisible();
   const activationId = await activation.getAttribute("data-activation-id");
   expect(activationId).toBeTruthy();
-  await expect(activation.getByText("RECOVERY DECISION REQUIRED")).toBeVisible();
+  await expect(activation.getByText(/PAUSED · WRITER_CONTINUITY_LOST/)).toBeVisible();
+  await expect(activation.getByText("恢复激活", { exact: false })).toHaveCount(0);
   await assertAccessible(page, testInfo, "operations-before");
 
-  const resumeControl = activation.locator(".control-row").filter({ hasText: "Resume activation" });
-  await resumeControl.getByRole("button", { name: "Preview" }).click();
-  const dialog = page.getByRole("dialog", { name: "Confirm limited control" });
+  const stopControl = activation.locator(".control").filter({ hasText: "停止新增风险" });
+  await stopControl.getByRole("button", { name: "查看后果" }).click();
+  const dialog = page.getByRole("dialog", { name: "确认故障控制" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("Resume is denied: no authoritative reconciliation digest")).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Submit RESUME_ACTIVATION" })).toBeDisabled();
-  await assertAccessible(page, testInfo, "resume-denied");
-  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog.getByText("停止新增风险", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("只停止新的开仓和加仓", { exact: false })).toBeVisible();
+  await assertAccessible(page, testInfo, "stop-preview");
+  await dialog.getByRole("button", { name: "取消" }).click();
 
-  const exitControl = activation.locator(".control-row").filter({ hasText: "Exit strategy" });
-  await exitControl.getByRole("button", { name: "Preview" }).click();
+  const exitControl = activation.locator(".control").filter({ hasText: "退出策略" });
+  await exitControl.getByRole("button", { name: "查看后果" }).click();
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Submit EXIT_STRATEGY" }).click();
-  await expect(activation.getByRole("status")).toContainText("PROCESSING · Receipt");
+  await dialog.getByRole("button", { name: "确认退出策略" }).click();
+  await expect(activation.getByRole("status")).toContainText("EFFECTIVE · 回执");
+  await expect(activation.getByRole("status")).toContainText("EXIT_WITHOUT_VENUE_RESPONSIBILITY_COMPLETED");
   await page.reload();
-  const exiting = page.locator(`article.activation[data-activation-id="${activationId}"]`);
-  await expect(exiting.getByText("EXIT CLOSURE PENDING")).toBeVisible();
-  await expect(exiting.getByText("EXIT_STRATEGY")).toBeVisible();
+  await expect(page.locator(`article.activation[data-activation-id="${activationId}"]`)).toHaveCount(0);
   await assertAccessible(page, testInfo, "operations-after-exit");
   await testInfo.attach("operations-after-exit.png", {
     body: await page.screenshot({ fullPage: true }),

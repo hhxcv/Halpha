@@ -55,6 +55,23 @@ def test_runtime_proxy_is_an_optional_executor_only_reference() -> None:
     assert configured.executor.runtime_proxy_reference.account == "runtime_proxy"
 
 
+def test_public_market_proxy_is_non_secret_and_loopback_only() -> None:
+    settings = load_settings(EXAMPLE)
+    app = settings.app.model_dump(mode="json")
+    app["public_market_proxy_url"] = "http://127.0.0.1:7897"
+    configured = load_settings(EXAMPLE, constructor_values={"app": app})
+    assert configured.app.public_market_proxy_url == "http://127.0.0.1:7897"
+
+    for invalid in (
+        "https://proxy.example.test:7897",
+        "http://user:secret@127.0.0.1:7897",
+        "http://127.0.0.1:7897/path",
+    ):
+        app["public_market_proxy_url"] = invalid
+        with pytest.raises(ConfigurationError, match="CONFIGURATION_INVALID"):
+            load_settings(EXAMPLE, constructor_values={"app": app})
+
+
 def test_maintenance_targets_are_fixed_and_paths_are_repository_relative() -> None:
     settings = load_settings(EXAMPLE)
     assert settings.maintenance.demo.database_name == "halpha_demo"

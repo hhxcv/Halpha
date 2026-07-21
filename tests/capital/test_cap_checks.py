@@ -145,6 +145,59 @@ def test_natural_overrun_only_blocks_increase_and_reduction_cannot_reverse() -> 
     assert reverse.reason_code == "RISK_REDUCTION_UNPROVEN"
 
 
+def test_owned_cancel_remains_allowed_after_exit_stops_new_risk() -> None:
+    cancel = _action(
+        action_profile="CANCEL_ORDER",
+        control_category=StopCategory.RISK_REDUCTION_OR_ORDER_MANAGEMENT,
+        risk_class=RiskClass.RISK_NEUTRAL,
+        quantized_quantity="0",
+        conservative_price="1",
+        current_abs_position="0",
+        post_action_abs_position="0",
+    )
+
+    decision = check_action(
+        cancel,
+        boundary=_boundary(lifecycle="EXITING"),
+        stop_states=(_stop(StopCategory.NEW_RISK),),
+    )
+
+    assert decision.accepted is True
+    assert decision.reason_code == "ACCEPTED_RISK_NEUTRAL"
+
+
+def test_expired_plan_blocks_new_risk_but_not_reduction_or_owned_cancel() -> None:
+    expired = _boundary(
+        valid_from=NOW - timedelta(days=1),
+        valid_until=NOW - timedelta(seconds=1),
+        lifecycle="EXITING",
+    )
+    reducing = _action(
+        action_profile="REDUCE_OR_CLOSE_MARKET",
+        control_category=StopCategory.RISK_REDUCTION_OR_ORDER_MANAGEMENT,
+        risk_class=RiskClass.RISK_REDUCING,
+        current_abs_position="1",
+        post_action_abs_position="0.9",
+    )
+    cancel = _action(
+        action_profile="CANCEL_ORDER",
+        control_category=StopCategory.RISK_REDUCTION_OR_ORDER_MANAGEMENT,
+        risk_class=RiskClass.RISK_NEUTRAL,
+        quantized_quantity="0",
+        conservative_price="1",
+        current_abs_position="1",
+        post_action_abs_position="1",
+    )
+
+    assert check_action(_action(), boundary=expired).reason_code == "PLAN_EXPIRED"
+    assert check_action(reducing, boundary=expired).reason_code == (
+        "ACCEPTED_RISK_REDUCING"
+    )
+    assert check_action(cancel, boundary=expired).reason_code == (
+        "ACCEPTED_RISK_NEUTRAL"
+    )
+
+
 def test_stop_categories_union_and_all_exchange_changes_precedence() -> None:
     protection = check_action(
         _action(control_category=StopCategory.PROTECTION),

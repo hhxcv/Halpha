@@ -44,7 +44,9 @@ class NativeIndicatorSnapshot(BaseModel):
     @field_validator("upper", "lower", "atr")
     @classmethod
     def finite_values(cls, value: str) -> str:
-        return canonical_decimal(decimal_from_string(value, code="INDICATOR_VALUE_INVALID"))
+        return canonical_decimal(
+            decimal_from_string(value, code="INDICATOR_VALUE_INVALID")
+        )
 
 
 class InstrumentQuantityRules(BaseModel):
@@ -109,7 +111,9 @@ class EntryEvaluationInput(BaseModel):
         if not values:
             raise ValueError("CONFIRMATION_BARS_MISSING")
         return tuple(
-            canonical_decimal(decimal_from_string(value, code="BAR_VALUE_INVALID", positive=True))
+            canonical_decimal(
+                decimal_from_string(value, code="BAR_VALUE_INVALID", positive=True)
+            )
             for value in values
         )
 
@@ -128,7 +132,9 @@ class EntryEvaluationInput(BaseModel):
             "max_margin",
             "effective_leverage",
         ):
-            decimal_from_string(getattr(self, field), code="SIZING_INPUT_INVALID", positive=True)
+            decimal_from_string(
+                getattr(self, field), code="SIZING_INPUT_INVALID", positive=True
+            )
         fee = decimal_from_string(
             self.taker_fee_rate,
             code="SIZING_INPUT_INVALID",
@@ -191,7 +197,9 @@ class EntryRiskContext(BaseModel):
     @field_validator("instrument_rules_digest")
     @classmethod
     def rules_digest_is_sha256(cls, value: str) -> str:
-        if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+        if len(value) != 64 or any(
+            character not in "0123456789abcdef" for character in value
+        ):
             raise ValueError("ENTRY_RISK_CONTEXT_INVALID")
         return value
 
@@ -245,11 +253,18 @@ class OneShotDonchianAtrLogic:
     ) -> StrategyEvaluation:
         if state.entry_opportunity_consumed:
             return StrategyEvaluation(reason_code="ENTRY_OPPORTUNITY_CONSUMED")
-        if state.lifecycle != "RUNNING" or state.run_state != "ACTIVE" or not state.new_risk_allowed:
+        if (
+            state.lifecycle != "RUNNING"
+            or state.run_state != "ACTIVE"
+            or not state.new_risk_allowed
+        ):
             return StrategyEvaluation(reason_code="NEW_RISK_NOT_ALLOWED")
         if not evaluation.indicators.initialized:
             return StrategyEvaluation(reason_code="INDICATORS_NOT_INITIALIZED")
-        if len(evaluation.confirmation_closes) != self.parameters.confirmation_bars_1m:
+        if (
+            len(evaluation.confirmation_closes)
+            != self.parameters.effective_confirmation_bars_1m
+        ):
             return StrategyEvaluation(reason_code="CONFIRMATION_WINDOW_INCOMPLETE")
 
         upper = Decimal(evaluation.indicators.upper)
@@ -259,16 +274,29 @@ class OneShotDonchianAtrLogic:
             return StrategyEvaluation(reason_code="INDICATOR_VALUE_INVALID")
         closes = tuple(Decimal(value) for value in evaluation.confirmation_closes)
         extension = Decimal(self.parameters.max_entry_extension_atr) * atr
-        if self.parameters.direction is Direction.LONG:
-            triggered = all(close > upper for close in closes) and closes[-1] <= upper + extension
+        reference_price = Decimal(evaluation.reference_price)
+        if self.parameters.demo_immediate_entry:
+            triggered = True
+            entry_extension_boundary = (
+                reference_price + extension
+                if self.parameters.direction is Direction.LONG
+                else reference_price - extension
+            )
+        elif self.parameters.direction is Direction.LONG:
+            triggered = (
+                all(close > upper for close in closes)
+                and closes[-1] <= upper + extension
+            )
             entry_extension_boundary = upper + extension
         else:
-            triggered = all(close < lower for close in closes) and closes[-1] >= lower - extension
+            triggered = (
+                all(close < lower for close in closes)
+                and closes[-1] >= lower - extension
+            )
             entry_extension_boundary = lower - extension
         if not triggered:
             return StrategyEvaluation(reason_code="ENTRY_CONDITION_FALSE")
 
-        reference_price = Decimal(evaluation.reference_price)
         stop_distance = Decimal(self.parameters.initial_stop_atr_multiple) * atr
         risk_budget = Decimal(evaluation.max_allowed_loss) * Decimal("0.80")
         fee = Decimal(evaluation.taker_fee_rate)
@@ -283,7 +311,9 @@ class OneShotDonchianAtrLogic:
         )
         quantity = _floor_to_step(min(candidates), Decimal(evaluation.rules.step_size))
         if quantity < Decimal(evaluation.rules.step_size) * 2:
-            return StrategyEvaluation(reason_code="QUANTITY_BELOW_TAKE_PROFIT_SPLIT_MINIMUM")
+            return StrategyEvaluation(
+                reason_code="QUANTITY_BELOW_TAKE_PROFIT_SPLIT_MINIMUM"
+            )
         if quantity < Decimal(evaluation.rules.min_quantity):
             return StrategyEvaluation(reason_code="QUANTITY_BELOW_MINIMUM")
         if quantity * reference_price < Decimal(evaluation.rules.min_notional):
@@ -292,7 +322,11 @@ class OneShotDonchianAtrLogic:
         proposal_fields = {
             "strategy_id": self.strategy_id,
             "activation_id": evaluation.activation_id,
-            "rule_id": "ENTRY_BREAKOUT",
+            "rule_id": (
+                "DEMO_ORDER_FLOW_CHECK"
+                if self.parameters.demo_immediate_entry
+                else "ENTRY_BREAKOUT"
+            ),
             "source_identity": evaluation.source_identity,
             "source_cutoff": evaluation.source_cutoff,
             "input_digest": evaluation.input_digest,
@@ -303,7 +337,11 @@ class OneShotDonchianAtrLogic:
             "quantity": canonical_decimal(quantity),
             "reference_price": canonical_decimal(reference_price),
             "reference_source": evaluation.reference_source,
-            "reason_code": "ENTRY_BREAKOUT_CONFIRMED",
+            "reason_code": (
+                "DEMO_ORDER_FLOW_CHECK_REQUESTED"
+                if self.parameters.demo_immediate_entry
+                else "ENTRY_BREAKOUT_CONFIRMED"
+            ),
             "valid_until": evaluation.valid_until,
             "entry_risk_context": EntryRiskContext(
                 trigger_atr=canonical_decimal(atr),

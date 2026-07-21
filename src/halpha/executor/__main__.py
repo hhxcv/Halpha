@@ -253,6 +253,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 runtime_real_write_gate=gate_status.runtime_real_write_gate,
                 live_write_activation_id=gate_status.authorized_activation_id,
                 live_write_submission_guard=live_write_submission_guard,
+                runtime_event_sink=lambda event, fields: logger.info(event, **fields),
                 forward_observation_spec=observation_spec,
                 observation_proposal_sink=(
                     observation.record_proposal if observation is not None else None
@@ -273,6 +274,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     observation.record_process_started()
 
                 def report_ready(runtime_evidence: dict[str, object]) -> None:
+                    runtime.publish_ready_product_build(product_build_id)
                     report = {
                         "status": (
                             "READ_ONLY_RUNTIME_READY"
@@ -297,12 +299,21 @@ def main(argv: Sequence[str] | None = None) -> int:
                         **runtime_evidence,
                     )
 
-                runtime.run_until_stop(stop_event.wait, on_ready=report_ready)
+                try:
+                    runtime.run_until_stop(stop_event.wait, on_ready=report_ready)
+                except BaseException as exc:
+                    logger.error(
+                        "runtime_failed",
+                        exception_type=type(exc).__name__,
+                        reason_code=str(exc),
+                    )
+                    raise
                 logger.info("runtime_stopped", reason_code="MAINTENANCE_STOP")
                 if observation is not None:
                     observation.close(reason_code="MAINTENANCE_STOP")
             finally:
                 runtime.close()
+                logger.info("runtime_exiting")
                 if observation is not None:
                     observation.close(reason_code="RUNTIME_EXIT")
             return 0

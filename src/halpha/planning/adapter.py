@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -11,7 +11,7 @@ from uuid import NAMESPACE_URL, uuid5
 from nautilus_trader.trading.config import StrategyConfig
 from nautilus_trader.trading.strategy import Strategy
 from nautilus_trader.model.enums import OrderSide, TimeInForce, TriggerType
-from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import Bar, BarType
 from nautilus_trader.model.identifiers import ClientOrderId, InstrumentId
 from nautilus_trader.model.objects import Price, Quantity
 
@@ -36,12 +36,26 @@ class BarEventSink(Protocol):
     def __call__(self, bar: object) -> None: ...
 
 
+class BarFailureSink(Protocol):
+    def __call__(self, bar: object, exception: Exception) -> None: ...
+
+
+class HistoryWarmupFailureSink(Protocol):
+    def __call__(
+        self, stage: str, item: object | None, exception: Exception
+    ) -> None: ...
+
+
 class QuoteEventSink(Protocol):
     def __call__(self, tick: object) -> None: ...
 
 
 class MarkPriceEventSink(Protocol):
     def __call__(self, mark_price: object) -> None: ...
+
+
+class HistoryCacheProvider(Protocol):
+    def __call__(self, bar_type: BarType) -> Iterable[Bar]: ...
 
 
 class ControllerPort(Protocol):
@@ -87,10 +101,13 @@ class HalphaStrategyAdapter(Strategy):
         execution_event_sink: ExecutionEventSink | None = None,
         bar_evaluator: NautilusBarEntryEvaluator | None = None,
         bar_event_sink: BarEventSink | None = None,
+        bar_failure_sink: BarFailureSink | None = None,
+        history_warmup_failure_sink: HistoryWarmupFailureSink | None = None,
         quote_event_sink: QuoteEventSink | None = None,
         mark_price_event_sink: MarkPriceEventSink | None = None,
         live_history_warmup: bool = False,
         current_time_provider: Callable[[], datetime] | None = None,
+        history_cache_provider: HistoryCacheProvider | None = None,
     ) -> None:
         super().__init__(config=strategy_config_for_activation(activation_id))
         self._activation_id = activation_id
@@ -106,10 +123,13 @@ class HalphaStrategyAdapter(Strategy):
         self._execution_event_sink = execution_event_sink
         self._bar_evaluator = bar_evaluator
         self._bar_event_sink = bar_event_sink
+        self._bar_failure_sink = bar_failure_sink
+        self._history_warmup_failure_sink = history_warmup_failure_sink
         self._quote_event_sink = quote_event_sink
         self._mark_price_event_sink = mark_price_event_sink
         self._live_history_warmup = live_history_warmup
         self._current_time_provider = current_time_provider
+        self._history_cache_provider = history_cache_provider
         self._history_request_id: str | None = None
         self._live_bar_subscriptions_started = False
         self._stopping = False
@@ -145,7 +165,32 @@ class HalphaStrategyAdapter(Strategy):
             self.subscribe_mark_prices(self._instrument_id)
             self.subscribe_quote_ticks(self._instrument_id)
         if self._bar_evaluator is not None and self._live_history_warmup:
-            self._begin_live_history_warmup()
+            try:
+                if self._try_live_history_cache_warmup():
+                    self._start_live_bar_subscriptions()
+                else:
+                    self._begin_live_history_warmup()
+            except Exception as exc:
+                self._report_history_warmup_failure("REQUEST", None, exc)
+                raise
+
+    def _try_live_history_cache_warmup(self) -> bool:
+        if self._bar_evaluator is None:
+            raise RuntimeError("LIVE_WARMUP_STATE_INVALID")
+        provider = self._history_cache_provider
+        if provider is None:
+            provider = self.cache.bars
+        return self._bar_evaluator.try_warm_from_cached_bars(
+            target_bars=provider(self._bar_evaluator.target_bar_type),
+        )
+
+    def _start_live_bar_subscriptions(self) -> None:
+        if self._bar_evaluator is None or self._live_bar_subscriptions_started:
+            raise RuntimeError("LIVE_WARMUP_STATE_INVALID")
+        source, target = self._bar_evaluator.subscribed_bar_types
+        self.subscribe_bars(source)
+        self.subscribe_bars(target)
+        self._live_bar_subscriptions_started = True
 
     def _begin_live_history_warmup(self) -> None:
         if self._bar_evaluator is None or self._history_request_id is not None:
@@ -164,17 +209,16 @@ class HalphaStrategyAdapter(Strategy):
             second=0,
             microsecond=0,
         )
-        warmup_start = fifteen_minute_floor - timedelta(hours=72)
-        request_id = self.request_aggregated_bars(
-            [
-                self._bar_evaluator.target_bar_type,
-            ],
+        target_count = self._bar_evaluator.target_history_count
+        warmup_start = fifteen_minute_floor - timedelta(
+            minutes=15 * (target_count + 1)
+        )
+        request_id = self.request_bars(
+            self._bar_evaluator.target_bar_type,
             start=warmup_start,
             end=warmup_end,
-            limit=1500,
+            limit=target_count + 2,
             callback=self._on_live_history_complete,
-            include_external_data=True,
-            update_subscriptions=True,
             update_catalog=False,
         )
         self._history_request_id = str(request_id)
@@ -185,20 +229,31 @@ class HalphaStrategyAdapter(Strategy):
             and self._bar_evaluator is not None
             and isinstance(data, Bar)
         ):
-            self._bar_evaluator.accept_historical(data)
+            try:
+                self._bar_evaluator.accept_historical(data)
+            except Exception as exc:
+                self._report_history_warmup_failure("DATA", data, exc)
+                raise
 
     def _on_live_history_complete(self, request_id: object) -> None:
         if self._stopping:
             return
-        if self._history_request_id != str(request_id):
-            raise RuntimeError("LIVE_WARMUP_REQUEST_ID_MISMATCH")
-        if self._bar_evaluator is None:
-            raise RuntimeError("LIVE_WARMUP_STATE_INVALID")
-        self._bar_evaluator.complete_live_warmup()
-        source, target = self._bar_evaluator.subscribed_bar_types
-        self.subscribe_bars(source)
-        self.subscribe_bars(target)
-        self._live_bar_subscriptions_started = True
+        try:
+            if self._history_request_id != str(request_id):
+                raise RuntimeError("LIVE_WARMUP_REQUEST_ID_MISMATCH")
+            if self._bar_evaluator is None:
+                raise RuntimeError("LIVE_WARMUP_STATE_INVALID")
+            self._bar_evaluator.complete_live_warmup()
+            self._start_live_bar_subscriptions()
+        except Exception as exc:
+            self._report_history_warmup_failure("COMPLETE", request_id, exc)
+            raise
+
+    def _report_history_warmup_failure(
+        self, stage: str, item: object | None, exception: Exception
+    ) -> None:
+        if self._history_warmup_failure_sink is not None:
+            self._history_warmup_failure_sink(stage, item, exception)
 
     def on_stop(self) -> None:
         self._stopping = True
@@ -215,9 +270,21 @@ class HalphaStrategyAdapter(Strategy):
             self._bar_event_sink(bar)
         if self._bar_evaluator is None:
             return
-        evaluation = self._bar_evaluator.accept(bar)
-        if evaluation is not None:
-            self.evaluate_normalized_entry(evaluation)
+        try:
+            # Once this one-shot activation owns an entry responsibility, no
+            # later bar can create another entry. Avoid building an evaluation
+            # (and therefore avoid the live pre-submit fact read) after that
+            # permanent product decision. The state is checked again below for
+            # the still-open path so a concurrent stop remains fail-closed.
+            if self._state_provider().entry_opportunity_consumed:
+                return
+            evaluation = self._bar_evaluator.accept(bar)
+            if evaluation is not None:
+                self.evaluate_normalized_entry(evaluation)
+        except Exception as exc:
+            if self._bar_failure_sink is not None:
+                self._bar_failure_sink(bar, exc)
+            raise
 
     def on_quote_tick(self, tick: object) -> None:
         if self._quote_event_sink is not None:

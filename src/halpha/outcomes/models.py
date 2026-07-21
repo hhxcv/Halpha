@@ -41,6 +41,7 @@ class EvidencePurpose(StrEnum):
     LIVE_ACTIVATION_REVIEW = "LIVE_ACTIVATION_REVIEW"
 
 
+OWNER_CONCLUSION_KEY = "owner_conclusion"
 EVALUATION_KEYS = frozenset(
     {
         "account_result",
@@ -78,9 +79,18 @@ class Review(OutcomeModel):
         if self.previous_version is not None and self.previous_version >= self.review_version:
             raise ValueError("REVIEW_VERSION_CONFLICT")
         if self.status is ReviewStatus.COMPLETE:
-            if set(self.evaluations) != EVALUATION_KEYS:
+            keys = set(self.evaluations)
+            if keys == {OWNER_CONCLUSION_KEY}:
+                item = self.evaluations[OWNER_CONCLUSION_KEY]
+                if (
+                    item.get("result") not in {value.value for value in EvaluationResult}
+                    or not isinstance(item.get("reason"), str)
+                    or not isinstance(item.get("evidence_refs"), list)
+                ):
+                    raise ValueError("REVIEW_COMPLETION_INCOMPLETE")
+            elif keys != EVALUATION_KEYS:
                 raise ValueError("REVIEW_COMPLETION_INCOMPLETE")
-            if any(
+            elif any(
                 item.get("result") not in {value.value for value in EvaluationResult}
                 or not isinstance(item.get("reason"), str)
                 or not item.get("reason")

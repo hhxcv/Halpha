@@ -4,6 +4,8 @@ import type { components, paths } from "./schema";
 
 export type Overview = components["schemas"]["OverviewResponse"];
 export type SettingsStatus = components["schemas"]["SettingsStatusResponse"];
+export type MarketContext = components["schemas"]["MarketContext"];
+export type MarketWindow = components["schemas"]["MarketWindow"];
 export type PlanDraftPayload = components["schemas"]["PlanDraftPayload"];
 export type ActivationPayload = components["schemas"]["ActivationPayload"];
 export type ControlPayload = components["schemas"]["ControlPayload"];
@@ -13,6 +15,9 @@ export type StrategySummary = {
   strategy_id: string;
   strategy_version: string;
   display_name: string;
+  value_logic: string;
+  applicable_scenarios: string;
+  execution_behavior: string;
   parameter_schema_version: string;
   supported_directions: string[];
   economic_scope: Record<string, unknown>;
@@ -29,6 +34,9 @@ export type PlanSummary = {
   plan_version_id: string | null;
   fixed_at: string | null;
   fixed_content_digest: string | null;
+  fixed_product_build_id: string | null;
+  fixed_valid_until: string | null;
+  product_build_consistent: boolean | null;
 };
 
 export type PlanDraft = {
@@ -138,6 +146,42 @@ export async function getStrategies(): Promise<StrategySummary[]> {
   const { data, error, response } = await api.GET("/api/v1/strategies");
   if (!data) throw new ApiFailure(response.status, errorCode(error, "STRATEGIES_FAILED"));
   return data as StrategySummary[];
+}
+
+export async function getMarketContext(
+  instrumentRef: string,
+  channelLookback15m: number,
+): Promise<MarketContext> {
+  const { data, error, response } = await api.GET("/api/v1/market-context", {
+    params: {
+      query: {
+        instrument_ref: instrumentRef,
+        channel_lookback_15m: channelLookback15m,
+      },
+    },
+  });
+  if (!data) throw new ApiFailure(response.status, errorCode(error, "MARKET_CONTEXT_FAILED"));
+  return data;
+}
+
+export async function getMarketWindow(
+  instrumentRef: string,
+  startAt: string,
+  endAt: string,
+  interval: "1m" | "15m",
+): Promise<MarketWindow> {
+  const { data, error, response } = await api.GET("/api/v1/market-window", {
+    params: {
+      query: {
+        instrument_ref: instrumentRef,
+        start_at: startAt,
+        end_at: endAt,
+        interval,
+      },
+    },
+  });
+  if (!data) throw new ApiFailure(response.status, errorCode(error, "MARKET_WINDOW_FAILED"));
+  return data;
 }
 
 export async function getPlans(): Promise<PlanSummary[]> {

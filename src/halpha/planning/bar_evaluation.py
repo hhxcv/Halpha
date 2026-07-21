@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 
 from nautilus_trader.indicators import AverageTrueRange, DonchianChannel, MovingAverageType
@@ -84,19 +84,17 @@ class NautilusBarEntryEvaluator:
             f"{instrument_ref}.BINANCE-1-MINUTE-LAST-EXTERNAL"
         )
         self.target_bar_type = BarType.from_str(
-            f"{instrument_ref}.BINANCE-15-MINUTE-LAST-INTERNAL@1-MINUTE-EXTERNAL"
+            f"{instrument_ref}.BINANCE-15-MINUTE-LAST-EXTERNAL"
         )
-        self._delivered_target_bar_type = self.target_bar_type.standard()
         self._indicator_bars: deque[IndicatorBar] = deque(
             maxlen=parameters.channel_lookback_15m
         )
         self._confirmation_bars: deque[Bar] = deque(
-            maxlen=parameters.confirmation_bars_1m
+            maxlen=parameters.effective_confirmation_bars_1m
         )
         self._recent_target_timestamps: deque[int] = deque(
             maxlen=max(parameters.channel_lookback_15m, 15)
         )
-        self._recent_source_timestamps: deque[int] = deque(maxlen=15)
         self._donchian = DonchianChannel(parameters.channel_lookback_15m)
         self._atr = AverageTrueRange(
             period=14,
@@ -117,45 +115,77 @@ class NautilusBarEntryEvaluator:
     def warmup_complete(self) -> bool:
         return self._warmup_complete
 
+    @property
+    def target_history_count(self) -> int:
+        return max(self.parameters.channel_lookback_15m, 15)
+
     def accept_historical(self, bar: Bar) -> None:
         """Prime the native indicators without producing historical actions."""
 
         if not self._requires_live_warmup or self._warmup_complete:
             raise BarEvaluationError("HISTORICAL_BAR_OUTSIDE_WARMUP")
         bar_type = str(bar.bar_type)
-        if bar_type == str(self._delivered_target_bar_type):
+        if bar_type == str(self.target_bar_type):
             self._accept_target(bar)
-        elif bar_type == str(self.source_bar_type):
-            self._accept_source_identity(bar, collect_confirmation=False)
 
     def complete_live_warmup(self) -> None:
-        """Open the live handoff only after both source and target tails are continuous."""
+        """Open the live handoff after a continuous target-indicator window."""
 
         if not self._requires_live_warmup:
             raise BarEvaluationError("LIVE_WARMUP_NOT_CONFIGURED")
         if self._warmup_complete:
             return
-        target_count = max(self.parameters.channel_lookback_15m, 15)
-        if not self._is_continuous(
-            self._recent_target_timestamps,
-            interval_ns=900_000_000_000,
-            count=target_count,
-        ):
+        target_count = self.target_history_count
+        if not self._target_history_is_continuous(target_count):
             raise BarEvaluationError("TARGET_WARMUP_INCOMPLETE")
-        if not self._is_continuous(
-            self._recent_source_timestamps,
-            interval_ns=60_000_000_000,
-            count=15,
-        ):
-            raise BarEvaluationError("SOURCE_WARMUP_INCOMPLETE")
         if not self._donchian.initialized or not self._atr.initialized:
             raise BarEvaluationError("INDICATOR_WARMUP_INCOMPLETE")
         self._confirmation_bars.clear()
         self._warmup_complete = True
 
+    def try_warm_from_cached_bars(
+        self,
+        *,
+        target_bars: Iterable[Bar],
+    ) -> bool:
+        """Prime the indicators from Nautilus' existing 15-minute bar cache."""
+
+        if not self._requires_live_warmup:
+            raise BarEvaluationError("LIVE_WARMUP_NOT_CONFIGURED")
+        if self._warmup_complete:
+            return True
+
+        target_count = self.target_history_count
+        target_tail = sorted(
+            (
+                bar
+                for bar in target_bars
+                if str(bar.bar_type) == str(self.target_bar_type)
+            ),
+            key=lambda bar: bar.ts_event,
+        )[-target_count:]
+        if not self._is_continuous(
+            [bar.ts_event for bar in target_tail],
+            interval_ns=900_000_000_000,
+            count=target_count,
+        ):
+            return False
+
+        for bar in target_tail:
+            self.accept_historical(bar)
+        self.complete_live_warmup()
+        return True
+
+    def _target_history_is_continuous(self, count: int) -> bool:
+        return self._is_continuous(
+            self._recent_target_timestamps,
+            interval_ns=900_000_000_000,
+            count=count,
+        )
+
     @staticmethod
     def _is_continuous(
-        timestamps: deque[int],
+        timestamps: Sequence[int],
         *,
         interval_ns: int,
         count: int,
@@ -172,7 +202,7 @@ class NautilusBarEntryEvaluator:
         if self._requires_live_warmup and not self._warmup_complete:
             raise BarEvaluationError("LIVE_WARMUP_NOT_COMPLETE")
         bar_type = str(bar.bar_type)
-        if bar_type == str(self._delivered_target_bar_type):
+        if bar_type == str(self.target_bar_type):
             self._accept_target(bar)
             return None
         if bar_type == str(self.source_bar_type):
@@ -213,7 +243,10 @@ class NautilusBarEntryEvaluator:
         decision_at = _datetime_from_ns(bar.ts_event)
         if decision_at < self.decision_not_before or decision_at >= self.valid_until:
             return None
-        if len(self._confirmation_bars) != self.parameters.confirmation_bars_1m:
+        if (
+            len(self._confirmation_bars)
+            != self.parameters.effective_confirmation_bars_1m
+        ):
             return None
         if len(self._indicator_bars) != self.parameters.channel_lookback_15m:
             return None
@@ -265,6 +298,7 @@ class NautilusBarEntryEvaluator:
         )
 
     def _accept_source_identity(self, bar: Bar, *, collect_confirmation: bool) -> bool:
+        previous_source_ts = self._last_source_ts
         digest = content_digest(
             {
                 "bar_type": str(bar.bar_type),
@@ -285,7 +319,12 @@ class NautilusBarEntryEvaluator:
                 return False
         self._last_source_ts = bar.ts_event
         self._last_source_digest = digest
-        self._recent_source_timestamps.append(bar.ts_event)
+        if (
+            collect_confirmation
+            and previous_source_ts is not None
+            and bar.ts_event - previous_source_ts != 60_000_000_000
+        ):
+            self._confirmation_bars.clear()
         if collect_confirmation:
             self._confirmation_bars.append(bar)
         return True
