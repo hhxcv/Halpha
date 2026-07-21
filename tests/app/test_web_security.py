@@ -208,6 +208,14 @@ def test_strategy_and_status_reads_need_no_session(tmp_path: Path) -> None:
 
     assert strategies.status_code == 200
     assert strategies.json()[0]["strategy_id"] == "ONE_SHOT_DONCHIAN_ATR_BREAKOUT"
+    assert strategies.json()[0]["plan_key_parameters"][0] == {
+        "parameter_key": "demo_immediate_entry",
+        "label": "入场模式",
+        "display_format": "BOOLEAN_LABEL",
+        "unit": None,
+        "true_label": "Demo 流程检查",
+        "false_label": "自然突破信号",
+    }
     assert "Donchian 通道" in strategies.json()[0]["value_logic"]
     assert "15 分钟通道突破" in strategies.json()[0]["applicable_scenarios"]
     assert "ATR 止损和两档止盈" in strategies.json()[0]["execution_behavior"]

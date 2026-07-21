@@ -164,10 +164,10 @@ export const theme = createTheme({
           transition: "background-color 150ms cubic-bezier(.2,.8,.2,1), border-color 150ms cubic-bezier(.2,.8,.2,1), color 150ms cubic-bezier(.2,.8,.2,1), transform 90ms cubic-bezier(.2,.8,.2,1)",
           "&:active:not(.Mui-disabled)": { transform: "scale(.985)" },
           "&.MuiButton-containedPrimary": {
-            border: `1px solid ${colors.accentBorder}`,
+            border: 0,
             color: colors.text,
             backgroundColor: colors.accent,
-            "&:hover": { borderColor: "#CAA300", color: colors.text, backgroundColor: colors.accentHover, boxShadow: "none" },
+            "&:hover": { color: colors.text, backgroundColor: colors.accentHover, boxShadow: "none" },
           },
           "&.MuiButton-outlined": {
             borderColor: colors.border,
@@ -176,8 +176,8 @@ export const theme = createTheme({
             "&:hover": { borderColor: colors.borderStrong, backgroundColor: colors.surfaceMuted },
           },
           "&.MuiButton-text": {
-            color: colors.accentText,
-            "&:hover": { color: "#963400", backgroundColor: colors.surfaceMuted },
+            color: colors.textSecondary,
+            "&:hover": { color: colors.text, backgroundColor: colors.surfaceMuted },
           },
           "&.MuiButton-outlinedInfo": {
             borderColor: semanticColors.info.border,

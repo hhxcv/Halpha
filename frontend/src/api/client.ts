@@ -6,10 +6,20 @@ export type Overview = components["schemas"]["OverviewResponse"];
 export type SettingsStatus = components["schemas"]["SettingsStatusResponse"];
 export type MarketContext = components["schemas"]["MarketContext"];
 export type MarketWindow = components["schemas"]["MarketWindow"];
+export type PlanCreatePayload = components["schemas"]["PlanCreatePayload"];
 export type PlanDraftPayload = components["schemas"]["PlanDraftPayload"];
 export type ActivationPayload = components["schemas"]["ActivationPayload"];
 export type ControlPayload = components["schemas"]["ControlPayload"];
 export type ReviewCompletionPayload = components["schemas"]["ReviewCompletionPayload"];
+
+export type PlanKeyParameterDefinition = {
+  parameter_key: string;
+  label: string;
+  display_format: "VALUE" | "PERCENT" | "BOOLEAN_LABEL";
+  unit: string | null;
+  true_label: string | null;
+  false_label: string | null;
+};
 
 export type StrategySummary = {
   strategy_id: string;
@@ -21,6 +31,7 @@ export type StrategySummary = {
   parameter_schema_version: string;
   supported_directions: string[];
   economic_scope: Record<string, unknown>;
+  plan_key_parameters: PlanKeyParameterDefinition[];
 };
 
 export type PlanSummary = {
@@ -28,9 +39,16 @@ export type PlanSummary = {
   draft_version: number;
   draft_content_digest: string;
   updated_at: string;
+  plan_name: string | null;
+  created_at: string | null;
+  creator_kind: "HUMAN" | "AI" | null;
   strategy_id: string;
   instrument_ref: string;
   direction: string;
+  parameters: Record<string, unknown>;
+  max_notional: string;
+  valid_from: string;
+  valid_until: string;
   plan_version_id: string | null;
   fixed_at: string | null;
   fixed_content_digest: string | null;
@@ -44,6 +62,9 @@ export type PlanDraft = {
   environment_id: string;
   draft_version: number;
   content: {
+    plan_name: string | null;
+    created_at: string | null;
+    creator_kind: "HUMAN" | "AI" | null;
     strategy_id: string;
     parameters: Record<string, unknown>;
     venue_ref: string;
@@ -198,13 +219,25 @@ export async function getPlan(planId: string): Promise<PlanDraft> {
   return data as PlanDraft;
 }
 
-export async function createPlan(payload: PlanDraftPayload): Promise<Record<string, unknown>> {
+export async function createPlan(payload: PlanCreatePayload): Promise<Record<string, unknown>> {
   const { data, error, response } = await api.POST("/api/v1/plans", {
     body: payload,
     params: { header: { "Idempotency-Key": crypto.randomUUID() } },
     headers: csrfHeader(),
   });
   if (!data) throw new ApiFailure(response.status, errorCode(error, "PLAN_CREATE_FAILED"));
+  return data;
+}
+
+export async function deletePlan(planId: string, draftVersion: number): Promise<Record<string, unknown>> {
+  const { data, error, response } = await api.DELETE("/api/v1/plans/{plan_id}", {
+    params: {
+      path: { plan_id: planId },
+      header: { "If-Match": String(draftVersion) },
+    },
+    headers: csrfHeader(),
+  });
+  if (!data) throw new ApiFailure(response.status, errorCode(error, "PLAN_DELETE_FAILED"));
   return data;
 }
 

@@ -92,6 +92,29 @@ class PostgreSQLPlanningRepository:
             updated_at=row[5],
         )
 
+    def has_fixed_version(self, plan_id: str) -> bool:
+        row = self._connection.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM halpha.trade_plan_version
+                WHERE environment_id = %s AND plan_id = %s
+            )
+            """,
+            (self._environment_id, plan_id),
+        ).fetchone()
+        return bool(row and row[0])
+
+    def delete_draft(self, plan_id: str, *, expected_version: int) -> None:
+        cursor = self._connection.execute(
+            """
+            DELETE FROM halpha.trade_plan_draft
+            WHERE environment_id = %s AND plan_id = %s AND draft_version = %s
+            """,
+            (self._environment_id, plan_id, expected_version),
+        )
+        if cursor.rowcount != 1:
+            raise PlanningConflict("PLAN_VERSION_CONFLICT")
+
     def insert_version(self, version: TradePlanVersion) -> None:
         basis = version.strategy_basis
         self._connection.execute(
@@ -127,6 +150,21 @@ class PostgreSQLPlanningRepository:
                 Jsonb(
                     {
                         **version.terms,
+                        **(
+                            {"plan_name": version.plan_name}
+                            if version.plan_name is not None
+                            else {}
+                        ),
+                        **(
+                            {"created_at": version.created_at.isoformat()}
+                            if version.created_at is not None
+                            else {}
+                        ),
+                        **(
+                            {"creator_kind": version.creator_kind.value}
+                            if version.creator_kind is not None
+                            else {}
+                        ),
                         "target_exposure": version.target_exposure,
                         "valid_from": version.valid_from.isoformat(),
                         "valid_until": version.valid_until.isoformat(),
@@ -154,11 +192,15 @@ class PostgreSQLPlanningRepository:
         if row is None:
             raise PlanningConflict("PLAN_VERSION_NOT_FOUND")
         terms = dict(row[12])
+        created_at = terms.pop("created_at", None)
         return TradePlanVersion(
             plan_version_id=str(row[0]),
             plan_id=str(row[1]),
             environment_id=str(row[2]),
             fixed_at=row[3],
+            plan_name=terms.pop("plan_name", None),
+            created_at=datetime.fromisoformat(str(created_at)) if created_at else None,
+            creator_kind=terms.pop("creator_kind", None),
             strategy_basis=FixedStrategyPlanBasis.model_validate(row[4]),
             account_ref=str(row[5]),
             venue_ref=str(row[6]),

@@ -100,6 +100,17 @@ class PlanningApplicationService:
         content: TradePlanContent,
         observed_at: datetime,
     ) -> TradePlanDraft:
+        current = self._planning.get_draft(plan_id, for_update=True)
+        if current.draft_version != expected_version:
+            raise ValueError("PLAN_VERSION_CONFLICT")
+        if self._planning.has_fixed_version(plan_id):
+            raise ValueError("PLAN_DRAFT_FIXED")
+        content = content.model_copy(
+            update={
+                "created_at": current.content.created_at,
+                "creator_kind": current.content.creator_kind,
+            }
+        )
         draft = TradePlanDraft(
             plan_id=plan_id,
             environment_id=self._environment_id,
@@ -110,6 +121,14 @@ class PlanningApplicationService:
         )
         self._planning.save_draft(draft, expected_version=expected_version)
         return draft
+
+    def delete_draft(self, *, plan_id: str, expected_version: int) -> None:
+        draft = self._planning.get_draft(plan_id, for_update=True)
+        if draft.draft_version != expected_version:
+            raise ValueError("PLAN_VERSION_CONFLICT")
+        if self._planning.has_fixed_version(plan_id):
+            raise ValueError("PLAN_DRAFT_FIXED")
+        self._planning.delete_draft(plan_id, expected_version=expected_version)
 
     def fix_draft(
         self,
@@ -134,6 +153,9 @@ class PlanningApplicationService:
             "plan_id": plan_id,
             "environment_id": self._environment_id,
             "fixed_at": fixed_at,
+            "plan_name": content.plan_name,
+            "created_at": content.created_at,
+            "creator_kind": content.creator_kind,
             "strategy_basis": basis,
             "account_ref": content.account_ref,
             "venue_ref": content.venue_ref,

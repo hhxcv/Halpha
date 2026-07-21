@@ -6,6 +6,7 @@ import {
   Checkbox,
   Collapse,
   FormControlLabel,
+  IconButton,
   LinearProgress,
   MenuItem,
   Stack,
@@ -27,6 +28,7 @@ import {
   getMarketContext,
   getPlan,
   getStrategies,
+  type PlanCreatePayload,
   type PlanDraftPayload,
   type SettingsStatus,
   type StrategySummary,
@@ -41,6 +43,7 @@ import { surfaceFrameSx } from "../theme";
 
 
 type Direction = "LONG" | "SHORT";
+type PlanCreatorKind = "HUMAN" | "AI";
 type StrategyDirectionFilter = "ALL" | Direction;
 type StrategySort = "NAME_ASC" | "NAME_DESC" | "VERSION_DESC";
 
@@ -173,7 +176,7 @@ function StrategySelection({
             <Typography variant="caption" color="text.secondary" role="status">
               匹配 {visibleStrategies.length} / {strategies.length} 个策略
             </Typography>
-            <Button size="small" variant="text" disabled={!filtersActive} onClick={resetFilters}>重置筛选</Button>
+            <Button size="small" variant="outlined" disabled={!filtersActive} onClick={resetFilters}>重置筛选</Button>
           </Stack>
         </Box>
 
@@ -181,8 +184,13 @@ function StrategySelection({
           <Table size="small" aria-label="选择交易策略">
             <TableHead>
               <TableRow>
+                <TableCell sx={{ width: 40, px: .5 }}>
+                  <Box component="span" sx={{ position: "absolute", width: "1px", height: "1px", p: 0, m: -1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
+                    策略介绍
+                  </Box>
+                </TableCell>
                 <TableCell>策略</TableCell>
-                <TableCell align="right" sx={{ width: { xs: 152, sm: 224 } }}>操作</TableCell>
+                <TableCell align="right" sx={{ width: { xs: 112, sm: 128 } }}>操作</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -205,6 +213,21 @@ function StrategySelection({
                     }}
                     sx={{ cursor: "pointer", "&:focus-visible": { bgcolor: "action.hover" } }}
                   >
+                    <TableCell sx={{ width: 40, px: .5 }}>
+                      <IconButton
+                        size="small"
+                        aria-label={`${expanded ? "收起" : "展开"}${strategy.display_name}策略介绍`}
+                        aria-expanded={expanded}
+                        aria-controls={`strategy-introduction-${strategy.strategy_id}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setExpandedStrategyId(expanded ? null : strategy.strategy_id);
+                        }}
+                        sx={{ width: 32, height: 32, border: 0, bgcolor: "transparent", fontSize: 18 }}
+                      >
+                        <Box component="span" aria-hidden="true" sx={{ lineHeight: 1 }}>{expanded ? "▾" : "▸"}</Box>
+                      </IconButton>
+                    </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
                       <Typography sx={{ fontWeight: 750 }}>{strategy.display_name}</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: .25, overflowWrap: "anywhere" }}>
@@ -212,19 +235,7 @@ function StrategySelection({
                       </Typography>
                     </TableCell>
                     <TableCell align="right" sx={{ py: 1 }}>
-                      <Stack direction={{ xs: "column", sm: "row" }} spacing={.5} sx={{ justifyContent: "flex-end", alignItems: "flex-end" }}>
-                        <Button
-                          size="small"
-                          variant="text"
-                          aria-expanded={expanded}
-                          aria-controls={`strategy-introduction-${strategy.strategy_id}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setExpandedStrategyId(expanded ? null : strategy.strategy_id);
-                          }}
-                        >
-                          {expanded ? "收起介绍" : "展开介绍"}
-                        </Button>
+                      <Stack direction="row" spacing={.5} sx={{ justifyContent: "flex-end" }}>
                         <Button
                           size="small"
                           variant="outlined"
@@ -239,7 +250,7 @@ function StrategySelection({
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell colSpan={2} sx={{ p: 0, borderBottom: expanded ? undefined : 0 }}>
+                    <TableCell colSpan={3} sx={{ p: 0, borderBottom: expanded ? undefined : 0 }}>
                       <Collapse in={expanded} timeout="auto" unmountOnExit>
                         <Box id={`strategy-introduction-${strategy.strategy_id}`} sx={{ px: { xs: 1.5, sm: 2 }, pb: 2, bgcolor: "background.default" }}>
                           <StrategyIntroduction strategy={strategy} embedded />
@@ -251,7 +262,7 @@ function StrategySelection({
               })}
               {!loading && visibleStrategies.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2} sx={{ py: 5, textAlign: "center" }}>
+                  <TableCell colSpan={3} sx={{ py: 5, textAlign: "center" }}>
                     <Typography sx={{ fontWeight: 700 }}>没有匹配的策略</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: .5, mb: 1 }}>调整关键词或方向后重试。</Typography>
                     <Button size="small" onClick={resetFilters}>清除筛选</Button>
@@ -263,7 +274,7 @@ function StrategySelection({
         </TableContainer>
       </>}
 
-      <Button variant="text" onClick={onCancel} sx={{ mt: 2 }}>取消</Button>
+      <Button variant="outlined" onClick={onCancel} sx={{ mt: 2 }}>取消</Button>
     </Box>
   );
 }
@@ -302,6 +313,8 @@ export default function NewPlanPage() {
     ?? "";
   const selectingStrategy = !editing && !copying && creationStep === "strategy";
   const selectedStrategy = strategies.data?.find((strategy) => strategy.strategy_id === strategyId);
+  const [planName, setPlanName] = useState("");
+  const [creatorKind, setCreatorKind] = useState<PlanCreatorKind>("HUMAN");
   const [parameters, setParameters] = useState<StrategyParameters>(DEFAULT_PARAMETERS);
   const [instrument, setInstrument] = useState("BTCUSDT-PERP");
   const [tradeAmount, setTradeAmount] = useState("500");
@@ -325,11 +338,14 @@ export default function NewPlanPage() {
     } as StrategyParameters);
     setInstrument(source.instrument_ref);
     setTradeAmount(source.requested_limits.max_notional);
+    setPlanName(editing
+      ? source.plan_name ?? ""
+      : `${source.plan_name?.trim() || "未命名计划"} 副本`.slice(0, 80));
     const duration = Math.round(
       (Date.parse(source.valid_until) - Date.parse(source.valid_from)) / 60_000,
     );
     if (Number.isFinite(duration) && duration > 0) setValidMinutes(String(duration));
-  }, [draft.data?.content_digest]);
+  }, [draft.data?.content_digest, editing]);
 
   const update = <K extends keyof StrategyParameters>(key: K, value: StrategyParameters[K]) => {
     setParameters((current) => ({ ...current, [key]: value }));
@@ -344,6 +360,8 @@ export default function NewPlanPage() {
   const maxHoldingBarsValid = integerInRange(parameters.max_hold_bars_15m, 4, 672);
   const planValidityValid = numberInRange(validMinutes, 15, 10080)
     && Number.isInteger(Number(validMinutes));
+  const normalizedPlanName = planName.trim();
+  const planNameValid = normalizedPlanName.length > 0 && normalizedPlanName.length <= 80;
   const tradeAmountValid = Number(tradeAmount) > 0 && Number.isFinite(Number(tradeAmount));
   const initialStopValid = numberInRange(parameters.initial_stop_atr_multiple, 1, 3);
   const maxExtensionValid = numberInRange(parameters.max_entry_extension_atr, .1, 1);
@@ -412,6 +430,7 @@ export default function NewPlanPage() {
   const mutation = useMutation({
     mutationFn: () => {
       const payload = {
+        plan_name: normalizedPlanName,
         strategy_id: strategyId,
         parameters,
         venue_ref: "BINANCE_USDM",
@@ -425,7 +444,10 @@ export default function NewPlanPage() {
       } satisfies PlanDraftPayload;
       return editing && draft.data
         ? updatePlan(draft.data.plan_id, draft.data.draft_version, payload)
-        : createPlan(payload);
+        : createPlan({
+          ...payload,
+          creator_kind: creatorKind,
+        } satisfies PlanCreatePayload);
     },
     onSuccess: () => navigate("/plans"),
   });
@@ -467,6 +489,40 @@ export default function NewPlanPage() {
       {loading && <LinearProgress aria-label={editing ? "正在读取草稿" : "正在读取策略"} />}
       {loadFailed && <Alert severity="error">{editing ? "草稿或策略当前不可用，不能编辑。" : "策略当前不可用。"}</Alert>}
       {mutation.isError && <Alert severity="error" sx={{ mb: 2 }}>{mutationMessage}</Alert>}
+
+      <Box component="section" aria-labelledby="plan-identity-title" sx={{ ...surfaceFrameSx, mb: 3, p: 2 }}>
+        <Typography id="plan-identity-title" variant="h2" sx={{ mb: 2 }}>计划信息</Typography>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))" }, gap: 2 }}>
+          <TextField
+            label="计划名称"
+            value={planName}
+            onChange={(event) => setPlanName(event.target.value)}
+            error={planName.length > 0 && !planNameValid}
+            helperText={planNameValid ? "用于区分同一策略的不同计划" : "必填，最多 80 个字符"}
+            slotProps={{ htmlInput: { maxLength: 80 } }}
+            required
+          />
+          {!editing ? (
+            <TextField
+              select
+              label="创建方式"
+              value={creatorKind}
+              onChange={(event) => setCreatorKind(event.target.value as PlanCreatorKind)}
+              helperText="AI 代为创建时必须主动选择“AI 创建”"
+            >
+              <MenuItem value="HUMAN">人工创建</MenuItem>
+              <MenuItem value="AI">AI 创建</MenuItem>
+            </TextField>
+          ) : (
+            <TextField
+              label="创建来源"
+              value={draft.data?.content.creator_kind === "AI" ? "AI 创建" : draft.data?.content.creator_kind === "HUMAN" ? "人工创建" : "未知"}
+              helperText={draft.data?.content.created_at ? `创建于 ${formatUserVisibleTime(draft.data.content.created_at)}` : "创建时间未知"}
+              slotProps={{ htmlInput: { readOnly: true } }}
+            />
+          )}
+        </Box>
+      </Box>
 
       {selectedStrategy && (
         <Box sx={{ ...surfaceFrameSx, mb: 3, p: 2 }}>
@@ -578,8 +634,8 @@ export default function NewPlanPage() {
         </Box>
       </Box>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mt: 3 }}>
-        <Button type="submit" variant="contained" disabled={loading || loadFailed || mutation.isPending || marketContextRefreshing || !parameterRangesValid}>{mutation.isPending ? "正在保存…" : marketContextRefreshing ? "正在按当前回看更新行情…" : editing ? "保存计划修改" : "保存计划"}</Button>
-        <Button variant="text" onClick={() => navigate("/plans")}>取消</Button>
+        <Button type="submit" variant="contained" disabled={loading || loadFailed || mutation.isPending || marketContextRefreshing || !parameterRangesValid || !planNameValid}>{mutation.isPending ? "正在保存…" : marketContextRefreshing ? "正在按当前回看更新行情…" : editing ? "保存计划修改" : "保存计划"}</Button>
+        <Button variant="outlined" onClick={() => navigate("/plans")}>取消</Button>
       </Stack>
     </Box>
   );

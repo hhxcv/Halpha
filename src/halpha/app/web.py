@@ -31,6 +31,7 @@ from halpha.public_market import (
 from halpha.app.planning_api import (
     ActivationPayload,
     ControlPayload,
+    PlanCreatePayload,
     PlanDraftPayload,
     PlanningApiUnavailable,
     PostgreSQLPlanningApi,
@@ -742,7 +743,7 @@ def create_app(
         status_code=201,
     )
     def create_plan(
-        payload: PlanDraftPayload,
+        payload: PlanCreatePayload,
         idempotency_key: str = Header(alias="Idempotency-Key"),
     ) -> dict[str, Any]:
         return domain_call(
@@ -768,6 +769,21 @@ def create_app(
                 payload,
                 expected_version=expected_version(if_match),
                 observed_at=datetime.now(UTC),
+            )
+        )
+
+    @app.delete(
+        "/api/v1/plans/{plan_id}",
+        response_model=dict[str, Any],
+    )
+    def delete_plan(
+        plan_id: str,
+        if_match: str = Header(alias="If-Match"),
+    ) -> dict[str, Any]:
+        return domain_call(
+            lambda: planning_api.delete_plan(
+                plan_id,
+                expected_version=expected_version(if_match),
             )
         )
 

@@ -256,7 +256,8 @@ export interface paths {
         /** Update Plan */
         put: operations["update_plan_api_v1_plans__plan_id__put"];
         post?: never;
-        delete?: never;
+        /** Delete Plan */
+        delete: operations["delete_plan_api_v1_plans__plan_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -562,6 +563,42 @@ export interface components {
             /** View Retrieved At */
             view_retrieved_at: string;
         };
+        /** PlanCreatePayload */
+        PlanCreatePayload: {
+            creator_kind: components["schemas"]["PlanCreatorKind"];
+            /** Direction */
+            direction: string;
+            /** Instrument Ref */
+            instrument_ref: string;
+            /** Max Allowed Loss */
+            max_allowed_loss: string;
+            /** Max Margin */
+            max_margin: string;
+            /** Max Notional */
+            max_notional: string;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Plan Name */
+            plan_name: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Target Exposure */
+            target_exposure: string;
+            /** Valid Minutes */
+            valid_minutes: number;
+            /**
+             * Venue Ref
+             * @default BINANCE_USDM
+             */
+            venue_ref: string;
+        };
+        /**
+         * PlanCreatorKind
+         * @enum {string}
+         */
+        PlanCreatorKind: "HUMAN" | "AI";
         /** PlanDraftPayload */
         PlanDraftPayload: {
             /** Direction */
@@ -578,6 +615,8 @@ export interface components {
             parameters: {
                 [key: string]: unknown;
             };
+            /** Plan Name */
+            plan_name: string;
             /** Strategy Id */
             strategy_id: string;
             /** Target Exposure */
@@ -1176,7 +1215,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PlanDraftPayload"];
+                "application/json": components["schemas"]["PlanCreatePayload"];
             };
         };
         responses: {
@@ -1251,6 +1290,41 @@ export interface operations {
                 "application/json": components["schemas"]["PlanDraftPayload"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_plan_api_v1_plans__plan_id__delete: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

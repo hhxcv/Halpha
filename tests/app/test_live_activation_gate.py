@@ -7,7 +7,7 @@ from pydantic import SecretStr
 
 from halpha.app.planning_api import (
     ActivationPayload,
-    PlanDraftPayload,
+    PlanCreatePayload,
     PostgreSQLPlanningApi,
 )
 from halpha.live_write_gate import LiveWriteGateStatus
@@ -93,7 +93,9 @@ def test_live_plan_rejects_demo_immediate_entry_before_database_mutation(
         "_connect",
         lambda: pytest.fail("database must not be reached"),
     )
-    payload = PlanDraftPayload(
+    payload = PlanCreatePayload(
+        plan_name="AI live boundary check",
+        creator_kind="AI",
         strategy_id="ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
         parameters={"demo_immediate_entry": True},
         instrument_ref="BTCUSDT-PERP",
@@ -158,6 +160,9 @@ def test_activation_preview_returns_the_fixed_protection_and_exit_terms(
     ).model_dump(mode="json")
     version = SimpleNamespace(
         plan_version_id="plan-version-live-001",
+        plan_name=None,
+        created_at=None,
+        creator_kind=None,
         account_ref="binance-usdm-live-owner-primary",
         instrument_ref="BTCUSDT-PERP",
         direction=Direction.SHORT,
@@ -214,9 +219,19 @@ def test_plan_list_marks_a_fixed_plan_from_an_old_product_version(
                 "c" * 64,
                 NOW,
                 {
+                    "plan_name": "AI short breakout",
+                    "created_at": NOW.isoformat(),
+                    "creator_kind": "AI",
                     "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
                     "instrument_ref": "BTCUSDT-PERP",
                     "direction": "SHORT",
+                    "parameters": {
+                        "direction": "SHORT",
+                        "channel_lookback_15m": 20,
+                    },
+                    "requested_limits": {"max_notional": "500"},
+                    "valid_from": NOW.isoformat(),
+                    "valid_until": "2026-07-18T13:00:00+00:00",
                 },
                 "plan-version-001",
                 NOW,
@@ -233,6 +248,12 @@ def test_plan_list_marks_a_fixed_plan_from_an_old_product_version(
     assert plans[0]["fixed_product_build_id"] == "b" * 64
     assert plans[0]["fixed_valid_until"] == NOW.isoformat()
     assert plans[0]["product_build_consistent"] is False
+    assert plans[0]["parameters"]["channel_lookback_15m"] == 20
+    assert plans[0]["max_notional"] == "500"
+    assert plans[0]["valid_until"] == "2026-07-18T13:00:00+00:00"
+    assert plans[0]["plan_name"] == "AI short breakout"
+    assert plans[0]["created_at"] == NOW.isoformat()
+    assert plans[0]["creator_kind"] == "AI"
 
 
 def test_live_activation_uses_the_plan_amount_without_opening_the_gate(

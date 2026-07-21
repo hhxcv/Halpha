@@ -34,6 +34,11 @@ class ProtectionState(StrEnum):
     CLOSED = "CLOSED"
 
 
+class PlanCreatorKind(StrEnum):
+    HUMAN = "HUMAN"
+    AI = "AI"
+
+
 class ConditionResult(StrEnum):
     TRUE = "TRUE"
     FALSE = "FALSE"
@@ -70,6 +75,9 @@ class RequestedLimits(PlanningModel):
 
 
 class TradePlanContent(PlanningModel):
+    plan_name: str | None = None
+    created_at: datetime | None = None
+    creator_kind: PlanCreatorKind | None = None
     strategy_id: str
     parameters: dict[str, Any]
     environment_id: str
@@ -85,6 +93,16 @@ class TradePlanContent(PlanningModel):
     valid_until: datetime
     allowed_actions: frozenset[str]
     terms: dict[str, Any]
+
+    @field_validator("plan_name")
+    @classmethod
+    def plan_name_is_readable(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized or len(normalized) > 80:
+            raise ValueError("PLAN_NAME_INVALID")
+        return normalized
 
     @field_validator("target_exposure")
     @classmethod
@@ -131,6 +149,9 @@ class TradePlanVersion(PlanningModel):
     plan_id: str
     environment_id: str
     fixed_at: datetime
+    plan_name: str | None = None
+    created_at: datetime | None = None
+    creator_kind: PlanCreatorKind | None = None
     strategy_basis: FixedStrategyPlanBasis
     account_ref: str
     venue_ref: str
