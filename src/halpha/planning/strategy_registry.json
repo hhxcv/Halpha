@@ -1,7 +1,7 @@
 {
-  "registry_digest": "8cc96ffbcde99a9bee40f985ad958cbb932e1d0d8f60f07b2b4f3b6ecb97c999",
+  "registry_digest": "dbeb0a1211c716fee5e93f45e178516ca664882cc5e58170c0c0873c4ce8133a",
   "registry_kind": "STATIC_BUILD_ARTIFACT",
-  "schema_version": 1,
+  "schema_version": 2,
   "strategies": [
     {
       "allowed_action_profiles": [
@@ -118,6 +118,88 @@
         "type": "object"
       },
       "parameter_schema_version": "1.3.0",
+      "plan_key_parameters": [
+        {
+          "display_format": "BOOLEAN_LABEL",
+          "false_label": "自然突破信号",
+          "label": "入场模式",
+          "parameter_key": "demo_immediate_entry",
+          "true_label": "Demo 流程检查",
+          "unit": null
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "15m 通道回看",
+          "parameter_key": "channel_lookback_15m",
+          "true_label": null,
+          "unit": "根"
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "1m 确认根数",
+          "parameter_key": "confirmation_bars_1m",
+          "true_label": null,
+          "unit": "根"
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "入场等待窗口",
+          "parameter_key": "entry_valid_minutes",
+          "true_label": null,
+          "unit": "分钟"
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "初始止损",
+          "parameter_key": "initial_stop_atr_multiple",
+          "true_label": null,
+          "unit": "ATR"
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "最大追价",
+          "parameter_key": "max_entry_extension_atr",
+          "true_label": null,
+          "unit": "ATR"
+        },
+        {
+          "display_format": "PERCENT",
+          "false_label": null,
+          "label": "止盈一仓位比例",
+          "parameter_key": "take_profit_1_fraction",
+          "true_label": null,
+          "unit": null
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "止盈一目标",
+          "parameter_key": "take_profit_1_r",
+          "true_label": null,
+          "unit": "R"
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "止盈二目标",
+          "parameter_key": "take_profit_2_r",
+          "true_label": null,
+          "unit": "R"
+        },
+        {
+          "display_format": "VALUE",
+          "false_label": null,
+          "label": "最大持仓（15m）",
+          "parameter_key": "max_hold_bars_15m",
+          "true_label": null,
+          "unit": "根"
+        }
+      ],
       "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
       "strategy_version": "1.0.1",
       "supported_directions": [

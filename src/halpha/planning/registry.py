@@ -24,6 +24,33 @@ class Direction(StrEnum):
     SHORT = "SHORT"
 
 
+class PlanParameterDisplayFormat(StrEnum):
+    VALUE = "VALUE"
+    PERCENT = "PERCENT"
+    BOOLEAN_LABEL = "BOOLEAN_LABEL"
+
+
+class PlanKeyParameterDefinition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    parameter_key: str
+    label: str
+    display_format: PlanParameterDisplayFormat = PlanParameterDisplayFormat.VALUE
+    unit: str | None = None
+    true_label: str | None = None
+    false_label: str | None = None
+
+    @model_validator(mode="after")
+    def boolean_labels_match_format(self) -> PlanKeyParameterDefinition:
+        labels = (self.true_label, self.false_label)
+        if self.display_format is PlanParameterDisplayFormat.BOOLEAN_LABEL:
+            if any(label is None for label in labels):
+                raise ValueError("PLAN_PARAMETER_BOOLEAN_LABEL_MISSING")
+        elif any(label is not None for label in labels):
+            raise ValueError("PLAN_PARAMETER_BOOLEAN_LABEL_UNEXPECTED")
+        return self
+
+
 class OneShotParameters(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -94,6 +121,17 @@ class CodeStrategyDefinition(BaseModel):
     allowed_action_profiles: tuple[str, ...]
     supported_directions: tuple[Direction, ...]
     economic_scope: dict[str, Any]
+    plan_key_parameters: tuple[PlanKeyParameterDefinition, ...]
+
+    @model_validator(mode="after")
+    def plan_key_parameters_belong_to_schema(self) -> CodeStrategyDefinition:
+        schema_keys = set(self.parameter_schema.get("properties", {}))
+        parameter_keys = [item.parameter_key for item in self.plan_key_parameters]
+        if len(parameter_keys) != len(set(parameter_keys)):
+            raise ValueError("PLAN_KEY_PARAMETER_DUPLICATED")
+        if not set(parameter_keys).issubset(schema_keys):
+            raise ValueError("PLAN_KEY_PARAMETER_UNKNOWN")
+        return self
 
 
 class FixedStrategyPlanBasis(BaseModel):
@@ -243,6 +281,60 @@ def _definition() -> CodeStrategyDefinition:
             "one_entry_cycle": True,
             "funding_model": "NOT_MODELED_IN_BACKTEST",
         },
+        plan_key_parameters=(
+            PlanKeyParameterDefinition(
+                parameter_key="demo_immediate_entry",
+                label="入场模式",
+                display_format=PlanParameterDisplayFormat.BOOLEAN_LABEL,
+                true_label="Demo 流程检查",
+                false_label="自然突破信号",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="channel_lookback_15m",
+                label="15m 通道回看",
+                unit="根",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="confirmation_bars_1m",
+                label="1m 确认根数",
+                unit="根",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="entry_valid_minutes",
+                label="入场等待窗口",
+                unit="分钟",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="initial_stop_atr_multiple",
+                label="初始止损",
+                unit="ATR",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="max_entry_extension_atr",
+                label="最大追价",
+                unit="ATR",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="take_profit_1_fraction",
+                label="止盈一仓位比例",
+                display_format=PlanParameterDisplayFormat.PERCENT,
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="take_profit_1_r",
+                label="止盈一目标",
+                unit="R",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="take_profit_2_r",
+                label="止盈二目标",
+                unit="R",
+            ),
+            PlanKeyParameterDefinition(
+                parameter_key="max_hold_bars_15m",
+                label="最大持仓（15m）",
+                unit="根",
+            ),
+        ),
     )
 
 
@@ -253,7 +345,7 @@ def list_strategies() -> tuple[CodeStrategyDefinition, ...]:
 def strategy_registry_payload() -> dict[str, Any]:
     strategies = [item.model_dump(mode="json") for item in list_strategies()]
     payload: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "registry_kind": "STATIC_BUILD_ARTIFACT",
         "strategies": strategies,
     }

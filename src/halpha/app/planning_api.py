@@ -20,7 +20,12 @@ from halpha.live_write_gate import (
     closed_live_write_gate_status,
 )
 from halpha.outcomes.trade_result import summarize_trade_result
-from halpha.planning.models import PlanLifecycle, RequestedLimits, TradePlanContent
+from halpha.planning.models import (
+    PlanCreatorKind,
+    PlanLifecycle,
+    RequestedLimits,
+    TradePlanContent,
+)
 from halpha.planning.control_service import ActivationControlService
 from halpha.planning.registry import (
     describe_strategy,
@@ -38,6 +43,7 @@ class ApiModel(BaseModel):
 
 
 class PlanDraftPayload(ApiModel):
+    plan_name: str
     strategy_id: str
     parameters: dict[str, Any]
     venue_ref: str = "BINANCE_USDM"
@@ -48,6 +54,14 @@ class PlanDraftPayload(ApiModel):
     max_notional: str
     max_allowed_loss: str
     valid_minutes: int = Field(ge=15, le=10080)
+
+    @field_validator("plan_name")
+    @classmethod
+    def readable_plan_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized or len(normalized) > 80:
+            raise ValueError("PLAN_NAME_INVALID")
+        return normalized
 
     @field_validator(
         "target_exposure",
@@ -60,6 +74,10 @@ class PlanDraftPayload(ApiModel):
         return canonical_decimal(
             decimal_from_string(value, code="PLAN_VALUE_INVALID", positive=True)
         )
+
+
+class PlanCreatePayload(PlanDraftPayload):
+    creator_kind: PlanCreatorKind
 
 
 class ActivationPayload(ApiModel):
@@ -157,6 +175,10 @@ class PostgreSQLPlanningApi:
                     direction.value for direction in item.supported_directions
                 ],
                 "economic_scope": item.economic_scope,
+                "plan_key_parameters": [
+                    parameter.model_dump(mode="json")
+                    for parameter in item.plan_key_parameters
+                ],
             }
             for item in list_strategies()
         ]
@@ -190,9 +212,16 @@ class PostgreSQLPlanningApi:
                 "draft_version": int(row[1]),
                 "draft_content_digest": str(row[2]),
                 "updated_at": row[3].isoformat(),
+                "plan_name": row[4].get("plan_name"),
+                "created_at": row[4].get("created_at"),
+                "creator_kind": row[4].get("creator_kind"),
                 "strategy_id": row[4]["strategy_id"],
                 "instrument_ref": row[4]["instrument_ref"],
                 "direction": row[4]["direction"],
+                "parameters": dict(row[4]["parameters"]),
+                "max_notional": str(row[4]["requested_limits"]["max_notional"]),
+                "valid_from": str(row[4]["valid_from"]),
+                "valid_until": str(row[4]["valid_until"]),
                 "plan_version_id": str(row[5]) if row[5] is not None else None,
                 "fixed_at": row[6].isoformat() if row[6] is not None else None,
                 "fixed_content_digest": str(row[7]) if row[7] is not None else None,
@@ -223,7 +252,7 @@ class PostgreSQLPlanningApi:
 
     def save_new_plan(
         self,
-        payload: PlanDraftPayload,
+        payload: PlanCreatePayload,
         *,
         idempotency_key: str,
         observed_at: datetime,
@@ -237,6 +266,9 @@ class PostgreSQLPlanningApi:
         self._require_demo_parameter_scope(parameters)
         plan_id = _stable_id(self._environment_id, "plan", idempotency_key)
         content = TradePlanContent(
+            plan_name=payload.plan_name,
+            created_at=observed_at,
+            creator_kind=payload.creator_kind,
             strategy_id=payload.strategy_id,
             parameters=parameters,
             environment_id=self._environment_id,
@@ -289,6 +321,7 @@ class PostgreSQLPlanningApi:
         parameters = {**payload.parameters, "direction": payload.direction}
         self._require_demo_parameter_scope(parameters)
         content = TradePlanContent(
+            plan_name=payload.plan_name,
             strategy_id=payload.strategy_id,
             parameters=parameters,
             environment_id=self._environment_id,
@@ -319,6 +352,20 @@ class PostgreSQLPlanningApi:
                 observed_at=observed_at,
             )
         return draft.model_dump(mode="json")
+
+    def delete_plan(self, plan_id: str, *, expected_version: int) -> dict[str, Any]:
+        with self._connect() as connection, connection.transaction():
+            PlanningApplicationService(
+                connection, self._environment_id
+            ).delete_draft(
+                plan_id=plan_id,
+                expected_version=expected_version,
+            )
+        return {
+            "result": "APPLIED",
+            "plan_id": plan_id,
+            "deleted_draft_version": expected_version,
+        }
 
     def fix_plan(
         self,
@@ -367,6 +414,13 @@ class PostgreSQLPlanningApi:
         )
         return {
             "plan_version_id": version.plan_version_id,
+            "plan_name": version.plan_name,
+            "created_at": (
+                version.created_at.isoformat() if version.created_at is not None else None
+            ),
+            "creator_kind": (
+                version.creator_kind.value if version.creator_kind is not None else None
+            ),
             "environment_id": self._environment_id,
             "environment_kind": self._environment_kind.value,
             "authority_class": self._authority_class.value,

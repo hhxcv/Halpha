@@ -6,6 +6,11 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -27,6 +32,7 @@ import {
   TableRow,
   TextField,
   Toolbar,
+  Tooltip,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -34,6 +40,8 @@ import {
   useTheme,
 } from "@mui/material";
 import AssignmentOutlined from "@mui/icons-material/AssignmentOutlined";
+import ChevronLeftOutlined from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlined from "@mui/icons-material/ChevronRightOutlined";
 import DashboardOutlined from "@mui/icons-material/DashboardOutlined";
 import MenuOutlined from "@mui/icons-material/MenuOutlined";
 import OpenInNewOutlined from "@mui/icons-material/OpenInNewOutlined";
@@ -56,6 +64,7 @@ import {
   ApiFailure,
   createActivation,
   completeReview,
+  deletePlan,
   fixPlan,
   getActivation,
   getActivations,
@@ -74,12 +83,13 @@ import {
   sendTestEmail,
   submitActivationControl,
   type ControlIntent,
+  type PlanKeyParameterDefinition,
+  type PlanSummary,
   type ReviewCompletionPayload,
   type SettingsStatus,
 } from "./api/client";
 import PageHeader from "./components/PageHeader";
 import FactGrid from "./components/FactGrid";
-import StrategyIntroduction from "./components/StrategyIntroduction";
 import { closedBarBreakoutGapPercent, entryExtensionBoundary, estimateImmediateExit, formatUserVisibleTime, gapPercent, latestUtc, marketPrice, marketVolume, notSubmittedReasonText, observedOrderStateText, pendingBreakoutNote, planEventSummary, shortDigest, venueReasonText } from "./format";
 import {
   applyMarketColorScheme,
@@ -94,6 +104,8 @@ import {
 import { surfaceFrameSx } from "./theme";
 
 const DRAWER_WIDTH = 236;
+const COLLAPSED_DRAWER_WIDTH = 72;
+const NAVIGATION_COLLAPSED_STORAGE_KEY = "halpha.navigation-collapsed.v1";
 const STATUS_QUERY_KEY = ["settings-status"] as const;
 const NewPlanPage = lazy(() => import("./pages/NewPlanPage"));
 const ReviewPriceChart = lazy(() => import("./components/ReviewCharts").then((module) => ({ default: module.ReviewPriceChart })));
@@ -109,6 +121,24 @@ const visuallyHiddenSx = {
   whiteSpace: "nowrap",
   border: 0,
 } as const;
+
+function readNavigationCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(NAVIGATION_COLLAPSED_STORAGE_KEY) === "collapsed";
+  } catch {
+    return false;
+  }
+}
+
+function saveNavigationCollapsed(collapsed: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(NAVIGATION_COLLAPSED_STORAGE_KEY, collapsed ? "collapsed" : "expanded");
+  } catch {
+    // A blocked preference store must not prevent navigation.
+  }
+}
 
 function valueOf(record: Record<string, unknown> | undefined, key: string, fallback = "UNKNOWN"): string {
   const value = record?.[key];
@@ -184,6 +214,29 @@ function usdt(value: unknown): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
   }).format(amount)} USDT`;
+}
+
+function planDurationMinutes(validFrom: string, validUntil: string): string {
+  const minutes = Math.round((Date.parse(validUntil) - Date.parse(validFrom)) / 60_000);
+  return Number.isFinite(minutes) && minutes > 0 ? `${minutes} 分钟` : "未知";
+}
+
+function formatPlanKeyParameter(
+  definition: PlanKeyParameterDefinition,
+  value: unknown,
+): string {
+  if (definition.display_format === "BOOLEAN_LABEL") {
+    if (value === true) return definition.true_label ?? "是";
+    if (value === false) return definition.false_label ?? "否";
+    return "未配置";
+  }
+  if (definition.display_format === "PERCENT") {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? percent(numeric * 100) : "未配置";
+  }
+  if (value === null || value === undefined || value === "") return "未配置";
+  const rendered = String(value);
+  return definition.unit ? `${rendered} ${definition.unit}` : rendered;
 }
 
 function durationText(value: unknown): string {
@@ -412,6 +465,14 @@ function planConfirmationError(error: unknown): string {
   return `${code}，请刷新当前计划后重试`;
 }
 
+function planDeletionError(error: unknown): string {
+  const code = error instanceof ApiFailure ? error.code : "结果未知";
+  if (code === "PLAN_VERSION_CONFLICT") return "草稿已变化，请关闭弹窗并刷新后重试";
+  if (code === "PLAN_DRAFT_FIXED") return "计划已经确认，不能再删除草稿";
+  if (code === "PLAN_NOT_FOUND") return "草稿已不存在，请刷新计划列表";
+  return `草稿未删除：${code}`;
+}
+
 function AppLoading() {
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }} role="status" aria-live="polite">
@@ -458,6 +519,7 @@ function WorkbenchFrame({ status }: { status: SettingsStatus }) {
   const theme = useTheme();
   const narrow = useMediaQuery(theme.breakpoints.down("md"));
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [navigationCollapsed, setNavigationCollapsed] = useState(readNavigationCollapsed);
   const [loadedProductBuildId] = useState(status.product_build_id);
   const [marketColorScheme, setMarketColorSchemeState] = useState(readMarketColorScheme);
   const location = useLocation();
@@ -467,6 +529,15 @@ function WorkbenchFrame({ status }: { status: SettingsStatus }) {
     saveMarketColorScheme(scheme);
     setMarketColorSchemeState(scheme);
   }, []);
+  const toggleNavigationCollapsed = useCallback(() => {
+    setNavigationCollapsed((current) => {
+      const next = !current;
+      saveNavigationCollapsed(next);
+      return next;
+    });
+  }, []);
+  const drawerCollapsed = !narrow && navigationCollapsed;
+  const desktopDrawerWidth = navigationCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH;
   const productUpdateAvailable = Boolean(
     loadedProductBuildId
     && status.product_build_id
@@ -485,30 +556,51 @@ function WorkbenchFrame({ status }: { status: SettingsStatus }) {
 
   const drawer = (
     <Box component="aside" aria-label="工作台侧栏" sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
-      <Stack direction="row" spacing={1} sx={{ height: 64, minHeight: 64, px: 2, alignItems: "center", borderBottom: 1, borderColor: "rgba(16,24,32,.09)" }}>
-        <Typography sx={{ fontSize: 22, lineHeight: 1, fontWeight: 760 }}>{narrow ? "Halpha 工作台" : "Halpha"}</Typography>
-        <Chip label={narrow ? `环境 · ${status.environment_kind}` : status.environment_kind} size="small" color="primary" icon={<ShieldOutlined />} />
+      <Stack direction="row" spacing={.75} sx={{ height: 64, minHeight: 64, px: drawerCollapsed ? 1 : 1.5, alignItems: "center", justifyContent: drawerCollapsed ? "center" : "flex-start", borderBottom: 1, borderColor: "rgba(16,24,32,.09)" }}>
+        {!drawerCollapsed && <Typography sx={{ fontSize: 22, lineHeight: 1, fontWeight: 760 }}>{narrow ? "Halpha 工作台" : "Halpha"}</Typography>}
+        {!drawerCollapsed && <Chip label={narrow ? `环境 · ${status.environment_kind}` : status.environment_kind} size="small" color="primary" icon={<ShieldOutlined />} />}
+        {!narrow && (
+          <IconButton
+            aria-label={drawerCollapsed ? "展开导航" : "折叠导航"}
+            title={drawerCollapsed ? "展开导航" : "折叠导航"}
+            onClick={toggleNavigationCollapsed}
+            sx={{ ml: drawerCollapsed ? 0 : "auto", width: 36, height: 36, flexShrink: 0, border: 0, bgcolor: "transparent" }}
+          >
+            {drawerCollapsed ? <ChevronRightOutlined /> : <ChevronLeftOutlined />}
+          </IconButton>
+        )}
       </Stack>
       <Box component="nav" aria-label="工作台导航" sx={{ pt: 2, minHeight: 0, display: "flex", flexGrow: 1, flexDirection: "column" }}>
-        <List aria-label="工作台主导航" sx={{ px: 1.75, py: 0, display: "grid", gap: .75 }}>
+        <List aria-label="工作台主导航" sx={{ px: drawerCollapsed ? 1 : 1.75, py: 0, display: "grid", gap: .75 }}>
           {navItems.map((item) => (
             <ListItem key={item.path} disablePadding>
-              <ListItemButton
-                selected={item.path === currentPrimaryPath}
-                onClick={() => { navigate(item.path); setDrawerOpen(false); }}
-                sx={{ px: 1.5 }}
-              >
-                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontSize: 14, fontWeight: 700 } } }} />
-              </ListItemButton>
+              <Tooltip title={drawerCollapsed ? item.label : ""} placement="right" disableHoverListener={!drawerCollapsed} disableFocusListener={!drawerCollapsed}>
+                <ListItemButton
+                  aria-label={item.label}
+                  selected={item.path === currentPrimaryPath}
+                  onClick={() => { navigate(item.path); setDrawerOpen(false); }}
+                  sx={{ px: drawerCollapsed ? 0 : 1.5, justifyContent: drawerCollapsed ? "center" : "flex-start" }}
+                >
+                  <ListItemIcon sx={{ minWidth: drawerCollapsed ? 0 : 36, color: "inherit", justifyContent: "center" }}>{item.icon}</ListItemIcon>
+                  {!drawerCollapsed && <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontSize: 14, fontWeight: 700 } } }} />}
+                </ListItemButton>
+              </Tooltip>
             </ListItem>
           ))}
         </List>
-        <Box sx={{ mt: "auto", p: 1.75 }}>
+        <Box sx={{ mt: "auto", p: drawerCollapsed ? 1 : 1.75 }}>
           <Divider sx={{ mb: 1.5 }} />
-          <Button component="a" href="/operations" fullWidth variant="text" endIcon={<OpenInNewOutlined />} sx={{ justifyContent: "space-between" }}>
-            故障接管
-          </Button>
+          {drawerCollapsed ? (
+            <Tooltip title="故障接管" placement="right">
+              <IconButton component="a" href="/operations" aria-label="故障接管" sx={{ mx: "auto", display: "flex" }}>
+                <OpenInNewOutlined />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Button component="a" href="/operations" fullWidth variant="text" endIcon={<OpenInNewOutlined />} sx={{ justifyContent: "space-between" }}>
+              故障接管
+            </Button>
+          )}
         </Box>
       </Box>
     </Box>
@@ -521,8 +613,9 @@ function WorkbenchFrame({ status }: { status: SettingsStatus }) {
         color="transparent"
         sx={{
           zIndex: theme.zIndex.appBar,
-          left: { xs: 0, md: `${DRAWER_WIDTH}px` },
-          width: { xs: "100%", md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          left: { xs: 0, md: `${desktopDrawerWidth}px` },
+          width: { xs: "100%", md: `calc(100% - ${desktopDrawerWidth}px)` },
+          transition: theme.transitions.create(["left", "width"], { duration: theme.transitions.duration.shorter }),
         }}
       >
         <Toolbar
@@ -544,7 +637,7 @@ function WorkbenchFrame({ status }: { status: SettingsStatus }) {
           ) : (
             <Typography component="div" sx={{ fontSize: 24, lineHeight: 1.1, fontWeight: 650 }}>{pageTitle}</Typography>
           )}
-          {narrow && <Chip label={status.environment_kind} size="small" color="primary" icon={<ShieldOutlined />} />}
+          {(narrow || drawerCollapsed) && <Chip label={status.environment_kind} size="small" color="primary" icon={<ShieldOutlined />} />}
           <Typography
             className="mono"
             variant="caption"
@@ -587,19 +680,22 @@ function WorkbenchFrame({ status }: { status: SettingsStatus }) {
         open={narrow ? drawerOpen : true}
         onClose={() => setDrawerOpen(false)}
         ModalProps={{ keepMounted: true }}
+        slotProps={{ paper: { "aria-label": narrow ? "工作台导航抽屉" : undefined } }}
         sx={{
-          width: DRAWER_WIDTH,
+          width: narrow ? DRAWER_WIDTH : desktopDrawerWidth,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: DRAWER_WIDTH,
+            width: narrow ? DRAWER_WIDTH : desktopDrawerWidth,
             top: 0,
             height: "100%",
+            overflowX: "hidden",
+            transition: theme.transitions.create("width", { duration: theme.transitions.duration.shorter }),
           },
         }}
       >
         {drawer}
       </Drawer>
-      <Box component="main" sx={{ ml: { xs: 0, md: `${DRAWER_WIDTH}px` }, pt: { xs: "96px", md: "64px" }, minHeight: "100vh" }}>
+      <Box component="main" sx={{ ml: { xs: 0, md: `${desktopDrawerWidth}px` }, pt: { xs: "96px", md: "64px" }, minHeight: "100vh", transition: theme.transitions.create("margin-left", { duration: theme.transitions.duration.shorter }) }}>
         {productUpdateAvailable && (
           <Alert
             severity="info"
@@ -937,11 +1033,22 @@ function PlansPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"CURRENT" | "HISTORY">("CURRENT");
+  const [deleteTarget, setDeleteTarget] = useState<PlanSummary | null>(null);
   const query = useQuery({ queryKey: ["plans"], queryFn: getPlans });
   const strategiesQuery = useQuery({ queryKey: ["strategies"], queryFn: getStrategies });
   const fixMutation = useMutation({
     mutationFn: ({ planId, version }: { planId: string; version: number }) => fixPlan(planId, version),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["plans"] }); },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (plan: PlanSummary) => deletePlan(plan.plan_id, plan.draft_version),
+    onSuccess: async (_result, deletedPlan) => {
+      queryClient.setQueryData<PlanSummary[]>(["plans"], (current) =>
+        current?.filter((plan) => plan.plan_id !== deletedPlan.plan_id)
+      );
+      setDeleteTarget(null);
+      await queryClient.invalidateQueries({ queryKey: ["plans"] });
+    },
   });
   const plans = query.data ?? [];
   const historicalPlans = plans.filter((plan) => Boolean(
@@ -954,6 +1061,11 @@ function PlansPage() {
   const currentPlans = plans.filter((plan) => !historicalPlans.includes(plan));
   const renderPlan = (plan: (typeof plans)[number]) => {
     const strategy = strategiesQuery.data?.find((item) => item.strategy_id === plan.strategy_id);
+    const planParameters = plan.parameters ?? {};
+    const keyParameterFacts = strategy?.plan_key_parameters?.map((definition) => ({
+      label: definition.label,
+      value: formatPlanKeyParameter(definition, planParameters[definition.parameter_key]),
+    })) ?? [];
     const oldProductVersion = Boolean(plan.plan_version_id && plan.product_build_consistent === false);
     const expired = Boolean(plan.fixed_valid_until && Date.parse(plan.fixed_valid_until) <= Date.now());
     const unavailable = oldProductVersion || expired;
@@ -964,33 +1076,54 @@ function PlansPage() {
         : plan.plan_version_id
           ? "已确认计划"
           : "可编辑草稿";
-    return <Box key={plan.plan_id} sx={{ ...surfaceFrameSx, p: 2.5, borderColor: unavailable ? "warning.main" : "divider", opacity: unavailable ? .72 : 1 }}>
+    const planName = plan.plan_name?.trim() || `未命名计划 · ${shortDigest(plan.plan_id)}`;
+    const creatorLabel = plan.creator_kind === "AI"
+      ? "AI 创建"
+      : plan.creator_kind === "HUMAN" ? "人工创建" : "创建来源未知";
+    const creationTime = plan.created_at
+      ? `创建于 ${formatUserVisibleTime(plan.created_at)}`
+      : "创建时间未知";
+    return <Box component="article" aria-label={`计划 ${planName}`} key={plan.plan_id} sx={{ ...surfaceFrameSx, p: 2.5, borderColor: unavailable ? "warning.main" : "divider", opacity: unavailable ? .72 : 1 }}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { md: "center" } }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" color={unavailable ? "warning.main" : "text.secondary"}>{planState}</Typography>
-          <Typography variant="h2" sx={{ mt: .5 }}>{strategy?.display_name ?? plan.strategy_id}</Typography>
-          <Typography className="mono" variant="body2" color="text.secondary">
-            {plan.instrument_ref} · <MarketToneText tone={marketToneForDirection(plan.direction)}>{plan.direction === "LONG" ? "做多" : "做空"}</MarketToneText> · {plan.plan_version_id ? "已确认" : `草稿 v${plan.draft_version}`}
+          <Typography variant="h2" sx={{ mt: .5 }}>{planName}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {strategy?.display_name ?? plan.strategy_id} · <Box component="span" className="mono">{plan.instrument_ref}</Box> · <MarketToneText tone={marketToneForDirection(plan.direction)}>{plan.direction === "LONG" ? "做多" : "做空"}</MarketToneText> · {plan.plan_version_id ? "已确认" : `草稿 v${plan.draft_version}`}
           </Typography>
-          <Typography className="mono" variant="caption" color="text.secondary">{shortDigest(plan.plan_version_id ?? plan.draft_content_digest)}</Typography>
+          <Typography variant="caption" color="text.secondary">{creatorLabel} · {creationTime} · <Box component="span" className="mono">{shortDigest(plan.plan_version_id ?? plan.draft_content_digest)}</Box></Typography>
           {oldProductVersion && <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>该计划由旧产品版本确认，不能用于当前运行实例。</Typography>}
           {!oldProductVersion && expired && <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>计划有效期已结束，请新建当前计划。</Typography>}
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           {!plan.plan_version_id && <Button variant="outlined" onClick={() => navigate(`/plans/${plan.plan_id}/edit`)}>编辑计划</Button>}
+          {!plan.plan_version_id && <Button variant="outlined" color="error" disabled={deleteMutation.isPending} onClick={() => { deleteMutation.reset(); setDeleteTarget(plan); }}>删除草稿</Button>}
           {!plan.plan_version_id && <Button variant="contained" disabled={fixMutation.isPending} onClick={() => fixMutation.mutate({ planId: plan.plan_id, version: plan.draft_version })}>确认计划</Button>}
           {plan.plan_version_id && <Button variant="outlined" onClick={() => navigate(`/plans/new?copyFrom=${encodeURIComponent(plan.plan_id)}`)}>沿用参数新建</Button>}
           {plan.plan_version_id && !unavailable && <Button variant="contained" onClick={() => navigate(`/plans/${plan.plan_version_id}/activate`)}>启动策略</Button>}
         </Stack>
       </Stack>
-      {strategy && (
-        <Box component="details" sx={{ mt: 1.5, borderTop: 1, borderColor: "divider", pt: 1.25 }}>
-          <Box component="summary" sx={{ display: "inline-flex", cursor: "pointer", color: "info.main", fontSize: 13, fontWeight: 700 }}>
-            策略详情
-          </Box>
-          <StrategyIntroduction strategy={strategy} embedded />
+      <Box component="details" sx={{ mt: 1.5, borderTop: 1, borderColor: "divider", pt: 1.25 }}>
+        <Box component="summary" sx={{ display: "inline-flex", cursor: "pointer", color: "info.main", fontSize: 13, fontWeight: 700 }}>
+          计划配置
         </Box>
-      )}
+        <Box sx={{ mt: 1.5 }}>
+          <FactGrid
+            columns={3}
+            dense
+            facts={[
+              { label: "交易金额", value: usdt(plan.max_notional), note: "本计划的资金边界" },
+              { label: "计划有效期", value: planDurationMinutes(plan.valid_from, plan.valid_until), note: `截至 ${formatUserVisibleTime(plan.valid_until)}` },
+              ...keyParameterFacts,
+            ]}
+          />
+          {!strategy && (
+            <Typography variant="caption" color="warning.main" sx={{ display: "block", mt: 1 }}>
+              策略关键参数定义当前不可读；页面未猜测或重写参数含义。
+            </Typography>
+          )}
+        </Box>
+      </Box>
     </Box>;
   };
   return (
@@ -1015,10 +1148,31 @@ function PlansPage() {
           <Button variant="outlined" onClick={() => void query.refetch()}>刷新</Button>
         </Stack>
       </Stack>
-      {strategiesQuery.isError && <Alert severity="warning" sx={{ mb: 2 }}>策略说明当前不可读；计划事实仍按原身份显示。</Alert>}
+      {strategiesQuery.isError && <Alert severity="warning" sx={{ mb: 2 }}>策略定义当前不可读；计划身份与基础配置仍按计划事实显示，关键参数不做猜测。</Alert>}
       {query.isPending && <LinearProgress aria-label="正在读取计划" />}
       {query.isError && <Alert severity="error">计划事实不可用；页面没有显示缓存副本。</Alert>}
       {fixMutation.isError && <Alert severity="warning" sx={{ mb: 2 }}>确认失败：{planConfirmationError(fixMutation.error)}。</Alert>}
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={() => { if (!deleteMutation.isPending) { setDeleteTarget(null); deleteMutation.reset(); } }}
+        aria-labelledby="delete-plan-title"
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle id="delete-plan-title">删除草稿？</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            将永久删除“{deleteTarget?.plan_name?.trim() || (deleteTarget ? `未命名计划 · ${shortDigest(deleteTarget.plan_id)}` : "当前计划")}”。此操作不可恢复，但不会影响策略定义、其他计划或任何已确认版本。
+          </DialogContentText>
+          {deleteMutation.isError && <Alert severity="error" sx={{ mt: 2 }}>{planDeletionError(deleteMutation.error)}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" disabled={deleteMutation.isPending} onClick={() => { setDeleteTarget(null); deleteMutation.reset(); }}>取消</Button>
+          <Button variant="contained" color="error" disabled={!deleteTarget || deleteMutation.isPending} onClick={() => { if (deleteTarget) deleteMutation.mutate(deleteTarget); }}>
+            {deleteMutation.isPending ? "正在删除…" : "删除草稿"}
+          </Button>
+        </DialogActions>
+      </Dialog>
       {activeTab === "CURRENT" && <>
         <ExpandableList items={currentPlans} initialCount={8} step={8} renderItem={renderPlan} />
         {query.data && currentPlans.length === 0 && <Alert severity="info" variant="outlined">当前没有可操作计划。</Alert>}
@@ -1084,9 +1238,10 @@ function PlanActivationRoute() {
   const shortClosedBarBreakoutGap = currentMarket
     ? closedBarBreakoutGapPercent("SHORT", currentMarket.latest_close_1m, currentMarket.channel_lower)
     : "";
+  const planName = valueOf(preview.data, "plan_name", "");
   return (
     <Box sx={{ width: "min(920px, calc(100% - clamp(32px, 4vw, 48px)))", mx: "auto", py: { xs: 2.5, sm: 3 } }}>
-      <PageHeader title="确认启动策略" description="交易金额已在策略计划中确定。这里仅确认启动固定计划，不再进行资金授权，也不会立即向 Binance 下单。" />
+      <PageHeader eyebrow="确认启动计划" title={planName || "未命名计划"} description="交易金额已在策略计划中确定。这里仅确认启动固定计划，不再进行资金授权，也不会立即向 Binance 下单。" />
       {preview.isPending && <LinearProgress aria-label="正在读取激活复核" />}
       {preview.isError && <Alert severity="error">当前复核事实不可用，不能启动策略。</Alert>}
       {preview.data && <>

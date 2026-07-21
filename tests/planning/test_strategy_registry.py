@@ -71,6 +71,20 @@ def test_static_registry_and_schema_are_build_bound() -> None:
         "nautilus_trader.indicators.DonchianChannel",
         "nautilus_trader.indicators.AverageTrueRange",
     )
+    assert [
+        item.parameter_key for item in definition.plan_key_parameters
+    ] == [
+        "demo_immediate_entry",
+        "channel_lookback_15m",
+        "confirmation_bars_1m",
+        "entry_valid_minutes",
+        "initial_stop_atr_multiple",
+        "max_entry_extension_atr",
+        "take_profit_1_fraction",
+        "take_profit_1_r",
+        "take_profit_2_r",
+        "max_hold_bars_15m",
+    ]
     assert (ROOT / "src/halpha/planning/strategy_registry.json").read_text(
         encoding="utf-8"
     ) == render_strategy_registry()
