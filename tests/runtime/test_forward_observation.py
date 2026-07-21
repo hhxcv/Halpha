@@ -45,7 +45,9 @@ def test_forward_observation_spec_binds_start_inputs_and_parameters() -> None:
     spec = _spec()
 
     assert spec.schema_version == 4
-    assert spec.entry_valid_until == spec.starts_at + timedelta(days=1)
+    assert spec.entry_valid_until == spec.starts_at + timedelta(
+        minutes=spec.parameters.entry_valid_minutes
+    )
     with pytest.raises(ValidationError, match="PARAMETER_DIGEST_MISMATCH"):
         ForwardObservationSpec.model_validate(
             {

@@ -31,12 +31,13 @@ def native_donchian_atr_snapshot(
 ) -> NativeIndicatorSnapshot:
     """Calculate the fixed indicators using only public Nautilus classes."""
 
-    if len(bars) != lookback:
+    required_bar_count = max(lookback, 15)
+    if len(bars) != required_bar_count:
         raise ValueError("INDICATOR_WINDOW_INCOMPLETE")
     timestamps = [bar.ts_event_ns for bar in bars]
     if timestamps != sorted(timestamps) or len(set(timestamps)) != len(timestamps):
         raise ValueError("INDICATOR_WINDOW_ORDER_INVALID")
-    bar_type = BarType.from_str(f"{instrument_id}-15-MINUTE-LAST-INTERNAL@1-MINUTE-EXTERNAL")
+    bar_type = BarType.from_str(f"{instrument_id}-15-MINUTE-LAST-EXTERNAL")
     donchian = DonchianChannel(lookback)
     atr = AverageTrueRange(
         period=14,

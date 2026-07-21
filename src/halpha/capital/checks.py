@@ -122,9 +122,11 @@ def check_action(
         or boundary.instrument_ref != action.instrument_ref
     ):
         return reject("PLAN_BOUNDARY_MISMATCH")
-    if not (boundary.valid_from <= action.checked_at < boundary.valid_until):
-        return reject("PLAN_EXPIRED")
-    if action.action_profile not in boundary.allowed_actions:
+    is_owned_cancel = (
+        action.action_profile == "CANCEL_ORDER"
+        and action.risk_class is RiskClass.RISK_NEUTRAL
+    )
+    if action.action_profile not in boundary.allowed_actions and not is_owned_cancel:
         return reject("PLAN_BOUNDARY_MISMATCH")
     if not action.facts_fresh:
         return reject("VALUATION_UNKNOWN")
@@ -140,8 +142,6 @@ def check_action(
         return reject("ACTION_CATEGORY_STOPPED")
     if action.risk_class is RiskClass.AMBIGUOUS:
         return reject("ATTRIBUTION_UNKNOWN")
-    if action.risk_class is RiskClass.RISK_INCREASING and boundary.lifecycle != "RUNNING":
-        return reject("NEW_RISK_STOPPED")
     if action.risk_class is RiskClass.RISK_REDUCING:
         if action.would_reverse_position or Decimal(action.post_action_abs_position) > Decimal(
             action.current_abs_position
@@ -172,6 +172,10 @@ def check_action(
             activation_margin_after=margin_after,
             stopped=stopped,
         )
+    if not (boundary.valid_from <= action.checked_at < boundary.valid_until):
+        return reject("PLAN_EXPIRED")
+    if boundary.lifecycle != "RUNNING":
+        return reject("NEW_RISK_STOPPED")
 
     try:
         leverage = effective_leverage(action.actual_margin_mode, action.actual_leverage)

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from halpha.capital.models import CapDecision, RiskClass
 from halpha.domain_values import content_digest
 from halpha.planning.models import PlanEvent, ProposedAction, ProposedActionKind
@@ -129,7 +131,25 @@ class FakeFactRepository:
         self.facts = {}
 
     def find_by_source(self, fact):
-        return self.facts.get(fact.venue_fact_id)
+        return next(
+            (
+                existing
+                for existing in self.facts.values()
+                if (
+                    existing.environment_id,
+                    existing.source_class,
+                    existing.source_object_id,
+                    existing.source_sequence,
+                )
+                == (
+                    fact.environment_id,
+                    fact.source_class,
+                    fact.source_object_id,
+                    fact.source_sequence,
+                )
+            ),
+            None,
+        )
 
     def insert(self, fact):
         self.facts[fact.venue_fact_id] = fact
@@ -271,3 +291,114 @@ def test_late_acknowledgement_is_retained_without_regressing_working_state() -> 
     assert updated.state_version == working.state_version + 1
     assert late_ack.venue_fact_id in updated.venue_fact_refs
     assert facts.facts[late_ack.venue_fact_id] is late_ack
+
+
+def test_same_venue_version_reobserved_later_is_idempotent() -> None:
+    action = _submitting_action()
+    actions = FakeActionRepository((action,))
+    facts = FakeFactRepository()
+    service = ExecutionApplicationService(
+        actions,  # type: ignore[arg-type]
+        facts,  # type: ignore[arg-type]
+        environment_id="demo-main",
+        environment_kind="DEMO",
+        authority_class="DEMO_VALIDATION",
+        execution_profile_ref="BINANCE_DEMO",
+        account_ref="demo-owner",
+    )
+    first = build_venue_fact(
+        venue_fact_id="10000000-0000-0000-0000-000000000020",
+        environment_id=action.environment_id,
+        venue_ref="BINANCE",
+        account_ref=action.account_ref,
+        instrument_ref="BTCUSDT-PERP",
+        kind=VenueFactKind.ORDER_STATE,
+        source_class=VenueFactSourceClass.VENUE_QUERY,
+        source_object_id="venue-order-1",
+        source_sequence="123:WORKING",
+        source_time=NOW,
+        received_at=NOW + timedelta(seconds=1),
+        cutoff=NOW + timedelta(seconds=1),
+        payload={"status": "WORKING", "venue_order_ref": "venue-order-1"},
+        action=action,
+    )
+    repeated = build_venue_fact(
+        venue_fact_id="10000000-0000-0000-0000-000000000021",
+        environment_id=action.environment_id,
+        venue_ref="BINANCE",
+        account_ref=action.account_ref,
+        instrument_ref="BTCUSDT-PERP",
+        kind=VenueFactKind.ORDER_STATE,
+        source_class=VenueFactSourceClass.VENUE_QUERY,
+        source_object_id="venue-order-1",
+        source_sequence="123:WORKING",
+        source_time=NOW,
+        received_at=NOW + timedelta(seconds=2),
+        cutoff=NOW + timedelta(seconds=2),
+        payload={"status": "WORKING", "venue_order_ref": "venue-order-1"},
+        action=action,
+    )
+
+    first_result = service.apply_venue_fact(
+        fact=first,
+        observed_at=first.received_at,
+    )
+    repeated_result = service.apply_venue_fact(
+        fact=repeated,
+        observed_at=repeated.received_at,
+    )
+
+    assert first_result is not None
+    assert repeated_result is first_result
+    assert tuple(facts.facts) == (first.venue_fact_id,)
+
+
+def test_same_venue_version_with_changed_payload_is_a_conflict() -> None:
+    action = _submitting_action()
+    actions = FakeActionRepository((action,))
+    facts = FakeFactRepository()
+    service = ExecutionApplicationService(
+        actions,  # type: ignore[arg-type]
+        facts,  # type: ignore[arg-type]
+        environment_id="demo-main",
+        environment_kind="DEMO",
+        authority_class="DEMO_VALIDATION",
+        execution_profile_ref="BINANCE_DEMO",
+        account_ref="demo-owner",
+    )
+    first = build_venue_fact(
+        venue_fact_id="10000000-0000-0000-0000-000000000022",
+        environment_id=action.environment_id,
+        venue_ref="BINANCE",
+        account_ref=action.account_ref,
+        instrument_ref="BTCUSDT-PERP",
+        kind=VenueFactKind.ORDER_STATE,
+        source_class=VenueFactSourceClass.VENUE_QUERY,
+        source_object_id="venue-order-2",
+        source_sequence="456:WORKING",
+        source_time=NOW,
+        received_at=NOW + timedelta(seconds=1),
+        cutoff=NOW + timedelta(seconds=1),
+        payload={"status": "WORKING", "venue_order_ref": "venue-order-2"},
+        action=action,
+    )
+    conflict = build_venue_fact(
+        venue_fact_id="10000000-0000-0000-0000-000000000023",
+        environment_id=action.environment_id,
+        venue_ref="BINANCE",
+        account_ref=action.account_ref,
+        instrument_ref="BTCUSDT-PERP",
+        kind=VenueFactKind.ORDER_STATE,
+        source_class=VenueFactSourceClass.VENUE_QUERY,
+        source_object_id="venue-order-2",
+        source_sequence="456:WORKING",
+        source_time=NOW,
+        received_at=NOW + timedelta(seconds=2),
+        cutoff=NOW + timedelta(seconds=2),
+        payload={"status": "CANCELLED", "venue_order_ref": "venue-order-2"},
+        action=action,
+    )
+    service.apply_venue_fact(fact=first, observed_at=first.received_at)
+
+    with pytest.raises(ValueError, match="FACT_CONFLICT"):
+        service.apply_venue_fact(fact=conflict, observed_at=conflict.received_at)

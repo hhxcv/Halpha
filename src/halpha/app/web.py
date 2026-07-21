@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
 import html
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 import psycopg
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -20,6 +20,13 @@ from halpha.app.projection import (
     PostgreSQLWorkbenchProjection,
     ProjectionUnavailable,
     WorkbenchProjection,
+)
+from halpha.public_market import (
+    BinancePublicMarketContext,
+    MarketContext,
+    MarketContextProvider,
+    MarketContextUnavailable,
+    MarketWindow,
 )
 from halpha.app.planning_api import (
     ActivationPayload,
@@ -86,6 +93,8 @@ class SettingsStatusResponse(FrozenResponse):
     server_fact_cutoff: str | None
     product_build_id: str
     app_executor_product_build_consistent: bool | None
+    executor_status: str
+    executor_status_checked_at: str
     configured_runtime_real_write_gate: str
     runtime_real_write_gate: str
     live_write_gate_violations: list[str]
@@ -110,31 +119,33 @@ def _csrf_token(request: Request) -> str:
     return str(getter())
 
 
-_STOP_CATEGORIES = (
-    "NEW_RISK",
-    "PROTECTION",
-    "RISK_REDUCTION_OR_ORDER_MANAGEMENT",
-    "ALL_EXCHANGE_CHANGES",
-)
-
-
 def _operation_value(value: Any, *, fallback: str = "UNKNOWN") -> str:
     if value is None or value == "":
         return fallback
     return html.escape(str(value))
 
 
-def _money_value(value: Any, quote_asset: Any) -> str:
+_USER_VISIBLE_TIME_ZONE = ZoneInfo("Asia/Shanghai")
+
+
+def _operation_time(value: Any, *, fallback: str = "UNKNOWN") -> str:
     if value is None or value == "":
-        return "UNKNOWN"
-    try:
-        normalized = format(Decimal(str(value)).normalize(), "f")
-    except (InvalidOperation, ValueError):
-        normalized = str(value)
-    if "." in normalized:
-        normalized = normalized.rstrip("0").rstrip(".")
-    unit = str(quote_asset or "").strip()
-    return html.escape(f"{normalized} {unit}".strip())
+        return fallback
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        token = str(value).strip()
+        if token.endswith("Z"):
+            token = f"{token[:-1]}+00:00"
+        try:
+            parsed = datetime.fromisoformat(token)
+        except ValueError:
+            return fallback
+    if parsed.utcoffset() is None:
+        return fallback
+    return html.escape(
+        f"{parsed.astimezone(_USER_VISIBLE_TIME_ZONE):%Y-%m-%d %H:%M:%S} UTC+8"
+    )
 
 
 def _operations_activation_document(activation: dict[str, Any]) -> str:
@@ -146,134 +157,54 @@ def _operations_activation_document(activation: dict[str, Any]) -> str:
     run_state = str(activation.get("run_state", "UNKNOWN"))
     pause_reason = str(activation.get("pause_reason") or "NONE")
     stopped = {str(item) for item in activation.get("stopped_categories", [])}
-    stop_rows = "".join(
-        f"<div><dt>{html.escape(category)}</dt>"
-        f'<dd class="{"stopped" if category in stopped else "clear"}">'
-        f'{"STOPPED" if category in stopped else "CLEAR"}</dd></div>'
-        for category in _STOP_CATEGORIES
-    )
-    receipts = activation.get("receipts") or []
-    receipt_rows = "".join(
-        "<tr>"
-        f"<td>{_operation_value(receipt.get('intent'))}</td>"
-        f'<td><span class="receipt-state">{_operation_value(receipt.get("state"))}</span></td>'
-        f"<td><code>{_operation_value(receipt.get('receipt_id'))}</code></td>"
-        f"<td>{_operation_value(receipt.get('reason_code'), fallback='—')}</td>"
-        f"<td>{_operation_value(receipt.get('updated_at'))}</td>"
-        "</tr>"
-        for receipt in receipts
-    ) or '<tr><td colspan="5" class="empty-cell">No command receipts for this activation.</td></tr>'
-    actions = activation.get("execution_actions") or []
-    action_rows = "".join(
-        "<tr>"
-        f"<td>{_operation_value(action.get('action_kind'))}</td>"
-        f"<td>{_operation_value(action.get('state'))}</td>"
-        f"<td><code>{_operation_value(action.get('client_order_id'), fallback='—')}</code></td>"
-        f"<td>{_operation_value(action.get('updated_at'))}</td>"
-        "</tr>"
-        for action in actions
-    ) or '<tr><td colspan="4" class="empty-cell">No persisted execution action.</td></tr>'
-    venue_facts = activation.get("venue_facts") or []
-    venue_rows = "".join(
-        "<tr>"
-        f"<td>{_operation_value(fact.get('kind'))}</td>"
-        f"<td>{_operation_value(fact.get('source_object_id'), fallback='—')}</td>"
-        f"<td>{_operation_value(fact.get('cutoff'))}</td>"
-        "</tr>"
-        for fact in venue_facts
-    ) or '<tr><td colspan="3" class="empty-cell">No attributed position or order fact.</td></tr>'
-
-    resume_initially_available = (
-        lifecycle == "RUNNING"
-        and run_state == "PAUSED"
-        and pause_reason == "WRITER_CONTINUITY_LOST"
-    )
-    resume_reason = (
-        "Preview current reconciliation, authorization, facts, and stops before resuming."
-        if resume_initially_available
-        else "Available only for RUNNING activations paused by WRITER_CONTINUITY_LOST."
-    )
     terminal = lifecycle in {"USER_TAKEOVER", "COMPLETED"}
+    new_risk_stopped = bool(
+        {"NEW_RISK", "ALL_EXCHANGE_CHANGES"}.intersection(stopped)
+    ) or lifecycle in {"EXITING", "USER_TAKEOVER"}
     exiting = lifecycle == "EXITING"
-    quote_asset = activation.get("quote_asset")
 
     def control(
         intent: str,
         label: str,
         consequence: str,
         disabled: bool,
-        disabled_reason: str,
+        disabled_reason: str = "",
+        tone: str = "",
     ) -> str:
         disabled_attr = " disabled" if disabled else ""
+        reason = f"<small>{html.escape(disabled_reason)}</small>" if disabled_reason else ""
         return f"""
-          <div class="control-row">
-            <div><strong>{html.escape(label)}</strong><p>{html.escape(consequence)}</p></div>
-            <button type="button" class="control-button" data-intent="{html.escape(intent, quote=True)}"{disabled_attr}>Preview</button>
-            <small>{html.escape(disabled_reason)}</small>
-          </div>
+          <section class="control {html.escape(tone)}">
+            <h3>{html.escape(label)}</h3>
+            <p>{html.escape(consequence)}</p>
+            {reason}
+            <button type="button" class="control-button" data-intent="{html.escape(intent, quote=True)}"{disabled_attr}>查看后果</button>
+          </section>
         """
 
-    open_responsibility = "NONE OBSERVED"
-    if lifecycle == "EXITING":
-        open_responsibility = "EXIT CLOSURE PENDING"
-    elif run_state == "PAUSED" and pause_reason == "WRITER_CONTINUITY_LOST":
-        open_responsibility = "RECOVERY DECISION REQUIRED"
-    elif any(str(receipt.get("state")) == "PROCESSING" for receipt in receipts):
-        open_responsibility = "COMMAND EFFECT PENDING"
-    elif lifecycle == "UNKNOWN":
-        open_responsibility = "FACT RECONCILIATION REQUIRED"
+    run_state_text = run_state
+    if pause_reason != "NONE":
+        run_state_text = f"{run_state} · {pause_reason}"
+    new_risk_text = "已停止" if new_risk_stopped else "未记录停止"
 
     return f"""
       <article class="activation" data-activation-id="{raw_activation_id}" data-state-version="{state_version}">
         <div class="activation-head">
-          <div><p class="eyebrow">PLAN ACTIVATION</p><h2>{instrument} · {_operation_value(activation.get('direction'))}</h2></div>
-          <code>{activation_id}</code>
+          <div><h2>{instrument} · {_operation_value(activation.get('direction'))}</h2><code>{activation_id}</code></div>
+          <span class="state">{_operation_value(lifecycle)}</span>
         </div>
-        <dl class="primary-facts">
-          <div><dt>Lifecycle</dt><dd>{_operation_value(lifecycle)}</dd></div>
-          <div><dt>Run state</dt><dd>{_operation_value(run_state)}</dd></div>
-          <div><dt>Pause reason</dt><dd>{_operation_value(pause_reason)}</dd></div>
-          <div><dt>Protection</dt><dd>{_operation_value(activation.get('protection_state'))}</dd></div>
-          <div><dt>计划有效期至</dt><dd>{_operation_value(activation.get('plan_valid_until'))}</dd></div>
-          <div><dt>Open responsibility</dt><dd>{html.escape(open_responsibility)}</dd></div>
-          <div><dt>Venue fact cutoff</dt><dd>{_operation_value(activation.get('latest_venue_cutoff'))}</dd></div>
-          <div><dt>State version</dt><dd>{state_version}</dd></div>
+        <dl class="activation-facts">
+          <div><dt>运行状态</dt><dd>{_operation_value(run_state_text)}</dd></div>
+          <div><dt>新增风险</dt><dd class="{'stopped' if new_risk_stopped else ''}">{new_risk_text}</dd></div>
+          <div><dt>保护状态</dt><dd>{_operation_value(activation.get('protection_state'))}</dd></div>
+          <div><dt>场所事实截止</dt><dd>{_operation_time(activation.get('latest_venue_cutoff'))}</dd></div>
         </dl>
-        <div class="detail-grid">
-          <section aria-label="{instrument} capital and position projection">
-            <h3>Capital / position projection</h3>
-            <dl class="compact-facts">
-              <div><dt>计划生命周期</dt><dd>{_operation_value(activation.get('lifecycle'))}</dd></div>
-              <div><dt>最大保证金</dt><dd>{_money_value(activation.get('max_margin'), quote_asset)}</dd></div>
-              <div><dt>交易金额</dt><dd>{_money_value(activation.get('max_notional'), quote_asset)}</dd></div>
-              <div><dt>当前损失 / 允许损失</dt><dd>{_money_value(activation.get('activation_loss'), quote_asset)} / {_money_value(activation.get('max_allowed_loss'), quote_asset)}</dd></div>
-              <div><dt>Max loss latch</dt><dd>{'REACHED' if activation.get('max_loss_reached') else 'CLEAR'}</dd></div>
-              <div><dt>Account</dt><dd>{_operation_value(activation.get('account_ref'))}</dd></div>
-            </dl>
-          </section>
-          <section aria-label="{instrument} CAP stop categories">
-            <h3>CAP stop categories</h3>
-            <dl class="compact-facts stop-facts">{stop_rows}</dl>
-          </section>
+        <div class="controls" aria-label="{instrument} 故障控制">
+          {control('STOP_NEW_RISK', '停止新增风险', '停止新的开仓和加仓；已有保护和退出责任继续。', terminal or new_risk_stopped, '当前已停止新增风险。' if new_risk_stopped else '接管或完成后不可用。' if terminal else '')}
+          {control('EXIT_STRATEGY', '退出策略', '由 Halpha 进入退出责任；接受命令不代表 Binance 仓位已经平仓。', terminal or exiting, '当前已经进入退出。' if exiting else '接管或完成后不可用。' if terminal else '')}
+          {control('USER_TAKEOVER', '用户接管', '停止 Halpha 后续自动交易操作；撤单、保护和平仓需在 Binance 核对处理。', terminal, '当前已经接管或完成。' if terminal else '', 'danger')}
         </div>
-        <details>
-          <summary>Execution actions and attributed venue facts</summary>
-          <div class="table-grid">
-            <div><h3>Execution actions / orders</h3><div class="table-scroll" role="region" aria-label="{instrument} execution actions and orders" tabindex="0"><table><thead><tr><th>Kind</th><th>State</th><th>Client order ID</th><th>Updated</th></tr></thead><tbody>{action_rows}</tbody></table></div></div>
-            <div><h3>Position / order facts</h3><div class="table-scroll" role="region" aria-label="{instrument} position and order facts" tabindex="0"><table><thead><tr><th>Kind</th><th>Venue object</th><th>Cutoff</th></tr></thead><tbody>{venue_rows}</tbody></table></div></div>
-          </div>
-        </details>
-        <section class="controls" aria-label="{instrument} limited activation controls">
-          <h3>Limited controls</h3>
-          {control('RESUME_ACTIVATION', 'Resume activation', 'Clear only a writer-continuity pause after authoritative reconciliation succeeds.', not resume_initially_available, resume_reason)}
-          {control('EXIT_STRATEGY', 'Exit strategy', 'Enter exit responsibility and stop new funding. This does not mean the account is already flat.', terminal or exiting, 'Unavailable after exit has begun, takeover, or completion.' if terminal or exiting else 'Requires a current consequence preview.')}
-          {control('USER_TAKEOVER', 'User takeover', 'Persist responsibility transfer and stop later automatic writes. It does not cancel, protect, or close venue exposure.', terminal, 'Unavailable after takeover or completion.' if terminal else 'Requires a current consequence preview.')}
-          <div class="command-status" role="status" aria-live="polite">No command submitted from this page load.</div>
-        </section>
-        <details class="receipts" open>
-          <summary>Original command receipts</summary>
-          <div class="table-scroll" role="region" aria-label="{instrument} original command receipts" tabindex="0"><table><thead><tr><th>Intent</th><th>State</th><th>Receipt ID</th><th>Reason</th><th>Updated</th></tr></thead><tbody>{receipt_rows}</tbody></table></div>
-        </details>
+        <div class="command-status" role="status" aria-live="polite" tabindex="-1">尚未提交控制命令。</div>
       </article>
     """
 
@@ -290,7 +221,6 @@ def _operations_script() -> str:
     target: dialog.querySelector('[data-preview="target"]'),
     state: dialog.querySelector('[data-preview="state"]'),
     protection: dialog.querySelector('[data-preview="protection"]'),
-    digest: dialog.querySelector('[data-preview="digest"]'),
     consequence: dialog.querySelector('[data-preview="consequence"]'),
     boundary: dialog.querySelector('[data-preview="boundary"]'),
     error: dialog.querySelector('.dialog-error'),
@@ -298,14 +228,24 @@ def _operations_script() -> str:
   };
   let pending = null;
 
+  const labels = {
+    STOP_NEW_RISK: '停止新增风险',
+    EXIT_STRATEGY: '退出策略',
+    USER_TAKEOVER: '用户接管',
+  };
   const endpoint = (activationId, intent) => {
     const suffix = {
-      RESUME_ACTIVATION: 'resume',
+      STOP_NEW_RISK: 'stop-new-risk',
       EXIT_STRATEGY: 'exit',
       USER_TAKEOVER: 'takeover',
     }[intent];
     return `/api/v1/activations/${encodeURIComponent(activationId)}/${suffix}`;
   };
+  const boundary = (intent) => ({
+    STOP_NEW_RISK: '只停止新的开仓和加仓；不会撤单、平仓，也不会停止已有保护和退出责任。',
+    EXIT_STRATEGY: '命令被接受只表示 Halpha 进入退出责任，不表示 Binance 仓位已经平仓。',
+    USER_TAKEOVER: '持久化成功后 Halpha 不再发起新的交易操作；现有订单、保护和仓位必须在 Binance 核对。',
+  })[intent] || 'UNKNOWN';
   const responseError = async (response) => {
     let code;
     try {
@@ -323,12 +263,15 @@ def _operations_script() -> str:
     status.textContent = message;
     status.dataset.tone = tone;
   };
+  const lockControls = (article) => {
+    article.querySelectorAll('.control-button').forEach((button) => { button.disabled = true; });
+  };
   const receiptMessage = (receipt) => {
     const reason = receipt.reason_code ? ` · ${receipt.reason_code}` : '';
     const boundary = receipt.state === 'PROCESSING'
-      ? 'Processing is not a venue result; inspect the same receipt and venue facts.'
-      : 'This receipt is the command result; venue effects still require venue facts.';
-    return `${receipt.state} · Receipt ${receipt.receipt_id}${reason}. ${boundary}`;
+      ? '命令仍在处理中，不代表 Binance 已经发生变化。'
+      : '这是 Halpha 命令结果；Binance 结果仍需在官方入口核对。';
+    return `${receipt.state} · 回执 ${receipt.receipt_id}${reason}。${boundary}`;
   };
   const pollReceipt = async (article, receiptId, attempt = 0) => {
     if (attempt >= 30 || !document.body.contains(article)) return;
@@ -343,7 +286,7 @@ def _operations_script() -> str:
         window.setTimeout(() => pollReceipt(article, receiptId, attempt + 1), 2000);
       }
     } catch (error) {
-      setStatus(article, `Receipt lookup unknown for ${receiptId}: ${error.message}. Keep this receipt ID; do not create a replacement command.`, 'danger');
+      setStatus(article, `回执 ${receiptId} 查询结果未知：${error.message}。请保留该回执，不要提交替代命令。`, 'danger');
     }
   };
 
@@ -354,7 +297,8 @@ def _operations_script() -> str:
     const activationId = article.dataset.activationId;
     const intent = button.dataset.intent;
     button.disabled = true;
-    setStatus(article, `Loading current ${intent} consequence preview…`);
+    button.setAttribute('aria-busy', 'true');
+    setStatus(article, `正在读取“${labels[intent]}”的当前后果…`);
     try {
       const response = await fetch(`/api/v1/activations/${encodeURIComponent(activationId)}/control-preview?intent=${encodeURIComponent(intent)}`, {
         method: 'POST', credentials: 'same-origin',
@@ -363,50 +307,48 @@ def _operations_script() -> str:
       if (!response.ok) throw await responseError(response);
       const preview = await response.json();
       const activation = preview.activation || {};
-      const reconciliationDigest = preview.reconciliation_digest || null;
       pending = {
         article, activationId, intent,
         expectedVersion: Number(activation.state_version),
-        reconciliationDigest,
         idempotencyKey: crypto.randomUUID(),
+        trigger: button,
       };
-      fields.intent.textContent = intent;
+      fields.intent.textContent = labels[intent] || intent;
       fields.target.textContent = activationId;
       fields.state.textContent = `${activation.lifecycle} / ${activation.run_state}${activation.pause_reason ? ` / ${activation.pause_reason}` : ''}`;
       fields.protection.textContent = activation.protection_state || 'UNKNOWN';
-      fields.digest.textContent = preview.preview_digest || 'UNKNOWN';
       fields.consequence.textContent = preview.consequence || 'UNKNOWN';
-      fields.boundary.textContent = intent === 'USER_TAKEOVER'
-        ? 'Takeover stops later automatic writes only after persistence. It does not cancel, protect, or close venue exposure.'
-        : intent === 'EXIT_STRATEGY'
-          ? 'Acceptance enters exit responsibility. HTTP success or PROCESSING does not mean the account is flat.'
-          : 'Resume clears only WRITER_CONTINUITY_LOST. It cannot clear CAP stops, expired authorization, unknown facts, maximum loss, exit, or takeover.';
+      fields.boundary.textContent = boundary(intent);
       fields.error.textContent = '';
-      fields.confirm.textContent = `Submit ${intent}`;
-      fields.confirm.disabled = intent === 'RESUME_ACTIVATION' && !reconciliationDigest;
-      if (fields.confirm.disabled) {
-        fields.error.textContent = 'Resume is denied: no authoritative reconciliation digest is available in the current preview.';
-      }
-      setStatus(article, `Preview ${preview.preview_digest || 'UNKNOWN'} loaded at ${preview.previewed_at || 'UNKNOWN'}; no command submitted.`);
+      fields.confirm.textContent = `确认${labels[intent] || intent}`;
+      fields.confirm.disabled = false;
+      setStatus(article, '已读取当前后果，尚未提交命令。');
       dialog.showModal();
       fields.confirm.focus();
     } catch (error) {
-      setStatus(article, `Preview unavailable: ${error.message}. No command was submitted.`, 'danger');
+      setStatus(article, `无法读取当前后果：${error.message}。没有提交命令。`, 'danger');
     } finally {
-      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      if (!pending) button.disabled = false;
     }
   });
 
   dialog.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+    const trigger = pending?.trigger;
     dialog.close(); pending = null;
+    if (trigger) { trigger.disabled = false; trigger.focus(); }
   });
-  dialog.addEventListener('cancel', () => { pending = null; });
+  dialog.addEventListener('cancel', () => {
+    const trigger = pending?.trigger;
+    pending = null;
+    if (trigger) { trigger.disabled = false; window.setTimeout(() => trigger.focus(), 0); }
+  });
   dialog.querySelector('form').addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!pending || fields.confirm.disabled) return;
     fields.confirm.disabled = true;
     fields.error.textContent = '';
-    setStatus(pending.article, `Submitting ${pending.intent} with idempotency key ${pending.idempotencyKey}…`);
+    setStatus(pending.article, `正在提交“${labels[pending.intent]}”…`);
     try {
       const response = await fetch(endpoint(pending.activationId, pending.intent), {
         method: 'POST', credentials: 'same-origin',
@@ -421,19 +363,21 @@ def _operations_script() -> str:
       });
       if (!response.ok) throw await responseError(response);
       const receipt = await response.json();
+      lockControls(pending.article);
       setStatus(pending.article, receiptMessage(receipt), receipt.state === 'REJECTED' ? 'danger' : '');
       const article = pending.article;
       const receiptId = receipt.receipt_id;
       dialog.close(); pending = null;
+      article.querySelector('.command-status')?.focus();
       if (receipt.state === 'PROCESSING') pollReceipt(article, receiptId);
     } catch (error) {
       const knownRejection = Number(error.status) >= 400 && Number(error.status) < 500;
       if (knownRejection) {
-        fields.error.textContent = `Command was not accepted: ${error.message}. No Receipt was created; correct the request and retry this confirmation.`;
-        setStatus(pending.article, `Command rejected before acceptance: ${error.message}. No Receipt was created.`, 'danger');
+        fields.error.textContent = `命令未被接受：${error.message}。没有建立回执，请关闭并刷新页面。`;
+        setStatus(pending.article, `命令未被接受：${error.message}。没有建立回执。`, 'danger');
       } else {
-        fields.error.textContent = `Submission outcome is unknown: ${error.message}. The same idempotency key is retained; retry this confirmation, not a new command.`;
-        setStatus(pending.article, `Submission outcome unknown for idempotency key ${pending.idempotencyKey}. Do not create a new command.`, 'danger');
+        fields.error.textContent = `提交结果未知：${error.message}。再次确认会沿用同一请求，不会建立替代命令。`;
+        setStatus(pending.article, `提交结果未知；已保留同一请求身份。不要从其他入口重复提交。`, 'danger');
       }
       fields.confirm.disabled = false;
     }
@@ -447,117 +391,107 @@ def _operations_document(
     settings: HalphaSettings,
     csrf_token: str,
     summary: dict[str, Any] | None = None,
-    runtime_real_write_gate: str = "CLOSED",
 ) -> str:
-    profile = html.escape(settings.release.profile)
     account = html.escape(settings.release.account_id)
-    environment = html.escape(_environment_kind(settings))
+    environment_kind = _environment_kind(settings)
+    environment = html.escape(environment_kind)
+    venue_url = (
+        "https://demo.binance.com/"
+        if environment_kind == "DEMO"
+        else "https://www.binance.com/"
+    )
     current = summary or {
         "database_available": False,
         "server_fact_cutoff": None,
         "activations": [],
     }
-    db_state = "AVAILABLE" if current.get("database_available") else "UNKNOWN"
-    cutoff = html.escape(str(current.get("server_fact_cutoff") or "UNKNOWN"))
+    db_state = "可用" if current.get("database_available") else "不可用"
+    cutoff = _operation_time(current.get("server_fact_cutoff"))
     activations = list(current.get("activations") or [])
     activation_documents = "".join(
         _operations_activation_document(activation) for activation in activations
     )
     if not activation_documents:
         empty_reason = (
-            "Database facts are unavailable. Controls remain closed until authoritative facts return."
+            "当前无法读取 Halpha 数据库事实，所有控制保持关闭。请停止 Executor，并在 Binance 官方入口核对订单和仓位。"
             if not current.get("database_available")
-            else "No non-completed activation exists in this environment."
+            else "当前环境没有未结束的策略运行。"
         )
         activation_documents = f"""
           <section class="empty-state" aria-labelledby="empty-title">
-            <p class="eyebrow">NO OPERABLE ACTIVATION</p>
-            <h2 id="empty-title">Nothing to control</h2>
+            <h2 id="empty-title">无需接管</h2>
             <p>{html.escape(empty_reason)}</p>
           </section>
         """
     script = '<script src="/operations.js" defer></script>'
     body = f"""
       <header class="statusbar">
-        <strong>Halpha operations</strong>
-        <span class="env">ENV · {environment}</span>
-        <span>ACCOUNT · {account}</span>
-        <span class="gate">REAL WRITE · {html.escape(runtime_real_write_gate)}</span>
-        <span class="cutoff">SERVER FACT CUTOFF · {cutoff}</span>
+        <strong>Halpha</strong>
+        <span class="env">{environment}</span>
+        <span class="account">账户 · {account}</span>
+        <a href="{venue_url}" target="_blank" rel="noreferrer">打开 Binance 官方入口</a>
       </header>
       <main class="workspace">
         <section class="page-head" aria-labelledby="state-title">
-          <div>
-            <p class="eyebrow">SAME-PROCESS LIMITED ENTRY</p>
-            <h1 id="state-title">Recovery operations</h1>
-            <p>Current state, limited controls, and original command receipts. This is the same App control path, not an emergency control plane.</p>
-          </div>
-          <dl class="summary-facts">
-            <div><dt>Profile</dt><dd>{profile}</dd></div>
-            <div><dt>Database</dt><dd>{db_state}</dd></div>
-            <div><dt>Open activations</dt><dd>{len(activations) if current.get('database_available') else 'UNKNOWN'}</dd></div>
-          </dl>
+          <h1 id="state-title">故障接管</h1>
+          <p>主界面不可用时，仅用这里停止、退出或接管；需要手工处理时再打开 Binance。</p>
         </section>
-        <aside class="effect-boundary" aria-label="Command effect boundary">
-          <strong>A Receipt is not a venue result.</strong>
-          <span>HTTP success accepts a command. <code>PROCESSING</code> means responsibility remains open; only authoritative venue facts establish external effects.</span>
+        <dl class="summary-facts">
+          <div><dt>数据库</dt><dd>{db_state}</dd></div>
+          <div><dt>事实截止</dt><dd>{cutoff}</dd></div>
+          <div><dt>未结束策略</dt><dd>{len(activations) if current.get('database_available') else 'UNKNOWN'}</dd></div>
+        </dl>
+        <aside class="effect-boundary" aria-label="控制边界">
+          页面只记录 Halpha 的停止、退出或接管决定；命令被接受不代表 Binance 已经撤单、保护或平仓。
         </aside>
-        <section class="activation-list" aria-label="Open activations">{activation_documents}</section>
+        <section class="activation-list" aria-label="未结束策略">{activation_documents}</section>
       </main>
       <dialog id="control-dialog" aria-labelledby="dialog-title">
         <form method="dialog">
-          <div class="dialog-head"><p class="eyebrow">CURRENT CONSEQUENCE PREVIEW</p><h2 id="dialog-title">Confirm limited control</h2></div>
+          <div class="dialog-head"><h2 id="dialog-title">确认故障控制</h2></div>
           <dl class="dialog-facts">
-            <div><dt>Intent</dt><dd data-preview="intent">—</dd></div>
-            <div><dt>Target</dt><dd data-preview="target">—</dd></div>
-            <div><dt>Current state</dt><dd data-preview="state">—</dd></div>
-            <div><dt>Protection</dt><dd data-preview="protection">—</dd></div>
-            <div><dt>Preview digest</dt><dd data-preview="digest">—</dd></div>
+            <div><dt>操作</dt><dd data-preview="intent">—</dd></div>
+            <div><dt>策略运行</dt><dd data-preview="target">—</dd></div>
+            <div><dt>当前状态</dt><dd data-preview="state">—</dd></div>
+            <div><dt>保护状态</dt><dd data-preview="protection">—</dd></div>
           </dl>
-          <section class="dialog-consequence"><h3>Consequence</h3><p data-preview="consequence"></p><p data-preview="boundary"></p></section>
+          <section class="dialog-consequence"><h3>后果</h3><p data-preview="consequence"></p><p data-preview="boundary"></p></section>
           <p class="dialog-error" role="alert" aria-live="assertive"></p>
-          <div class="dialog-actions"><button type="button" class="secondary" data-action="cancel">Cancel</button><button type="submit" data-action="confirm">Submit command</button></div>
+          <div class="dialog-actions"><button type="button" class="secondary" data-action="cancel">取消</button><button type="submit" data-action="confirm">确认操作</button></div>
         </form>
       </dialog>
     """
     return f"""<!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="halpha-csrf" content="{html.escape(csrf_token, quote=True)}">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%230b1017'/%3E%3Cpath d='M18 14h8v14h12V14h8v36h-8V36H26v14h-8z' fill='%2358a8d8'/%3E%3C/svg%3E">
-  <title>Halpha operations</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23FFD43B'/%3E%3Cpath d='M17 14h9v14h12V14h9v36h-9V36H26v14h-9z' fill='%23111827'/%3E%3C/svg%3E">
+  <title>Halpha 故障接管</title>
   <style>
-    :root {{ color-scheme:dark; font-family:Inter,"Segoe UI",sans-serif; background:#090e14; color:#e6edf5; --line:#293543; --panel:#101720; --panel-2:#141d28; --muted:#8e9bad; --blue:#69b6e5; --danger:#f08b8f; --green:#84d6ad; }}
-    * {{ box-sizing:border-box; }} body {{ margin:0; min-height:100vh; background:linear-gradient(180deg,#0c121a 0,#090e14 420px); }}
-    code,dd,.statusbar,th,td {{ font-family:ui-monospace,Consolas,"Cascadia Mono",monospace; }}
-    .statusbar {{ position:sticky; top:0; z-index:4; min-height:46px; display:flex; flex-wrap:wrap; align-items:center; gap:14px 22px; padding:9px 22px; border-bottom:1px solid var(--line); background:#0d141deF; backdrop-filter:blur(10px); color:#aab7c7; font-size:11px; font-weight:700; letter-spacing:.035em; }} .statusbar>* {{ min-width:0; overflow-wrap:anywhere; }}
-    .statusbar strong {{ margin-right:auto; color:#f2f6fb; font:750 14px/1.4 Inter,"Segoe UI",sans-serif; letter-spacing:0; }}
-    .statusbar .env {{ color:#9bd8fc; }} .statusbar .gate {{ color:#f1bc71; }} .statusbar .cutoff {{ color:#8795a8; }}
-    .workspace {{ width:min(1240px,calc(100% - 32px)); margin:30px auto 60px; }}
-    h1 {{ margin:5px 0 8px; font-size:clamp(27px,3vw,38px); letter-spacing:-.035em; }} h2 {{ margin:4px 0; font-size:18px; }} h3 {{ margin:0 0 10px; color:#bcc8d6; font-size:12px; letter-spacing:.045em; text-transform:uppercase; }}
-    p {{ color:#98a6b8; line-height:1.55; }} .eyebrow {{ margin:0; color:#75869a; font:750 10px/1.4 ui-monospace,Consolas,monospace; letter-spacing:.13em; }}
-    .page-head {{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:32px; align-items:end; padding-bottom:20px; }} .page-head p:not(.eyebrow) {{ margin:0; max-width:760px; }}
-    .summary-facts,.primary-facts,.compact-facts,.dialog-facts {{ margin:0; display:grid; gap:1px; background:var(--line); border:1px solid var(--line); }}
-    .summary-facts {{ grid-template-columns:repeat(3,minmax(120px,1fr)); }} .primary-facts {{ grid-template-columns:repeat(4,minmax(0,1fr)); }} .compact-facts {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
-    dl div {{ min-width:0; background:var(--panel); padding:10px 12px; }} dt {{ color:#78879a; font-size:10px; line-height:1.35; text-transform:uppercase; letter-spacing:.055em; }} dd {{ margin:4px 0 0; color:#dbe4ee; font-size:12px; font-weight:650; line-height:1.45; overflow-wrap:anywhere; }}
-    .effect-boundary {{ display:flex; gap:10px 16px; align-items:baseline; margin-bottom:18px; border-left:3px solid #d39a4e; padding:10px 13px; background:#1b1712; color:#d8c5a7; font-size:12px; }} .effect-boundary strong {{ color:#f4d39c; white-space:nowrap; }}
-    .activation-list {{ display:grid; gap:18px; }} .activation {{ min-width:0; border:1px solid var(--line); border-top:2px solid #477a99; background:#0e151e; box-shadow:0 18px 50px #0003; }}
-    .activation-head {{ display:flex; justify-content:space-between; align-items:end; gap:20px; padding:15px 16px 13px; }} .activation-head>code {{ color:#748397; font-size:10px; overflow-wrap:anywhere; text-align:right; }}
-    .detail-grid,.table-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; background:var(--line); }} .detail-grid>section,.table-grid>div {{ min-width:0; padding:14px 16px; background:#0d141d; }}
-    .stopped {{ color:#ffae88; }} .clear {{ color:var(--green); }}
-    details {{ border-top:1px solid var(--line); }} summary {{ cursor:pointer; padding:11px 16px; color:#aebac8; font-size:12px; font-weight:700; }} summary:hover {{ background:#141d28; }}
-    .table-scroll {{ overflow-x:auto; }} table {{ width:100%; border-collapse:collapse; font-size:10px; }} th,td {{ padding:8px 10px; border-top:1px solid #23303e; text-align:left; vertical-align:top; white-space:nowrap; }} th {{ color:#76869a; font-size:9px; text-transform:uppercase; letter-spacing:.055em; }} td {{ color:#c8d3df; }} td code {{ color:#8fc8eb; }} .empty-cell {{ color:#718094; white-space:normal; }}
-    .controls {{ min-width:0; border-top:1px solid var(--line); padding:14px 16px; }} .control-row {{ min-width:0; display:grid; grid-template-columns:minmax(280px,1fr) 92px minmax(260px,.7fr); gap:12px 18px; align-items:center; padding:10px 0; border-top:1px solid #202c39; }} .control-row>div {{ min-width:0; }} .control-row:first-of-type {{ border-top:0; }} .control-row strong {{ font-size:13px; }} .control-row p,.control-row small {{ margin:2px 0 0; color:#8795a7; font-size:11px; line-height:1.45; overflow-wrap:anywhere; }}
-    button {{ border:1px solid #4a97c3; border-radius:3px; padding:9px 14px; background:#51a9dc; color:#06111a; font-weight:800; cursor:pointer; }} button:hover:not(:disabled) {{ background:#72bee9; }} button:disabled {{ border-color:#323e4d; background:#1d2733; color:#677487; cursor:not-allowed; }} button.secondary {{ border-color:#344355; background:#202b38; color:#d6e0ea; }}
-    input:focus-visible,button:focus-visible,summary:focus-visible,.table-scroll:focus-visible {{ outline:3px solid #7ac8f7; outline-offset:2px; }} .command-status {{ margin-top:10px; border-left:2px solid #4a8fb8; padding:9px 11px; background:#101b25; color:#9db3c6; font:600 11px/1.5 ui-monospace,Consolas,monospace; overflow-wrap:anywhere; }} .command-status[data-tone="danger"] {{ border-color:var(--danger); color:#f1b1b4; background:#211419; }}
-    .receipts {{ border-bottom:0; }} .receipts .table-scroll {{ padding:0 16px 15px; }} .receipt-state {{ color:#9ed8fb; }}
-    .empty-state {{ border:1px dashed #344153; padding:30px; background:#0f161f; }} .empty-state h2 {{ font-size:22px; }}
-    dialog {{ width:min(720px,calc(100% - 28px)); max-height:calc(100vh - 40px); overflow:auto; padding:0; border:1px solid #405066; border-top:2px solid #69b6e5; background:#0e151e; color:#e6edf5; box-shadow:0 30px 90px #000b; }} dialog::backdrop {{ background:#03070bd9; }} dialog form {{ padding:20px; }} .dialog-head {{ margin-bottom:14px; }} .dialog-facts {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} .dialog-facts div:last-child {{ grid-column:1/-1; }} .dialog-consequence {{ margin-top:14px; border-left:3px solid #d39a4e; padding:11px 13px; background:#191711; }} .dialog-consequence p {{ margin:5px 0; font-size:12px; }} .dialog-error {{ min-height:20px; margin:10px 0; color:#f2a4a8; font-size:12px; }} .dialog-actions {{ display:flex; justify-content:flex-end; gap:10px; }}
-    @media (max-width:860px) {{ .page-head,.detail-grid,.table-grid {{ grid-template-columns:1fr; }} .summary-facts {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .primary-facts {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} .control-row {{ grid-template-columns:minmax(0,1fr) 92px; }} .control-row small {{ grid-column:1/-1; }} }}
-    @media (max-width:560px) {{ .workspace {{ width:min(1240px,calc(100% - 20px)); margin-top:18px; }} .statusbar {{ position:static; gap:7px 12px; padding:9px 10px; }} .statusbar strong,.statusbar .cutoff {{ width:100%; }} .summary-facts,.primary-facts,.compact-facts,.dialog-facts {{ grid-template-columns:1fr; }} .dialog-facts div:last-child {{ grid-column:auto; }} .activation-head {{ align-items:start; flex-direction:column; }} .activation-head>code {{ text-align:left; }} .control-row {{ grid-template-columns:1fr; }} .control-button {{ width:100%; }} .effect-boundary {{ align-items:start; flex-direction:column; }} }}
-    @media (prefers-reduced-motion:reduce) {{ * {{ scroll-behavior:auto!important; }} }}
+    :root {{ color-scheme:light; font-family:Inter,"Segoe UI",sans-serif; background:#f7f8fb; color:#111827; --line:#dbe1ea; --muted:#4b5563; --faint:#8892a1; --accent:#ffd43b; --accent-border:#e0b800; --accent-text:#c2410c; --success:#236553; --success-bg:#eef7f3; --success-border:#bfdccd; --warning:#7a4100; --warning-bg:#fff7dd; --warning-border:#ebcb72; --danger:#873631; --danger-bg:#fff1ef; --danger-border:#e7b8b3; --info:#3a4f82; --info-bg:#f0f4ff; --info-border:#cbd6f3; }}
+    * {{ box-sizing:border-box; }} body {{ margin:0; min-width:320px; min-height:100vh; background:#f7f8fb; }}
+    code,dd,.account {{ font-family:"Cascadia Mono",Consolas,ui-monospace,monospace; font-variant-numeric:tabular-nums; }}
+    .statusbar {{ min-height:64px; display:flex; align-items:center; gap:16px; padding:10px 24px; border-bottom:1px solid var(--line); background:#fff; }}
+    .statusbar strong {{ margin-right:2px; font-size:20px; }} .statusbar .env {{ border:1px solid var(--accent-border); border-radius:999px; padding:4px 9px; background:var(--accent); font-size:12px; font-weight:800; }}
+    .statusbar .account {{ min-width:0; margin-right:auto; color:var(--muted); font-size:12px; overflow-wrap:anywhere; }} .statusbar a {{ border:1px solid var(--line); border-radius:10px; padding:9px 12px; color:#111827; background:#fff; font-size:13px; font-weight:700; text-decoration:none; }} .statusbar a:hover {{ background:#f2f4f7; }}
+    .workspace {{ width:min(920px,calc(100% - 32px)); margin:28px auto 56px; }}
+    h1 {{ margin:0; font-size:28px; line-height:1.15; }} h2 {{ margin:0; font-size:18px; }} h3 {{ margin:0; font-size:14px; }} p {{ margin:6px 0 0; color:var(--muted); line-height:1.5; }}
+    .page-head {{ margin-bottom:18px; }} .page-head p {{ max-width:720px; }}
+    .summary-facts,.activation-facts,.dialog-facts {{ margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1px; overflow:hidden; border:1px solid var(--line); border-radius:14px; background:var(--line); }}
+    .activation-facts {{ grid-template-columns:repeat(4,minmax(0,1fr)); }} .dialog-facts {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
+    dl div {{ min-width:0; padding:11px 12px; background:#fff; }} dt {{ color:var(--muted); font-size:11px; }} dd {{ margin:5px 0 0; font-size:12px; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }} dd.stopped {{ color:var(--danger); }}
+    .effect-boundary {{ margin:16px 0; border:1px solid var(--warning-border); border-left:3px solid #f59e0b; border-radius:10px; padding:10px 12px; background:var(--warning-bg); color:var(--warning); font-size:12px; line-height:1.5; }}
+    .activation-list {{ display:grid; gap:14px; }} .activation {{ min-width:0; overflow:hidden; border:1px solid var(--line); border-radius:14px; background:#fff; }}
+    .activation-head {{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px 16px; }} .activation-head code {{ display:block; margin-top:5px; color:var(--muted); font-size:10px; overflow-wrap:anywhere; }} .state {{ border:1px solid var(--line); border-radius:999px; padding:4px 8px; color:var(--muted); font-size:11px; font-weight:800; }}
+    .controls {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid var(--line); }} .control {{ display:flex; min-width:0; flex-direction:column; align-items:flex-start; padding:14px 16px; border-right:1px solid var(--line); }} .control:last-child {{ border-right:0; }} .control p,.control small {{ font-size:12px; }} .control small {{ min-height:18px; margin-top:5px; color:var(--danger); }} .control button {{ margin-top:auto; }}
+    button {{ min-height:38px; border:1px solid var(--accent-border); border-radius:10px; padding:8px 13px; background:var(--accent); color:#111827; font:700 13px/1.2 inherit; cursor:pointer; }} button:hover:not(:disabled) {{ background:#ffdf5a; }} button:active:not(:disabled) {{ transform:scale(.985); }} button:disabled {{ border-color:var(--line); background:#f2f4f7; color:var(--faint); cursor:not-allowed; }} button.secondary {{ border-color:var(--line); background:#fff; }} .control.danger button:not(:disabled) {{ border-color:var(--danger-border); background:#fff; color:var(--danger); }}
+    a:focus-visible,button:focus-visible {{ outline:3px solid #ffe98a; outline-offset:2px; }} .command-status {{ border-top:1px solid var(--line); padding:11px 16px; color:var(--muted); background:#f9fafb; font:600 12px/1.5 ui-monospace,Consolas,monospace; overflow-wrap:anywhere; }} .command-status[data-tone="danger"] {{ color:var(--danger); background:var(--danger-bg); }}
+    .empty-state {{ border:1px dashed #b9c3d0; border-radius:14px; padding:24px; background:#fff; }} .empty-state p {{ margin-bottom:0; }}
+    dialog {{ width:min(620px,calc(100% - 28px)); max-height:calc(100vh - 40px); overflow:auto; padding:0; border:1px solid #b9c3d0; border-radius:14px; background:#fff; color:#111827; }} dialog::backdrop {{ background:#1118278c; }} dialog form {{ padding:20px; }} .dialog-head {{ margin-bottom:14px; }} .dialog-consequence {{ margin-top:14px; border-left:3px solid #f59e0b; padding:11px 13px; background:var(--warning-bg); color:var(--warning); }} .dialog-consequence p {{ color:inherit; font-size:12px; }} .dialog-error {{ min-height:20px; margin:10px 0; color:var(--danger); font-size:12px; }} .dialog-actions {{ display:flex; justify-content:flex-end; gap:10px; }}
+    @media (max-width:700px) {{ .statusbar {{ flex-wrap:wrap; gap:8px 10px; padding:10px 14px; }} .statusbar .account {{ order:4; flex-basis:100%; }} .workspace {{ width:calc(100% - 24px); margin-top:20px; }} .summary-facts,.activation-facts,.dialog-facts,.controls {{ grid-template-columns:1fr; }} .control {{ border-right:0; border-bottom:1px solid var(--line); }} .control:last-child {{ border-bottom:0; }} .activation-head {{ align-items:flex-start; flex-direction:column; }} .statusbar a {{ margin-left:auto; }} }}
+    @media (prefers-reduced-motion:reduce) {{ * {{ transition:none!important; }} }}
   </style>
 </head>
 <body>{body}{script}</body>
@@ -571,6 +505,7 @@ def create_app(
     repo_root: Path,
     product_build_id: str | None = None,
     projection: WorkbenchProjection | None = None,
+    market_context_provider: MarketContextProvider | None = None,
     static_dist: Path | None = None,
 ) -> FastAPI:
     """Construct one local App surface without starting external writers."""
@@ -580,6 +515,10 @@ def create_app(
         settings.release.database_name,
         app_secrets.database_password,
         settings.release.environment_id,
+    )
+    public_market_context = market_context_provider or BinancePublicMarketContext(
+        settings.release.profile,
+        proxy_url=settings.app.public_market_proxy_url,
     )
     current_product_build_id = product_build_id or calculate_product_build_id(
         repo_root.resolve(), settings
@@ -659,6 +598,14 @@ def create_app(
             return operation()
         except KeyError as exc:
             raise HTTPException(status_code=404, detail={"code": str(exc).strip("'")}) from None
+        except ValidationError as exc:
+            codes = {
+                str(error.get("ctx", {}).get("error"))
+                for error in exc.errors(include_url=False)
+                if error.get("ctx", {}).get("error") is not None
+            }
+            code = codes.pop() if len(codes) == 1 else "INPUT_VALIDATION_FAILED"
+            raise HTTPException(status_code=409, detail={"code": code}) from None
         except (
             ValueError,
             PlanningConflict,
@@ -677,6 +624,23 @@ def create_app(
                 status_code=503,
                 detail={"code": "OUTCOMES_DATABASE_UNAVAILABLE"},
             ) from None
+
+    def current_executor_status() -> dict[str, Any]:
+        reader = getattr(database, "executor_status", None)
+        if not callable(reader):
+            return {
+                "status": "UNKNOWN",
+                "checked_at": _utc_now(),
+                "product_build_consistent": None,
+            }
+        try:
+            return dict(reader(current_product_build_id))
+        except ProjectionUnavailable:
+            return {
+                "status": "UNKNOWN",
+                "checked_at": _utc_now(),
+                "product_build_consistent": None,
+            }
 
     @app.get(
         "/api/v1/overview",
@@ -710,6 +674,53 @@ def create_app(
     )
     def strategies() -> list[dict[str, Any]]:
         return planning_api.strategies()
+
+    @app.get(
+        "/api/v1/market-context",
+        response_model=MarketContext,
+    )
+    async def market_context(
+        instrument_ref: str = "BTCUSDT-PERP",
+        channel_lookback_15m: int = 20,
+    ) -> MarketContext:
+        try:
+            return await public_market_context.fetch(
+                instrument_ref,
+                channel_lookback_15m,
+            )
+        except MarketContextUnavailable as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": str(exc)},
+            ) from None
+
+    @app.get(
+        "/api/v1/market-window",
+        response_model=MarketWindow,
+    )
+    async def market_window(
+        instrument_ref: str,
+        start_at: datetime,
+        end_at: datetime,
+        interval: Literal["1m", "15m"] = "1m",
+    ) -> MarketWindow:
+        if start_at.utcoffset() is None or end_at.utcoffset() is None:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "MARKET_WINDOW_TIMEZONE_REQUIRED"},
+            )
+        try:
+            return await public_market_context.fetch_window(
+                instrument_ref,
+                interval,
+                start_at,
+                end_at,
+            )
+        except MarketContextUnavailable as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": str(exc)},
+            ) from None
 
     @app.get(
         "/api/v1/strategies/{strategy_id}/schema",
@@ -797,7 +808,16 @@ def create_app(
         response_model=dict[str, Any],
     )
     def activation_preview(plan_version_id: str) -> dict[str, Any]:
-        return domain_call(lambda: planning_api.activation_preview(plan_version_id))
+        def operation() -> dict[str, Any]:
+            preview = planning_api.activation_preview(plan_version_id)
+            executor = current_executor_status()
+            return {
+                **preview,
+                "executor_status": executor["status"],
+                "executor_status_checked_at": executor["checked_at"],
+            }
+
+        return domain_call(operation)
 
     @app.get(
         "/api/v1/activations",
@@ -815,13 +835,16 @@ def create_app(
         payload: ActivationPayload,
         idempotency_key: str = Header(alias="Idempotency-Key"),
     ) -> dict[str, Any]:
-        return domain_call(
-            lambda: planning_api.activate(
+        def operation() -> dict[str, Any]:
+            if current_executor_status()["status"] != "READY":
+                raise ValueError("EXECUTOR_NOT_READY")
+            return planning_api.activate(
                 payload,
                 idempotency_key=idempotency_key,
                 observed_at=datetime.now(UTC),
             )
-        )
+
+        return domain_call(operation)
 
     @app.get(
         "/api/v1/activations/{activation_id}",
@@ -922,6 +945,7 @@ def create_app(
     def settings_status() -> SettingsStatusResponse:
         availability = database.availability()
         gate_status = current_gate_status()
+        executor = current_executor_status()
         return SettingsStatusResponse(
             environment_kind=_environment_kind(settings),
             environment_id=settings.release.environment_id,
@@ -936,8 +960,10 @@ def create_app(
             server_fact_cutoff=availability.get("server_fact_cutoff"),
             product_build_id=current_product_build_id,
             app_executor_product_build_consistent=(
-                gate_status.product_build_consistent
+                executor["product_build_consistent"]
             ),
+            executor_status=str(executor["status"]),
+            executor_status_checked_at=str(executor["checked_at"]),
             configured_runtime_real_write_gate=(
                 gate_status.configured_runtime_real_write_gate
             ),
@@ -1004,7 +1030,6 @@ def create_app(
                 settings=settings,
                 csrf_token=csrf_token,
                 summary=summary,
-                runtime_real_write_gate=current_gate_status().runtime_real_write_gate,
             )
         )
 

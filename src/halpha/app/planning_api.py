@@ -19,7 +19,8 @@ from halpha.live_write_gate import (
     LiveWriteGateStatus,
     closed_live_write_gate_status,
 )
-from halpha.planning.models import RequestedLimits, TradePlanContent
+from halpha.outcomes.trade_result import summarize_trade_result
+from halpha.planning.models import PlanLifecycle, RequestedLimits, TradePlanContent
 from halpha.planning.control_service import ActivationControlService
 from halpha.planning.registry import (
     describe_strategy,
@@ -75,7 +76,9 @@ class PlanningApiUnavailable(RuntimeError):
 
 
 def _stable_id(environment_id: str, kind: str, idempotency_key: str) -> str:
-    return str(uuid5(NAMESPACE_URL, f"urn:halpha:{environment_id}:{kind}:{idempotency_key}"))
+    return str(
+        uuid5(NAMESPACE_URL, f"urn:halpha:{environment_id}:{kind}:{idempotency_key}")
+    )
 
 
 class PostgreSQLPlanningApi:
@@ -133,14 +136,26 @@ class PostgreSQLPlanningApi:
                 f"PLANNING_DATABASE_UNAVAILABLE type={type(exc).__name__}"
             ) from None
 
+    def _require_demo_parameter_scope(self, parameters: dict[str, Any]) -> None:
+        if (
+            parameters.get("demo_immediate_entry") is True
+            and self._profile != "BINANCE_DEMO"
+        ):
+            raise ValueError("DEMO_IMMEDIATE_ENTRY_REQUIRES_DEMO")
+
     def strategies(self) -> list[dict[str, Any]]:
         return [
             {
                 "strategy_id": item.strategy_id,
                 "strategy_version": item.strategy_version,
                 "display_name": item.display_name,
+                "value_logic": item.value_logic,
+                "applicable_scenarios": item.applicable_scenarios,
+                "execution_behavior": item.execution_behavior,
                 "parameter_schema_version": item.parameter_schema_version,
-                "supported_directions": [direction.value for direction in item.supported_directions],
+                "supported_directions": [
+                    direction.value for direction in item.supported_directions
+                ],
                 "economic_scope": item.economic_scope,
             }
             for item in list_strategies()
@@ -154,10 +169,12 @@ class PostgreSQLPlanningApi:
             rows = connection.execute(
                 """
                 SELECT d.plan_id, d.draft_version, d.content_digest, d.updated_at,
-                       d.content, v.plan_version_id, v.fixed_at, v.content_digest
+                       d.content, v.plan_version_id, v.fixed_at, v.content_digest,
+                       v.product_build_id, v.terms ->> 'valid_until'
                 FROM halpha.trade_plan_draft d
                 LEFT JOIN LATERAL (
-                    SELECT plan_version_id, fixed_at, content_digest
+                    SELECT plan_version_id, fixed_at, content_digest,
+                           product_build_id, terms
                     FROM halpha.trade_plan_version v
                     WHERE v.environment_id = d.environment_id AND v.plan_id = d.plan_id
                     ORDER BY fixed_at DESC LIMIT 1
@@ -179,6 +196,13 @@ class PostgreSQLPlanningApi:
                 "plan_version_id": str(row[5]) if row[5] is not None else None,
                 "fixed_at": row[6].isoformat() if row[6] is not None else None,
                 "fixed_content_digest": str(row[7]) if row[7] is not None else None,
+                "fixed_product_build_id": str(row[8]) if row[8] is not None else None,
+                "fixed_valid_until": str(row[9]) if row[9] is not None else None,
+                "product_build_consistent": (
+                    str(row[8]) == self._product_build_id
+                    if row[8] is not None
+                    else None
+                ),
             }
             for row in rows
         ]
@@ -205,9 +229,12 @@ class PostgreSQLPlanningApi:
         observed_at: datetime,
     ) -> dict[str, Any]:
         definition = describe_strategy(payload.strategy_id)
-        if payload.direction not in {item.value for item in definition.supported_directions}:
+        if payload.direction not in {
+            item.value for item in definition.supported_directions
+        }:
             raise ValueError("PARAMETER_INVALID")
         parameters = {**payload.parameters, "direction": payload.direction}
+        self._require_demo_parameter_scope(parameters)
         plan_id = _stable_id(self._environment_id, "plan", idempotency_key)
         content = TradePlanContent(
             strategy_id=payload.strategy_id,
@@ -259,9 +286,11 @@ class PostgreSQLPlanningApi:
         observed_at: datetime,
     ) -> dict[str, Any]:
         definition = describe_strategy(payload.strategy_id)
+        parameters = {**payload.parameters, "direction": payload.direction}
+        self._require_demo_parameter_scope(parameters)
         content = TradePlanContent(
             strategy_id=payload.strategy_id,
-            parameters={**payload.parameters, "direction": payload.direction},
+            parameters=parameters,
             environment_id=self._environment_id,
             environment_kind=self._environment_kind,
             authority_class=self._authority_class,
@@ -281,7 +310,9 @@ class PostgreSQLPlanningApi:
             terms={"one_entry_cycle": True, "resume_policy": "MANUAL_PLAN_RESUME"},
         )
         with self._connect() as connection, connection.transaction():
-            draft = PlanningApplicationService(connection, self._environment_id).update_draft(
+            draft = PlanningApplicationService(
+                connection, self._environment_id
+            ).update_draft(
                 plan_id=plan_id,
                 expected_version=expected_version,
                 content=content,
@@ -297,7 +328,9 @@ class PostgreSQLPlanningApi:
         expected_version: int,
         observed_at: datetime,
     ) -> dict[str, Any]:
-        plan_version_id = _stable_id(self._environment_id, "plan-version", idempotency_key)
+        plan_version_id = _stable_id(
+            self._environment_id, "plan-version", idempotency_key
+        )
         with self._connect() as connection:
             repository = PostgreSQLPlanningRepository(connection, self._environment_id)
             try:
@@ -344,6 +377,7 @@ class PostgreSQLPlanningApi:
                 f"{version.strategy_basis.strategy_id}@{version.strategy_basis.strategy_version}"
             ),
             "parameter_digest": version.strategy_basis.parameter_digest,
+            "strategy_parameters": version.strategy_basis.normalized_parameters,
             "trade_amount": version.requested_limits.max_notional,
             "limits": version.requested_limits.model_dump(mode="json"),
             "valid_until": version.valid_until.isoformat(),
@@ -404,9 +438,7 @@ class PostgreSQLPlanningApi:
                         if constraint_name == "uq_plan_activation_open_scope":
                             raise ValueError("ATTRIBUTION_AMBIGUOUS") from None
                         raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
-                if (
-                    activation.plan_version_ref != payload.plan_version_id
-                ):
+                if activation.plan_version_ref != payload.plan_version_id:
                     raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
         return {
             "activation": activation.model_dump(mode="json"),
@@ -437,12 +469,21 @@ class PostgreSQLPlanningApi:
             version = PostgreSQLPlanningRepository(
                 connection, self._environment_id
             ).get_version(activation.plan_version_ref)
+            if activation.lifecycle is PlanLifecycle.COMPLETED:
+                ActivationControlService(
+                    connection,
+                    self._environment_id,
+                ).finalize_completed_activation(
+                    activation_id,
+                    observed_at=datetime.now(UTC),
+                )
             actions = connection.execute(
                 """
                 SELECT execution_action_id, action_kind, action_class, action_terms,
                        client_order_id, state, state_version, unknown_reason,
-                       protection_digest, closure_evidence_digest, created_at, updated_at,
-                       execution_profile_ref, account_ref, authority_class
+                       not_submitted_reason, protection_digest, closure_evidence_digest,
+                       created_at, updated_at, execution_profile_ref, account_ref,
+                       authority_class, cancel_target
                 FROM halpha.execution_action
                 WHERE environment_id = %s AND activation_id = %s
                 ORDER BY created_at, execution_action_id
@@ -491,9 +532,7 @@ class PostgreSQLPlanningApi:
                 """,
                 (self._environment_id, self._account_ref, activation_id),
             ).fetchall()
-        stopped_categories = {
-            str(category) for row in stops for category in row[0]
-        }
+        stopped_categories = {str(category) for row in stops for category in row[0]}
         if "ALL_EXCHANGE_CHANGES" in stopped_categories:
             stopped_categories.update(
                 {
@@ -504,12 +543,32 @@ class PostgreSQLPlanningApi:
             )
         return {
             "activation": activation.model_dump(mode="json"),
+            "strategy": {
+                "strategy_ref": (
+                    f"{version.strategy_basis.strategy_id}@"
+                    f"{version.strategy_basis.strategy_version}"
+                ),
+                "parameters": version.strategy_basis.normalized_parameters,
+            },
             "capital": {
                 "max_margin": version.requested_limits.max_margin,
                 "max_notional": version.requested_limits.max_notional,
                 "max_allowed_loss": version.requested_limits.max_allowed_loss,
                 **dict(activation.rule_state.get("capital", {})),
             },
+            "trade_result": summarize_trade_result(
+                direction=activation.direction.value,
+                action_kinds={str(row[0]): str(row[1]) for row in actions},
+                facts=(
+                    {
+                        "kind": str(row[1]),
+                        "payload": dict(row[7]),
+                        "action_ref": str(row[8]) if row[8] is not None else None,
+                        "source_time": row[4].isoformat() if row[4] is not None else None,
+                    }
+                    for row in facts
+                ),
+            ),
             "execution_actions": [
                 {
                     "execution_action_id": str(row[0]),
@@ -520,13 +579,19 @@ class PostgreSQLPlanningApi:
                     "state": str(row[5]),
                     "state_version": int(row[6]),
                     "unknown_reason": str(row[7]) if row[7] is not None else None,
-                    "protection_digest": str(row[8]) if row[8] is not None else None,
-                    "closure_evidence_digest": str(row[9]) if row[9] is not None else None,
-                    "created_at": row[10].isoformat(),
-                    "updated_at": row[11].isoformat(),
-                    "execution_profile_ref": str(row[12]),
-                    "account_ref": str(row[13]),
-                    "authority_class": str(row[14]),
+                    "not_submitted_reason": (
+                        str(row[8]) if row[8] is not None else None
+                    ),
+                    "protection_digest": str(row[9]) if row[9] is not None else None,
+                    "closure_evidence_digest": str(row[10])
+                    if row[10] is not None
+                    else None,
+                    "created_at": row[11].isoformat(),
+                    "updated_at": row[12].isoformat(),
+                    "execution_profile_ref": str(row[13]),
+                    "account_ref": str(row[14]),
+                    "authority_class": str(row[15]),
+                    "cancel_target": dict(row[16]) if row[16] is not None else None,
                 }
                 for row in actions
             ],
@@ -665,7 +730,9 @@ class PostgreSQLPlanningApi:
             key=lambda item: (item["at"], item["stage_order"], item["source_ref"]),
         )
 
-    def control_preview(self, activation_id: str, intent: ControlIntent) -> dict[str, Any]:
+    def control_preview(
+        self, activation_id: str, intent: ControlIntent
+    ) -> dict[str, Any]:
         current = self.activation_detail(activation_id)
         consequences = {
             ControlIntent.STOP_NEW_RISK: "立即阻止新风险；已有查询、保护、撤单和减险责任继续。",
@@ -691,7 +758,9 @@ class PostgreSQLPlanningApi:
             "consequence": consequences[intent],
             "preview_digest": content_digest(preview_basis),
             "previewed_at": datetime.now(UTC).isoformat(),
-            "resume_eligible": False if intent is ControlIntent.RESUME_ACTIVATION else None,
+            "resume_eligible": False
+            if intent is ControlIntent.RESUME_ACTIVATION
+            else None,
             "resume_denial_reasons": (
                 ["AUTHORITATIVE_RECONCILIATION_NOT_AVAILABLE"]
                 if intent is ControlIntent.RESUME_ACTIVATION
@@ -742,17 +811,34 @@ class PostgreSQLPlanningApi:
         return receipt.model_dump(mode="json")
 
     def receipt(self, receipt_id: str) -> dict[str, Any]:
-        with self._connect() as connection:
-            row = connection.execute(
+        query = """
+                SELECT r.receipt_id, r.command_id, r.processing_owner, r.state,
+                       r.state_version, r.reason_code, r.result,
+                       r.pending_responsibility_refs, r.content_digest,
+                       r.created_at, r.updated_at, c.target_ref
+                FROM halpha.receipt r
+                JOIN halpha.command c
+                  ON c.environment_id = r.environment_id
+                 AND c.command_id = r.command_id
+                WHERE r.environment_id = %s AND r.receipt_id = %s
                 """
-                SELECT receipt_id, command_id, processing_owner, state, state_version,
-                       reason_code, result, pending_responsibility_refs,
-                       content_digest, created_at, updated_at
-                FROM halpha.receipt
-                WHERE environment_id = %s AND receipt_id = %s
-                """,
+        with self._connect() as connection, connection.transaction():
+            row = connection.execute(
+                query,
                 (self._environment_id, receipt_id),
             ).fetchone()
+            if row is not None and str(row[3]) == "PROCESSING":
+                ActivationControlService(
+                    connection,
+                    self._environment_id,
+                ).finalize_completed_activation(
+                    str(row[11]),
+                    observed_at=datetime.now(UTC),
+                )
+                row = connection.execute(
+                    query,
+                    (self._environment_id, receipt_id),
+                ).fetchone()
         if row is None:
             raise ValueError("RECEIPT_NOT_FOUND")
         return {

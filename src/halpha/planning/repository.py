@@ -349,10 +349,40 @@ class PostgreSQLPlanningRepository:
             WHERE environment_id = %s
               AND lifecycle NOT IN ('COMPLETED', 'USER_TAKEOVER')
               AND run_state <> 'PAUSED'
+              AND (
+                has_entry_fill
+                OR pending_action_digest IS NOT NULL
+                OR EXISTS (
+                  SELECT 1 FROM halpha.execution_action action
+                  WHERE action.environment_id = plan_activation.environment_id
+                    AND action.activation_id = plan_activation.activation_id
+                )
+              )
             """,
             (observed_at, observed_at, self._environment_id),
         )
-        return int(cursor.rowcount)
+        paused_count = int(cursor.rowcount)
+        self._connection.execute(
+            """
+            UPDATE halpha.plan_activation
+            SET run_state = 'ACTIVE', pause_reason = NULL, paused_at = NULL,
+                reconciliation_digest = NULL, current_resume_command_ref = NULL,
+                state_version = state_version + 1, updated_at = %s
+            WHERE environment_id = %s
+              AND lifecycle = 'RUNNING'
+              AND run_state = 'PAUSED'
+              AND pause_reason = 'WRITER_CONTINUITY_LOST'
+              AND has_entry_fill = FALSE
+              AND pending_action_digest IS NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM halpha.execution_action action
+                WHERE action.environment_id = plan_activation.environment_id
+                  AND action.activation_id = plan_activation.activation_id
+              )
+            """,
+            (observed_at, self._environment_id),
+        )
+        return paused_count
 
     def find_event_by_source(
         self, activation_id: str, source_identity: str

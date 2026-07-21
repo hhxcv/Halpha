@@ -7,14 +7,19 @@ import json
 from types import SimpleNamespace
 
 import pytest
+from nautilus_trader.adapters.binance.http.error import BinanceClientError
+from pydantic import SecretStr
 
 from halpha.capital.models import AuthorityClass, EnvironmentKind
 from halpha.domain_values import content_digest
+import halpha.executor.product_entry as product_entry_module
 from halpha.executor.product_entry import (
     LiveEntryFactTracker,
     ProductAccountFacts,
     ProductPreSubmitRejected,
+    ProductPreSubmitFactProvider,
     ProductProposalBoundary,
+    _conservative_entry_price,
     _query_current_mark_price,
     _require_flat_entry_scope,
     instrument_rules_payload,
@@ -25,7 +30,10 @@ from halpha.planning.strategies.one_shot import (
     RiskDirection,
     StrategyProposal,
 )
-from halpha.venue_integration.models import ExecutionActionState
+from halpha.venue_integration.models import (
+    ExecutionActionKind,
+    ExecutionActionState,
+)
 
 
 NOW = datetime(2026, 7, 18, 6, 0, tzinfo=UTC)
@@ -163,6 +171,77 @@ def test_current_mark_query_requires_the_requested_symbol_and_positive_value() -
     assert int(observed_at.timestamp() * 1000) == 1_784_357_200_000
 
 
+def test_old_unknown_entry_is_closed_only_on_exact_binance_absence(
+    monkeypatch,
+) -> None:
+    class AccountApi:
+        def __init__(self, *_args):
+            pass
+
+        async def query_order(self, **values):
+            assert values == {
+                "symbol": "BTCUSDT",
+                "orig_client_order_id": "a" * 32,
+                "recv_window": "5000",
+            }
+            raise BinanceClientError(
+                400,
+                {"code": -2013, "msg": "Order does not exist."},
+                {},
+            )
+
+    monkeypatch.setattr(
+        product_entry_module,
+        "get_cached_binance_http_client",
+        lambda **_values: object(),
+    )
+    monkeypatch.setattr(
+        product_entry_module,
+        "BinanceFuturesAccountHttpAPI",
+        AccountApi,
+    )
+    provider = ProductPreSubmitFactProvider(
+        node=SimpleNamespace(kernel=SimpleNamespace(clock=object())),
+        profile="BINANCE_DEMO",
+        api_key=SecretStr("demo-key"),
+        api_secret=SecretStr("demo-secret"),
+        proxy_url=None,
+    )
+    action = SimpleNamespace(
+        action_kind=ExecutionActionKind.ENTRY,
+        state=ExecutionActionState.SUBMITTED_UNKNOWN,
+        client_order_id="a" * 32,
+        call_started_at=datetime.now(UTC) - timedelta(minutes=2),
+        action_terms={"instrument_ref": "BTCUSDT-PERP"},
+    )
+
+    assert asyncio.run(provider.entry_order_is_definitely_absent(action)) is True
+
+
+def test_recent_unknown_entry_is_not_declared_absent_without_query(monkeypatch) -> None:
+    monkeypatch.setattr(
+        product_entry_module,
+        "get_cached_binance_http_client",
+        lambda **_values: pytest.fail("recent unknown must not be queried as absent"),
+    )
+    provider = ProductPreSubmitFactProvider(
+        node=SimpleNamespace(kernel=SimpleNamespace(clock=object())),
+        profile="BINANCE_DEMO",
+        api_key=SecretStr("demo-key"),
+        api_secret=SecretStr("demo-secret"),
+        proxy_url=None,
+    )
+    action = SimpleNamespace(
+        action_kind=ExecutionActionKind.ENTRY,
+        state=ExecutionActionState.SUBMITTED_UNKNOWN,
+        client_order_id="a" * 32,
+        call_started_at=datetime.now(UTC) - timedelta(seconds=5),
+        action_terms={"instrument_ref": "BTCUSDT-PERP"},
+    )
+
+    assert asyncio.run(provider.entry_order_is_definitely_absent(action)) is False
+
+
 @pytest.mark.parametrize(
     ("positions", "open_orders", "open_algo_orders", "reason_code"),
     (
@@ -272,6 +351,21 @@ def test_stream_tracker_uses_one_fresh_quote_and_mark_snapshot() -> None:
         raise AssertionError("stale stream facts must fail closed")
 
 
+def test_entry_extension_price_is_conservative_in_both_directions() -> None:
+    assert _conservative_entry_price(
+        Direction.LONG,
+        mark=Decimal("50002"),
+        bid=Decimal("49999"),
+        ask=Decimal("50001"),
+    ) == "50002"
+    assert _conservative_entry_price(
+        Direction.SHORT,
+        mark=Decimal("49998"),
+        bid=Decimal("49999"),
+        ask=Decimal("50001"),
+    ) == "49998"
+
+
 def test_preliminary_sizing_allows_a_short_unchanged_quote_window() -> None:
     tracker = LiveEntryFactTracker()
     cutoff = int(NOW.timestamp() * 1_000_000_000)
@@ -297,6 +391,36 @@ def test_preliminary_sizing_allows_a_short_unchanged_quote_window() -> None:
         cutoff_ns=cutoff,
         max_age_ns=15_000_000_000,
     ) == "50002"
+
+
+def test_stream_tracker_rejects_spread_above_sizing_assumption() -> None:
+    tracker = LiveEntryFactTracker()
+    cutoff = int(NOW.timestamp() * 1_000_000_000)
+    tracker.record_quote(
+        SimpleNamespace(
+            instrument_id="BTCUSDT-PERP.BINANCE",
+            bid_price="49950",
+            ask_price="50050.1",
+            ts_event=cutoff - 1_000_000_000,
+        )
+    )
+    tracker.record_mark(
+        SimpleNamespace(
+            instrument_id="BTCUSDT-PERP.BINANCE",
+            value="50000",
+            ts_event=cutoff - 1_000_000_000,
+        )
+    )
+
+    with pytest.raises(
+        ProductPreSubmitRejected,
+        match="ENTRY_SPREAD_TOO_WIDE",
+    ):
+        tracker.conservative_reference(
+            "BTCUSDT-PERP.BINANCE",
+            Direction.LONG,
+            cutoff_ns=cutoff,
+        )
 
 
 def test_product_proposal_processor_enters_cap_and_exe_once_with_stable_identity() -> None:

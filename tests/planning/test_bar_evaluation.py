@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -22,7 +23,7 @@ from halpha.planning.strategies.one_shot import (
 
 
 SOURCE = BarType.from_str("BTCUSDT-PERP.BINANCE-1-MINUTE-LAST-EXTERNAL")
-TARGET = BarType.from_str("BTCUSDT-PERP.BINANCE-15-MINUTE-LAST-INTERNAL")
+TARGET = BarType.from_str("BTCUSDT-PERP.BINANCE-15-MINUTE-LAST-EXTERNAL")
 
 
 def _bar(bar_type: BarType, *, minute: int, close: str, high: str, low: str) -> Bar:
@@ -42,12 +43,21 @@ def _bar(bar_type: BarType, *, minute: int, close: str, high: str, low: str) -> 
     )
 
 
-def _evaluator(*, requires_live_warmup: bool = False) -> NautilusBarEntryEvaluator:
+def _evaluator(
+    *,
+    requires_live_warmup: bool = False,
+    channel_lookback_15m: int = 20,
+    demo_immediate_entry: bool = False,
+) -> NautilusBarEntryEvaluator:
     start = datetime(2026, 1, 1, tzinfo=UTC)
     return NautilusBarEntryEvaluator(
         activation_id="activation-bar-evaluation",
         instrument_ref="BTCUSDT-PERP",
-        parameters=OneShotParameters(direction=Direction.LONG),
+        parameters=OneShotParameters(
+            direction=Direction.LONG,
+            channel_lookback_15m=channel_lookback_15m,
+            demo_immediate_entry=demo_immediate_entry,
+        ),
         decision_not_before=start,
         valid_until=start + timedelta(days=1),
         sizing_provider=lambda bar: EntrySizingSnapshot(
@@ -99,6 +109,79 @@ def test_shared_adapter_builds_one_normalized_proposal_from_native_bars() -> Non
     assert proposals[0].action_profile == "ENTRY_MARKET"
 
 
+def test_adapter_skips_live_sizing_after_entry_opportunity_is_consumed() -> None:
+    evaluator = _evaluator()
+    sizing_reads = 0
+
+    def sizing_provider(bar: Bar) -> EntrySizingSnapshot:
+        nonlocal sizing_reads
+        sizing_reads += 1
+        return EntrySizingSnapshot(
+            reference_price=str(bar.close),
+            reference_source="LIVE_TOP_OF_BOOK_ASK",
+            max_allowed_loss="50",
+            max_notional="500",
+            max_margin="100",
+            effective_leverage="5",
+            taker_fee_rate="0.0006",
+            rules=InstrumentQuantityRules(
+                step_size="0.0001",
+                price_tick_size="0.1",
+                min_quantity="0.0001",
+                max_market_quantity="100",
+                min_notional="5",
+            ),
+        )
+
+    evaluator.sizing_provider = sizing_provider
+    state = {"consumed": False}
+    adapter = HalphaStrategyAdapter(
+        activation_id=evaluator.activation_id,
+        logic=OneShotDonchianAtrLogic(evaluator.parameters),
+        state_provider=lambda: ActivationStrategyState(
+            entry_opportunity_consumed=state["consumed"],
+        ),
+        proposal_sink=lambda _proposal: None,
+        bar_evaluator=evaluator,
+    )
+    for index in range(20):
+        adapter.on_bar(
+            _bar(
+                TARGET,
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
+        )
+    adapter.on_bar(_bar(SOURCE, minute=301, close="120.5", high="121", low="120"))
+    state["consumed"] = True
+    adapter.on_bar(_bar(SOURCE, minute=302, close="120.8", high="121", low="120"))
+
+    assert sizing_reads == 0
+
+
+def test_demo_flow_check_uses_the_next_closed_minute_with_default_parameters() -> None:
+    evaluator = _evaluator(demo_immediate_entry=True)
+    for index in range(20):
+        evaluator.accept(
+            _bar(
+                TARGET,
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
+        )
+
+    evaluation = evaluator.accept(
+        _bar(SOURCE, minute=301, close="120", high="121", low="119")
+    )
+
+    assert evaluation is not None
+    assert evaluation.confirmation_closes == ("120",)
+
+
 def test_duplicate_bar_is_idempotent_and_conflicting_identity_fails_closed() -> None:
     evaluator = _evaluator()
     first = _bar(TARGET, minute=15, close="100", high="101", low="99")
@@ -124,28 +207,23 @@ def test_live_warmup_primes_indicators_without_historical_proposals() -> None:
                 low=str(99 + index),
             )
         )
-    for minute in range(286, 301):
-        evaluator.accept_historical(
-            _bar(SOURCE, minute=minute, close="120", high="121", low="119")
-        )
-
     evaluator.complete_live_warmup()
     assert evaluator.warmup_complete is True
     assert evaluator.accept(
         _bar(SOURCE, minute=300, close="120", high="121", low="119")
     ) is None
-    assert evaluator.accept(
-        _bar(SOURCE, minute=301, close="120.5", high="121", low="120")
-    ) is None
     proposal_input = evaluator.accept(
-        _bar(SOURCE, minute=302, close="120.8", high="121", low="120")
+        _bar(SOURCE, minute=301, close="120.5", high="121", low="120")
     )
     assert proposal_input is not None
 
 
-def test_live_warmup_rejects_a_gapped_source_tail() -> None:
-    evaluator = _evaluator(requires_live_warmup=True)
-    for index in range(20):
+def test_short_channel_keeps_full_atr_warmup_and_uses_recent_donchian() -> None:
+    evaluator = _evaluator(
+        requires_live_warmup=True,
+        channel_lookback_15m=4,
+    )
+    for index in range(15):
         evaluator.accept_historical(
             _bar(
                 TARGET,
@@ -155,13 +233,89 @@ def test_live_warmup_rejects_a_gapped_source_tail() -> None:
                 low=str(99 + index),
             )
         )
-    for minute in (*range(285, 292), *range(293, 301)):
+    evaluator.complete_live_warmup()
+    assert evaluator.accept(
+        _bar(SOURCE, minute=226, close="115.5", high="116", low="115")
+    ) is None
+    proposal_input = evaluator.accept(
+        _bar(SOURCE, minute=227, close="115.6", high="116", low="115")
+    )
+
+    assert proposal_input is not None
+    assert proposal_input.indicators.upper == "115"
+    assert proposal_input.indicators.lower == "110"
+    assert Decimal(proposal_input.indicators.atr) > 0
+
+
+def test_live_warmup_rejects_a_gapped_target_tail() -> None:
+    evaluator = _evaluator(requires_live_warmup=True)
+    for index in (*range(9), *range(10, 21)):
         evaluator.accept_historical(
-            _bar(SOURCE, minute=minute, close="120", high="121", low="119")
+            _bar(
+                TARGET,
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
+        )
+    with pytest.raises(BarEvaluationError, match="TARGET_WARMUP_INCOMPLETE"):
+        evaluator.complete_live_warmup()
+
+
+def test_live_source_gap_restarts_confirmation_window() -> None:
+    evaluator = _evaluator()
+    for index in range(20):
+        evaluator.accept(
+            _bar(
+                TARGET,
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
         )
 
-    with pytest.raises(BarEvaluationError, match="SOURCE_WARMUP_INCOMPLETE"):
-        evaluator.complete_live_warmup()
+    assert evaluator.accept(
+        _bar(SOURCE, minute=301, close="120.5", high="121", low="120")
+    ) is None
+    assert evaluator.accept(
+        _bar(SOURCE, minute=303, close="120.8", high="121", low="120")
+    ) is None
+    assert evaluator.accept(
+        _bar(SOURCE, minute=304, close="120.9", high="121", low="120")
+    ) is not None
+
+
+def test_next_external_target_bar_replaces_warmup_channel_after_mid_interval_start() -> None:
+    evaluator = _evaluator(requires_live_warmup=True, channel_lookback_15m=4)
+    for index in range(15):
+        evaluator.accept_historical(
+            _bar(
+                TARGET,
+                minute=(index + 1) * 15,
+                close=str(100 + index),
+                high=str(101 + index),
+                low=str(99 + index),
+            )
+        )
+    evaluator.complete_live_warmup()
+
+    evaluator.accept(
+        _bar(TARGET, minute=240, close="149", high="150", low="148")
+    )
+    assert evaluator.accept(
+        _bar(SOURCE, minute=241, close="150.5", high="151", low="150")
+    ) is None
+    evaluation = evaluator.accept(
+        _bar(SOURCE, minute=242, close="150.6", high="151", low="150")
+    )
+
+    assert evaluation is not None
+    assert evaluation.indicators.upper == "150"
+    assert evaluation.indicators.source_cutoff_ns == _bar(
+        TARGET, minute=240, close="149", high="150", low="148"
+    ).ts_event
 
 
 def test_live_adapter_warms_history_before_subscribing_to_bars() -> None:
@@ -175,6 +329,7 @@ def test_live_adapter_warms_history_before_subscribing_to_bars() -> None:
         bar_evaluator=evaluator,
         live_history_warmup=True,
         current_time_provider=lambda: datetime(2026, 1, 2, 6, 7, 30, tzinfo=UTC),
+        history_cache_provider=lambda _bar_type: (),
     )
     request_id = uuid4()
     events: list[tuple[str, object]] = []
@@ -187,42 +342,31 @@ def test_live_adapter_warms_history_before_subscribing_to_bars() -> None:
     )
     adapter.subscribe_bars = lambda bar_type: events.append(("bar", bar_type))
 
-    def request_aggregated_bars(bar_types, **kwargs):
-        events.append(("request", (bar_types, kwargs)))
+    def request_bars(bar_type, **kwargs):
+        events.append(("request", (bar_type, kwargs)))
         return request_id
 
-    adapter.request_aggregated_bars = request_aggregated_bars
+    adapter.request_bars = request_bars
     adapter.on_start()
 
     assert [event[0] for event in events] == ["mark", "quote", "request"]
-    bar_types, request = events[-1][1]
-    # Nautilus expects requested bar types to be internally aggregated. The
-    # first composite names the external 1m source queried from Binance, and
-    # include_external_data forwards that source to on_historical_data.
-    assert bar_types == [evaluator.target_bar_type]
-    assert bar_types[0].is_internally_aggregated()
-    assert bar_types[0].is_composite()
-    assert bar_types[0].composite() == evaluator.source_bar_type
-    assert request["include_external_data"] is True
-    assert request["update_subscriptions"] is True
+    bar_type, request = events[-1][1]
+    assert bar_type == evaluator.target_bar_type
+    assert bar_type.is_externally_aggregated()
     assert request["update_catalog"] is False
-    assert request["end"] - request["start"] < timedelta(hours=72, minutes=15)
+    assert request["limit"] == evaluator.target_history_count + 2
+    assert request["end"] - request["start"] < timedelta(hours=6)
 
     for index in range(20):
         adapter.on_historical_data(
             _bar(
-                TARGET.standard(),
+                TARGET,
                 minute=(index + 1) * 15,
                 close=str(100 + index),
                 high=str(101 + index),
                 low=str(99 + index),
             )
         )
-    for minute in range(286, 301):
-        adapter.on_historical_data(
-            _bar(SOURCE, minute=minute, close="120", high="121", low="119")
-        )
-
     request["callback"](request_id)
 
     assert evaluator.warmup_complete is True
@@ -231,3 +375,109 @@ def test_live_adapter_warms_history_before_subscribing_to_bars() -> None:
         ("bar", SOURCE),
         ("bar", evaluator.target_bar_type),
     ]
+
+
+def test_live_adapter_reuses_framework_cache_before_requesting_history() -> None:
+    evaluator = _evaluator(
+        requires_live_warmup=True,
+        channel_lookback_15m=4,
+    )
+    target_history = [
+        _bar(
+            TARGET,
+            minute=(index + 1) * 15,
+            close=str(100 + index),
+            high=str(101 + index),
+            low=str(99 + index),
+        )
+        for index in range(15)
+    ]
+    cache_reads: list[BarType] = []
+    events: list[tuple[str, object]] = []
+
+    def cached_bars(bar_type: BarType) -> list[Bar]:
+        cache_reads.append(bar_type)
+        if str(bar_type) == str(TARGET):
+            return list(reversed(target_history))
+        return []
+
+    adapter = HalphaStrategyAdapter(
+        activation_id=evaluator.activation_id,
+        logic=OneShotDonchianAtrLogic(evaluator.parameters),
+        state_provider=lambda: ActivationStrategyState(),
+        proposal_sink=lambda _proposal: None,
+        instrument_ref="BTCUSDT-PERP",
+        bar_evaluator=evaluator,
+        live_history_warmup=True,
+        history_cache_provider=cached_bars,
+    )
+    adapter.subscribe_mark_prices = lambda instrument_id: events.append(
+        ("mark", instrument_id)
+    )
+    adapter.subscribe_quote_ticks = lambda instrument_id: events.append(
+        ("quote", instrument_id)
+    )
+    adapter.subscribe_bars = lambda bar_type: events.append(("bar", bar_type))
+    adapter.request_bars = lambda *_args, **_kwargs: pytest.fail(
+        "cached history must avoid a duplicate framework history request"
+    )
+
+    adapter.on_start()
+
+    assert cache_reads == [TARGET]
+    assert evaluator.warmup_complete is True
+    assert adapter.live_history_ready is True
+    assert events[-2:] == [
+        ("bar", SOURCE),
+        ("bar", evaluator.target_bar_type),
+    ]
+
+
+def test_adapter_reports_bar_evaluation_failure_before_reraising() -> None:
+    evaluator = _evaluator()
+    failures: list[tuple[object, Exception]] = []
+    adapter = HalphaStrategyAdapter(
+        activation_id=evaluator.activation_id,
+        logic=OneShotDonchianAtrLogic(evaluator.parameters),
+        state_provider=lambda: ActivationStrategyState(),
+        proposal_sink=lambda _proposal: None,
+        bar_evaluator=evaluator,
+        bar_failure_sink=lambda bar, exception: failures.append((bar, exception)),
+    )
+    bar = _bar(SOURCE, minute=1, close="100", high="101", low="99")
+
+    with pytest.raises(BarEvaluationError, match="SOURCE_BAR_OUT_OF_ORDER"):
+        adapter.on_bar(bar)
+        adapter.on_bar(
+            _bar(SOURCE, minute=0, close="100", high="101", low="99")
+        )
+
+    assert len(failures) == 1
+    assert str(failures[0][1]) == "SOURCE_BAR_OUT_OF_ORDER"
+
+
+def test_adapter_reports_history_warmup_failure_before_reraising() -> None:
+    evaluator = _evaluator(requires_live_warmup=True)
+    failures: list[tuple[str, object | None, Exception]] = []
+    adapter = HalphaStrategyAdapter(
+        activation_id=evaluator.activation_id,
+        logic=OneShotDonchianAtrLogic(evaluator.parameters),
+        state_provider=lambda: ActivationStrategyState(),
+        proposal_sink=lambda _proposal: None,
+        bar_evaluator=evaluator,
+        live_history_warmup=True,
+        history_warmup_failure_sink=lambda stage, item, exception: failures.append(
+            (stage, item, exception)
+        ),
+    )
+    newer = _bar(TARGET, minute=30, close="100", high="101", low="99")
+    older = _bar(TARGET, minute=15, close="100", high="101", low="99")
+
+    adapter.on_historical_data(newer)
+    with pytest.raises(BarEvaluationError, match="TARGET_BAR_OUT_OF_ORDER"):
+        adapter.on_historical_data(older)
+
+    assert len(failures) == 1
+    assert failures[0][0] == "DATA"
+    assert failures[0][1] is older
+    assert str(failures[0][2]) == "TARGET_BAR_OUT_OF_ORDER"

@@ -78,6 +78,17 @@ Treat targeted checks as iteration feedback, not final suite evidence. At the na
 - Keep mutating fixtures on isolated environments, databases and ports. Match current interfaces, replace external dependencies with deterministic bounded providers, exclude real credentials and exchange-changing effects, clean up on success and failure, and never point them at an active Demo or live product instance.
 - Treat fixture, tool and qualification success as evidence for only the path they exercise; do not use it to claim product closure or replace the closest authorized runtime check.
 
+Treat targeted checks as iteration feedback, not final suite evidence. At the natural outcome boundary, run the complete relevant repository suites, including separately configured browser or qualification suites when they can exercise the affected path, and report skips and checks not run.
+
+#### Keep Tests Valuable
+
+- Start from a current user result, authority boundary or failure mode. Use the lowest-cost layer that proves it, and add a direct-consumer or integration check when behavior crosses a process, persistence, framework or browser boundary. Test count and blanket coverage are not goals.
+- Before adding or retaining a case, find the production consumer and existing coverage. Extend an existing scenario when it proves the same risk; delete a test with a mechanism that has no current consumer instead of preserving self-validating code.
+- Assert durable semantics such as state transitions, reason codes, persisted identities, authoritative facts and accessible roles. Avoid exact source text, private call topology, file-membership lists and whole UI sentences unless that representation is itself the contract.
+- Classify a failure from direct evidence as a product regression, fixture or interface drift, or a stale expectation before changing code or relaxing an assertion.
+- Keep mutating fixtures on isolated environments, databases and ports. Match current interfaces, replace external dependencies with deterministic bounded providers, exclude real credentials and exchange-changing effects, clean up on success and failure, and never point them at an active Demo or live product instance.
+- Treat fixture, tool and qualification success as evidence for only the path they exercise; do not use it to claim product closure or replace the closest authorized runtime check.
+
 Use elapsed observation only when a current release, deployment or real-capital decision needs behavior that direct tests cannot establish. Waiting remains read-only and creates no permanent role or project state. When evidence arrives, verify its source, inputs, time and scope before using it.
 
 ### 7. Resolve Design Conflicts

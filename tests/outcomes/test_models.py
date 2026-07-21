@@ -6,13 +6,13 @@ import pytest
 
 from halpha.domain_values import content_digest
 from halpha.outcomes.models import (
-    EVALUATION_KEYS,
+    EvaluationResult,
     EvidencePurpose,
     PrimaryResult,
     Review,
     ReviewStatus,
 )
-from halpha.outcomes.service import _draft_evaluations
+from halpha.outcomes.service import _draft_evaluations, _owner_conclusion
 
 
 NOW = datetime(2026, 7, 17, 13, tzinfo=UTC)
@@ -45,16 +45,13 @@ def test_demo_review_has_one_stable_record_shape_and_digest() -> None:
     assert review.primary_result is PrimaryResult.NO_ACTION
 
 
-def test_complete_review_requires_all_six_evaluations() -> None:
+def test_complete_review_requires_one_owner_conclusion() -> None:
     fields = _review_fields()
     fields.update({"status": ReviewStatus.COMPLETE, "evaluations": {}})
     with pytest.raises(ValueError, match="REVIEW_COMPLETION_INCOMPLETE"):
         Review(**fields, content_digest=content_digest(fields))
 
-    fields["evaluations"] = {
-        key: {"result": "AS_EXPECTED", "reason": "evidence checked", "evidence_refs": []}
-        for key in EVALUATION_KEYS
-    }
+    fields["evaluations"] = _owner_conclusion(EvaluationResult.AS_EXPECTED, "")
     complete = Review(**fields, content_digest=content_digest(fields))
     assert complete.status is ReviewStatus.COMPLETE
 
@@ -65,17 +62,12 @@ def test_review_digest_drift_is_rejected() -> None:
         Review(**fields, content_digest="0" * 64)
 
 
-def test_draft_plan_evaluation_uses_plan_event_count_not_action_count() -> None:
-    evaluations = _draft_evaluations(
-        primary_result=PrimaryResult.NO_ACTION,
-        missing_refs=[],
-        closure_digest="b" * 64,
-        event_count=3,
-        action_count=7,
-        fact_count=2,
-    )
-    assert evaluations["plan"]["evidence_refs"] == ["plan_event_count:3"]
-    assert evaluations["execution_facts"]["evidence_refs"] == [
-        "actions:7",
-        "facts:2",
-    ]
+def test_draft_review_contains_only_the_owner_conclusion() -> None:
+    evaluations = _draft_evaluations()
+    assert evaluations == {
+        "owner_conclusion": {
+            "result": "UNKNOWN",
+            "reason": "",
+            "evidence_refs": [],
+        }
+    }

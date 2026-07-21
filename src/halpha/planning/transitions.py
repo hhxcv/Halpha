@@ -63,10 +63,6 @@ def venue_source_identity(
     )
 
 
-def user_source_identity(command_id: str) -> str:
-    return f"COMMAND:{command_id}"
-
-
 def proposed_action_from_strategy_proposal(
     activation: PlanActivation,
     proposal: StrategyProposal,

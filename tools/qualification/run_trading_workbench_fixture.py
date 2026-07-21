@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import sys
 from threading import Timer
+from typing import Literal
 from uuid import uuid4
 
 
@@ -38,6 +39,7 @@ from halpha.planning.strategies.one_shot import (
     StrategyProposal,
 )
 from halpha.planning.transitions import bar_source_identity
+from halpha.public_market import MarketBar, MarketContext, MarketWindow
 from halpha.venue_integration.gateway import PersistedActionGate
 from halpha.venue_integration.repository import (
     PostgreSQLExecutionActionRepository,
@@ -56,6 +58,70 @@ from tools.qualification.database_fixture import (
 
 FIXTURE_ENVIRONMENT_ID = "trading-workbench-fixture"
 FIXTURE_ACCOUNT_ID = "trading-workbench-account"
+
+
+class FixtureMarketContextProvider:
+    """Return deterministic public facts without reaching an exchange endpoint."""
+
+    async def fetch(self, instrument_ref: str, lookback: int) -> MarketContext:
+        now = datetime.now(UTC)
+        return MarketContext(
+            instrument_ref=instrument_ref,
+            source="WORKBENCH_FIXTURE_PUBLIC",
+            source_cutoff=now,
+            latest_closed_1m_at=now - timedelta(minutes=1),
+            latest_closed_15m_at=now - timedelta(minutes=15),
+            channel_lookback_15m=lookback,
+            bid_price="100",
+            ask_price="100.2",
+            reference_price="100.1",
+            latest_close_1m="100.1",
+            latest_volume_1m="1000",
+            latest_trade_count_1m=100,
+            latest_close_15m="100",
+            channel_upper="101",
+            channel_lower="99",
+            atr_14="2",
+            long_breakout_gap_pct="0.8991",
+            short_breakout_gap_pct="1.0989",
+        )
+
+    async def fetch_window(
+        self,
+        instrument_ref: str,
+        interval: Literal["1m", "15m"],
+        start_at: datetime,
+        end_at: datetime,
+    ) -> MarketWindow:
+        step = timedelta(minutes=1 if interval == "1m" else 15)
+        cursor = start_at.replace(second=0, microsecond=0)
+        if interval == "15m":
+            cursor = cursor.replace(minute=(cursor.minute // 15) * 15)
+        bars: list[MarketBar] = []
+        index = 0
+        while cursor <= end_at and len(bars) < 300:
+            base = 100 + (index % 12) * 0.18
+            close = base + (0.12 if index % 3 else -0.08)
+            bars.append(
+                MarketBar(
+                    open_at=cursor,
+                    close_at=cursor + step,
+                    open=str(base),
+                    high=str(max(base, close) + 0.22),
+                    low=str(min(base, close) - 0.2),
+                    close=str(close),
+                    volume=str(900 + index * 7),
+                )
+            )
+            cursor += step
+            index += 1
+        return MarketWindow(
+            instrument_ref=instrument_ref,
+            interval=interval,
+            source="WORKBENCH_FIXTURE_PUBLIC",
+            source_cutoff=bars[-1].close_at,
+            bars=tuple(bars),
+        )
 
 
 def _parse_args() -> argparse.Namespace:
@@ -266,12 +332,9 @@ def _prepare_states(app_connection: object, executor_connection: object) -> dict
         position_zero=True,
         open_order_refs=(),
         external_activity_conflict=False,
-        fees_complete=True,
-        funding_complete=True,
         user_takeover=False,
         handover_command_ref=None,
         fact_refs=(),
-        result_ref="ignored-browser-fixture-ref",
         observed_at=now,
     )
 
@@ -450,6 +513,7 @@ def main() -> int:
                 SecretStr(database_password),
                 settings.release.environment_id,
             ),
+            market_context_provider=FixtureMarketContextProvider(),
             static_dist=ROOT / "frontend" / "dist",
         )
         server_config = {

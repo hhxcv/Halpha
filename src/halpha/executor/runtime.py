@@ -55,6 +55,10 @@ from halpha.planning.strategies.one_shot import (
     OneShotDonchianAtrLogic,
     StrategyProposal,
 )
+from halpha.product_build import (
+    EXECUTOR_STARTING_APPLICATION_NAME,
+    executor_ready_application_name,
+)
 from halpha.venue_integration.gateway import PersistedActionGate
 from halpha.venue_integration.nautilus_client import NautilusVenueExecutionClient
 from halpha.venue_integration.repository import PostgreSQLExecutionActionRepository
@@ -91,6 +95,21 @@ class ExecutorRuntimeError(RuntimeError):
     """Sanitized fail-closed product runtime failure."""
 
 
+def _activation_entry_deadline(activation: object) -> datetime:
+    rule_state = getattr(activation, "rule_state", {})
+    deadlines = rule_state.get("deadlines", {}) if isinstance(rule_state, dict) else {}
+    value = deadlines.get("entry_valid_until") if isinstance(deadlines, dict) else None
+    if not isinstance(value, str):
+        raise ExecutorRuntimeError("ENTRY_DEADLINE_MISSING")
+    try:
+        deadline = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        raise ExecutorRuntimeError("ENTRY_DEADLINE_INVALID") from None
+    if deadline.tzinfo is None:
+        raise ExecutorRuntimeError("ENTRY_DEADLINE_INVALID")
+    return deadline.astimezone(UTC)
+
+
 class HalphaRuntimeController(Controller):
     """The unique product Controller used for activation adapter lifecycle."""
 
@@ -103,17 +122,23 @@ def _connect_product_database(
     *,
     database_name: str,
     password: str,
+    application_name: str | None = None,
 ) -> Any:
     """Keep reads outside explicit units from opening a hidden outer transaction."""
 
+    values: dict[str, Any] = {
+        "host": "127.0.0.1",
+        "port": 5432,
+        "dbname": database_name,
+        "user": f"{database_name}_executor",
+        "password": password,
+        "connect_timeout": 2,
+        "autocommit": True,
+    }
+    if application_name is not None:
+        values["application_name"] = application_name
     return connector(
-        host="127.0.0.1",
-        port=5432,
-        dbname=database_name,
-        user=f"{database_name}_executor",
-        password=password,
-        connect_timeout=2,
-        autocommit=True,
+        **values,
     )
 
 
@@ -231,7 +256,7 @@ def build_product_node_config(
             reconciliation_lookback_mins=None,
             reconciliation_instrument_ids=instrument_ids,
             reconciliation_startup_delay_secs=10.0,
-            inflight_check_interval_ms=0,
+            inflight_check_interval_ms=2_000,
             inflight_check_threshold_ms=5000,
             inflight_check_retries=5,
             open_check_interval_secs=10.0,
@@ -313,6 +338,7 @@ class ProductExecutorRuntime:
         runtime_real_write_gate: str = "CLOSED",
         live_write_activation_id: str | None = None,
         live_write_submission_guard: Callable[[str], None] | None = None,
+        runtime_event_sink: Callable[[str, dict[str, object]], None] | None = None,
     ) -> None:
         self._settings = settings
         self._database_password = database_password
@@ -332,17 +358,21 @@ class ProductExecutorRuntime:
         self._runtime_real_write_gate = runtime_real_write_gate
         self._live_write_activation_id = live_write_activation_id
         self._live_write_submission_guard = live_write_submission_guard
+        self._runtime_event_sink = runtime_event_sink
         self._connection: Any | None = None
         self._node: TradingNode | None = None
         self._lifecycle: ActivationAdapterLifecycle | None = None
         self._coordinator: HalphaCoordinator | None = None
         self._capability: object | None = None
         self._proposal_processors: dict[str, ProductProposalBoundary] = {}
-        self._responsibility_processors: dict[
-            str, ProductResponsibilityBoundary
-        ] = {}
+        self._responsibility_processors: dict[str, ProductResponsibilityBoundary] = {}
         self._recovery_complete = False
         self._recovered_action_count = 0
+
+    def _record_runtime_event(self, event: str, **fields: object) -> None:
+        sink = getattr(self, "_runtime_event_sink", None)
+        if sink is not None:
+            sink(event, fields)
 
     @property
     def node(self) -> TradingNode:
@@ -398,13 +428,10 @@ class ProductExecutorRuntime:
             raise ExecutorRuntimeError("PRODUCT_RUNTIME_ALREADY_BUILT")
         release = self._settings.release
         read_only = release.profile == "BINANCE_LIVE_READ_ONLY"
-        if (
-            release.profile == "BINANCE_LIVE_WRITE"
-            and (
-                self._runtime_real_write_gate != "OPEN"
-                or self._live_write_activation_id is None
-                or self._live_write_submission_guard is None
-            )
+        if release.profile == "BINANCE_LIVE_WRITE" and (
+            self._runtime_real_write_gate != "OPEN"
+            or self._live_write_activation_id is None
+            or self._live_write_submission_guard is None
         ):
             raise ExecutorRuntimeError("RUNTIME_REAL_WRITE_GATE_CLOSED")
         database_password = self._database_password
@@ -443,6 +470,7 @@ class ProductExecutorRuntime:
                     self._connector,
                     database_name=release.database_name,
                     password=database_password.get_secret_value(),
+                    application_name=EXECUTOR_STARTING_APPLICATION_NAME,
                 )
                 self._connection = connection
             node = self._node_factory(config=config, loop=self._loop)
@@ -503,6 +531,21 @@ class ProductExecutorRuntime:
             raise ExecutorRuntimeError(
                 f"PRODUCT_RUNTIME_BUILD_FAILED type={type(exc).__name__}"
             ) from None
+
+    def publish_ready_product_build(self, product_build_id: str) -> None:
+        """Publish framework readiness through the Executor's existing DB session."""
+
+        if self._settings.release.profile == "BINANCE_LIVE_READ_ONLY":
+            return
+        if self._connection is None:
+            raise ExecutorRuntimeError("PRODUCT_DATABASE_CONNECTION_MISSING")
+        try:
+            self._connection.execute(
+                "SELECT set_config('application_name', %s, false)",
+                (executor_ready_application_name(product_build_id),),
+            )
+        except Exception:
+            raise ExecutorRuntimeError("EXECUTOR_READINESS_PUBLISH_FAILED") from None
 
     @staticmethod
     def _decimal_text(value: object | None) -> str | None:
@@ -596,6 +639,38 @@ class ProductExecutorRuntime:
             self._settings.release.environment_id,
         )
         activations = planning.list_open_activations()
+        if self._settings.release.profile == "BINANCE_DEMO":
+            observed_at = datetime.now(UTC)
+            for activation in activations:
+                rule_state = getattr(activation, "rule_state", {})
+                deadlines = (
+                    rule_state.get("deadlines", {})
+                    if isinstance(rule_state, dict)
+                    else {}
+                )
+                deadline_value = (
+                    deadlines.get("entry_valid_until")
+                    if isinstance(deadlines, dict)
+                    else None
+                )
+                if (
+                    activation.lifecycle is not PlanLifecycle.RUNNING
+                    or activation.entry_opportunity_consumed
+                    or not isinstance(deadline_value, str)
+                ):
+                    continue
+                try:
+                    deadline = datetime.fromisoformat(
+                        deadline_value.replace("Z", "+00:00")
+                    )
+                except ValueError:
+                    raise ExecutorRuntimeError("ENTRY_DEADLINE_INVALID") from None
+                if observed_at >= deadline:
+                    self.coordinator.expire_empty_entry_window(
+                        activation_id=activation.activation_id,
+                        observed_at=observed_at,
+                    )
+            activations = planning.list_open_activations()
         if self._settings.release.profile == "BINANCE_LIVE_WRITE":
             authorized_activation_id = self._live_write_activation_id
             if (
@@ -604,11 +679,39 @@ class ProductExecutorRuntime:
                 or activations[0].activation_id != authorized_activation_id
             ):
                 raise ExecutorRuntimeError("LIVE_WRITE_ACTIVATION_SET_MISMATCH")
+        open_activation_ids = {activation.activation_id for activation in activations}
+        removed_stale_adapter = False
+        for activation_id in set(self._lifecycle.activation_ids) - open_activation_ids:
+            self._lifecycle.stop_and_remove(activation_id)
+            removed_stale_adapter = True
+            proposal_processor = self._proposal_processors.pop(activation_id, None)
+            if proposal_processor is not None:
+                proposal_processor.close()
+            responsibility_processor = self._responsibility_processors.pop(
+                activation_id,
+                None,
+            )
+            if responsibility_processor is not None:
+                responsibility_processor.close()
+        if removed_stale_adapter:
+            # Nautilus requires no active subscription for the same underlying
+            # market while aggregated history is requested. Give the controller
+            # one sync cycle to finish the old adapter's unsubscriptions before
+            # starting the replacement activation and its warmup request.
+            return
         for activation in activations:
+            if activation.activation_id in self._lifecycle.activation_ids:
+                continue
             version = planning.get_version(activation.plan_version_ref)
             parameters = OneShotParameters.model_validate(
                 version.strategy_basis.normalized_parameters
             )
+            if (
+                parameters.demo_immediate_entry
+                and self._settings.release.profile != "BINANCE_DEMO"
+            ):
+                raise ExecutorRuntimeError("DEMO_IMMEDIATE_ENTRY_REQUIRES_DEMO")
+            entry_valid_until = _activation_entry_deadline(activation)
             tracker = LiveEntryFactTracker()
             api_key = self._api_key
             api_secret = self._api_secret
@@ -632,9 +735,7 @@ class ProductExecutorRuntime:
                 fact_provider=fact_provider,
                 environment_id=self._settings.release.environment_id,
                 environment_kind=environment_kind,
-                authority_class=AuthorityClass(
-                    self._settings.release.authority_class
-                ),
+                authority_class=AuthorityClass(self._settings.release.authority_class),
                 account_ref=self._settings.release.account_id,
             )
             self._proposal_processors[activation.activation_id] = processor
@@ -642,6 +743,9 @@ class ProductExecutorRuntime:
                 loop=self._loop,
                 coordinator=self.coordinator,
                 fact_provider=fact_provider.risk_reduction_facts,
+                entry_order_absence_provider=(
+                    fact_provider.entry_order_is_definitely_absent
+                ),
                 environment_id=self._settings.release.environment_id,
             )
             self._responsibility_processors[activation.activation_id] = responsibility
@@ -650,19 +754,32 @@ class ProductExecutorRuntime:
                 activation_id: str = activation.activation_id,
             ) -> ActivationStrategyState:
                 current = planning.get_activation(activation_id)
+                entry_responsibility_open = (
+                    self.coordinator.has_open_entry_responsibility(activation_id)
+                )
+                new_risk_allowed = self.coordinator.new_risk_allowed(activation_id)
                 return ActivationStrategyState(
-                    entry_opportunity_consumed=current.entry_opportunity_consumed,
+                    entry_opportunity_consumed=(
+                        current.entry_opportunity_consumed
+                        or entry_responsibility_open
+                    ),
                     lifecycle=current.lifecycle.value,
                     run_state=current.run_state.value,
                     new_risk_allowed=(
                         current.lifecycle is PlanLifecycle.RUNNING
                         and current.run_state is RunState.ACTIVE
+                        and new_risk_allowed
                     ),
                 )
 
             def proposal_sink(
                 proposal: StrategyProposal,
             ) -> None:
+                self._record_runtime_event(
+                    "strategy_proposal_observed",
+                    activation_id=proposal.activation_id,
+                    source_identity=proposal.source_identity,
+                )
                 self.submit_strategy_proposal(proposal)
 
             def sizing_provider(
@@ -673,18 +790,33 @@ class ProductExecutorRuntime:
                 direction=activation.direction,
                 used_tracker: LiveEntryFactTracker = tracker,
             ) -> EntrySizingSnapshot | None:
-                instrument_id = f"{instrument_ref}.BINANCE"
-                instrument = self.node.cache.instrument(
-                    InstrumentId.from_str(instrument_id)
+                self._record_runtime_event(
+                    "entry_sizing_requested",
+                    activation_id=activation_id,
                 )
-                account = self.node.cache.account_for_venue(BINANCE)
-                if instrument is None or account is None:
+                instrument_id = f"{instrument_ref}.BINANCE"
+                nautilus_instrument_id = InstrumentId.from_str(instrument_id)
+                instrument = self.node.cache.instrument(nautilus_instrument_id)
+                account = self.node.cache.account_for_venue(
+                    nautilus_instrument_id.venue
+                )
+                if instrument is None:
+                    self._record_runtime_event(
+                        "entry_sizing_unavailable",
+                        activation_id=activation_id,
+                        reason_code="INSTRUMENT_CACHE_MISSING",
+                    )
+                    return None
+                if account is None:
+                    self._record_runtime_event(
+                        "entry_sizing_unavailable",
+                        activation_id=activation_id,
+                        reason_code="ACCOUNT_CACHE_MISSING",
+                    )
                     return None
                 try:
-                    boundary = self.coordinator.get_entry_sizing_boundary(
-                        activation_id
-                    )
-                    return build_live_entry_sizing_snapshot(
+                    boundary = self.coordinator.get_entry_sizing_boundary(activation_id)
+                    snapshot = build_live_entry_sizing_snapshot(
                         instrument_id=instrument_id,
                         direction=direction,
                         cutoff_ns=self.node.kernel.clock.timestamp_ns(),
@@ -693,7 +825,17 @@ class ProductExecutorRuntime:
                         account=account,
                         boundary=boundary,
                     )
-                except ProductPreSubmitRejected:
+                    self._record_runtime_event(
+                        "entry_sizing_ready",
+                        activation_id=activation_id,
+                    )
+                    return snapshot
+                except ProductPreSubmitRejected as exc:
+                    self._record_runtime_event(
+                        "entry_sizing_unavailable",
+                        activation_id=activation_id,
+                        reason_code=exc.reason_code,
+                    )
                     return None
 
             evaluator = NautilusBarEntryEvaluator(
@@ -701,7 +843,7 @@ class ProductExecutorRuntime:
                 instrument_ref=activation.instrument_ref,
                 parameters=parameters,
                 decision_not_before=version.valid_from,
-                valid_until=version.valid_until,
+                valid_until=entry_valid_until,
                 sizing_provider=sizing_provider,
                 requires_live_warmup=True,
             )
@@ -716,7 +858,17 @@ class ProductExecutorRuntime:
                 event: object,
                 used_normalizer=normalizer,
                 used_responsibility: ProductResponsibilityBoundary = responsibility,
+                activation_id: str = activation.activation_id,
             ) -> None:
+                client_order_id = getattr(event, "client_order_id", None)
+                self._record_runtime_event(
+                    "execution_event_observed",
+                    activation_id=activation_id,
+                    event_type=type(event).__name__,
+                    client_order_id=(
+                        str(client_order_id) if client_order_id is not None else None
+                    ),
+                )
                 normalized = self.coordinator.handle_nautilus_order_event(
                     used_normalizer,
                     event,
@@ -724,12 +876,53 @@ class ProductExecutorRuntime:
                 )
                 used_responsibility.submit_event(normalized)
 
+            def bar_event_sink(
+                bar: object,
+                *,
+                activation_id: str = activation.activation_id,
+            ) -> None:
+                self._record_runtime_event(
+                    "strategy_bar_observed",
+                    activation_id=activation_id,
+                    bar_type=str(getattr(bar, "bar_type", "UNKNOWN")),
+                    ts_event=int(getattr(bar, "ts_event", 0)),
+                )
+
+            def bar_failure_sink(
+                bar: object,
+                exception: Exception,
+                *,
+                activation_id: str = activation.activation_id,
+            ) -> None:
+                self._record_runtime_event(
+                    "strategy_bar_failed",
+                    activation_id=activation_id,
+                    bar_type=str(getattr(bar, "bar_type", "UNKNOWN")),
+                    exception_type=type(exception).__name__,
+                    reason_code=str(exception),
+                )
+
+            def history_warmup_failure_sink(
+                stage: str,
+                item: object | None,
+                exception: Exception,
+                *,
+                activation_id: str = activation.activation_id,
+            ) -> None:
+                self._record_runtime_event(
+                    "strategy_history_warmup_failed",
+                    activation_id=activation_id,
+                    stage=stage,
+                    item_type=type(item).__name__ if item is not None else "NONE",
+                    bar_type=str(getattr(item, "bar_type", "UNKNOWN")),
+                    exception_type=type(exception).__name__,
+                    reason_code=str(exception),
+                )
+
             def adapter_factory(
                 activation_id: str = activation.activation_id,
                 instrument_ref: str = activation.instrument_ref,
-                logic: OneShotDonchianAtrLogic = OneShotDonchianAtrLogic(
-                    parameters
-                ),
+                logic: OneShotDonchianAtrLogic = OneShotDonchianAtrLogic(parameters),
                 used_state_provider=state_provider,
                 used_proposal_sink=proposal_sink,
                 used_event_sink=event_sink,
@@ -745,6 +938,9 @@ class ProductExecutorRuntime:
                     persisted_action_capability=capability,
                     execution_event_sink=used_event_sink,
                     bar_evaluator=used_evaluator,
+                    bar_event_sink=bar_event_sink,
+                    bar_failure_sink=bar_failure_sink,
+                    history_warmup_failure_sink=history_warmup_failure_sink,
                     quote_event_sink=used_tracker.record_quote,
                     mark_price_event_sink=used_tracker.record_mark,
                     live_history_warmup=True,
@@ -756,6 +952,51 @@ class ProductExecutorRuntime:
                     factory=adapter_factory,
                 )
             )
+            self._record_runtime_event(
+                "strategy_adapter_started",
+                activation_id=activation.activation_id,
+                entry_valid_until=entry_valid_until.isoformat(),
+            )
+
+    async def _wait_for_stop_and_sync_activations(
+        self,
+        stop_wait: Callable[[], object],
+        capability: object,
+        *,
+        interval_seconds: float = 1.0,
+    ) -> None:
+        """Discover UI-created Demo activations without restarting the Executor."""
+
+        if self._settings.release.profile != "BINANCE_DEMO":
+            await self._loop.run_in_executor(None, stop_wait)
+            return
+        lifecycle = self._lifecycle
+        if lifecycle is None:
+            raise ExecutorRuntimeError("PRODUCT_RUNTIME_NOT_BUILT")
+
+        stop_future = self._loop.run_in_executor(None, stop_wait)
+        while not stop_future.done():
+            await asyncio.sleep(interval_seconds)
+            if stop_future.done():
+                break
+            previous_ids = set(lifecycle.activation_ids)
+            self._restore_paused_adapters(capability)
+            for activation_id, processor in tuple(
+                self._responsibility_processors.items()
+            ):
+                try:
+                    await processor.sync(activation_id)
+                except Exception as exc:
+                    self._record_runtime_event(
+                        "responsibility_sync_failed",
+                        activation_id=activation_id,
+                        reason=type(exc).__name__,
+                        reason_code=str(exc),
+                    )
+            current_ids = set(lifecycle.activation_ids)
+            if current_ids - previous_ids:
+                await self._wait_for_strategy_history_warmup()
+        await stop_future
 
     async def _startup_and_stop(
         self,
@@ -821,7 +1062,10 @@ class ProductExecutorRuntime:
                     "runtime_real_write_gate": self._runtime_real_write_gate,
                 }
             )
-        await self._loop.run_in_executor(None, stop_wait)
+        await self._wait_for_stop_and_sync_activations(
+            stop_wait,
+            self._capability,
+        )
         if self._lifecycle is not None:
             self._lifecycle.stop_all()
         await self.node.stop_async()

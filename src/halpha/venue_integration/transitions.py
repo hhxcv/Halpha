@@ -382,6 +382,28 @@ def mark_submission_unknown(
     )
 
 
+def defer_unknown_query(
+    action: ExecutionAction,
+    *,
+    next_query_at: datetime,
+    observed_at: datetime,
+) -> ExecutionAction:
+    """Rate-limit another query without changing the unresolved responsibility."""
+
+    if action.state is not ExecutionActionState.SUBMITTED_UNKNOWN:
+        raise ExecutionActionConflict("EXECUTION_ACTION_TRANSITION_INVALID")
+    values = action.model_dump(mode="python", exclude={"state_digest"})
+    values.update(
+        {
+            "next_query_at": next_query_at,
+            "state_version": action.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+    values["state_digest"] = execution_action_state_digest(values)
+    return ExecutionAction(**values)
+
+
 def apply_venue_outcome(
     action: ExecutionAction,
     *,

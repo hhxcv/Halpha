@@ -7,7 +7,7 @@ plans, activations, and UX command state.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -53,6 +53,17 @@ from halpha.planning.transitions import (
     resolve_existing_event,
     update_protection_projection,
 )
+
+
+def _entry_valid_until(
+    version: TradePlanVersion,
+    *,
+    activated_at: datetime,
+) -> datetime:
+    value = version.strategy_basis.normalized_parameters.get("entry_valid_minutes")
+    if not isinstance(value, int):
+        raise ValueError("ENTRY_VALID_MINUTES_INVALID")
+    return min(version.valid_until, activated_at + timedelta(minutes=value))
 
 
 class PlanningApplicationService:
@@ -154,6 +165,7 @@ class PlanningApplicationService:
             raise ValueError("PRODUCT_BUILD_MISMATCH")
         if not (version.valid_from <= observed_at < version.valid_until):
             raise ValueError("PLAN_EXPIRED")
+        entry_valid_until = _entry_valid_until(version, activated_at=observed_at)
         activation = PlanActivation(
             activation_id=activation_id,
             environment_id=self._environment_id,
@@ -167,7 +179,7 @@ class PlanningApplicationService:
             framework_strategy_id=strategy_id_for_activation(activation_id),
             target_exposure=version.target_exposure,
             rule_state={
-                "deadlines": {"entry_valid_until": version.valid_until.isoformat()},
+                "deadlines": {"entry_valid_until": entry_valid_until.isoformat()},
                 "condition_judgements": {},
                 "last_bar_cursors": {},
                 "capital": {
@@ -232,6 +244,7 @@ class PlanningApplicationService:
         plan_event_id: str,
         proposal: StrategyProposal,
         action_check: ActionCheckInput,
+        entry_responsibility_open: bool,
         created_at: datetime,
     ) -> PlanEvent:
         """Normalize one proposal, perform CAP's first check, and append one event."""
@@ -253,11 +266,16 @@ class PlanningApplicationService:
             return replay
 
         proposed_action = proposed_action_from_strategy_proposal(activation, proposal)
+        block_reason = None
         if (
             activation.lifecycle is not PlanLifecycle.RUNNING
             or activation.run_state is not RunState.ACTIVE
             or activation.entry_opportunity_consumed
         ):
+            block_reason = "NEW_RISK_STOPPED"
+        elif entry_responsibility_open:
+            block_reason = "ENTRY_RESPONSIBILITY_OPEN"
+        if block_reason is not None:
             event = build_plan_event(
                 plan_event_id=plan_event_id,
                 activation=activation,
@@ -265,9 +283,9 @@ class PlanningApplicationService:
                 source_identity=proposal.source_identity,
                 source_cutoff=proposal.source_cutoff,
                 input_digest=proposal.input_digest,
-                reason_code="NEW_RISK_STOPPED",
+                reason_code=block_reason,
                 proposed_action=None,
-                no_action_reason="NEW_RISK_STOPPED",
+                no_action_reason=block_reason,
                 condition_judgement=ConditionJudgement(
                     rule_id=proposal.rule_id,
                     source_identity=proposal.source_identity,
@@ -279,7 +297,7 @@ class PlanningApplicationService:
                 ),
                 capital_decision={
                     "accepted": False,
-                    "reason_code": "NOT_EVALUATED_NEW_RISK_STOPPED",
+                    "reason_code": f"NOT_EVALUATED_{block_reason}",
                 },
                 created_at=created_at,
             )

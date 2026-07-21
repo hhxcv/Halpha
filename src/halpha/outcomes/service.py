@@ -10,14 +10,15 @@ from psycopg import Connection
 
 from halpha.domain_values import content_digest
 from halpha.outcomes.models import (
-    EVALUATION_KEYS,
     EvaluationResult,
     EvidencePurpose,
+    OWNER_CONCLUSION_KEY,
     PrimaryResult,
     Review,
     ReviewStatus,
 )
 from halpha.outcomes.repository import OutcomeConflict, PostgreSQLOutcomeRepository
+from halpha.outcomes.trade_result import summarize_trade_result
 
 
 TERMINAL_ACTION_STATES = frozenset(
@@ -51,7 +52,11 @@ class OutcomeApplicationService:
         latest = self._repository.get_latest_for_activation(
             activation_id, for_update=True
         )
-        if latest is not None and latest.input_digest == input_digest:
+        if latest is not None and _review_matches_basis(
+            latest,
+            basis=basis,
+            input_digest=input_digest,
+        ):
             return latest
         if latest is not None and latest.status is not ReviewStatus.SUPERSEDED:
             superseded = _replace_review(latest, status=ReviewStatus.SUPERSEDED)
@@ -87,12 +92,13 @@ class OutcomeApplicationService:
         review_id: str,
         *,
         expected_version: int,
-        evaluations: dict[str, dict[str, Any]],
+        conclusion: EvaluationResult,
+        note: str,
     ) -> Review:
         current = self._repository.get_review(review_id, expected_version)
         if current.status is ReviewStatus.SUPERSEDED:
             raise OutcomeConflict("REVIEW_VERSION_CONFLICT")
-        normalized = _validate_evaluations(evaluations)
+        normalized = _owner_conclusion(conclusion, note)
         completed = _replace_review(
             current,
             status=ReviewStatus.COMPLETE,
@@ -120,7 +126,7 @@ class OutcomeApplicationService:
                    account_ref, instrument_ref, strategy_id, lifecycle, run_state,
                    protection_state,
                    responsibility_owner, takeover_scope, closure_digest, result_ref,
-                   created_at, updated_at, state_version
+                   created_at, updated_at, state_version, direction
             FROM halpha.plan_activation
             WHERE environment_id = %s AND activation_id = %s
             """,
@@ -150,7 +156,7 @@ class OutcomeApplicationService:
         actions = self._connection.execute(
             """
             SELECT execution_action_id, state_version, state, state_digest,
-                   closure_evidence_digest, updated_at
+                   closure_evidence_digest, updated_at, action_kind
             FROM halpha.execution_action
             WHERE environment_id = %s AND activation_id = %s
             ORDER BY created_at, execution_action_id
@@ -159,7 +165,8 @@ class OutcomeApplicationService:
         ).fetchall()
         facts = self._connection.execute(
             """
-            SELECT venue_fact_id, schema_version, kind, content_digest, cutoff
+            SELECT venue_fact_id, schema_version, kind, content_digest, cutoff,
+                   source_time, payload, action_ref
             FROM halpha.venue_fact
             WHERE environment_id = %s AND activation_ref = %s AND cutoff <= %s
             ORDER BY cutoff, venue_fact_id
@@ -250,13 +257,19 @@ class OutcomeApplicationService:
         else:
             primary_result = PrimaryResult.COMPLETED
         missing_refs = ["plan_version"] if plan is None else []
-        evaluations = _draft_evaluations(
-            primary_result=primary_result,
-            missing_refs=missing_refs,
-            closure_digest=str(activation[12]),
-            event_count=len(events),
-            action_count=len(actions),
-            fact_count=len(facts),
+        evaluations = _draft_evaluations()
+        trade_result = summarize_trade_result(
+            direction=str(activation[17]),
+            action_kinds={str(row[0]): str(row[6]) for row in actions},
+            facts=(
+                {
+                    "kind": str(row[2]),
+                    "payload": dict(row[6]),
+                    "action_ref": str(row[7]) if row[7] is not None else None,
+                    "source_time": row[5].isoformat() if row[5] is not None else None,
+                }
+                for row in facts
+            ),
         )
         return {
             "input_refs": input_refs,
@@ -269,6 +282,7 @@ class OutcomeApplicationService:
                 ),
                 "venue_fact_refs": [str(row[0]) for row in facts],
                 "missing_refs": missing_refs,
+                "trade_result": trade_result,
             },
             "open_responsibilities": {
                 "execution_action_refs": open_action_refs,
@@ -284,79 +298,44 @@ class OutcomeApplicationService:
             ),
         }
 
-def _draft_evaluations(
-    *,
-    primary_result: PrimaryResult,
-    missing_refs: list[str],
-    closure_digest: str,
-    event_count: int,
-    action_count: int,
-    fact_count: int,
-) -> dict[str, dict[str, Any]]:
-    unknown = bool(missing_refs) or primary_result is PrimaryResult.RESULT_UNKNOWN
-    base_result = (
-        EvaluationResult.UNKNOWN.value
-        if unknown
-        else EvaluationResult.AS_EXPECTED.value
-    )
+def _draft_evaluations() -> dict[str, dict[str, Any]]:
     return {
-        "system_maintenance": {
-            "result": base_result,
-            "reason": "System mechanism evidence is evaluated before strategy behavior.",
-            "evidence_refs": [closure_digest],
-        },
-        "plan": {
-            "result": base_result,
-            "reason": "Plan lifecycle is reconstructed from the activation and ordered plan events.",
-            "evidence_refs": [f"plan_event_count:{event_count}"],
-        },
-        "capital_authority": {
-            "result": base_result,
-            "reason": "计划、动作和事实引用保持原身份，不复制生命周期。",
-            "evidence_refs": [f"missing:{','.join(missing_refs)}" if missing_refs else "references:complete"],
-        },
-        "execution_facts": {
-            "result": base_result,
-            "reason": "Execution actions and venue facts remain separate authoritative references.",
-            "evidence_refs": [f"actions:{action_count}", f"facts:{fact_count}"],
-        },
-        "interaction": {
+        OWNER_CONCLUSION_KEY: {
             "result": EvaluationResult.UNKNOWN.value,
-            "reason": "Owner evaluation is required before completion.",
+            "reason": "",
             "evidence_refs": [],
-        },
-        "account_result": {
-            "result": (
-                EvaluationResult.NOT_APPLICABLE.value
-                if primary_result is PrimaryResult.NO_ACTION
-                else base_result
-            ),
-            "reason": "Only attributed venue facts can support the account result.",
-            "evidence_refs": [f"facts:{fact_count}"],
-        },
+        }
     }
 
 
-def _validate_evaluations(
-    evaluations: dict[str, dict[str, Any]],
+def _review_matches_basis(
+    review: Review,
+    *,
+    basis: dict[str, Any],
+    input_digest: str,
+) -> bool:
+    """Reuse a review only when its facts and current derived result still match."""
+
+    return (
+        review.input_digest == input_digest
+        and review.primary_result == basis["primary_result"]
+        and review.account_result == basis["account_result"]
+        and review.open_responsibilities == basis["open_responsibilities"]
+        and review.evidence_purpose == basis["evidence_purpose"]
+    )
+
+
+def _owner_conclusion(
+    conclusion: EvaluationResult,
+    note: str,
 ) -> dict[str, dict[str, Any]]:
-    if set(evaluations) != EVALUATION_KEYS:
-        raise OutcomeConflict("REVIEW_COMPLETION_INCOMPLETE")
-    allowed = {item.value for item in EvaluationResult}
-    normalized: dict[str, dict[str, Any]] = {}
-    for key, item in evaluations.items():
-        if set(item) != {"result", "reason", "evidence_refs"}:
-            raise OutcomeConflict("REVIEW_COMPLETION_INCOMPLETE")
-        if item["result"] not in allowed or not str(item["reason"]).strip():
-            raise OutcomeConflict("REVIEW_COMPLETION_INCOMPLETE")
-        if not isinstance(item["evidence_refs"], list):
-            raise OutcomeConflict("REVIEW_COMPLETION_INCOMPLETE")
-        normalized[key] = {
-            "result": str(item["result"]),
-            "reason": str(item["reason"]).strip(),
-            "evidence_refs": [str(value) for value in item["evidence_refs"]],
+    return {
+        OWNER_CONCLUSION_KEY: {
+            "result": conclusion.value,
+            "reason": note.strip(),
+            "evidence_refs": [],
         }
-    return normalized
+    }
 
 
 def _replace_review(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -24,6 +25,7 @@ class NormalizedNautilusEvent:
     client_order_id: str | None = None
     definitely_not_submitted: bool = False
     result_unknown: bool = False
+    unknown_reason: str | None = None
 
 
 class NautilusExecutionEventNormalizer:
@@ -86,10 +88,27 @@ class NautilusExecutionEventNormalizer:
                 facts=(),
                 client_order_id=client_order_id,
                 result_unknown=cancel_action is not None,
+                unknown_reason=(
+                    "VENUE_CANCEL_RESULT_UNKNOWN" if cancel_action is not None else None
+                ),
+            )
+
+        if event_type == "OrderRejected" and _submission_result_is_unknown(event):
+            return NormalizedNautilusEvent(
+                action=action,
+                facts=(),
+                client_order_id=client_order_id,
+                result_unknown=action is not None,
+                unknown_reason=(
+                    "VENUE_SUBMISSION_RESULT_UNKNOWN" if action is not None else None
+                ),
             )
 
         status = {
-            "OrderAccepted": "ACKNOWLEDGED",
+            # Nautilus emits OrderAccepted for Binance order/algo status NEW.
+            # This is the authoritative venue event that the order is active;
+            # waiting for a later OrderUpdated leaves resting protection UNKNOWN.
+            "OrderAccepted": "WORKING",
             "OrderUpdated": "WORKING",
             "OrderRejected": "REJECTED",
             "OrderCanceled": "CANCELLED",
@@ -287,3 +306,47 @@ def _source_class(
     if bool(getattr(event, "reconciliation", False)):
         return VenueFactSourceClass.VENUE_QUERY
     return VenueFactSourceClass.VENUE_STREAM
+
+
+_SUBMISSION_UNKNOWN_HTTP_STATUS = re.compile(
+    r"(?:\bhttp(?:error)?(?:/\d(?:\.\d)?)?\s+|<title>\s*|"
+    r"\bstatus(?:\s+code)?\s*[:=]?\s*)(?:408|5\d\d)\b",
+)
+
+
+def _submission_result_is_unknown(event: object) -> bool:
+    """Recognize post-submit responses that cannot prove a terminal venue result."""
+
+    reason = str(getattr(event, "reason", "")).strip().casefold()
+    if not reason:
+        return False
+    # LiveExecutionEngine resolves an order which stayed in-flight after all
+    # status queries as a reconciliation OrderRejected(reason="UNKNOWN"). This
+    # is a technical cache resolution, not proof that Binance rejected or never
+    # accepted the original client order identity.
+    if bool(getattr(event, "reconciliation", False)) and reason == "unknown":
+        return True
+    if _SUBMISSION_UNKNOWN_HTTP_STATUS.search(reason):
+        return True
+    return any(
+        marker in reason
+        for marker in (
+            "-1007",
+            "execution status unknown",
+            "send status unknown",
+            "timeout waiting for response from backend server",
+            "unknown error, please check your request or try again later",
+            "request occur unknown error",
+            "bad gateway",
+            "gateway timeout",
+            "service unavailable",
+            "internal server error",
+            "request timeout",
+            "connection reset",
+            "connection aborted",
+            "connection closed",
+            "remote end closed connection",
+            "unexpected eof",
+            "timed out",
+        )
+    )

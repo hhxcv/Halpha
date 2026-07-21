@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -8,6 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 from nautilus_trader.adapters.binance.common.enums import BinanceEnvironment
+from nautilus_trader.model.identifiers import Venue
 from pydantic import SecretStr
 
 import halpha.executor.runtime as runtime_module
@@ -16,17 +18,37 @@ from halpha.executor.forward_observation import ForwardObservationSpec
 from halpha.executor.runtime import (
     ExecutorRuntimeError,
     ProductExecutorRuntime,
+    _activation_entry_deadline,
     _cached_leaves_quantity,
     _connect_product_database,
     build_product_node_config,
 )
+from halpha.product_build import EXECUTOR_STARTING_APPLICATION_NAME
 from halpha.planning.adapter import HalphaStrategyAdapter
 from halpha.planning.bar_evaluation import NautilusBarEntryEvaluator
+from halpha.planning.models import PlanLifecycle
 from halpha.planning.registry import Direction, OneShotParameters
 from halpha.planning.strategies.one_shot import OneShotDonchianAtrLogic
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_activation_entry_deadline_uses_persisted_activation_window() -> None:
+    activation = SimpleNamespace(
+        rule_state={
+            "deadlines": {"entry_valid_until": "2026-07-19T22:15:00+00:00"}
+        }
+    )
+
+    assert _activation_entry_deadline(activation) == datetime(
+        2026, 7, 19, 22, 15, tzinfo=UTC
+    )
+
+
+def test_activation_entry_deadline_rejects_missing_state() -> None:
+    with pytest.raises(ExecutorRuntimeError, match="ENTRY_DEADLINE_MISSING"):
+        _activation_entry_deadline(SimpleNamespace(rule_state={}))
 
 
 def _config(profile: str):
@@ -72,7 +94,7 @@ def test_demo_product_node_uses_the_accepted_single_topology() -> None:
     assert node.save_state is False
     assert node.exec_engine.reconciliation is True
     assert node.exec_engine.reconciliation_startup_delay_secs == 10.0
-    assert node.exec_engine.inflight_check_interval_ms == 0
+    assert node.exec_engine.inflight_check_interval_ms == 2_000
     assert node.exec_engine.open_check_open_only is True
     assert node.exec_engine.generate_missing_orders is True
     assert node.controller is not None
@@ -386,6 +408,7 @@ def test_product_database_connection_uses_explicit_transactions_on_autocommit() 
             connector,
             database_name="halpha_demo",
             password="qualification-password",
+            application_name=EXECUTOR_STARTING_APPLICATION_NAME,
         )
         is connection
     )
@@ -397,7 +420,28 @@ def test_product_database_connection_uses_explicit_transactions_on_autocommit() 
         "password": "qualification-password",
         "connect_timeout": 2,
         "autocommit": True,
+        "application_name": EXECUTOR_STARTING_APPLICATION_NAME,
     }
+
+
+def test_product_runtime_publishes_ready_build_on_existing_connection() -> None:
+    calls: list[tuple[str, tuple[str, ...]]] = []
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(profile="BINANCE_DEMO")
+    )
+    runtime._connection = SimpleNamespace(
+        execute=lambda statement, parameters: calls.append((statement, parameters))
+    )
+
+    runtime.publish_ready_product_build("b" * 64)
+
+    assert calls == [
+        (
+            "SELECT set_config('application_name', %s, false)",
+            ("halpha-executor:ready:" + "b" * 40,),
+        )
+    ]
 
 
 def test_live_write_product_runtime_fails_closed_without_an_open_runtime_gate() -> None:
@@ -535,6 +579,207 @@ def test_product_runtime_waits_for_every_strategy_history_warmup() -> None:
     asyncio.run(exercise())
 
 
+def test_demo_runtime_discovers_ui_created_activation_without_restart() -> None:
+    stop = threading.Event()
+    activation_ids: list[str] = []
+    sync_calls = 0
+    warmup_calls = 0
+
+    class FakeLifecycle:
+        @property
+        def activation_ids(self):
+            return tuple(activation_ids)
+
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(profile="BINANCE_DEMO")
+    )
+    runtime._lifecycle = FakeLifecycle()
+    runtime._responsibility_processors = {}
+
+    def sync(_capability: object) -> None:
+        nonlocal sync_calls
+        sync_calls += 1
+        activation_ids.append("activation-created-from-ui")
+        stop.set()
+
+    async def wait_for_warmup(*, timeout_seconds: float = 60.0) -> None:
+        del timeout_seconds
+        nonlocal warmup_calls
+        warmup_calls += 1
+
+    async def exercise() -> None:
+        runtime._loop = asyncio.get_running_loop()
+        runtime._restore_paused_adapters = sync
+        runtime._wait_for_strategy_history_warmup = wait_for_warmup
+        await runtime._wait_for_stop_and_sync_activations(
+            stop.wait,
+            object(),
+            interval_seconds=0.001,
+        )
+
+    asyncio.run(exercise())
+
+    assert sync_calls == 1
+    assert activation_ids == ["activation-created-from-ui"]
+    assert warmup_calls == 1
+
+
+def test_demo_runtime_keeps_running_when_responsibility_sync_fails() -> None:
+    stop = threading.Event()
+    events: list[tuple[str, dict[str, object]]] = []
+
+    class FailingProcessor:
+        @staticmethod
+        async def sync(activation_id: str) -> None:
+            assert activation_id == "activation-demo"
+            stop.set()
+            raise RuntimeError("private diagnostic detail")
+
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(profile="BINANCE_DEMO")
+    )
+    runtime._lifecycle = SimpleNamespace(activation_ids=("activation-demo",))
+    runtime._responsibility_processors = {
+        "activation-demo": FailingProcessor()
+    }
+    runtime._runtime_event_sink = lambda event, fields: events.append((event, fields))
+    runtime._restore_paused_adapters = lambda _capability: None
+    runtime._wait_for_strategy_history_warmup = lambda: None
+
+    async def exercise() -> None:
+        runtime._loop = asyncio.get_running_loop()
+        await runtime._wait_for_stop_and_sync_activations(
+            stop.wait,
+            object(),
+            interval_seconds=0.001,
+        )
+
+    asyncio.run(exercise())
+
+    assert events == [
+        (
+            "responsibility_sync_failed",
+            {
+                "activation_id": "activation-demo",
+                "reason": "RuntimeError",
+                "reason_code": "private diagnostic detail",
+            },
+        )
+    ]
+
+
+def test_demo_runtime_closes_an_expired_empty_activation_before_wiring(
+    monkeypatch,
+) -> None:
+    state = {"closed": False}
+    activation = SimpleNamespace(
+        activation_id="activation-demo-expired",
+        lifecycle=PlanLifecycle.RUNNING,
+        entry_opportunity_consumed=False,
+        rule_state={
+            "deadlines": {"entry_valid_until": "2026-07-19T00:00:00+00:00"}
+        },
+    )
+
+    class FakePlanning:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def list_open_activations():
+            return () if state["closed"] else (activation,)
+
+    class FakeCoordinator:
+        @staticmethod
+        def expire_empty_entry_window(**values):
+            assert values["activation_id"] == activation.activation_id
+            state["closed"] = True
+
+    monkeypatch.setattr(
+        runtime_module,
+        "PostgreSQLPlanningRepository",
+        FakePlanning,
+    )
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._connection = object()
+    runtime._lifecycle = SimpleNamespace(activation_ids=())
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(
+            profile="BINANCE_DEMO",
+            environment_id="demo-main",
+        )
+    )
+    runtime._coordinator = FakeCoordinator()
+    runtime._proposal_processors = {}
+    runtime._responsibility_processors = {}
+
+    runtime._restore_paused_adapters(object())
+
+    assert state["closed"] is True
+
+
+def test_product_activation_handoff_defers_warmup_until_old_adapter_is_removed(
+    monkeypatch,
+) -> None:
+    new_activation = SimpleNamespace(
+        activation_id="activation-new",
+        lifecycle=PlanLifecycle.RUNNING,
+        entry_opportunity_consumed=False,
+        rule_state={
+            "deadlines": {"entry_valid_until": "2099-07-20T12:30:00+00:00"}
+        },
+    )
+    version_reads: list[str] = []
+
+    class FakePlanning:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def list_open_activations():
+            return (new_activation,)
+
+        @staticmethod
+        def get_version(plan_version_ref):
+            version_reads.append(plan_version_ref)
+            raise AssertionError("new warmup must wait for the next sync cycle")
+
+    class FakeLifecycle:
+        activation_ids = ("activation-old",)
+
+        def __init__(self):
+            self.removed: list[str] = []
+
+        def stop_and_remove(self, activation_id):
+            self.removed.append(activation_id)
+
+    monkeypatch.setattr(
+        runtime_module,
+        "PostgreSQLPlanningRepository",
+        FakePlanning,
+    )
+    lifecycle = FakeLifecycle()
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._connection = object()
+    runtime._lifecycle = lifecycle
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(
+            profile="BINANCE_DEMO",
+            environment_id="demo-main",
+        )
+    )
+    runtime._coordinator = SimpleNamespace()
+    runtime._proposal_processors = {}
+    runtime._responsibility_processors = {}
+
+    runtime._restore_paused_adapters(object())
+
+    assert lifecycle.removed == ["activation-old"]
+    assert version_reads == []
+
+
 def test_product_open_activation_wires_warmup_proposal_and_event_path(
     monkeypatch,
 ) -> None:
@@ -546,6 +791,9 @@ def test_product_open_activation_wires_warmup_proposal_and_event_path(
         entry_opportunity_consumed=False,
         lifecycle=SimpleNamespace(value="RUNNING"),
         run_state=SimpleNamespace(value="ACTIVE"),
+        rule_state={
+            "deadlines": {"entry_valid_until": "2026-07-19T00:00:00+00:00"}
+        },
     )
     version = SimpleNamespace(
         valid_from=datetime(2026, 7, 18, tzinfo=UTC),
@@ -576,9 +824,18 @@ def test_product_open_activation_wires_warmup_proposal_and_event_path(
     class FakeLifecycle:
         adapter = None
 
+        @property
+        def activation_ids(self):
+            if self.adapter is None:
+                return ()
+            return (self.adapter.activation_id,)
+
         def start(self, spec):
             self.adapter = spec.factory()
             return self.adapter
+
+        def stop_and_remove(self, _activation_id):
+            self.adapter = None
 
     class FakeCoordinator:
         @staticmethod
@@ -611,22 +868,56 @@ def test_product_open_activation_wires_warmup_proposal_and_event_path(
     runtime._api_secret = SecretStr("qualification-secret")
     runtime._proxy_url = None
     runtime._loop = loop
+    observed_venues: list[Venue] = []
+
+    class FakeCache:
+        @staticmethod
+        def instrument(_instrument_id):
+            return object()
+
+        @staticmethod
+        def account_for_venue(venue):
+            observed_venues.append(venue)
+            return None
+
     runtime._node = SimpleNamespace(
-        cache=SimpleNamespace(),
+        cache=FakeCache(),
         kernel=SimpleNamespace(clock=SimpleNamespace(timestamp_ns=lambda: 0)),
     )
     runtime._coordinator = FakeCoordinator()
     runtime._proposal_processors = {}
     runtime._responsibility_processors = {}
+    runtime_events: list[tuple[str, dict[str, object]]] = []
+    runtime._runtime_event_sink = lambda event, fields: runtime_events.append(
+        (event, fields)
+    )
     try:
         runtime._restore_paused_adapters(object())
         adapter = lifecycle.adapter
         assert isinstance(adapter, HalphaStrategyAdapter)
         assert isinstance(adapter._bar_evaluator, NautilusBarEntryEvaluator)
+        assert adapter._bar_evaluator.sizing_provider(object()) is None
+        assert observed_venues == [Venue("BINANCE")]
         assert adapter._bar_evaluator.warmup_complete is False
         assert adapter._live_history_warmup is True
         assert adapter._quote_event_sink is not None
         assert adapter._mark_price_event_sink is not None
+        assert adapter._bar_event_sink is not None
+        assert adapter._bar_failure_sink is not None
+        adapter._bar_event_sink(
+            SimpleNamespace(bar_type="BTCUSDT-PERP-1-MINUTE-LAST-EXTERNAL", ts_event=1)
+        )
+        adapter._bar_failure_sink(
+            SimpleNamespace(bar_type="BTCUSDT-PERP-1-MINUTE-LAST-EXTERNAL"),
+            RuntimeError("evaluation-failed"),
+        )
+        assert [event for event, _fields in runtime_events] == [
+            "strategy_adapter_started",
+            "entry_sizing_requested",
+            "entry_sizing_unavailable",
+            "strategy_bar_observed",
+            "strategy_bar_failed",
+        ]
         assert tuple(runtime._proposal_processors) == (
             "activation-product-wiring",
         )

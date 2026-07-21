@@ -15,17 +15,13 @@ from halpha.source_identity import source_file_sha256
 
 
 ONE_SHOT_STRATEGY_ID = "ONE_SHOT_DONCHIAN_ATR_BREAKOUT"
-ONE_SHOT_STRATEGY_VERSION = "1.0.0"
-PARAMETER_SCHEMA_VERSION = "1.0.0"
+ONE_SHOT_STRATEGY_VERSION = "1.0.1"
+PARAMETER_SCHEMA_VERSION = "1.3.0"
 
 
 class Direction(StrEnum):
     LONG = "LONG"
     SHORT = "SHORT"
-
-
-class DecimalString(str):
-    """Marker type used only to keep JSON Schema values string-exact."""
 
 
 class OneShotParameters(BaseModel):
@@ -37,15 +33,16 @@ class OneShotParameters(BaseModel):
     )
 
     direction: Direction
-    channel_lookback_15m: int = Field(default=20, ge=20, le=96)
+    demo_immediate_entry: bool = False
+    channel_lookback_15m: int = Field(default=20, ge=4, le=96)
     confirmation_bars_1m: int = Field(default=2, ge=1, le=3)
     initial_stop_atr_multiple: str = "1.5"
     max_entry_extension_atr: str = "0.5"
     take_profit_1_r: str = "1.5"
     take_profit_1_fraction: str = "0.50"
     take_profit_2_r: str = "3.0"
-    max_hold_bars_15m: int = Field(default=96, ge=4, le=672)
-    entry_valid_minutes: int = Field(default=1440, ge=15, le=10080)
+    max_hold_bars_15m: int = Field(default=4, ge=4, le=672)
+    entry_valid_minutes: int = Field(default=60, ge=15, le=10080)
 
     @field_validator(
         "initial_stop_atr_multiple",
@@ -75,6 +72,10 @@ class OneShotParameters(BaseModel):
             raise ValueError("TAKE_PROFIT_ORDER_INVALID")
         return self
 
+    @property
+    def effective_confirmation_bars_1m(self) -> int:
+        return 1 if self.demo_immediate_entry else self.confirmation_bars_1m
+
 
 class CodeStrategyDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -82,6 +83,9 @@ class CodeStrategyDefinition(BaseModel):
     strategy_id: str
     strategy_version: str
     display_name: str
+    value_logic: str
+    applicable_scenarios: str
+    execution_behavior: str
     implementation_path: str
     implementation_digest: str
     parameter_schema_version: str
@@ -126,15 +130,66 @@ def _parameter_schema() -> dict[str, Any]:
         "required": ["direction"],
         "properties": {
             "direction": {"type": "string", "enum": ["LONG", "SHORT"]},
-            "channel_lookback_15m": {"type": "integer", "minimum": 20, "maximum": 96, "default": 20},
-            "confirmation_bars_1m": {"type": "integer", "minimum": 1, "maximum": 3, "default": 2},
-            "initial_stop_atr_multiple": {"type": "string", "pattern": decimal_pattern, "default": "1.5", "x-halpha-minimum": "1.0", "x-halpha-maximum": "3.0"},
-            "max_entry_extension_atr": {"type": "string", "pattern": decimal_pattern, "default": "0.5", "x-halpha-minimum": "0.1", "x-halpha-maximum": "1.0"},
-            "take_profit_1_r": {"type": "string", "pattern": decimal_pattern, "default": "1.5", "x-halpha-minimum": "1.0", "x-halpha-maximum": "3.0"},
-            "take_profit_1_fraction": {"type": "string", "pattern": decimal_pattern, "default": "0.50", "x-halpha-minimum": "0.25", "x-halpha-maximum": "0.75"},
-            "take_profit_2_r": {"type": "string", "pattern": decimal_pattern, "default": "3.0", "x-halpha-minimum": "2.0", "x-halpha-maximum": "6.0"},
-            "max_hold_bars_15m": {"type": "integer", "minimum": 4, "maximum": 672, "default": 96},
-            "entry_valid_minutes": {"type": "integer", "minimum": 15, "maximum": 10080, "default": 1440},
+            "demo_immediate_entry": {"type": "boolean", "default": False},
+            "channel_lookback_15m": {
+                "type": "integer",
+                "minimum": 4,
+                "maximum": 96,
+                "default": 20,
+            },
+            "confirmation_bars_1m": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3,
+                "default": 2,
+            },
+            "initial_stop_atr_multiple": {
+                "type": "string",
+                "pattern": decimal_pattern,
+                "default": "1.5",
+                "x-halpha-minimum": "1.0",
+                "x-halpha-maximum": "3.0",
+            },
+            "max_entry_extension_atr": {
+                "type": "string",
+                "pattern": decimal_pattern,
+                "default": "0.5",
+                "x-halpha-minimum": "0.1",
+                "x-halpha-maximum": "1.0",
+            },
+            "take_profit_1_r": {
+                "type": "string",
+                "pattern": decimal_pattern,
+                "default": "1.5",
+                "x-halpha-minimum": "1.0",
+                "x-halpha-maximum": "3.0",
+            },
+            "take_profit_1_fraction": {
+                "type": "string",
+                "pattern": decimal_pattern,
+                "default": "0.50",
+                "x-halpha-minimum": "0.25",
+                "x-halpha-maximum": "0.75",
+            },
+            "take_profit_2_r": {
+                "type": "string",
+                "pattern": decimal_pattern,
+                "default": "3.0",
+                "x-halpha-minimum": "2.0",
+                "x-halpha-maximum": "6.0",
+            },
+            "max_hold_bars_15m": {
+                "type": "integer",
+                "minimum": 4,
+                "maximum": 672,
+                "default": 4,
+            },
+            "entry_valid_minutes": {
+                "type": "integer",
+                "minimum": 15,
+                "maximum": 10080,
+                "default": 60,
+            },
         },
         "allOf": [
             {
@@ -152,6 +207,19 @@ def _definition() -> CodeStrategyDefinition:
         strategy_id=ONE_SHOT_STRATEGY_ID,
         strategy_version=ONE_SHOT_STRATEGY_VERSION,
         display_name="单次 Donchian 突破与 ATR 风险退出",
+        value_logic=(
+            "用 Donchian 通道识别价格脱离近期区间的方向性突破，并用 ATR 统一入场距离、"
+            "仓位风险和退出尺度，争取捕捉短周期动量，同时限制单次交易损失。"
+        ),
+        applicable_scenarios=(
+            "适用于 Binance USDⓈ-M 的 BTCUSDT 永续合约出现明确 15 分钟通道突破、"
+            "希望以单次多头或空头交易参与短周期趋势的场景；震荡行情可能产生假突破。"
+        ),
+        execution_behavior=(
+            "激活后检查已闭合 15 分钟 K 线和配置数量的 1 分钟确认收盘；满足突破且未过度"
+            "延伸时发起一次市价入场，成交后设置 ATR 止损和两档止盈，并记录最长持仓期限；"
+            "每个激活最多入场一次。仅 Demo 流程检查开关会跳过自然突破等待。"
+        ),
         implementation_path="halpha.planning.strategies.one_shot:OneShotDonchianAtrLogic",
         implementation_digest=_implementation_digest(),
         parameter_schema_version=PARAMETER_SCHEMA_VERSION,
@@ -165,6 +233,7 @@ def _definition() -> CodeStrategyDefinition:
             "PROTECTIVE_STOP_REDUCE_ONLY",
             "TAKE_PROFIT_1",
             "TAKE_PROFIT_2",
+            "CANCEL_ORDER",
             "REDUCE_OR_CLOSE_MARKET",
         ),
         supported_directions=(Direction.LONG, Direction.SHORT),
@@ -193,12 +262,15 @@ def strategy_registry_payload() -> dict[str, Any]:
 
 
 def render_strategy_registry() -> str:
-    return json.dumps(
-        strategy_registry_payload(),
-        ensure_ascii=False,
-        indent=2,
-        sort_keys=True,
-    ) + "\n"
+    return (
+        json.dumps(
+            strategy_registry_payload(),
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
 
 
 def describe_strategy(strategy_id: str) -> CodeStrategyDefinition:
@@ -234,7 +306,7 @@ def build_fixed_plan_basis(
         parameter_digest=content_digest(normalized),
         fact_input_contract={
             "source_1m": "1-MINUTE-LAST-EXTERNAL",
-            "target_15m": "15-MINUTE-LAST-INTERNAL@1-MINUTE-EXTERNAL",
+            "target_15m": "15-MINUTE-LAST-EXTERNAL",
             "closed_and_continuous": True,
             "risk_increase_freshness_seconds": 65,
         },

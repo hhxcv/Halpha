@@ -69,6 +69,22 @@ class CapitalApplicationService:
             stop_states=stop_states,
         )
 
+    def new_risk_allowed(self, activation_id: str) -> bool:
+        activation = self._planning.get_activation(activation_id)
+        stop_states = self._capital.lock_current_stop_states(
+            account_ref=activation.account_ref,
+            activation_id=activation.activation_id,
+        )
+        stopped = {
+            category
+            for state in stop_states
+            for category in state.stopped_categories
+        }
+        return not bool(
+            stopped
+            & {StopCategory.NEW_RISK, StopCategory.ALL_EXCHANGE_CHANGES}
+        )
+
     def stop_new_risk_for_external_activity(
         self,
         *,

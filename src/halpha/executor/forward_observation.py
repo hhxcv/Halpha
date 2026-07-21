@@ -49,7 +49,7 @@ class ForwardObservationSpec(BaseModel):
     activation_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,95}$")
     instrument_ref: Literal["BTCUSDT-PERP"] = "BTCUSDT-PERP"
     strategy_id: Literal["ONE_SHOT_DONCHIAN_ATR_BREAKOUT"] = ONE_SHOT_STRATEGY_ID
-    strategy_version: Literal["1.0.0"] = ONE_SHOT_STRATEGY_VERSION
+    strategy_version: Literal["1.0.1"] = ONE_SHOT_STRATEGY_VERSION
     strategy_evidence_ref: str = Field(min_length=1, max_length=512)
     strategy_evidence_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
     configuration_digest: str = Field(pattern=r"^[0-9a-f]{64}$")

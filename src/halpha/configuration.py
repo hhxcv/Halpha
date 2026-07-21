@@ -7,8 +7,16 @@ import json
 from pathlib import Path
 import re
 from typing import Any, Literal, Mapping
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict, TomlConfigSettingsSource
 
 
@@ -75,9 +83,29 @@ class AppConfig(FrozenModel):
     port: int = Field(default=8765, ge=1024, le=65535)
     workers: Literal[1] = 1
     reload: Literal[False] = False
+    public_market_proxy_url: str | None = None
     database_credential_reference: WinVaultReference
     csrf_signing_reference: WinVaultReference
     smtp_credential_reference: WinVaultReference
+
+    @field_validator("public_market_proxy_url")
+    @classmethod
+    def validate_public_market_proxy_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "http"
+            or parsed.hostname not in {"127.0.0.1", "localhost"}
+            or parsed.port is None
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in {"", "/"}
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("PUBLIC_MARKET_PROXY_MUST_BE_NON_SECRET_LOOPBACK_HTTP")
+        return value.rstrip("/")
 
 
 class ExecutorConfig(FrozenModel):
@@ -104,9 +132,6 @@ class MaintenanceConfig(FrozenModel):
     log_root: str = Field(min_length=3, max_length=200)
     backup_root: str = Field(min_length=3, max_length=200)
     temporary_root: str = Field(min_length=3, max_length=200)
-    evidence_catalog_root: str = Field(min_length=3, max_length=200)
-    evidence_raw_root: str = Field(min_length=3, max_length=200)
-    evidence_report_root: str = Field(min_length=3, max_length=200)
     backup_retention_count: Literal[14] = 14
     backup_schedule_local: Literal["02:30"] = "02:30"
     demo: DatabaseMaintenanceTarget
@@ -132,9 +157,6 @@ class MaintenanceConfig(FrozenModel):
             self.log_root,
             self.backup_root,
             self.temporary_root,
-            self.evidence_catalog_root,
-            self.evidence_raw_root,
-            self.evidence_report_root,
         )
         for value in relative_paths:
             path = Path(value)

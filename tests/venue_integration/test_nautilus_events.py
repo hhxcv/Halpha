@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from types import SimpleNamespace
-
 from halpha.capital.models import RiskClass
 from halpha.venue_integration.models import (
     VenueFactAttributionClass,
@@ -53,7 +50,7 @@ def _normalizer(action):
     )
 
 
-def test_order_accepted_maps_to_attributed_authoritative_order_fact() -> None:
+def test_order_accepted_maps_to_attributed_working_order_fact() -> None:
     action = begin_submission(
         _action(),
         capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
@@ -70,7 +67,8 @@ def test_order_accepted_maps_to_attributed_authoritative_order_fact() -> None:
     assert fact.kind is VenueFactKind.ORDER_STATE
     assert fact.source_class is VenueFactSourceClass.VENUE_STREAM
     assert fact.attribution_class is VenueFactAttributionClass.HALPHA_EXECUTION
-    assert fact.payload["status"] == "ACKNOWLEDGED"
+    assert fact.payload["status"] == "WORKING"
+    assert _state_from_fact(fact).value == "WORKING"
 
 
 def test_fill_maps_trade_and_actual_commission_without_synthesizing_terminal_state() -> None:
@@ -152,3 +150,112 @@ def test_framework_denied_is_definitely_not_submitted_and_creates_no_venue_fact(
     result = _normalizer(action).normalize(_event("OrderDenied"), received_at=NOW)
     assert result.definitely_not_submitted is True
     assert result.facts == ()
+
+
+def test_deterministic_order_rejection_remains_a_terminal_venue_fact() -> None:
+    action = begin_submission(
+        _action(),
+        capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+        request_payload={"profile": "ENTRY_MARKET"},
+        observed_at=NOW,
+    )
+
+    result = _normalizer(action).normalize(
+        _event("OrderRejected", reason="MIN_NOTIONAL"),
+        received_at=NOW,
+    )
+
+    assert result.result_unknown is False
+    assert result.unknown_reason is None
+    assert result.facts[0].payload["status"] == "REJECTED"
+    assert result.facts[0].payload["reason"] == "MIN_NOTIONAL"
+
+
+def test_binance_timeout_rejection_keeps_submission_result_unknown() -> None:
+    action = begin_submission(
+        _action(),
+        capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+        request_payload={"profile": "ENTRY_MARKET"},
+        observed_at=NOW,
+    )
+
+    result = _normalizer(action).normalize(
+        _event(
+            "OrderRejected",
+            reason=(
+                "{'code': -1007, 'msg': 'Timeout waiting for response from backend "
+                "server. Send status unknown; execution status unknown.'}"
+            ),
+        ),
+        received_at=NOW,
+    )
+
+    assert result.result_unknown is True
+    assert result.unknown_reason == "VENUE_SUBMISSION_RESULT_UNKNOWN"
+    assert result.facts == ()
+
+
+def test_nautilus_inflight_resolution_does_not_become_a_terminal_rejection() -> None:
+    action = begin_submission(
+        _action(),
+        capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+        request_payload={"profile": "ENTRY_MARKET"},
+        observed_at=NOW,
+    )
+
+    result = _normalizer(action).normalize(
+        _event("OrderRejected", reason="UNKNOWN", reconciliation=True),
+        received_at=NOW,
+    )
+
+    assert result.result_unknown is True
+    assert result.unknown_reason == "VENUE_SUBMISSION_RESULT_UNKNOWN"
+    assert result.facts == ()
+
+
+def test_ambiguous_server_and_transport_rejections_keep_submission_result_unknown() -> None:
+    reasons = (
+        "Non-JSON response (HTTP 200): <html><title>502 Bad Gateway</title></html>",
+        "HTTP 408 Request Timeout",
+        "HTTP/1.1 503 Service Unavailable",
+        "Connection reset by peer",
+    )
+
+    for reason in reasons:
+        action = begin_submission(
+            _action(),
+            capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+            request_payload={"profile": "ENTRY_MARKET"},
+            observed_at=NOW,
+        )
+        result = _normalizer(action).normalize(
+            _event("OrderRejected", reason=reason),
+            received_at=NOW,
+        )
+
+        assert result.result_unknown is True, reason
+        assert result.unknown_reason == "VENUE_SUBMISSION_RESULT_UNKNOWN", reason
+        assert result.facts == (), reason
+
+
+def test_binance_error_code_5022_is_not_mistaken_for_http_502() -> None:
+    action = begin_submission(
+        _action(),
+        capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+        request_payload={"profile": "ENTRY_MARKET"},
+        observed_at=NOW,
+    )
+    result = _normalizer(action).normalize(
+        _event(
+            "OrderRejected",
+            reason=(
+                "{'code': -5022, 'msg': 'Due to the order could not be executed as maker, "
+                "the Post Only order will be rejected.'}"
+            ),
+        ),
+        received_at=NOW,
+    )
+
+    assert result.result_unknown is False
+    assert result.unknown_reason is None
+    assert result.facts[0].payload["status"] == "REJECTED"

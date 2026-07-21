@@ -29,7 +29,7 @@ from halpha.configuration import (
 )
 from halpha.operational_logging import configure_halpha_logging
 from halpha.runtime_identity import repository_root, require_repository_runtime
-from halpha.windows_runtime import current_process_sid, require_process_identity
+from halpha.windows_runtime import require_process_identity
 from halpha.winvault import maintenance_secret_resolver
 
 

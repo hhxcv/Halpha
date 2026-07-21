@@ -1,5 +1,5 @@
 {
-  "registry_digest": "1bb21f9886d1574b354c7fcf4b0ff9ed5dd242ddfd51057b8d71fd5f754a2502",
+  "registry_digest": "8cc96ffbcde99a9bee40f985ad958cbb932e1d0d8f60f07b2b4f3b6ecb97c999",
   "registry_kind": "STATIC_BUILD_ARTIFACT",
   "schema_version": 1,
   "strategies": [
@@ -9,8 +9,10 @@
         "PROTECTIVE_STOP_REDUCE_ONLY",
         "TAKE_PROFIT_1",
         "TAKE_PROFIT_2",
+        "CANCEL_ORDER",
         "REDUCE_OR_CLOSE_MARKET"
       ],
+      "applicable_scenarios": "适用于 Binance USDⓈ-M 的 BTCUSDT 永续合约出现明确 15 分钟通道突破、希望以单次多头或空头交易参与短周期趋势的场景；震荡行情可能产生假突破。",
       "display_name": "单次 Donchian 突破与 ATR 风险退出",
       "economic_scope": {
         "funding_model": "NOT_MODELED_IN_BACKTEST",
@@ -18,14 +20,15 @@
         "qualified_live_instrument": "BTCUSDT-PERP",
         "venue": "BINANCE_USDM"
       },
-      "implementation_digest": "66299533bb4a7fb56efe52e2ffb9fad281d4b29f0fe9cdb47049115d3323d32e",
+      "execution_behavior": "激活后检查已闭合 15 分钟 K 线和配置数量的 1 分钟确认收盘；满足突破且未过度延伸时发起一次市价入场，成交后设置 ATR 止损和两档止盈，并记录最长持仓期限；每个激活最多入场一次。仅 Demo 流程检查开关会跳过自然突破等待。",
+      "implementation_digest": "b4bb68099c345336229d30d7a09ea1088b49e7ecf4e66e6818415ba05310e0b8",
       "implementation_path": "halpha.planning.strategies.one_shot:OneShotDonchianAtrLogic",
       "native_indicators": [
         "nautilus_trader.indicators.DonchianChannel",
         "nautilus_trader.indicators.AverageTrueRange"
       ],
       "parameter_schema": {
-        "$id": "urn:halpha:strategy:ONE_SHOT_DONCHIAN_ATR_BREAKOUT:parameters:1.0.0",
+        "$id": "urn:halpha:strategy:ONE_SHOT_DONCHIAN_ATR_BREAKOUT:parameters:1.3.0",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
         "allOf": [
@@ -40,7 +43,7 @@
           "channel_lookback_15m": {
             "default": 20,
             "maximum": 96,
-            "minimum": 20,
+            "minimum": 4,
             "type": "integer"
           },
           "confirmation_bars_1m": {
@@ -48,6 +51,10 @@
             "maximum": 3,
             "minimum": 1,
             "type": "integer"
+          },
+          "demo_immediate_entry": {
+            "default": false,
+            "type": "boolean"
           },
           "direction": {
             "enum": [
@@ -57,7 +64,7 @@
             "type": "string"
           },
           "entry_valid_minutes": {
-            "default": 1440,
+            "default": 60,
             "maximum": 10080,
             "minimum": 15,
             "type": "integer"
@@ -77,7 +84,7 @@
             "x-halpha-minimum": "0.1"
           },
           "max_hold_bars_15m": {
-            "default": 96,
+            "default": 4,
             "maximum": 672,
             "minimum": 4,
             "type": "integer"
@@ -110,13 +117,14 @@
         "title": "单次 Donchian 突破与 ATR 风险退出",
         "type": "object"
       },
-      "parameter_schema_version": "1.0.0",
+      "parameter_schema_version": "1.3.0",
       "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
-      "strategy_version": "1.0.0",
+      "strategy_version": "1.0.1",
       "supported_directions": [
         "LONG",
         "SHORT"
-      ]
+      ],
+      "value_logic": "用 Donchian 通道识别价格脱离近期区间的方向性突破，并用 ATR 统一入场距离、仓位风险和退出尺度，争取捕捉短周期动量，同时限制单次交易损失。"
     }
   ]
 }

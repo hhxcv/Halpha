@@ -10,10 +10,12 @@ from psycopg import Connection
 from halpha.capital.models import StopCategory, StopStateVersion
 from halpha.capital.repository import PostgreSQLCapitalRepository
 from halpha.domain_values import content_digest
-from halpha.planning.models import PlanActivation
+from halpha.outcomes.service import OutcomeApplicationService, review_id_for_activation
+from halpha.planning.models import PlanActivation, PlanLifecycle
 from halpha.planning.repository import PostgreSQLPlanningRepository
 from halpha.planning.transitions import (
     ControlIntent,
+    complete_activation,
     enter_exit,
     enter_user_takeover,
     resume_activation,
@@ -30,9 +32,45 @@ from halpha.user_workbench.repository import CommandConflict, PostgreSQLCommandR
 
 class ActivationControlService:
     def __init__(self, connection: Connection[Any], environment_id: str) -> None:
+        self._connection = connection
+        self._environment_id = environment_id
         self._planning = PostgreSQLPlanningRepository(connection, environment_id)
         self._capital = PostgreSQLCapitalRepository(connection, environment_id)
         self._commands = PostgreSQLCommandRepository(connection, environment_id)
+
+    def _complete_if_no_venue_responsibility(
+        self,
+        activation: PlanActivation,
+        *,
+        reason: str,
+        command_ref: str,
+        observed_at: datetime,
+    ) -> PlanActivation:
+        if (
+            activation.has_entry_fill
+            or activation.pending_action_digest is not None
+        ):
+            return activation
+        closure_digest = content_digest(
+            {
+                "environment_id": activation.environment_id,
+                "activation_id": activation.activation_id,
+                "reason": reason,
+                "command_ref": command_ref,
+                "has_entry_fill": False,
+                "execution_action_count": 0,
+                "observed_at": observed_at,
+            }
+        )
+        return complete_activation(
+            activation,
+            closure_digest=closure_digest,
+            result_ref=review_id_for_activation(
+                activation.environment_id,
+                activation.activation_id,
+            ),
+            observed_at=observed_at,
+        )
 
     @staticmethod
     def _active_categories(states: tuple[StopStateVersion, ...]) -> frozenset[StopCategory]:
@@ -170,16 +208,35 @@ class ActivationControlService:
                 reason="EXIT_STRATEGY_STOP_NEW_RISK",
                 observed_at=command.submitted_at,
             )
-            receipt_state = ReceiptState.PROCESSING
-            pending = ("EXIT_CLOSURE_DIGEST",)
-            reason = "EXIT_RESPONSIBILITY_ACCEPTED"
+            activation = self._complete_if_no_venue_responsibility(
+                activation,
+                reason="EXIT_WITHOUT_VENUE_RESPONSIBILITY",
+                command_ref=command.command_id,
+                observed_at=command.submitted_at,
+            )
+            if activation.lifecycle is PlanLifecycle.COMPLETED:
+                reason = "EXIT_WITHOUT_VENUE_RESPONSIBILITY_COMPLETED"
+            else:
+                receipt_state = ReceiptState.PROCESSING
+                pending = ("EXIT_CLOSURE_DIGEST",)
+                reason = "EXIT_RESPONSIBILITY_ACCEPTED"
         elif intent is ControlIntent.USER_TAKEOVER:
             activation = enter_user_takeover(
                 activation,
                 takeover_scope=command.scope,
                 observed_at=command.submitted_at,
             )
-            reason = "USER_TAKEOVER_PERSISTED"
+            activation = self._complete_if_no_venue_responsibility(
+                activation,
+                reason="USER_TAKEOVER_WITHOUT_VENUE_RESPONSIBILITY",
+                command_ref=command.command_id,
+                observed_at=command.submitted_at,
+            )
+            reason = (
+                "USER_TAKEOVER_WITHOUT_VENUE_RESPONSIBILITY_COMPLETED"
+                if activation.lifecycle is PlanLifecycle.COMPLETED
+                else "USER_TAKEOVER_PERSISTED"
+            )
         else:  # pragma: no cover - enum is closed
             raise ValueError("CONTROL_INTENT_UNSUPPORTED")
 
@@ -200,4 +257,56 @@ class ActivationControlService:
             observed_at=command.submitted_at,
         )
         self._commands.update_receipt(updated, expected_version=receipt.state_version)
+        if activation.lifecycle is PlanLifecycle.COMPLETED:
+            OutcomeApplicationService(
+                self._connection,
+                self._environment_id,
+            ).update_activation_review(
+                activation.activation_id,
+                fact_cutoff=command.submitted_at,
+                observed_at=command.submitted_at,
+            )
         return updated
+
+    def finalize_completed_activation(
+        self,
+        activation_id: str,
+        *,
+        observed_at: datetime,
+    ) -> tuple[Receipt, ...]:
+        """Finish only receipts whose promised responsibility ended with the activation."""
+
+        activation = self._planning.get_activation(activation_id, for_update=True)
+        if activation.lifecycle is not PlanLifecycle.COMPLETED:
+            return ()
+        finalized: list[Receipt] = []
+        for command, receipt in self._commands.list_processing_for_target(
+            activation_id,
+            for_update=True,
+        ):
+            reason = {
+                ControlIntent.EXIT_STRATEGY: "EXIT_COMPLETED",
+                ControlIntent.STOP_NEW_RISK: (
+                    "NEW_RISK_STOPPED_AND_RESPONSIBILITIES_TERMINAL"
+                ),
+            }.get(command.intent)
+            if reason is None:
+                continue
+            updated = advance_receipt(
+                receipt,
+                state=ReceiptState.EFFECTIVE,
+                reason_code=reason,
+                result={
+                    "activation_id": activation.activation_id,
+                    "activation_state_version": activation.state_version,
+                    "result_ref": activation.result_ref,
+                },
+                pending_responsibility_refs=(),
+                observed_at=observed_at,
+            )
+            self._commands.update_receipt(
+                updated,
+                expected_version=receipt.state_version,
+            )
+            finalized.append(updated)
+        return tuple(finalized)

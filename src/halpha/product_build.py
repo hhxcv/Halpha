@@ -19,6 +19,20 @@ PRODUCT_BUILD_INPUT_PATTERNS = (
     "frontend/dist/**/*",
 )
 
+EXECUTOR_STARTING_APPLICATION_NAME = "halpha-executor:starting"
+EXECUTOR_READY_APPLICATION_NAME_PREFIX = "halpha-executor:ready:"
+
+
+def executor_ready_application_name(product_build_id: str) -> str:
+    """Return the bounded PostgreSQL session label for one ready Executor."""
+
+    normalized = product_build_id.strip().lower()
+    if len(normalized) != 64 or any(
+        character not in "0123456789abcdef" for character in normalized
+    ):
+        raise ValueError("PRODUCT_BUILD_ID_INVALID")
+    return f"{EXECUTOR_READY_APPLICATION_NAME_PREFIX}{normalized[:40]}"
+
 
 def calculate_product_build_id(root: Path, settings: HalphaSettings) -> str:
     """Hash product files and effective non-secret configuration only."""

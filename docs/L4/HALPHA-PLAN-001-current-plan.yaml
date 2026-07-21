@@ -86,7 +86,8 @@ component_sources:
 current_strategy:
   owner: HALPHA-ALP-002
   strategy_id: ONE_SHOT_DONCHIAN_ATR_BREAKOUT
-  strategy_version: 1.0.0
+  strategy_version: 1.0.1
+  parameter_schema_version: 1.3.0
   registry: src/halpha/planning/strategy_registry.json
   instrument: BTCUSDT-PERP
   supported_directions: [LONG, SHORT]
@@ -94,23 +95,27 @@ current_strategy:
 
 product_build:
   target: ONE_PRODUCT_BUILD_ID
-  current_product_build_id: cad1459d89a6ffca1f9e4ef818dbfef27be1041eeff1377cdf7d45b455e5d0bc
+  current_product_build_id: d8cb41345cc3392e00e178f257ec7d534726f0ce2e4d5989d865f5beaf26d1c3
   implementation: src/halpha/product_build.py
   current_status: CALCULATED_BY_APP_AND_EXECUTOR
   rule: 只散列产品运行文件和有效非秘密配置；时间、Git 状态、文档、测试与验证报告不参与
 
 current_iteration:
-  focus: 完成交易工作台剩余交互和真实账户路径的无凭据实现，保持交易所变更请求关闭
+  focus: >-
+    仅在 DEMO 和唯一现有策略范围内，通过工作台进行短周期使用、发现问题、最小修复并再次使用；
+    普通用户交易动作只通过界面完成，真实账户交易请求保持关闭。
   validation:
-    - 受影响文档和当前计划机械校验
     - 直接相关后端与前端测试
-    - 工作台实际浏览器检查
+    - 工作台实际浏览器使用
+    - Binance Demo 下单、成交、保护、退出和复盘事实核对
+  current_result: >-
+    App 与 Executor 已使用同一产品版本；策略改用 Binance 已闭合 15m K 线，
+    与工作台行情口径一致。一次自然信号 Demo 交易已通过工作台完成入场、保护、盈利退出和复盘，
+    净结果为 +0.20185 USDT，闭合后没有开放或未知执行责任。
   next_candidates:
-    - 完成交易工作台剩余交互
-    - 完成真实账户交易路径的无凭据实现、秘密最后加载和禁止请求反例
-    - 按每次改动影响重跑策略、Demo、数据库、Windows、SMTP、前端和故障检查
-    - 检查部署、停止、备份、恢复和接管
-    - 由用户在产品中配置并激活一次受限真实计划
+    - 继续通过工作台执行短周期 Demo 交易；无信号时允许按截止时间结束，不为制造交易而绕过策略条件
+    - 继续核对成交质量、净盈亏和执行异常是否提供足够的用户决策信息
+    - 只在实际使用暴露问题时增加直接修复和对应验证
 
 real_account_trading:
   design_owner: HALPHA-TRADEPLAN-002、HALPHA-CAP-002、HALPHA-EXE-002、HALPHA-SYS-002

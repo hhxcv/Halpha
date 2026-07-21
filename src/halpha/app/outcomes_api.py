@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from halpha.outcomes.repository import PostgreSQLOutcomeRepository
 from halpha.outcomes.repository import OutcomeConflict
+from halpha.outcomes.models import EvaluationResult
 from halpha.outcomes.service import OutcomeApplicationService
 
 
@@ -23,7 +24,8 @@ class ReviewRefreshPayload(OutcomeApiModel):
 
 class ReviewCompletionPayload(OutcomeApiModel):
     expected_version: int = Field(gt=0)
-    evaluations: dict[str, dict[str, Any]]
+    conclusion: EvaluationResult
+    note: str = Field(default="", max_length=2000)
 
 
 class OutcomesApiUnavailable(RuntimeError):
@@ -59,15 +61,56 @@ class PostgreSQLOutcomesApi:
 
     def list_reviews(self) -> list[dict[str, Any]]:
         with self._connect() as connection, connection.transaction():
-            return OutcomeApplicationService(
+            reviews = OutcomeApplicationService(
                 connection, self._environment_id
             ).list_reviews()
+            return self._attach_trade_context(connection, reviews)
 
     def read_review(self, review_id: str) -> dict[str, Any]:
         with self._connect() as connection, connection.transaction():
-            return OutcomeApplicationService(
+            result = OutcomeApplicationService(
                 connection, self._environment_id
             ).read_review(review_id)
+            result["review"] = self._attach_trade_context(
+                connection, [result["review"]]
+            )[0]
+            return result
+
+    def _attach_trade_context(
+        self,
+        connection: psycopg.Connection[Any],
+        reviews: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        activation_ids = [str(item["activation_id"]) for item in reviews]
+        if not activation_ids:
+            return reviews
+        rows = connection.execute(
+            """
+            SELECT a.activation_id, a.instrument_ref, a.direction, a.strategy_id,
+                   v.max_notional, a.created_at, a.updated_at
+            FROM halpha.plan_activation a
+            LEFT JOIN halpha.trade_plan_version v
+              ON v.environment_id = a.environment_id
+             AND v.plan_version_id = a.plan_version_ref
+            WHERE a.environment_id = %s AND a.activation_id::text = ANY(%s)
+            """,
+            (self._environment_id, activation_ids),
+        ).fetchall()
+        contexts = {
+            str(row[0]): {
+                "instrument_ref": str(row[1]),
+                "direction": str(row[2]),
+                "strategy_id": str(row[3]),
+                "trade_amount": str(row[4]) if row[4] is not None else None,
+                "activation_started_at": row[5].isoformat(),
+                "activation_updated_at": row[6].isoformat(),
+            }
+            for row in rows
+        }
+        return [
+            {**item, "trade_context": contexts.get(str(item["activation_id"]), {})}
+            for item in reviews
+        ]
 
     def refresh_review(
         self, review_id: str, payload: ReviewRefreshPayload
@@ -99,6 +142,7 @@ class PostgreSQLOutcomesApi:
             ).complete_activation_review(
                 review_id,
                 expected_version=payload.expected_version,
-                evaluations=payload.evaluations,
+                conclusion=payload.conclusion,
+                note=payload.note,
             )
             return {"review": review.model_dump(mode="json")}

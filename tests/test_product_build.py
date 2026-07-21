@@ -4,8 +4,10 @@ from pathlib import Path
 
 from halpha.configuration import load_settings
 from halpha.product_build import (
+    EXECUTOR_READY_APPLICATION_NAME_PREFIX,
     PRODUCT_BUILD_INPUT_PATTERNS,
     calculate_product_build_id,
+    executor_ready_application_name,
 )
 
 
@@ -70,3 +72,21 @@ def test_product_build_inputs_exclude_git_tests_docs_and_qualification_reports()
     assert "docs" not in joined
     assert "tools" not in joined
     assert "build/evidence" not in joined
+
+
+def test_executor_ready_application_name_is_stable_and_bounded() -> None:
+    product_build_id = "a" * 64
+
+    application_name = executor_ready_application_name(product_build_id)
+
+    assert application_name == f"{EXECUTOR_READY_APPLICATION_NAME_PREFIX}{'a' * 40}"
+    assert len(application_name) <= 63
+
+
+def test_executor_ready_application_name_rejects_invalid_product_identity() -> None:
+    try:
+        executor_ready_application_name("not-a-product-build")
+    except ValueError as exc:
+        assert str(exc) == "PRODUCT_BUILD_ID_INVALID"
+    else:
+        raise AssertionError("invalid product identity must be rejected")
