@@ -3,7 +3,7 @@
 以下命令从仓库根目录在 PowerShell 中执行。三段数据严格按“上一阶段通过后才释放下一阶段”的顺序处理；只使用 Binance 官方公开现货日线归档。
 
 ```powershell
-$q = 'research/trx-paxg-balanced-spot'
+$q = 'research/studies/legacy/2026/trx-paxg-balanced-spot'
 $cache = 'D:/projects/Codex/CodexHome/research-data/halpha/trx-paxg-balanced-spot'
 
 python "$q/study.py" analyze --cache-dir $cache --manifest "$q/source_manifest_development.json" --phase development --output "$q/development.json"

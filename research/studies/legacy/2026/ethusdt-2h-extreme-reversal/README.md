@@ -2,7 +2,7 @@
 
 ## 状态与固定边界
 
-- 研究目录：`research/ethusdt-2h-extreme-reversal/`
+- 研究目录：`research/studies/legacy/2026/ethusdt-2h-extreme-reversal/`
 - 稳定产品基准提交：`de6b3052f28fe547730e89e58186d4ab397884b1`
 - 固定正式策略身份：`ONE_SHOT_DONCHIAN_ATR_BREAKOUT` `1.0.0`
 - 研究标的：Binance USDⓈ-M `ETHUSDT` 线性永续（Halpha 身份 `ETHUSDT-PERP`）

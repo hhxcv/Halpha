@@ -7,11 +7,11 @@
 运行：
 
 ```powershell
-research/.venv/Scripts/python.exe -m unittest discover -s research/btc-market-relationship-monitor/tests -v
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py refresh --offline
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/validate_results.py
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py refresh
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/validate_results.py
+research/.venv/Scripts/python.exe -m unittest discover -s research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/tests -v
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py refresh --offline
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/validate_results.py
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py refresh
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/validate_results.py
 ```
 
 结果：
@@ -22,7 +22,7 @@ research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/valid
 - 独立于主分析函数，直接从缓存重算 ETH/SOL/SUI/DOGE 的 Pearson、beta、波动倍数；所有绝对误差小于 `5e-10`。
 - Coin Metrics 可用的 ETH/DOGE 均方向一致，Pearson 跨源差分别为 0.0013/0.0014，低于预设质量检查的 0.02。
 - 离线结果 CSV SHA-256 为 `bfeb1557edcda65fb1645d5c885c4193101650d65ef6c5926e6c69ef16831e6b`，在线结果 CSV 为 `2268bca6e540a044be3c65699d0f0ad0720af0f037cac5452204c5d4b4682f31`；差异来自 `fetch_status` 运行来源。剔除该运行态字段后，两次分析身份均为 `581d0b3361cdfb4d404b24cd49aef04d2b69da258c6f46930a0133134e9055fb`。
-- 最终 `output/validation.json` 为零错误，保留逐项重算值和全部 Git 产物哈希。
+- 最终 `evidence/validation.json` 为零错误，保留逐项重算值和全部 Git 固定证据哈希。
 
 ## 页面浏览器验证
 
@@ -35,7 +35,7 @@ research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/valid
 - 打开“仅强关联”后计数由 385 变为 238；console 仍为 0 error / 0 warning。
 - 390×844 窄屏：header、四项摘要和图表无横向页面溢出；宽表保留自身横向滚动，不压缩字段含义；console 0 error / 0 warning。
 - 启动顺序测试确认 HTTP server 先绑定、初始公开数据刷新再进入后台；使用持久快照重启后，页面与摘要 API 连续请求实测约 52 ms，不再等待约一分钟才能访问页面。
-- 证据截图：`output/playwright/desktop-1440x1000.png`、`output/playwright/narrow-390x844.png`。
+- 证据截图：`evidence/playwright/desktop-1440x1000.png`、`evidence/playwright/narrow-390x844.png`。
 
 ## 仍需保留的限制
 

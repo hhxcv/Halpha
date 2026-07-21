@@ -6,7 +6,7 @@
 - 固定正式策略：`ONE_SHOT_DONCHIAN_ATR_BREAKOUT` `1.0.0`
 - 候选身份：`RESEARCH_MATURE_ALT_SPOT_VOL_MANAGED_TOP2_MOMENTUM`
 - 固定标的：Binance Spot `XRPUSDT`、`ADAUSDT`、`LTCUSDT`、`LINKUSDT`、`DOGEUSDT`。
-- 本题是 `research/mature-alt-spot-top2-momentum/` 的风险修复后续，不把原始和风险管理版重复计数。原研究 2021–2022 已暴露：90 日规则 +243.96%，但最大回撤 -85.70%，结论 `DOES_NOT_SUPPORT`。
+- 本题是 `research/studies/legacy/2026/mature-alt-spot-top2-momentum/` 的风险修复后续，不把原始和风险管理版重复计数。原研究 2021–2022 已暴露：90 日规则 +243.96%，但最大回撤 -85.70%，结论 `DOES_NOT_SUPPORT`。
 - 2021–2022 仅作为公开设计/开发集；2023–2024 与 2025–2026H1 仍未查看、未下载，分别承担独立评价和确认。
 
 只使用公开市场数据、先前 Git 内 manifest 与独立研究代码；不读取产品数据库、业务数据、凭据或运行配置，不启动产品运行时，不调用交易所变更端点。结果不授权产品策略、L4、资金或真实交易变化。

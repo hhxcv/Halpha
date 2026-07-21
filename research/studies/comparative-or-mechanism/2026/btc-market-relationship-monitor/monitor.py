@@ -35,10 +35,12 @@ from statsmodels.stats.multitest import multipletests
 
 
 QUESTION_DIR = Path(__file__).resolve().parent
-REPO_ROOT = QUESTION_DIR.parents[1]
-UNIVERSE_PATH = REPO_ROOT / "research" / "market-universe" / "universe.csv"
-OUTPUT_DIR = QUESTION_DIR / "output"
-STATIC_DIR = QUESTION_DIR / "static"
+RESEARCH_ROOT = next((path for path in QUESTION_DIR.parents if path.name == "research"), None)
+if RESEARCH_ROOT is None:
+    raise RuntimeError(f"cannot locate research root from {QUESTION_DIR}")
+UNIVERSE_PATH = RESEARCH_ROOT / "market-universe" / "universe.csv"
+EVIDENCE_DIR = QUESTION_DIR / "evidence"
+APP_DIR = QUESTION_DIR / "app"
 DEFAULT_CACHE_ROOT = Path(
     "D:/projects/Codex/CodexHome/research-data/halpha/btc-market-relationship-monitor"
 )
@@ -572,32 +574,42 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def _write_outputs(results: list[dict[str, Any]], summary: dict[str, Any], manifest: dict[str, Any]) -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def _write_outputs(
+    results: list[dict[str, Any]],
+    summary: dict[str, Any],
+    manifest: dict[str, Any],
+    output_dir: Path,
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame(results).sort_values(
         ["statistically_significant", "strong_association", "pearson", "symbol"],
         ascending=[False, False, False, True],
         na_position="last",
     )
-    frame.to_csv(OUTPUT_DIR / "results.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL)
+    frame.to_csv(output_dir / "results.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL)
     frame[frame["statistically_significant"] == True].to_csv(  # noqa: E712 - explicit CSV boolean filter
-        OUTPUT_DIR / "significant-associations.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL
+        output_dir / "significant-associations.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL
     )
     frame[frame["strong_association"] == True].to_csv(  # noqa: E712 - explicit CSV boolean filter
-        OUTPUT_DIR / "strong-associations.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL
+        output_dir / "strong-associations.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL
     )
     frame[frame["status"] != "ANALYZED"].to_csv(
-        OUTPUT_DIR / "not-analyzed.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL
+        output_dir / "not-analyzed.csv", index=False, float_format="%.10g", quoting=csv.QUOTE_MINIMAL
     )
-    (OUTPUT_DIR / "summary.json").write_text(
+    (output_dir / "summary.json").write_text(
         json.dumps(_json_safe(summary), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    (OUTPUT_DIR / "data-manifest.json").write_text(
+    (output_dir / "data-manifest.json").write_text(
         json.dumps(_json_safe(manifest), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
 
-def refresh(cache_root: Path = DEFAULT_CACHE_ROOT, offline: bool = False, workers: int = 8) -> dict[str, Any]:
+def refresh(
+    cache_root: Path = DEFAULT_CACHE_ROOT,
+    offline: bool = False,
+    workers: int = 8,
+    output_dir: Path | None = None,
+) -> dict[str, Any]:
     started = utc_now()
     cutoff = latest_closed_cutoff(started)
     refresh_id = started.strftime("%Y-%m-%dT%H%M%SZ")
@@ -723,7 +735,7 @@ def refresh(cache_root: Path = DEFAULT_CACHE_ROOT, offline: bool = False, worker
             "fetch_status and source-manifest identity intentionally record whether the run was online or offline."
         ),
     }
-    _write_outputs(results, summary, manifest)
+    _write_outputs(results, summary, manifest, output_dir or cache_root / "live")
     rolling_path = cache_root / "current" / "rolling-90d.json.gz"
     rolling_path.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(rolling_path, "wt", encoding="utf-8") as handle:
@@ -732,8 +744,9 @@ def refresh(cache_root: Path = DEFAULT_CACHE_ROOT, offline: bool = False, worker
 
 
 class MonitorState:
-    def __init__(self, cache_root: Path, refresh_seconds: int, workers: int) -> None:
+    def __init__(self, cache_root: Path, output_dir: Path, refresh_seconds: int, workers: int) -> None:
         self.cache_root = cache_root
+        self.output_dir = output_dir
         self.refresh_seconds = refresh_seconds
         self.workers = workers
         self.lock = threading.Lock()
@@ -746,13 +759,17 @@ class MonitorState:
             return
         try:
             self.last_attempt = iso_z(utc_now())
-            refresh(self.cache_root, offline=False, workers=self.workers)
+            refresh(self.cache_root, offline=False, workers=self.workers, output_dir=self.output_dir)
             self.last_error = None
         except Exception as exc:
             self.last_error = f"{type(exc).__name__}: {exc}"
         finally:
             self.next_attempt = iso_z(utc_now() + timedelta(seconds=self.refresh_seconds))
             self.lock.release()
+
+    def result_path(self, name: str) -> Path:
+        live_path = self.output_dir / name
+        return live_path if live_path.exists() else EVIDENCE_DIR / name
 
 
 def _load_json(path: Path) -> Any:
@@ -788,19 +805,19 @@ def make_handler(state: MonitorState) -> type[BaseHTTPRequestHandler]:
                 self._send(b"", "image/x-icon", HTTPStatus.NO_CONTENT)
                 return
             if parsed.path == "/":
-                self._send((STATIC_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
+                self._send((APP_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
                 return
             if parsed.path == "/app.js":
-                self._send((STATIC_DIR / "app.js").read_bytes(), "application/javascript; charset=utf-8")
+                self._send((APP_DIR / "app.js").read_bytes(), "application/javascript; charset=utf-8")
                 return
             if parsed.path == "/styles.css":
-                self._send((STATIC_DIR / "styles.css").read_bytes(), "text/css; charset=utf-8")
+                self._send((APP_DIR / "styles.css").read_bytes(), "text/css; charset=utf-8")
                 return
             if parsed.path == "/plotly.min.js":
                 self._send(plotly.offline.get_plotlyjs().encode("utf-8"), "application/javascript; charset=utf-8")
                 return
             if parsed.path == "/api/summary":
-                path = OUTPUT_DIR / "summary.json"
+                path = state.result_path("summary.json")
                 if not path.exists():
                     self._json({"status": "NOT_READY", "last_error": state.last_error}, HTTPStatus.SERVICE_UNAVAILABLE)
                     return
@@ -814,7 +831,7 @@ def make_handler(state: MonitorState) -> type[BaseHTTPRequestHandler]:
                 self._json(payload)
                 return
             if parsed.path == "/api/results":
-                path = OUTPUT_DIR / "results.csv"
+                path = state.result_path("results.csv")
                 if not path.exists():
                     self._json({"error": "results not ready"}, HTTPStatus.SERVICE_UNAVAILABLE)
                     return
@@ -852,8 +869,16 @@ def make_handler(state: MonitorState) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-def serve(host: str, port: int, cache_root: Path, refresh_seconds: int, workers: int, no_initial_refresh: bool) -> None:
-    state = MonitorState(cache_root, refresh_seconds, workers)
+def serve(
+    host: str,
+    port: int,
+    cache_root: Path,
+    refresh_seconds: int,
+    workers: int,
+    no_initial_refresh: bool,
+    output_dir: Path | None = None,
+) -> None:
+    state = MonitorState(cache_root, output_dir or cache_root / "live", refresh_seconds, workers)
     # Bind before refreshing so a persisted, validated snapshot is available
     # immediately. The public-data refresh can take around a minute for the
     # current universe and must not make the local page appear unavailable.
@@ -882,6 +907,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["refresh", "serve"])
     parser.add_argument("--cache-root", type=Path, default=DEFAULT_CACHE_ROOT)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Mutable result directory; defaults to <cache-root>/live outside Git.",
+    )
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--offline", action="store_true", help="Use only recorded caches (refresh command only).")
     parser.add_argument("--host", default="127.0.0.1")
@@ -894,13 +925,21 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     if args.command == "refresh":
-        summary = refresh(args.cache_root, args.offline, args.workers)
+        summary = refresh(args.cache_root, args.offline, args.workers, args.output_dir)
         print(json.dumps(_json_safe(summary["counts"]), ensure_ascii=False, indent=2))
         print(f"status={summary['status']} cutoff={summary['data_cutoff_utc']}")
         return 0 if summary["status"] in {"OK", "PARTIAL"} else 2
     if args.offline:
         raise SystemExit("--offline applies only to refresh")
-    serve(args.host, args.port, args.cache_root, args.refresh_seconds, args.workers, args.no_initial_refresh)
+    serve(
+        args.host,
+        args.port,
+        args.cache_root,
+        args.refresh_seconds,
+        args.workers,
+        args.no_initial_refresh,
+        args.output_dir,
+    )
     return 0
 
 

@@ -17,7 +17,7 @@ Use `develop-halpha` only when a selected result is authorized to change product
 
 ### 1. Ground the Direction and Survey Prior Art
 
-Read the current L4 research facts, the project decision or evidence gap that motivates the work, and directly relevant Halpha design. Before new web research, scan `research/**` by mechanism, instrument or venue, question, data period and conclusion. If an earlier study answers or materially overlaps the question, reproduce, extend or reference it instead of duplicating it; do not create a global index or registry for this scan.
+Read the current L4 research facts, the project decision or evidence gap that motivates the work, and directly relevant Halpha design. Read `research/README.md` and `research/studies/README.md` for the current workspace layout. Before new web research, scan `research/studies/**` by mechanism, instrument or venue, question, data period and conclusion. If an earlier study answers or materially overlaps the question, reproduce, extend or reference it instead of duplicating it; do not create a global index or registry for this scan.
 
 Do not choose a direction from general novelty, model preference or an isolated backtest idea.
 
@@ -53,15 +53,21 @@ Record every interval already inspected or used for tuning. Previously viewed da
 
 ### 4. Build the Smallest Reproducible Study
 
-Prefer one question folder containing only what future reruns need:
+Create each new question under the primary research kind and opening year fixed before viewing its results:
 
 ```text
-research/<question>/
+research/studies/<research-kind>/<opening-year>/<question-slug>/
   README.md or study.md
   study.py or notebook.ipynb
   results.json, csv or md
   attempts.md
 ```
+
+Map `DESCRIPTIVE` to `descriptive`, `COMPARATIVE_OR_MECHANISM` to `comparative-or-mechanism`, `PREDICTIVE` to `predictive`, and `STRATEGY_CANDIDATE` to `strategy-candidate`. Use a stable kebab-case question slug. Keep shared environment locks, framework verification and `market-universe/` at the research root; do not create a second copy inside a study.
+
+Treat `research/studies/legacy/**` as historical material whose primary type was not fixed under this directory contract. Do not place new questions there, retrospectively classify old studies, or move a viewed study to make a stronger claim appear preregistered. When reorganizing historical material, preserve outcome-bearing attempts, checkpoints and results as the actual historical record; update only current operating guides and explicitly record the migration rule.
+
+Prefer one question folder containing only what future reruns need. Do not force every example file above when the question does not need it.
 
 Reuse mature libraries already justified by the study. Add a dependency only when the exact experiment needs it and record how to reproduce the environment. Do not create a research database, service, scheduler, generic CLI suite, persistent worker, task registry, universal schema, custom sandbox or optimization platform without a demonstrated repeated bottleneck and a current consumer.
 
@@ -69,7 +75,7 @@ When current L4 selects VectorBT and the question can be represented by arrays o
 
 Before viewing ranked batch results, fix the hypothesis or strategy family, asset universe, windows, transformations, parameters or models, comparison metric, applicable cost cases and intended trial count. Save the full configuration-to-result table or its durable external identity, including failed and manually inspected variants; do not turn a large search into a sequence of unrecorded one-off scripts or retain only the winning statistic or column.
 
-Keep generated bulk data out of Git when appropriate, but record its source, immutable identity or retrieval rule and expected location.
+Keep generated bulk data out of Git when appropriate, but record its source, immutable identity or retrieval rule and expected location. For a continuously refreshed study, keep fixed-cutoff evidence that supports the reported conclusion in the question folder's `evidence/` when it is suitable for Git; write mutable latest state and large caches outside Git. Let a page or API fall back from the external latest state to fixed evidence, and do not let routine refreshes overwrite completed evidence.
 
 Before first revealing outcomes from an interval intended as untouched evaluation, save a lightweight checkpoint in the existing study materials. Record the fixed question, search scope, development or selection gate, input identity, code or method identity, allowed fixes, and the rule for opening the interval. Use a short note, snapshot or hash as appropriate; do not require a fixed manifest, schema or new tracking system.
 

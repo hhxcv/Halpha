@@ -27,38 +27,41 @@
 
 ## 运行
 
-研究虚拟环境和依赖锁位于 `research/.venv` 与 `research/requirements.txt`。默认缓存位于 Git 外：
+研究虚拟环境和依赖锁位于 `research/.venv` 与 `research/requirements.txt`。默认缓存和持续刷新的最新页面状态都位于 Git 外：
 
 `D:/projects/Codex/CodexHome/research-data/halpha/btc-market-relationship-monitor/`
 
-一次刷新并生成结果：
+其中固定 cutoff 的审核证据保存在本目录 `evidence/`；刷新默认写入 Git 外 `live/`，不会覆盖固定证据或持续制造工作树改动。页面优先读取 `live/`，尚无最新状态时回退到 `evidence/`。
+
+一次刷新并生成 Git 外最新结果：
 
 ```powershell
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py refresh
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py refresh
 ```
 
 启动独立只读页面（默认仅绑定 `127.0.0.1:8766`，避开当前核心本地端口；立即显示上次已验证快照并在后台刷新，以后每 15 分钟检查；日线指标只在新 UTC 日线闭合后变化）：
 
 ```powershell
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py serve
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py serve
 ```
 
 离线重算已缓存数据：
 
 ```powershell
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/monitor.py refresh --offline
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py refresh --offline
 ```
 
 测试：
 
 ```powershell
-research/.venv/Scripts/python.exe -m unittest discover -s research/btc-market-relationship-monitor/tests -v
-research/.venv/Scripts/python.exe research/btc-market-relationship-monitor/validate_results.py
+research/.venv/Scripts/python.exe -m unittest discover -s research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/tests -v
+research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/validate_results.py
 ```
+
+上述验证默认只读，不改写固定证据。只有明确固定新的研究 cutoff 并完成审核时，才使用 `validate_results.py --write-report` 更新 `evidence/validation.json`。
 
 ## 产物
 
-- Git 内：问题、检查点、来源、代码、测试、完整规范化结果 CSV、摘要 JSON、结果与限制。
-- Git 内验证证据：`result.md`、`validation.md`、`output/validation.json` 和桌面/窄屏页面截图。
-- Git 外：逐 symbol 原始/规范化 kline 缓存、Coin Metrics 核对数据、每次不可覆盖的 source manifest；可用 manifest、SHA-256 和命令重取。
-- 页面只读取研究结果；刷新失败时保留上次成功快照并明确显示陈旧/失败对象，不静默缩小宇宙。
+- Git 内：问题、检查点、来源、代码、测试、结果与限制，以及固定 cutoff 的 `evidence/` 规范化结果、摘要、验证 JSON 和桌面/窄屏截图。
+- Git 外：`live/` 最新页面状态、逐 symbol 原始/规范化 kline 缓存、Coin Metrics 核对数据和每次不可覆盖的 source manifest；可用 manifest、SHA-256 和命令重取。
+- 页面只读取本问题的 Git 外最新状态或固定证据回退；刷新失败时保留上次成功快照并明确显示陈旧/失败对象，不静默缩小宇宙。

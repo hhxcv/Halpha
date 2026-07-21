@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import importlib.util
 import json
@@ -50,8 +51,12 @@ def independent_pair_metrics(symbol: str, cache_root: Path) -> dict[str, float |
     }
 
 
-def validate(cache_root: Path = monitor.DEFAULT_CACHE_ROOT) -> dict[str, object]:
-    output = QUESTION_DIR / "output"
+def validate(
+    cache_root: Path = monitor.DEFAULT_CACHE_ROOT,
+    *,
+    write_report: bool = False,
+) -> dict[str, object]:
+    output = QUESTION_DIR / "evidence"
     summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
     results = pd.read_csv(output / "results.csv")
     significant = pd.read_csv(output / "significant-associations.csv")
@@ -142,11 +147,23 @@ def validate(cache_root: Path = monitor.DEFAULT_CACHE_ROOT) -> dict[str, object]
         },
         "required_caveats": summary["warnings"],
     }
-    (output / "validation.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if write_report:
+        (output / "validation.json").write_text(
+            json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
     return report
 
 
 if __name__ == "__main__":
-    result = validate()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cache-root", type=Path, default=monitor.DEFAULT_CACHE_ROOT)
+    parser.add_argument(
+        "--write-report",
+        action="store_true",
+        help="Replace evidence/validation.json after deliberately fixing a new evidence cutoff.",
+    )
+    args = parser.parse_args()
+    result = validate(args.cache_root, write_report=args.write_report)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     raise SystemExit(0 if not result["errors"] else 1)
