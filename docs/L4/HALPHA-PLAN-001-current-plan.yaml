@@ -6,7 +6,7 @@ as_of: 2026-07-21
 current_summary: >-
   Halpha 在现有 Windows 10 单机上持续完善最小交易闭环。开发每次选择一个可验证的小结果，
   只补足必要设计，随后实现、验证、修复并集成；不设置小时门、多轴资格或默认长期观察。
-  独立策略研究可与产品工作并行。
+  独立市场与策略研究可与产品工作并行。
 
 current_product_boundary:
   outcome: >-
@@ -141,12 +141,12 @@ independent_research:
   primary_framework:
     name: vectorbt
     version: 1.1.0
-    role: 适合数组或 bar 信号表达的问题的批量候选筛选、敏感性比较、初步组合模拟和分析
+    role: 适合数组或 bar 表达的问题的统计与滚动分析、批量候选筛选、敏感性比较和初步组合模拟
     product_runtime_dependency: false
     execution_semantics_authority: false
   product_quant_core:
     name: NautilusTrader
-    role: 唯一产品量化交易核心，以及候选进入产品后的事件、订单、成交与在线离线一致性验证
+    role: 唯一产品量化交易核心，以及获选策略候选进入产品后的事件、订单、成交与在线离线一致性验证
   qualification:
     checked_at: 2026-07-21
     host: Windows 10 Pro 22H2 x64
@@ -154,8 +154,9 @@ independent_research:
     isolation_reason: vectorbt 1.1.0 要求 pandas 3.x，产品当前因 NautilusTrader 兼容边界锁定 pandas 2.3.3
     evidence: research/README.md、research/verify_vectorbt.py
   handoff:
+    applicable_to: OWNER_SELECTED_STRATEGY_CANDIDATE_ONLY
     owner_selection_required: true
-    research_output: 框架无关的固定策略说明、小型输入与确定性决策轨迹
+    research_output: 仅对获选策略候选提供框架无关的固定策略说明、小型输入与确定性决策轨迹
     product_implementation: 在产品路径重新实现或审查纯策略逻辑，不导入 VectorBT 或研究目录
     product_acceptance: 相同规范输入的决策一致性检查，以及 NautilusTrader 事件与执行语义验证
     shared_runtime_or_cache: false

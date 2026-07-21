@@ -1,0 +1,113 @@
+{
+  "validated_at_utc": "2026-07-21T10:56:21.407Z",
+  "assessment": "READY_TO_SHARE_WITH_CAVEATS",
+  "errors": [],
+  "counts_reconciled": {
+    "results": 410,
+    "analyzed": 402,
+    "significant": 385,
+    "strong": 238,
+    "not_analyzed": 8
+  },
+  "cache_quality": {
+    "files_checked": 411,
+    "duplicate_open_times": 0,
+    "nonpositive_closes": 0,
+    "bars_after_cutoff": 0
+  },
+  "independent_spot_checks": {
+    "ETHUSDT": {
+      "recomputed": {
+        "n_obs": 365,
+        "pearson": 0.8754896215007177,
+        "beta": 1.3378063187998217,
+        "volatility_ratio": 1.528066450983879
+      },
+      "absolute_deltas": {
+        "pearson": 7.177591854201637e-13,
+        "beta": 2.00178318365829e-10,
+        "volatility_ratio": 1.6120882406767123e-11
+      }
+    },
+    "SOLUSDT": {
+      "recomputed": {
+        "n_obs": 365,
+        "pearson": 0.8397192989978657,
+        "beta": 1.3934731894072088,
+        "volatility_ratio": 1.6594511893083814
+      },
+      "absolute_deltas": {
+        "pearson": 2.134292742539401e-12,
+        "beta": 4.0720871119503954e-10,
+        "volatility_ratio": 3.0838132047961153e-10
+      }
+    },
+    "SUIUSDT": {
+      "recomputed": {
+        "n_obs": 365,
+        "pearson": 0.793383063704552,
+        "beta": 1.6094123314383688,
+        "volatility_ratio": 2.0285438460502583
+      },
+      "absolute_deltas": {
+        "pearson": 4.552025423265604e-12,
+        "beta": 4.3836889673798396e-10,
+        "volatility_ratio": 5.0258464057151286e-11
+      }
+    },
+    "DOGEUSDT": {
+      "recomputed": {
+        "n_obs": 365,
+        "pearson": 0.7628556089663796,
+        "beta": 1.3412192465979964,
+        "volatility_ratio": 1.7581561056033428
+      },
+      "absolute_deltas": {
+        "pearson": 3.3620439765513765e-11,
+        "beta": 4.0200354156638696e-10,
+        "volatility_ratio": 3.9665715156900205e-10
+      }
+    }
+  },
+  "cross_source_compared": [
+    {
+      "symbol": "ETHUSDT",
+      "status": "COMPARED",
+      "coin_metrics_n_obs": 365,
+      "binance_pearson": 0.8754896215007177,
+      "coin_metrics_pearson": 0.8768035803261206,
+      "pearson_delta": 0.0013139588254028611,
+      "binance_beta": 1.3378063187998217,
+      "coin_metrics_beta": 1.3465845973430381,
+      "beta_delta": 0.008778278543216445,
+      "direction_agreement": true
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "status": "COMPARED",
+      "coin_metrics_n_obs": 365,
+      "binance_pearson": 0.7628556089663796,
+      "coin_metrics_pearson": 0.7614838925895838,
+      "pearson_delta": 0.001371716376795784,
+      "binance_beta": 1.3412192465979975,
+      "coin_metrics_beta": 1.355612212082054,
+      "beta_delta": 0.014392965484056441,
+      "direction_agreement": true
+    }
+  ],
+  "analysis_identity_sha256": "581d0b3361cdfb4d404b24cd49aef04d2b69da258c6f46930a0133134e9055fb",
+  "analysis_identity_note": "Excludes fetch_status so online and offline cache replays are comparable.",
+  "artifact_hashes": {
+    "results.csv": "2268bca6e540a044be3c65699d0f0ad0720af0f037cac5452204c5d4b4682f31",
+    "significant-associations.csv": "1bf94460514502655a819329ff528be25083dc05438321262c86c11fff801de4",
+    "strong-associations.csv": "440ca6e71519fa54860d04d4e253d48da4ae6e38e3f636a4a2410bb66ce22de1",
+    "not-analyzed.csv": "9a30b6e077483280405fee454ad3ad23832f3b5d2ff3f5996031932430909ce3",
+    "summary.json": "6d4f404d56ac2820248fc919580b4e5eadf547da8bc59c6ac47c6cbc56ecb9c4",
+    "data-manifest.json": "a6dcc4ba320f76ef250b7f863821c86ae02626d6b3a24113e5ebc4c615f9a832"
+  },
+  "required_caveats": [
+    "Current-list survivorship: the universe is not reconstructed point-in-time.",
+    "Association is not causation, lead-lag, prediction, strategy evidence, or Alpha.",
+    "Daily single-venue closes do not identify intraday spillovers or execution quality."
+  ]
+}
