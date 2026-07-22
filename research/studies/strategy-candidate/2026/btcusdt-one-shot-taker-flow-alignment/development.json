@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "phase": "development",
+  "period": [
+    "2021-01-01T00:00:00Z",
+    "2024-01-01T00:00:00Z"
+  ],
+  "generated_at": "2026-07-21T18:09:21.056671+00:00",
+  "framework": {
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "numba": "0.66.0"
+  },
+  "foundation_study_sha256": "3dc692689fb279df88105868391e33de49726e83df36914234c774ba20b3b41c",
+  "data_identity": "536ccea4e4c350b5e2100bc47162d5362102a7d9fde3c444bbd468896080e264",
+  "data_quality": {
+    "bars": 1576861,
+    "first_open_time": "2021-01-01T00:00:00+00:00",
+    "last_open_time": "2024-01-01T01:00:00+00:00",
+    "archives_verified": 37,
+    "archive_bytes": 70193234,
+    "funding_events_in_loaded_range": 3286,
+    "continuous_1m": true,
+    "valid_ohlc": true,
+    "taker_flow_archives": 37,
+    "taker_flow_valid_bars": 1576620,
+    "taker_flow_invalid_bars": 241,
+    "taker_flow_zero_bars": 16
+  },
+  "authorization_sha256": null,
+  "configuration_count": 4,
+  "csv_sha256": "6da9891eeb82b2dc656326c5c1f59208923f8569c3ec5fc39b427cf6c1d99322",
+  "results": [
+    {
+      "config_id": "LONG:UNFILTERED",
+      "direction": "LONG",
+      "filter": "UNFILTERED",
+      "channel_lookback_15m": 20,
+      "confirmation_bars_1m": 2,
+      "max_entry_extension_atr": 0.5,
+      "raw_trigger_count": 15401,
+      "eligible_trigger_count": 15401,
+      "eligible_trigger_fraction": 1.0,
+      "confirmation_flow_signs": {
+        "positive": 9192,
+        "negative": 6209,
+        "zero": 0,
+        "unknown": 0
+      },
+      "favorable": {
+        "trades": 2956,
+        "mean": -0.001547106316277386,
+        "median": -0.002165225589540338,
+        "win_rate": 0.3135994587280108,
+        "total_compound": -0.9903663579577447,
+        "max_drawdown": -0.9906637755118372,
+        "standard_error": 0.0001226234557329327,
+        "annual_means": {
+          "2021": -0.0019098768325004714,
+          "2022": -0.0013944219792957357,
+          "2023": -0.0012274040654452957
+        },
+        "p01": -0.016985816982970157,
+        "worst": -0.03454116081544059
+      },
+      "base": {
+        "trades": 2049,
+        "mean": -0.0032467817287371464,
+        "median": -0.004194623893670796,
+        "win_rate": 0.25866276232308444,
+        "total_compound": -0.9987941904327045,
+        "max_drawdown": -0.9988104520176273,
+        "standard_error": 0.0001647327061489392,
+        "annual_means": {
+          "2021": -0.0036735435709825794,
+          "2022": -0.002844086532516099,
+          "2023": -0.00271761889068012
+        },
+        "p01": -0.020345312426296818,
+        "worst": -0.0353156022311353
+      },
+      "stress": {
+        "trades": 1480,
+        "mean": -0.00431217138984526,
+        "median": -0.005226978291514858,
+        "win_rate": 0.23986486486486486,
+        "total_compound": -0.9984094129731568,
+        "max_drawdown": -0.9984122504537941,
+        "standard_error": 0.00020852276017284337,
+        "annual_means": {
+          "2021": -0.004773584129799046,
+          "2022": -0.0036351765536073066,
+          "2023": -0.003356466450586178
+        },
+        "p01": -0.022211437379089947,
+        "worst": -0.03580027785594459
+      }
+    },
+    {
+      "config_id": "LONG:CONFIRMATION_TAKER_FLOW_ALIGNED",
+      "direction": "LONG",
+      "filter": "CONFIRMATION_TAKER_FLOW_ALIGNED",
+      "channel_lookback_15m": 20,
+      "confirmation_bars_1m": 2,
+      "max_entry_extension_atr": 0.5,
+      "raw_trigger_count": 15401,
+      "eligible_trigger_count": 9192,
+      "eligible_trigger_fraction": 0.5968443607557951,
+      "confirmation_flow_signs": {
+        "positive": 9192,
+        "negative": 6209,
+        "zero": 0,
+        "unknown": 0
+      },
+      "favorable": {
+        "trades": 2701,
+        "mean": -0.001596820169281966,
+        "median": -0.002171435424758874,
+        "win_rate": 0.31210662717512033,
+        "total_compound": -0.9874256866484495,
+        "max_drawdown": -0.9878992045599942,
+        "standard_error": 0.00012784488644377866,
+        "annual_means": {
+          "2021": -0.0020400638367023016,
+          "2022": -0.0013745238957950463,
+          "2023": -0.001217341980053119
+        },
+        "p01": -0.017637020149885583,
+        "worst": -0.03454116081544059
+      },
+      "base": {
+        "trades": 1763,
+        "mean": -0.003296380013654362,
+        "median": -0.004208165975776405,
+        "win_rate": 0.2597844583096994,
+        "total_compound": -0.9971795031749242,
+        "max_drawdown": -0.9972450206542938,
+        "standard_error": 0.0001786031852244694,
+        "annual_means": {
+          "2021": -0.0036446159529673876,
+          "2022": -0.002868570584654745,
+          "2023": -0.002939758728204716
+        },
+        "p01": -0.021041355934082604,
+        "worst": -0.0353156022311353
+      },
+      "stress": {
+        "trades": 1213,
+        "mean": -0.004484983059546791,
+        "median": -0.005264071804485711,
+        "win_rate": 0.23742786479802144,
+        "total_compound": -0.9958831670414872,
+        "max_drawdown": -0.995957341355133,
+        "standard_error": 0.00023301855326244853,
+        "annual_means": {
+          "2021": -0.004868031952979703,
+          "2022": -0.0040274508664081485,
+          "2023": -0.003294368445388494
+        },
+        "p01": -0.022427893627788065,
+        "worst": -0.03580027785594459
+      }
+    },
+    {
+      "config_id": "SHORT:UNFILTERED",
+      "direction": "SHORT",
+      "filter": "UNFILTERED",
+      "channel_lookback_15m": 20,
+      "confirmation_bars_1m": 2,
+      "max_entry_extension_atr": 0.5,
+      "raw_trigger_count": 13683,
+      "eligible_trigger_count": 13683,
+      "eligible_trigger_fraction": 1.0,
+      "confirmation_flow_signs": {
+        "positive": 5235,
+        "negative": 8448,
+        "zero": 0,
+        "unknown": 0
+      },
+      "favorable": {
+        "trades": 2729,
+        "mean": -0.0018437959946405234,
+        "median": -0.0023333383468870563,
+        "win_rate": 0.31366801026016855,
+        "total_compound": -0.9940448729460262,
+        "max_drawdown": -0.9940854563928998,
+        "standard_error": 0.00015287146348991155,
+        "annual_means": {
+          "2021": -0.0024829130671220226,
+          "2022": -0.001515452253690261,
+          "2023": -0.0013531606447876655
+        },
+        "p01": -0.0227403718076987,
+        "worst": -0.05910849386129224
+      },
+      "base": {
+        "trades": 1981,
+        "mean": -0.0036864815506483448,
+        "median": -0.004794267014953132,
+        "win_rate": 0.2579505300353357,
+        "total_compound": -0.9993858029994823,
+        "max_drawdown": -0.9993858029994823,
+        "standard_error": 0.00019998892761211202,
+        "annual_means": {
+          "2021": -0.004200246499010789,
+          "2022": -0.003231956180509004,
+          "2023": -0.0031205286424493663
+        },
+        "p01": -0.026619157190101987,
+        "worst": -0.05995369107287469
+      },
+      "stress": {
+        "trades": 1484,
+        "mean": -0.005051007878896982,
+        "median": -0.00659642371750649,
+        "win_rate": 0.22506738544474394,
+        "total_compound": -0.9994928704635982,
+        "max_drawdown": -0.9994928704635982,
+        "standard_error": 0.00025512597135973666,
+        "annual_means": {
+          "2021": -0.005489378495856787,
+          "2022": -0.0043607401141102665,
+          "2023": -0.004852611536321305
+        },
+        "p01": -0.028226886582603396,
+        "worst": -0.05998213597451954
+      }
+    },
+    {
+      "config_id": "SHORT:CONFIRMATION_TAKER_FLOW_ALIGNED",
+      "direction": "SHORT",
+      "filter": "CONFIRMATION_TAKER_FLOW_ALIGNED",
+      "channel_lookback_15m": 20,
+      "confirmation_bars_1m": 2,
+      "max_entry_extension_atr": 0.5,
+      "raw_trigger_count": 13683,
+      "eligible_trigger_count": 8448,
+      "eligible_trigger_fraction": 0.6174084630563473,
+      "confirmation_flow_signs": {
+        "positive": 5235,
+        "negative": 8448,
+        "zero": 0,
+        "unknown": 0
+      },
+      "favorable": {
+        "trades": 2505,
+        "mean": -0.0018599829713968887,
+        "median": -0.0023569392425043523,
+        "win_rate": 0.3093812375249501,
+        "total_compound": -0.9912934618576066,
+        "max_drawdown": -0.9914141476472421,
+        "standard_error": 0.00015969108782277867,
+        "annual_means": {
+          "2021": -0.0025115939914409293,
+          "2022": -0.0015514933902008668,
+          "2023": -0.0012889515095283347
+        },
+        "p01": -0.022206242066140153,
+        "worst": -0.05910849386129224
+      },
+      "base": {
+        "trades": 1684,
+        "mean": -0.003721998898300224,
+        "median": -0.004888819504571831,
+        "win_rate": 0.26068883610451304,
+        "total_compound": -0.9982527498463409,
+        "max_drawdown": -0.9982527498463409,
+        "standard_error": 0.00022206648362215606,
+        "annual_means": {
+          "2021": -0.004205812773421933,
+          "2022": -0.0031489997888741184,
+          "2023": -0.0033720063164757114
+        },
+        "p01": -0.025535898665853235,
+        "worst": -0.05995369107287469
+      },
+      "stress": {
+        "trades": 1214,
+        "mean": -0.005077137604861541,
+        "median": -0.0067814983891347404,
+        "win_rate": 0.2372322899505766,
+        "total_compound": -0.9980568801753407,
+        "max_drawdown": -0.9980568801753407,
+        "standard_error": 0.00029425043225511134,
+        "annual_means": {
+          "2021": -0.005550562143879433,
+          "2022": -0.004239119973009063,
+          "2023": -0.005109393524867091
+        },
+        "p01": -0.027576829013220307,
+        "worst": -0.05998829578962734
+      }
+    }
+  ]
+}

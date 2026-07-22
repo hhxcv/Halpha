@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-07-22T00:15:00+08:00",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_HOLD_HORIZON_2026",
+  "reason": "All six predeclared 2h, 4h, and 8h direction/horizon candidates had negative favorable, base, and stress mean net returns throughout development. No candidate passed the locked development gate, so evaluation and confirmation remained unopened.",
+  "development": {
+    "period": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "data_quality": "PASS",
+    "new_candidate_count": 6,
+    "exposed_benchmark_count": 4,
+    "positive_favorable_candidates": 0,
+    "positive_base_candidates": 0,
+    "positive_stress_candidates": 0,
+    "gate_pass_count": 0,
+    "evaluation_authorized": false,
+    "best_new_base": {
+      "config_id": "LONG:HOLD:8",
+      "max_hold_hours": 2.0,
+      "base_trades": 1824,
+      "favorable_mean_net_return_per_trade": -0.0015703354952389,
+      "base_mean_net_return_per_trade": -0.0032841907291155,
+      "stress_mean_net_return_per_trade": -0.0043612170158971,
+      "annual_base_means": {
+        "2021": -0.0037323368192165,
+        "2022": -0.0030096883080823,
+        "2023": -0.002594228994771
+      },
+      "base_p01": -0.0219369047898977,
+      "base_worst": -0.0420568130212055,
+      "mean_holding_hours": 1.3185489766081873
+    },
+    "best_same_direction_improvement": {
+      "config_id": "SHORT:HOLD:16",
+      "max_hold_hours": 4.0,
+      "base_mean_net_return_per_trade": -0.0035878992388614,
+      "same_direction_1h_base_mean_net_return_per_trade": -0.0036864815506483,
+      "improvement_per_trade": 0.0000985823117869
+    },
+    "current_1h_baseline": {
+      "LONG": {"base_trades": 2049, "base_mean_net_return_per_trade": -0.0032467817287371},
+      "SHORT": {"base_trades": 1981, "base_mean_net_return_per_trade": -0.0036864815506483}
+    },
+    "historical_24h_boundary_in_same_runner": {
+      "LONG": {"base_trades": 1499, "base_mean_net_return_per_trade": -0.0033769239666742},
+      "SHORT": {"base_trades": 1548, "base_mean_net_return_per_trade": -0.0037186753396627}
+    }
+  },
+  "evaluation": "NOT_OPENED_NO_DEVELOPMENT_CANDIDATE",
+  "confirmation": "NOT_OPENED_NO_DEVELOPMENT_CANDIDATE",
+  "strongest_support": "SHORT 4h improved its base mean by about 0.98 bps per trade versus the same-direction 1h baseline, indicating that the time exit can change outcomes at the margin.",
+  "strongest_counterevidence": "The best new candidate still lost about 15.70 bps per trade even under favorable costs and 32.84 bps under base costs. Every new candidate was negative in each development calendar year and all six also missed the locked base 1% tail threshold.",
+  "interpretation": "Extending the maximum hold alone does not repair the fixed current entry and ATR exit family. The evidence now closes both near-neighbor entry-selectivity tuning and the predeclared 1h-to-8h hold-horizon path; further search over these dimensions would be result-driven parameter dredging.",
+  "artifact_sha256": {
+    "study.py": "0a2a7d8c324622f58ce4aa40ae9af73aa24cb52397352ebe06d1fd84ba36ab9c",
+    "checkpoint.json": "4e8f1f8cd139136909a15780424f4c1cd26a915c5601d5776af408a9142e8384",
+    "development.csv": "07ccdf6c1cff1762333bf0d5ccdb937c453bf84a0493215c3995482ba94d1a98",
+    "development.json": "aa5df74554a9da99e1e6d4e1998bb48c9900cf6983766c93275b8485a0008bd0",
+    "selection.json": "6e024c39de42876c49e32faca8eabc4da9a0ddbb256da149ce5d0131af97baf6"
+  },
+  "product_effects": "NONE"
+}

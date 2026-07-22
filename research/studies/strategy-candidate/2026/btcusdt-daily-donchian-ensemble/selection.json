@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-21T23:56:52.753548+00:00",
+  "phase": "development_selection",
+  "source_sha256": "6f30cdba09707aeddf708b0e419731c81132e9a3c6d54f9081683723d84de547",
+  "assessed_candidates": [
+    {
+      "candidate_id": "LONG_FULL_9",
+      "passed": false,
+      "failed_checks": [
+        "sharpe_exceeds_benchmark",
+        "calmar_exceeds_benchmark",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": -0.04346259699411026,
+      "stress_sharpe": 0.39256666644342236,
+      "base_sharpe": 0.4134928133658723,
+      "lookback_count": 9
+    },
+    {
+      "candidate_id": "LONG_FAST_4",
+      "passed": false,
+      "failed_checks": [
+        "sharpe_exceeds_benchmark",
+        "calmar_exceeds_benchmark",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": -0.0877299886861197,
+      "stress_sharpe": 0.414816896570594,
+      "base_sharpe": 0.46554139449413984,
+      "lookback_count": 4
+    },
+    {
+      "candidate_id": "LONG_BALANCED_4",
+      "passed": false,
+      "failed_checks": [
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": -0.050961150663650145,
+      "stress_sharpe": 0.4580999777124785,
+      "base_sharpe": 0.4731166216753555,
+      "lookback_count": 4
+    },
+    {
+      "candidate_id": "LONG_SLOW_5",
+      "passed": false,
+      "failed_checks": [
+        "sharpe_exceeds_benchmark",
+        "calmar_exceeds_benchmark",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": -0.007218504078599475,
+      "stress_sharpe": 0.38538420326793943,
+      "base_sharpe": 0.39108808178659615,
+      "lookback_count": 5
+    },
+    {
+      "candidate_id": "LONG_SHORT_FULL_9",
+      "passed": false,
+      "failed_checks": [
+        "base_sharpe_above_0p30",
+        "sharpe_exceeds_benchmark",
+        "calmar_exceeds_benchmark",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": 0.0037617756534809033,
+      "stress_sharpe": 0.24435283393065674,
+      "base_sharpe": 0.2827390613275268,
+      "lookback_count": 9
+    },
+    {
+      "candidate_id": "LONG_SHORT_BALANCED_4",
+      "passed": false,
+      "failed_checks": [
+        "sharpe_exceeds_benchmark",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": -0.010066860386334975,
+      "stress_sharpe": 0.3718181951907312,
+      "base_sharpe": 0.39407515056640985,
+      "lookback_count": 4
+    }
+  ],
+  "selected_candidates": [],
+  "evaluation_authorized": false
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-22T00:15:00+08:00",
+  "research_type": "STRATEGY_CANDIDATE",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_HOLD_HORIZON_2026",
+  "baseline_commit": "bbd2458204389f05b58594a9a255b66062080fe3",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 on BTCUSDT-PERP",
+  "question": "Can one of three predeclared 2h, 4h, or 8h maximum holding horizons repair the current one-shot BTCUSDT Donchian/ATR strategy proxy's post-cost mean return while entry, stop, take-profit, direction choice, and all evidence gates remain fixed?",
+  "fixed_entry_parameters": {
+    "channel_lookback_bars_15m": 20,
+    "confirmation_bars_1m": 2,
+    "max_entry_extension_atr": 0.5
+  },
+  "fixed_exit_parameters": {
+    "initial_stop_atr_multiple": 1.5,
+    "take_profit_1_fraction": 0.5,
+    "take_profit_1_r": 1.5,
+    "take_profit_2_r": 3.0
+  },
+  "candidate_max_hold_bars_15m": [8, 16, 32],
+  "directions": ["LONG", "SHORT"],
+  "exposed_benchmark_max_hold_bars_15m": [4, 96],
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "costs_per_side": {
+    "favorable": {"taker_fee": 0.0004, "adverse_execution": 0.0002},
+    "base": {"taker_fee": 0.0004, "adverse_execution": 0.0010},
+    "stress": {"taker_fee": 0.0004, "adverse_execution": 0.0015}
+  },
+  "development_gate": "candidate only; trades >= 100; base and stress mean > 0; at least two of 2021/2022/2023 base means > 0; worst annual base mean >= -0.001; base p01 >= -0.02; base worst >= -0.05; rank by worst annual base mean, stress mean, base mean, then shorter hold; keep at most one",
+  "evaluation_gate": "fixed candidate trades >= 60; base and stress means > 0; 2024 and 2025 base means > 0; base improvement over same-direction 4x15m benchmark >= 0.0005; base p01 >= -0.02; base worst >= -0.05",
+  "confirmation_gate": "fixed candidate trades >= 15; base and stress means > 0; base p01 >= -0.02; base worst >= -0.05; trade-count-weighted evaluation plus confirmation base mean > 0",
+  "known_exposure": "All underlying 2021-2026H1 BTCUSDT data are exposed. The current 4x15m family and an older 96x15m proxy are exposed. The exact fixed-rule 8/16/32x15m candidates have not been run before this checkpoint, so evaluation is only a rule-level sequential holdout.",
+  "source_identity": {
+    "source_manifest_sha256": "eec3389434f11a7d0fdb13bd58e7f3c6cf234fda5b7babb271c0769763a7df5d",
+    "parent_study_sha256": "1450814102dd0fca73903c4221aae9797f0ae6eef11691fb23dea8eeb2eac0ec",
+    "parent_development_csv_sha256": "0c01bba510f149913752a33834adfdde1ff7416ff3c3d858985bbcca90fc7ce3",
+    "legacy_96_hold_evaluation_sha256": "a8821452be080b5081a90e37e8477d8f08ede0631ad7f17fee11c4824355cec7",
+    "strategy_registry_sha256": "ecf725d9adc795a11f613ff2ef0061d29d57408a10d1b72c4f1e1a5b13341375",
+    "product_one_shot_sha256": "b4bb68099c345336229d30d7a09ea1088b49e7ecf4e66e6818415ba05310e0b8"
+  },
+  "allowed_fixes_after_checkpoint": [
+    "parsing, timestamp, checksum and data-quality defects",
+    "implementation defects that do not alter candidates, periods, costs, event order, fixed entry/exit rules, ranks or gates"
+  ],
+  "forbidden_after_checkpoint": [
+    "adding or removing hold horizons after viewing results",
+    "changing entry, stop, take-profit, costs, periods, ranks or gates",
+    "reading evaluation before exactly one development candidate is fixed",
+    "reading confirmation before the fixed candidate passes evaluation"
+  ],
+  "study_code_sha256_before_first_result": "0a2a7d8c324622f58ce4aa40ae9af73aa24cb52397352ebe06d1fd84ba36ab9c",
+  "product_effects": "NONE"
+}

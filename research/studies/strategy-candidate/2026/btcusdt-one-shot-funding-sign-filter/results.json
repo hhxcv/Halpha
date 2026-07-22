@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-07-22T00:50:58+08:00",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_FUNDING_SIGN_FILTER_2026",
+  "reason": "Neither predeclared direction-non-adverse latest-settled-funding candidate produced a positive favorable, base, or stress mean in development. The LONG filter improved its same-direction base mean by 5.09 bps per trade but remained negative in every development year and failed the locked base p01 tail gate. The SHORT filter was worse than its unfiltered baseline. No candidate passed the locked development gate, so evaluation and confirmation remained unopened.",
+  "development": {
+    "period": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "data_quality": "PASS",
+    "candidate_count": 2,
+    "same_direction_unfiltered_baseline_count": 2,
+    "unfiltered_baseline_exact_match_to_parent": true,
+    "positive_favorable_candidates": 0,
+    "positive_base_candidates": 0,
+    "positive_stress_candidates": 0,
+    "gate_pass_count": 0,
+    "evaluation_authorized": false,
+    "directions": {
+      "LONG": {
+        "eligible_trigger_fraction": 0.12713460164924356,
+        "base_trades": 294,
+        "favorable_mean_net_return_per_trade": -0.0013664100943972923,
+        "base_mean_net_return_per_trade": -0.0027377917478301874,
+        "stress_mean_net_return_per_trade": -0.003752510896821336,
+        "same_direction_unfiltered_base_mean_net_return_per_trade": -0.0032467817287371464,
+        "base_improvement_per_trade": 0.000508989980906959,
+        "annual_base_means": {
+          "2021": -0.0025326660432058307,
+          "2022": -0.0028885597263867187,
+          "2023": -0.0025265732625436403
+        },
+        "base_p01": -0.021851687527829768,
+        "base_worst": -0.024475206901105485
+      },
+      "SHORT": {
+        "eligible_trigger_fraction": 0.8732003215669079,
+        "base_trades": 1740,
+        "favorable_mean_net_return_per_trade": -0.0019077266367129092,
+        "base_mean_net_return_per_trade": -0.0037912862632897906,
+        "stress_mean_net_return_per_trade": -0.005148152189881559,
+        "same_direction_unfiltered_base_mean_net_return_per_trade": -0.0036864815506483448,
+        "base_improvement_per_trade": -0.00010480471264144586,
+        "annual_base_means": {
+          "2021": -0.004328321641591608,
+          "2022": -0.003259542050177755,
+          "2023": -0.0030942359152482894
+        },
+        "base_p01": -0.026452514112305137,
+        "base_worst": -0.05995369107287469
+      }
+    }
+  },
+  "evaluation": "NOT_OPENED_NO_DEVELOPMENT_CANDIDATE",
+  "confirmation": "NOT_OPENED_NO_DEVELOPMENT_CANDIDATE",
+  "strongest_support": "The LONG filter retained only 12.71% of eligible triggers and improved base mean by about 5.09 bps per trade versus the exact same-direction unfiltered baseline.",
+  "strongest_counterevidence": "Even the improved LONG candidate still lost about 13.66 bps per trade under favorable costs and 27.38 bps under base costs; all three annual base means were negative and its base p01 was -2.19%, below the locked -2% gate. SHORT both remained negative and deteriorated versus baseline.",
+  "interpretation": "The latest-settled funding sign alone is not a sufficient entry filter for the fixed current one-shot Donchian/ATR proxy. This closes the predeclared zero-threshold sign-filter branch; it does not authorize post-result funding magnitude, persistence, z-score, open-interest, basis, or volatility tuning.",
+  "artifact_sha256": {
+    "study.py": "3dc692689fb279df88105868391e33de49726e83df36914234c774ba20b3b41c",
+    "checkpoint.json": "01ef206a395d33caecb2fa963bda07a1dd18d04d0f09cace094f14fafb01676f",
+    "development.csv": "99c769f067ab3f5e2be0ca53b407780d2ac4282d5efca62269a65c3bb3bc7e3b",
+    "development.json": "142213c7a928ce0487f7840e6feafa0bc9367313ecd06feb780a6ed9b9dfc4c5",
+    "selection.json": "1abb854a376cb1e094b49d43205043160954d35252f74e04c890c5312bcd59ac"
+  },
+  "product_effects": "NONE"
+}

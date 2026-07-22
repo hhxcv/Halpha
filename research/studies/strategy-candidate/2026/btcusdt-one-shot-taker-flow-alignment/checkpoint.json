@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "checkpoint_time": "2026-07-22T02:08:57+08:00",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_TAKER_FLOW_ALIGNMENT_2026",
+  "product_baseline_git": "bbd2458204389f05b58594a9a255b66062080fe3",
+  "formal_strategy_context": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 / BTCUSDT-PERP",
+  "question": "Does requiring the aggregate signed taker base volume across the two fixed confirmation minutes to align with the breakout direction make the otherwise fixed one-shot proxy positive after costs?",
+  "falsifier": "No direction passes the fixed development sample, positive base and stress mean, annual consistency, same-direction improvement, and tail gates.",
+  "candidate_count": 2,
+  "baseline_count": 2,
+  "development_period": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+  "evaluation_period": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+  "confirmation_period": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"],
+  "known_exposure": "All underlying periods were viewed by earlier questions; only this fixed rule and sequential gate are new.",
+  "foundation_study_sha256": "3dc692689fb279df88105868391e33de49726e83df36914234c774ba20b3b41c",
+  "study_sha256": "cc8fac83d6cbe107a50550f74b571e4963481d8ae2f3a48d542be0cac3d63f7e",
+  "allowed_fixes": ["path", "parser", "field integrity", "content identity", "non-economic implementation defect"],
+  "development_open_rule": "May run only after study_sha256 is fixed in this checkpoint.",
+  "evaluation_open_rule": "Only when selection.json has evaluation_authorized=true.",
+  "confirmation_open_rule": "Only when the fixed evaluation candidate passes its gate.",
+  "product_effects": "NONE"
+}
