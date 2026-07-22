@@ -40,7 +40,7 @@ function tradeResult({
         quantity: "1",
         price: entry,
         notional: "100.00",
-        liquidity_side: "TAKER",
+        liquidity_side: "2",
         fee: "0.06",
         fee_currency: "USDT",
         fill_time: firstFillTime,
@@ -51,7 +51,7 @@ function tradeResult({
         quantity: "1",
         price: exit,
         notional: exit,
-        liquidity_side: "MAKER",
+        liquidity_side: "1",
         fee: "0.04",
         fee_currency: "USDT",
         fill_time: lastFillTime,
@@ -59,6 +59,24 @@ function tradeResult({
     ],
   };
 }
+
+const professionalThreeTradeResult = tradeResult({
+  entry: "100",
+  exit: "102.5",
+  netPnl: "2.4",
+  grossPnl: "2.5",
+  commission: "0.1",
+  firstFillTime: "2026-07-21T00:20:00Z",
+  lastFillTime: "2026-07-21T00:25:30Z",
+});
+const legacyProfessionalThreeTradeResult = {
+  calculation_complete: professionalThreeTradeResult.calculation_complete,
+  closed: professionalThreeTradeResult.closed,
+  gross_pnl: professionalThreeTradeResult.gross_pnl,
+  commission: professionalThreeTradeResult.commission,
+  net_pnl: professionalThreeTradeResult.net_pnl,
+  average_entry_price: professionalThreeTradeResult.average_entry_price,
+};
 
 const reviews: JsonRecord[] = [
   {
@@ -73,8 +91,8 @@ const reviews: JsonRecord[] = [
     input_refs: { plan_events: [{}], execution_actions: [{}, {}, {}], venue_facts: [{}, {}, {}, {}], commands_and_receipts: [] },
     open_responsibilities: { execution_action_refs: [], unknown_action_refs: [] },
     evaluations: { owner_conclusion: { result: "AS_EXPECTED", reason: "按计划止盈", evidence_refs: [] } },
-    trade_context: { instrument_ref: "BTCUSDT-PERP", direction: "LONG", strategy_id: "ONE_SHOT_DONCHIAN_ATR_BREAKOUT", trade_amount: "100" },
-    account_result: { trade_result: tradeResult({ entry: "100", exit: "102.5", netPnl: "2.4", grossPnl: "2.5", commission: "0.1", firstFillTime: "2026-07-21T00:20:00Z", lastFillTime: "2026-07-21T00:25:30Z" }) },
+    trade_context: { plan_name: "AI BTC 突破复核", instrument_ref: "BTCUSDT-PERP", direction: "LONG", strategy_id: "ONE_SHOT_DONCHIAN_ATR_BREAKOUT", trade_amount: "100" },
+    account_result: { trade_result: legacyProfessionalThreeTradeResult },
   },
   {
     review_id: "review-professional-2",
@@ -160,7 +178,9 @@ async function mockProfessionalReviews(page: Page) {
     }
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({
       activation: { activation_id: "activation-professional-3", updated_at: "2026-07-21T00:28:00Z" },
+      plan: { plan_name: "AI BTC 突破复核", creator_kind: "AI", created_at: "2026-07-21T00:00:00Z" },
       strategy: { strategy_ref: "ONE_SHOT_DONCHIAN_ATR_BREAKOUT@1" },
+      trade_result: professionalThreeTradeResult,
       execution_actions: [
         { action_kind: "PROTECTION", state: "CLOSED", action_terms: { trigger_price: "98.5" } },
         { action_kind: "TAKE_PROFIT", state: "CLOSED", action_terms: { trigger_price: "102.5" } },
@@ -228,17 +248,22 @@ test("review workbench exposes recent performance and one visual trade narrative
   await expect(page.getByText("+3.30 USDT", { exact: true })).toBeVisible();
   await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("-0.90 USDT");
   await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("按计划止盈");
+  await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("AI BTC 突破复核");
   const listScreenshot = testInfo.outputPath(`review-list-${testInfo.project.name}.png`);
   await page.screenshot({ path: listScreenshot, fullPage: true });
   await testInfo.attach(`review-list-${testInfo.project.name}.png`, { path: listScreenshot, contentType: "image/png" });
 
   await page.getByRole("table", { name: "交易与复盘记录" }).locator("tbody tr").first().click();
+  await expect(page.getByRole("heading", { name: "AI BTC 突破复核" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "交易价格回看" })).toBeVisible();
   await expect(page.getByRole("group", { name: /1m K 线图/ })).toBeVisible();
   await page.getByRole("button", { name: "15 分钟" }).click();
   await expect(page.getByRole("group", { name: /15m K 线图/ })).toBeVisible();
   await page.getByRole("button", { name: "1 分钟" }).click();
   await expect(page.getByRole("group", { name: /1m K 线图/ })).toBeVisible();
+  await expect(page.getByText("平均入场价", { exact: true }).locator("..")).toContainText("100.00 USDT");
+  await expect(page.getByText("平均出场价", { exact: true }).locator("..")).toContainText("102.50 USDT");
+  await expect(page.getByText("持仓周期", { exact: true }).locator("..")).toContainText("5 分钟 30 秒");
   await expect(page.getByRole("table", { name: "本次复盘成交明细" })).toContainText("吃单");
   await expect(page.getByRole("table", { name: "本次复盘成交明细" })).toContainText("挂单");
   await expect(page.getByRole("heading", { name: "机器为何交易" })).toBeVisible();

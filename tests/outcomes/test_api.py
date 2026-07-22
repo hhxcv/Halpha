@@ -19,6 +19,9 @@ class _Rows:
                 "300",
                 datetime(2026, 7, 20, 1, tzinfo=UTC),
                 datetime(2026, 7, 20, 2, tzinfo=UTC),
+                "AI BTC breakout",
+                "2026-07-20T00:30:00+00:00",
+                "AI",
             )
         ]
 
@@ -69,4 +72,7 @@ def test_review_projection_adds_compact_trade_context() -> None:
         "trade_amount": "300",
         "activation_started_at": "2026-07-20T01:00:00+00:00",
         "activation_updated_at": "2026-07-20T02:00:00+00:00",
+        "plan_name": "AI BTC breakout",
+        "plan_created_at": "2026-07-20T00:30:00+00:00",
+        "plan_creator_kind": "AI",
     }

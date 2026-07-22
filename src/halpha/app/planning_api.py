@@ -504,14 +504,30 @@ class PostgreSQLPlanningApi:
         with self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT activation_id FROM halpha.plan_activation
-                WHERE environment_id = %s ORDER BY created_at DESC
+                SELECT a.activation_id,
+                       v.terms ->> 'plan_name',
+                       v.terms ->> 'created_at',
+                       v.terms ->> 'creator_kind'
+                FROM halpha.plan_activation a
+                LEFT JOIN halpha.trade_plan_version v
+                  ON v.environment_id = a.environment_id
+                 AND v.plan_version_id = a.plan_version_ref
+                WHERE a.environment_id = %s ORDER BY a.created_at DESC
                 """,
                 (self._environment_id,),
             ).fetchall()
             repository = PostgreSQLPlanningRepository(connection, self._environment_id)
             return [
-                repository.get_activation(str(row[0])).model_dump(mode="json")
+                {
+                    **repository.get_activation(str(row[0])).model_dump(mode="json"),
+                    "plan_name": str(row[1]) if row[1] is not None else None,
+                    "plan_created_at": (
+                        str(row[2]) if row[2] is not None else None
+                    ),
+                    "plan_creator_kind": (
+                        str(row[3]) if row[3] is not None else None
+                    ),
+                }
                 for row in rows
             ]
 
@@ -597,6 +613,21 @@ class PostgreSQLPlanningApi:
             )
         return {
             "activation": activation.model_dump(mode="json"),
+            "plan": {
+                "plan_version_id": version.plan_version_id,
+                "plan_id": version.plan_id,
+                "plan_name": version.plan_name,
+                "created_at": (
+                    version.created_at.isoformat()
+                    if version.created_at is not None
+                    else None
+                ),
+                "creator_kind": (
+                    version.creator_kind.value
+                    if version.creator_kind is not None
+                    else None
+                ),
+            },
             "strategy": {
                 "strategy_ref": (
                     f"{version.strategy_basis.strategy_id}@"

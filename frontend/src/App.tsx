@@ -251,8 +251,8 @@ function durationText(value: unknown): string {
 
 function liquidityText(value: unknown): string {
   const token = String(value ?? "").toUpperCase();
-  if (token.includes("MAKER")) return "挂单成交（Maker）";
-  if (token.includes("TAKER")) return "吃单成交（Taker）";
+  if (token === "1" || token.includes("MAKER")) return "挂单成交（Maker）";
+  if (token === "2" || token.includes("TAKER")) return "吃单成交（Taker）";
   return "未知";
 }
 
@@ -783,6 +783,7 @@ function OverviewPage() {
     const strategyRef = valueOf(recordOf(detail.strategy), "strategy_ref");
     const strategyId = strategyRef.split("@", 1)[0];
     const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
+    const planName = valueOf(recordOf(detail.plan), "plan_name", valueOf(summary, "plan_name", ""));
     return [{
       summary,
       detail,
@@ -793,6 +794,7 @@ function OverviewPage() {
       unrealizedPnl,
       positionFact,
       strategyName: strategy?.display_name ?? strategyRef,
+      planName,
     }];
   });
   return (
@@ -850,7 +852,8 @@ function OverviewPage() {
                       <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ p: 2, justifyContent: "space-between", alignItems: { md: "center" } }}>
                         <Box sx={{ minWidth: 0 }}>
                           <Typography variant="overline" color="text.secondary">{position.strategyName}</Typography>
-                          <Typography variant="h2" sx={{ mt: .25 }}>
+                          {position.planName && <Typography variant="h2" sx={{ mt: .25 }}>{position.planName}</Typography>}
+                          <Typography sx={{ mt: position.planName ? .25 : 0, fontWeight: 750 }}>
                             {instrument} · <MarketToneText tone={marketToneForDirection(position.quantity > 0 ? "LONG" : "SHORT")}>{direction}</MarketToneText>
                           </Typography>
                           <Typography variant="caption" color="text.secondary">保护 {translatedLabel(protectionStateLabels, position.summary.protection_state)} · 激活 {shortDigest(position.summary.activation_id)}</Typography>
@@ -883,7 +886,8 @@ function OverviewPage() {
                       <Box key={activation.activation_id} sx={{ ...surfaceFrameSx, p: 2 }}>
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
                           <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 750 }}>
+                          <Typography sx={{ fontWeight: 750 }}>{valueOf(activation, "plan_name", "未命名计划")}</Typography>
+                          <Typography variant="body2">
                             {activation.instrument_ref} · <MarketToneText tone={marketToneForDirection(activation.direction)}>{translatedLabel(directionLabels, activation.direction)}</MarketToneText>
                           </Typography>
                             <Typography variant="caption" color="text.secondary">{activation.lifecycle} · {activation.run_state} · 保护 {translatedLabel(protectionStateLabels, activation.protection_state)} · 更新于 {formatUserVisibleTime(activation.updated_at)}</Typography>
@@ -1338,6 +1342,7 @@ function ActivationRoute() {
     : "";
   const receipts = recordsOf(query.data?.receipts);
   const strategy = recordOf(query.data?.strategy);
+  const plan = recordOf(query.data?.plan);
   const parameters = recordOf(strategy.parameters);
   const demoImmediateEntry = parameters.demo_immediate_entry === true;
   const stopped = Array.isArray(query.data?.stopped_categories) ? query.data.stopped_categories.map(String) : [];
@@ -1522,9 +1527,10 @@ function ActivationRoute() {
     valueOf(activation, "latest_venue_cutoff", ""),
     ...facts.map((fact) => valueOf(fact, "cutoff", "")),
   ]);
+  const planName = valueOf(plan, "plan_name", "") || "未命名计划";
   return (
     <Box sx={{ width: "min(1000px, calc(100% - clamp(32px, 4vw, 48px)))", mx: "auto", py: { xs: 2.5, sm: 3 } }}>
-      <PageHeader title="激活运行与控制" description="按计划事件 → 执行动作 → 交易所事实 → 核对结论观察同一责任链；命令回执不冒充订单、成交、持仓或保护事实。" />
+      <PageHeader eyebrow="激活运行与控制" title={planName} description="按计划事件 → 执行动作 → 交易所事实 → 核对结论观察同一责任链；命令回执不冒充订单、成交、持仓或保护事实。" />
       {(query.isPending || timelineQuery.isPending) && <LinearProgress aria-label="正在读取激活与时间线" />}
       {(query.isError || timelineQuery.isError) && <Alert severity="error" sx={{ mb: 2 }}>当前服务器事实不可确认；页面不会把旧缓存冒充当前事实，也不会开放离线资本命令。</Alert>}
       {protectionGap && <Alert severity="error" variant="filled" sx={{ mb: 3 }}>存在已确认敞口，但交易所原生保护尚未证明为工作中。保持在线并核对 Binance 官方入口；任何“停止”或回执都不代表已经安全。</Alert>}
@@ -1848,7 +1854,7 @@ function ReviewsPage() {
             <TableRow>
               <TableCell>闭合时间</TableCell>
               <TableCell>交易</TableCell>
-              <TableCell>策略</TableCell>
+              <TableCell>计划 / 策略</TableCell>
               <TableCell align="right">入场 / 出场</TableCell>
               <TableCell align="right">成交额</TableCell>
               <TableCell align="right">净盈亏</TableCell>
@@ -1865,6 +1871,7 @@ function ReviewsPage() {
               const ownerConclusion = recordOf(recordOf(review.evaluations).owner_conclusion);
               const strategyId = valueOf(context, "strategy_id");
               const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
+              const planName = valueOf(context, "plan_name", "");
               const resultAvailable = result.calculation_complete === true && result.closed === true && finiteNumber(result.net_pnl) !== null;
               const reviewId = valueOf(review, "review_id");
               const closedAt = formatUserVisibleTime(valueOf(result, "last_fill_time", valueOf(review, "fact_cutoff")));
@@ -1891,7 +1898,10 @@ function ReviewsPage() {
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>{valueOf(context, "instrument_ref")}</Typography>
                     <MarketToneText tone={marketToneForDirection(valueOf(context, "direction"))}>{translatedLabel(directionLabels, valueOf(context, "direction"))}</MarketToneText>
                   </TableCell>
-                  <TableCell>{strategy?.display_name ?? strategyId}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: planName ? 700 : 400 }}>{planName || strategy?.display_name || strategyId}</Typography>
+                    {planName && <Typography variant="caption" color="text.secondary">{strategy?.display_name ?? strategyId}</Typography>}
+                  </TableCell>
                   <TableCell className="mono" align="right">{marketPrice(valueOf(result, "average_entry_price"))} / {marketPrice(valueOf(result, "average_exit_price"))}</TableCell>
                   <TableCell className="mono" align="right">{usdt(valueOf(result, "entry_notional", valueOf(context, "trade_amount")))}</TableCell>
                   <TableCell className="mono" align="right">{resultAvailable ? <MarketToneText tone={marketToneForSignedValue(result.net_pnl)}>{signedUsdt(result.net_pnl)}</MarketToneText> : "未知"}</TableCell>
@@ -1966,8 +1976,10 @@ function ReviewRoute() {
   const inputRefs = recordOf(review.input_refs);
   const persistedTradeResult = recordOf(recordOf(review.account_result).trade_result);
   const currentTradeResult = recordOf(activationQuery.data?.trade_result);
-  const reviewTradeResult = Object.keys(persistedTradeResult).length > 0 ? persistedTradeResult : currentTradeResult;
+  const reviewTradeResult = { ...currentTradeResult, ...persistedTradeResult };
   const tradeContext = recordOf(review.trade_context);
+  const reviewPlan = recordOf(activationQuery.data?.plan);
+  const planName = valueOf(tradeContext, "plan_name", valueOf(reviewPlan, "plan_name", ""));
   const strategyRef = valueOf(recordOf(activationQuery.data?.strategy), "strategy_ref", valueOf(tradeContext, "strategy_id"));
   const strategyId = strategyRef.split("@", 1)[0];
   const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
@@ -1987,13 +1999,16 @@ function ReviewRoute() {
   const firstFillAt = valueOf(reviewTradeResult, "first_fill_time", "");
   const lastFillAt = valueOf(reviewTradeResult, "last_fill_time", "");
   const activation = recordOf(activationQuery.data?.activation);
-  const fallbackAt = valueOf(activation, "updated_at", valueOf(review, "fact_cutoff", ""));
+  const fallbackAt = valueOf(review, "fact_cutoff", valueOf(activation, "updated_at", ""));
   const baseStartMs = Date.parse(firstFillAt || fallbackAt);
   const baseEndMs = Date.parse(lastFillAt || fallbackAt);
   const intervalMs = chartInterval === "1m" ? 60_000 : 15 * 60_000;
   const paddingBars = chartInterval === "1m" ? 24 : 12;
+  const latestCompleteBarOpenMs = Math.floor(Date.now() / intervalMs) * intervalMs - intervalMs;
   const chartStart = Number.isFinite(baseStartMs) ? new Date(baseStartMs - intervalMs * paddingBars).toISOString() : "";
-  const chartEnd = Number.isFinite(baseEndMs) ? new Date(baseEndMs + intervalMs * paddingBars).toISOString() : "";
+  const chartEnd = Number.isFinite(baseEndMs)
+    ? new Date(Math.min(baseEndMs + intervalMs * paddingBars, latestCompleteBarOpenMs)).toISOString()
+    : "";
   const marketWindowQuery = useQuery({
     queryKey: ["review-market-window", valueOf(tradeContext, "instrument_ref", ""), chartInterval, chartStart, chartEnd],
     queryFn: () => getMarketWindow(valueOf(tradeContext, "instrument_ref"), chartStart, chartEnd, chartInterval),
@@ -2018,8 +2033,9 @@ function ReviewRoute() {
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} sx={{ justifyContent: "space-between", alignItems: { md: "flex-end" }, mb: 2 }}>
           <Box>
             <Button variant="text" size="small" onClick={() => navigate("/reviews")} sx={{ px: 0, minWidth: 0, mb: 0.5 }}>← 交易记录</Button>
+            {planName && <Typography variant="h1" sx={{ mb: .25 }}>{planName}</Typography>}
             <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", flexWrap: "wrap" }}>
-              <Typography variant="h1">{instrumentRef}</Typography>
+              <Typography variant={planName ? "h2" : "h1"}>{instrumentRef}</Typography>
               <Typography sx={{ fontWeight: 750 }}><MarketToneText tone={marketToneForDirection(direction)}>{translatedLabel(directionLabels, direction)}</MarketToneText></Typography>
             </Stack>
             <Typography variant="body2" color="text.secondary">{strategy?.display_name ?? strategyRef} · 闭合于 {formatUserVisibleTime(valueOf(reviewTradeResult, "last_fill_time", valueOf(review, "fact_cutoff")))}</Typography>
@@ -2034,7 +2050,7 @@ function ReviewRoute() {
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between", alignItems: { sm: "center" }, mb: 1 }}>
             <Box>
               <Typography variant="h2">交易价格回看</Typography>
-              <Typography variant="caption" color="text.secondary">成交来自本次复盘事实；止损和止盈线来自当前激活记录。</Typography>
+              <Typography variant="caption" color="text.secondary">复盘快照值优先；旧版本未保存的成交明细与时间字段由同一激活的当前权威事实补充。止损和止盈线来自当前激活记录。</Typography>
             </Box>
             <ToggleButtonGroup
               exclusive
@@ -2073,11 +2089,11 @@ function ReviewRoute() {
             <Typography variant="h2" sx={{ mb: 1.5 }}>机器为何交易</Typography>
             <FactGrid facts={[
               { label: "操作理由", value: triggerEvent ? planEventSummary(valueOf(triggerEvent, "status"), valueOf(triggerDetail, "rule_id", "")) : reviewPrimaryResult === "NO_ACTION" ? "未发生交易" : "未知" },
-              { label: "触发来源", value: triggerEvent ? valueOf(triggerDetail, "source_identity") : "未知", note: triggerEvent ? `${formatUserVisibleTime(valueOf(triggerDetail, "source_cutoff"))} · ${shortDigest(valueOf(triggerEvent, "source_ref"))}` : "没有可归属的入场触发事件" },
+              { label: "触发来源", value: triggerEvent ? valueOf(triggerDetail, "source_identity") : reviewPrimaryResult === "NO_ACTION" ? "不适用" : "未知", note: triggerEvent ? `${formatUserVisibleTime(valueOf(triggerDetail, "source_cutoff"))} · ${shortDigest(valueOf(triggerEvent, "source_ref"))}` : reviewPrimaryResult === "NO_ACTION" ? "没有入场触发事件" : "没有可归属的入场触发事件" },
               { label: "首次成交", value: tradeExpected && hasAttributedFills ? formatUserVisibleTime(valueOf(reviewTradeResult, "first_fill_time")) : tradeExpected ? "未知" : "不适用" },
               { label: "末次成交", value: tradeExpected && hasAttributedFills ? formatUserVisibleTime(valueOf(reviewTradeResult, "last_fill_time")) : tradeExpected ? "未知" : "不适用" },
             ]} />
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>触发说明取自当前激活时间线；复盘中已持久化的成交与结果仍是最终核对依据。</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>触发说明取自当前激活时间线；复盘快照中的结果优先，旧版本缺失字段只由同一激活的当前权威事实补充。</Typography>
           </Box>
 
           <Box component="section" sx={{ ...surfaceFrameSx, p: 2 }}>

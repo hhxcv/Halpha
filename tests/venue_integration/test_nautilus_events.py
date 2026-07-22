@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
+from nautilus_trader.model.enums import LiquiditySide, OrderSide
+
 from halpha.capital.models import RiskClass
 from halpha.venue_integration.facts import latest_execution_status
 from halpha.venue_integration.models import (
@@ -86,8 +90,8 @@ def test_fill_maps_trade_and_actual_commission_without_synthesizing_terminal_sta
             last_qty="0.001",
             commission="0.03 USDT",
             currency=_Identifier("USDT"),
-            order_side="BUY",
-            liquidity_side="TAKER",
+            order_side=OrderSide.BUY,
+            liquidity_side=LiquiditySide.TAKER,
         ),
         received_at=NOW,
     )
@@ -97,8 +101,24 @@ def test_fill_maps_trade_and_actual_commission_without_synthesizing_terminal_sta
     )
     assert result.facts[0].payload["leaves_quantity"] == "0.000"
     assert result.facts[0].payload["last_quantity"] == "0.001"
+    assert result.facts[0].payload["order_side"] == "BUY"
+    assert result.facts[0].payload["liquidity_side"] == "TAKER"
     assert result.facts[1].payload["amount"] == "0.03 USDT"
     assert latest_execution_status((result.facts[0],)) == "FILLED"
+
+    late_working = NautilusExecutionEventNormalizer(
+        lambda _client_order_id: action,
+        environment_id="demo-main",
+        fact_id_factory=lambda: "10000000-0000-0000-0000-000000000014",
+    ).normalize(
+        _event(
+            "OrderUpdated",
+            id=_Identifier("event-2"),
+            ts_event=1_773_910_801_000_000_000,
+        ),
+        received_at=NOW + timedelta(seconds=1),
+    )
+    assert latest_execution_status((*result.facts, *late_working.facts)) == "FILLED"
 
 
 def test_fill_with_missing_or_invalid_leaves_quantity_stays_partial() -> None:

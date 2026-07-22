@@ -229,6 +229,34 @@ class ProductResponsibilityBoundary:
         facts = await self._fact_provider(activation)
         for action in actions:
             if action.state is ExecutionActionState.UNKNOWN:
+                if action.action_kind is ExecutionActionKind.CANCEL:
+                    target_client_order_id = (action.cancel_target or {}).get(
+                        "client_order_id"
+                    )
+                    target = next(
+                        (
+                            candidate
+                            for candidate in actions
+                            if candidate.client_order_id == target_client_order_id
+                        ),
+                        None,
+                    )
+                    target_fact = (
+                        _latest_terminal_order_fact(
+                            self._coordinator.list_venue_facts_for_action(
+                                target.execution_action_id
+                            )
+                        )
+                        if target is not None
+                        else None
+                    )
+                    if target_fact is not None:
+                        self._coordinator.reconcile_cancel_from_target_fact(
+                            action.execution_action_id,
+                            target_fact=target_fact,
+                            observed_at=facts.checked_at,
+                        )
+                        continue
                 definitely_absent = False
                 if (
                     action.action_kind is ExecutionActionKind.ENTRY
@@ -677,6 +705,25 @@ def _fills_have_commissions(facts: tuple[VenueFact, ...]) -> bool:
         and fact.payload.get("trade_id") is not None
     }
     return fill_trade_ids.issubset(commission_trade_ids)
+
+
+def _latest_terminal_order_fact(
+    facts: tuple[VenueFact, ...],
+) -> VenueFact | None:
+    terminal_facts = tuple(
+        fact for fact in facts if terminal_order_status((fact,)) is not None
+    )
+    if not terminal_facts:
+        return None
+    return max(
+        terminal_facts,
+        key=lambda fact: (
+            fact.source_time or fact.cutoff,
+            fact.cutoff,
+            fact.received_at,
+            fact.venue_fact_id,
+        ),
+    )
 
 
 def _stable_id(environment_id: str, kind: str, source_identity: str) -> str:

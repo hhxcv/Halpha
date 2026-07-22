@@ -87,7 +87,10 @@ class PostgreSQLOutcomesApi:
         rows = connection.execute(
             """
             SELECT a.activation_id, a.instrument_ref, a.direction, a.strategy_id,
-                   v.max_notional, a.created_at, a.updated_at
+                   v.max_notional, a.created_at, a.updated_at,
+                   v.terms ->> 'plan_name',
+                   v.terms ->> 'created_at',
+                   v.terms ->> 'creator_kind'
             FROM halpha.plan_activation a
             LEFT JOIN halpha.trade_plan_version v
               ON v.environment_id = a.environment_id
@@ -104,6 +107,9 @@ class PostgreSQLOutcomesApi:
                 "trade_amount": str(row[4]) if row[4] is not None else None,
                 "activation_started_at": row[5].isoformat(),
                 "activation_updated_at": row[6].isoformat(),
+                "plan_name": str(row[7]) if row[7] is not None else None,
+                "plan_created_at": str(row[8]) if row[8] is not None else None,
+                "plan_creator_kind": str(row[9]) if row[9] is not None else None,
             }
             for row in rows
         }

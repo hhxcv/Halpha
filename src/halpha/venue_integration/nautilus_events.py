@@ -9,6 +9,13 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from nautilus_trader.model.enums import (
+    LiquiditySide,
+    OrderSide,
+    liquidity_side_to_str,
+    order_side_to_str,
+)
+
 from halpha.venue_integration.facts import build_venue_fact
 from halpha.venue_integration.models import (
     ExecutionAction,
@@ -247,8 +254,10 @@ class NautilusExecutionEventNormalizer:
                 "last_price": str(getattr(event, "last_px")),
                 "last_quantity": str(getattr(event, "last_qty")),
                 "leaves_quantity": leaves_quantity,
-                "order_side": str(getattr(event, "order_side", "")),
-                "liquidity_side": str(getattr(event, "liquidity_side", "")),
+                "order_side": _order_side(getattr(event, "order_side", "")),
+                "liquidity_side": _liquidity_side(
+                    getattr(event, "liquidity_side", "")
+                ),
                 "reconciliation": bool(getattr(event, "reconciliation", False)),
             },
             **common,
@@ -273,6 +282,18 @@ class NautilusExecutionEventNormalizer:
                 )
             )
         return tuple(facts)
+
+
+def _order_side(value: object) -> str:
+    return order_side_to_str(value) if isinstance(value, OrderSide) else str(value)
+
+
+def _liquidity_side(value: object) -> str:
+    return (
+        liquidity_side_to_str(value)
+        if isinstance(value, LiquiditySide)
+        else str(value)
+    )
 
 
 def _identifier(value: Any) -> str | None:
