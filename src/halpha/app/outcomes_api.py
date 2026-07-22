@@ -11,7 +11,9 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from halpha.outcomes.repository import PostgreSQLOutcomeRepository
 from halpha.outcomes.repository import OutcomeConflict
 from halpha.outcomes.models import EvaluationResult
+from halpha.outcomes.account_reconciliation import account_result_role
 from halpha.outcomes.service import OutcomeApplicationService
+from halpha.outcomes.trade_result import summarize_trade_result
 
 
 class OutcomeApiModel(BaseModel):
@@ -113,8 +115,137 @@ class PostgreSQLOutcomesApi:
             }
             for row in rows
         }
+        action_rows = connection.execute(
+            """
+            SELECT activation_id, execution_action_id, action_kind
+            FROM halpha.execution_action
+            WHERE environment_id = %s AND activation_id::text = ANY(%s)
+            """,
+            (self._environment_id, activation_ids),
+        ).fetchall()
+        fact_rows = connection.execute(
+            """
+            SELECT COALESCE(
+                     activation_ref::text,
+                     impact_scope ->> 'account_episode_activation_id'
+                   ) AS account_episode_activation_id,
+                   venue_fact_id, schema_version, kind, content_digest,
+                   payload, action_ref, source_time, impact_scope,
+                   attribution_class
+            FROM halpha.venue_fact
+            WHERE environment_id = %s
+              AND (
+                activation_ref::text = ANY(%s)
+                OR (
+                  attribution_class IS NULL
+                  AND impact_scope ->> 'account_episode_activation_id' = ANY(%s)
+                )
+              )
+            """,
+            (self._environment_id, activation_ids, activation_ids),
+        ).fetchall()
+        actions_by_activation: dict[str, dict[str, tuple[Any, ...]]] = {}
+        for row in action_rows:
+            actions_by_activation.setdefault(str(row[0]), {})[str(row[1])] = row
+        facts_by_activation: dict[str, dict[str, tuple[Any, ...]]] = {}
+        for row in fact_rows:
+            facts_by_activation.setdefault(str(row[0]), {})[str(row[1])] = row
+
+        def resolved_trade_result(review: dict[str, Any]) -> dict[str, Any]:
+            activation_id = str(review["activation_id"])
+            input_refs = review.get("input_refs")
+            if not isinstance(input_refs, dict):
+                return _unresolved_trade_result(("input_refs",))
+            action_refs = input_refs.get("execution_actions", [])
+            fact_refs = input_refs.get("venue_facts", [])
+            if not isinstance(action_refs, list) or not isinstance(fact_refs, list):
+                return _unresolved_trade_result(("input_refs",))
+            if any(
+                not isinstance(item, dict)
+                or item.get("execution_action_id") is None
+                for item in action_refs
+            ) or any(
+                not isinstance(item, dict) or item.get("venue_fact_id") is None
+                for item in fact_refs
+            ):
+                return _unresolved_trade_result(("input_refs",))
+            expected_action_refs = tuple(action_refs)
+            expected_fact_refs = tuple(fact_refs)
+            expected_actions = tuple(
+                dict.fromkeys(
+                    str(item["execution_action_id"])
+                    for item in expected_action_refs
+                )
+            )
+            expected_facts = tuple(
+                dict.fromkeys(
+                    str(item["venue_fact_id"]) for item in expected_fact_refs
+                )
+            )
+            available_actions = actions_by_activation.get(activation_id, {})
+            available_facts = facts_by_activation.get(activation_id, {})
+            unresolved_refs = tuple(
+                sorted(
+                    {
+                        *(
+                            f"execution_action:{item}"
+                            for item in expected_actions
+                            if item not in available_actions
+                        ),
+                        *(
+                            f"venue_fact:{item}"
+                            for item in expected_facts
+                            if item not in available_facts
+                        ),
+                        *(
+                            f"venue_fact:{item['venue_fact_id']}:snapshot_mismatch"
+                            for item in expected_fact_refs
+                            if str(item["venue_fact_id"]) in available_facts
+                            and not _fact_matches_snapshot(
+                                available_facts[str(item["venue_fact_id"])],
+                                item,
+                            )
+                        ),
+                    }
+                )
+            )
+            if unresolved_refs:
+                return _unresolved_trade_result(unresolved_refs)
+            context = contexts.get(activation_id, {})
+            result = summarize_trade_result(
+                direction=str(context.get("direction", "")),
+                action_kinds={
+                    action_id: str(available_actions[action_id][2])
+                    for action_id in expected_actions
+                },
+                facts=(
+                    {
+                        "kind": str(available_facts[fact_id][3]),
+                        "payload": dict(available_facts[fact_id][5]),
+                        "action_ref": (
+                            str(available_facts[fact_id][6])
+                            if available_facts[fact_id][6] is not None
+                            else None
+                        ),
+                        "source_time": (
+                            available_facts[fact_id][7].isoformat()
+                            if available_facts[fact_id][7] is not None
+                            else None
+                        ),
+                        "result_role": account_result_role(
+                            available_facts[fact_id][8]
+                        ),
+                    }
+                    for fact_id in expected_facts
+                ),
+            )
+            return {**result, "unresolved_refs": []}
         return [
-            {**item, "trade_context": contexts.get(str(item["activation_id"]), {})}
+            {
+                **item,
+                "trade_context": contexts.get(str(item["activation_id"]), {}),
+                "resolved_trade_result": resolved_trade_result(item),
+            }
             for item in reviews
         ]
 
@@ -152,3 +283,45 @@ class PostgreSQLOutcomesApi:
                 note=payload.note,
             )
             return {"review": review.model_dump(mode="json")}
+
+
+def _unresolved_trade_result(unresolved_refs: tuple[str, ...]) -> dict[str, Any]:
+    return {
+        "fill_count": 0,
+        "fills": [],
+        "position_quantity": None,
+        "average_entry_price": None,
+        "average_exit_price": None,
+        "entry_notional": None,
+        "fill_cash_flow": None,
+        "commission": None,
+        "commission_complete": False,
+        "calculation_complete": False,
+        "closed": False,
+        "gross_pnl": None,
+        "net_pnl": None,
+        "currency": "USDT",
+        "funding_included": False,
+        "fill_times_complete": False,
+        "first_fill_time": None,
+        "last_fill_time": None,
+        "holding_duration_seconds": None,
+        "result_scope": "UNKNOWN",
+        "external_closure_fill_count": 0,
+        "strategy_attribution_complete": False,
+        "unresolved_refs": list(unresolved_refs),
+    }
+
+
+def _fact_matches_snapshot(row: tuple[Any, ...], snapshot: dict[str, Any]) -> bool:
+    return (
+        (
+            snapshot.get("schema_version") is None
+            or int(snapshot["schema_version"]) == int(row[2])
+        )
+        and (snapshot.get("kind") is None or str(snapshot["kind"]) == str(row[3]))
+        and (
+            snapshot.get("content_digest") is None
+            or str(snapshot["content_digest"]) == str(row[4])
+        )
+    )

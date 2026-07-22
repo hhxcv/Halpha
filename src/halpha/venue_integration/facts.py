@@ -102,6 +102,8 @@ def build_venue_fact(
     cutoff: datetime,
     payload: dict[str, Any],
     action: ExecutionAction | None = None,
+    impact_scope: dict[str, Any] | None = None,
+    affected_reference_refs: tuple[str, ...] | None = None,
 ) -> VenueFact:
     """Normalize one authoritative observation without inventing venue identity."""
 
@@ -156,8 +158,8 @@ def build_venue_fact(
         "correction_reason": None,
         "correction_evidence_refs": None,
         "correction_effective_time": None,
-        "impact_scope": None,
-        "affected_reference_refs": None,
+        "impact_scope": impact_scope,
+        "affected_reference_refs": affected_reference_refs,
     }
     fields["content_digest"] = venue_fact_content_digest(fields)
     return VenueFact(**fields)

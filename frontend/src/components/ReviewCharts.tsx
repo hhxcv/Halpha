@@ -75,7 +75,7 @@ function formatChartPrice(value: number): string {
 }
 
 function chartBaseOptions(container: HTMLDivElement) {
-  return {
+      return {
     autoSize: true,
     height: container.clientHeight,
     layout: {
@@ -165,7 +165,7 @@ export function ReviewPriceChart({
         position: markerBelow ? "belowBar" : "aboveBar",
         color: entry ? (direction === "LONG" ? colors.up : colors.down) : (direction === "LONG" ? colors.down : colors.up),
         shape: markerBelow ? "arrowUp" : "arrowDown",
-        text: `${entry ? "入场" : kind === "TAKE_PROFIT" ? "止盈" : kind === "PROTECTION" ? "止损" : "退出"} ${String(fill.price ?? "")}`,
+        text: `${entry ? "入场" : kind === "TAKE_PROFIT" ? "止盈" : kind === "PROTECTION" ? "止损" : kind === "EXTERNAL_ACCOUNT_CLOSURE" ? "外部平仓" : "退出"} ${String(fill.price ?? "")}`,
       }];
     });
     createSeriesMarkers(series, markers.sort((left, right) => Number(left.time) - Number(right.time)));
@@ -208,7 +208,7 @@ export function ReviewPriceChart({
       <Box
         ref={containerRef}
         role="group"
-        aria-label={`${interval} K 线图，包含入场、退出、止损和止盈标记`}
+        aria-label={`${interval} K 线图，包含入场、退出、外部平仓、止损和止盈标记`}
         sx={{ height: { xs: 320, md: 430 }, width: "100%" }}
       />
     </Box>
@@ -248,5 +248,5 @@ export function CumulativePnlChart({
     return () => destroyChart(chart);
   }, [marketColorScheme, points]);
 
-  return <Box ref={containerRef} role="group" aria-label="近期已闭合交易累计净盈亏趋势" sx={{ height: 180, width: "100%" }} />;
+  return <Box ref={containerRef} role="group" aria-label="全部已闭合交易累计净盈亏趋势" sx={{ height: 180, width: "100%" }} />;
 }
