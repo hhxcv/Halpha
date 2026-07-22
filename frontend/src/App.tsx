@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
   AppBar,
@@ -168,6 +168,58 @@ function TradingViewAttribution() {
   );
 }
 
+function ClampedTooltipText({ text, lines = 2 }: { text: string; lines?: number }) {
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  const updateTruncation = useCallback(() => {
+    const element = textRef.current;
+    if (!element) return;
+    setTruncated(element.scrollHeight > element.clientHeight + 1 || element.scrollWidth > element.clientWidth + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    updateTruncation();
+    const element = textRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(updateTruncation);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [text, lines, updateTruncation]);
+
+  return (
+    <Tooltip
+      title={text}
+      placement="top"
+      arrow
+      disableHoverListener={!truncated}
+      disableFocusListener={!truncated}
+      disableTouchListener={!truncated}
+      slotProps={{ tooltip: { sx: { maxWidth: 440, fontSize: 13, lineHeight: 1.55 } } }}
+    >
+      <Typography
+        ref={textRef}
+        component="span"
+        tabIndex={truncated ? 0 : undefined}
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: lines,
+          maxHeight: `${lines * 1.45}em`,
+          overflow: "hidden",
+          lineHeight: 1.45,
+          overflowWrap: "anywhere",
+          cursor: truncated ? "help" : "inherit",
+          outlineOffset: 2,
+        }}
+      >
+        {text}
+      </Typography>
+    </Tooltip>
+  );
+}
+
 function ExpandableList<T>({
   items,
   renderItem,
@@ -270,6 +322,8 @@ function exitReason(result: Record<string, unknown>): string {
       ? "保护止损"
       : kind === "EXIT"
         ? "策略退出"
+        : kind === "EXTERNAL_ACCOUNT_CLOSURE"
+          ? "外部应急平仓"
         : kind === "RISK_REDUCTION"
           ? "风险减仓"
           : "未知";
@@ -336,8 +390,12 @@ const pnlFilterLabels: Record<ReviewPnlFilter, string> = {
   UNKNOWN: "盈亏未知",
 };
 
+function tradeResultForReview(review: Record<string, unknown>): Record<string, unknown> {
+  return recordOf(review.resolved_trade_result);
+}
+
 function reviewPnlClass(review: Record<string, unknown>): Exclude<ReviewPnlFilter, "ALL"> {
-  const result = recordOf(recordOf(review.account_result).trade_result);
+  const result = tradeResultForReview(review);
   const netPnl = finiteNumber(result.net_pnl);
   if (result.calculation_complete !== true || result.closed !== true || netPnl === null) return "UNKNOWN";
   if (netPnl > 0) return "PROFIT";
@@ -395,6 +453,7 @@ const actionKindLabels: Record<string, string> = {
   TAKE_PROFIT: "止盈",
   RISK_REDUCTION: "减仓",
   EXIT: "退出",
+  EXTERNAL_ACCOUNT_CLOSURE: "外部应急平仓",
 };
 
 const actionStateLabels: Record<string, string> = {
@@ -747,10 +806,11 @@ function OverviewPage() {
   });
   const recentClosedTrades = [...(reviewsQuery.data ?? [])]
     .filter((review) => {
-      const result = recordOf(recordOf(review.account_result).trade_result);
+      const result = tradeResultForReview(review);
       return ["COMPLETED", "PARTIAL"].includes(valueOf(review, "primary_result"))
         && result.calculation_complete === true
         && result.closed === true
+        && result.result_scope !== "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE"
         && Number.isFinite(Number(result.net_pnl));
     })
     .sort((left, right) => Date.parse(valueOf(right, "fact_cutoff", "")) - Date.parse(valueOf(left, "fact_cutoff", "")))
@@ -763,7 +823,7 @@ function OverviewPage() {
     })),
   });
   const recentNetPnl = recentClosedTrades.reduce((total, review) => (
-    total + Number(recordOf(recordOf(review.account_result).trade_result).net_pnl)
+    total + Number(tradeResultForReview(review).net_pnl)
   ), 0);
   const positionRows = openActivations.flatMap((summary, index) => {
     const detail = activationDetailQueries[index]?.data;
@@ -913,7 +973,7 @@ function OverviewPage() {
                 ]} />
                 <Stack spacing={1.25} sx={{ mt: 2 }}>
                   {recentClosedTrades.map((review, index) => {
-                    const result = recordOf(recordOf(review.account_result).trade_result);
+                    const result = tradeResultForReview(review);
                     const detail = recentTradeActivationQueries[index]?.data;
                     const activation = recordOf(detail?.activation);
                     const capital = recordOf(detail?.capital);
@@ -1753,14 +1813,14 @@ function ReviewsPage() {
   const instrumentOptions = [...new Set(reviews.map((review) => valueOf(recordOf(review.trade_context), "instrument_ref", "")).filter(Boolean))].sort();
   const activeFilterCount = Object.values(listFilters).filter((value) => value !== "ALL").length;
   const reliableTrades = tradedReviews.filter((review) => {
-    const result = recordOf(recordOf(review.account_result).trade_result);
+    const result = tradeResultForReview(review);
     return result.calculation_complete === true && result.closed === true && finiteNumber(result.net_pnl) !== null;
-  }).slice(0, 30);
-  const netPnl = reliableTrades.reduce((sum, review) => sum + (finiteNumber(recordOf(recordOf(review.account_result).trade_result).net_pnl) ?? 0), 0);
-  const commissions = reliableTrades.reduce((sum, review) => sum + (finiteNumber(recordOf(recordOf(review.account_result).trade_result).commission) ?? 0), 0);
-  const wins = reliableTrades.filter((review) => (finiteNumber(recordOf(recordOf(review.account_result).trade_result).net_pnl) ?? 0) > 0).length;
+  });
+  const netPnl = reliableTrades.reduce((sum, review) => sum + (finiteNumber(tradeResultForReview(review).net_pnl) ?? 0), 0);
+  const commissions = reliableTrades.reduce((sum, review) => sum + (finiteNumber(tradeResultForReview(review).commission) ?? 0), 0);
+  const wins = reliableTrades.filter((review) => (finiteNumber(tradeResultForReview(review).net_pnl) ?? 0) > 0).length;
   const holdingDurations = reliableTrades.flatMap((review) => {
-    const duration = finiteNumber(recordOf(recordOf(review.account_result).trade_result).holding_duration_seconds);
+    const duration = finiteNumber(tradeResultForReview(review).holding_duration_seconds);
     return duration === null ? [] : [duration];
   });
   const averageHolding = holdingDurations.length > 0
@@ -1768,7 +1828,7 @@ function ReviewsPage() {
     : Number.NaN;
   let cumulative = 0;
   const trendPoints = [...reliableTrades].reverse().map((review) => {
-    const result = recordOf(recordOf(review.account_result).trade_result);
+    const result = tradeResultForReview(review);
     cumulative += finiteNumber(result.net_pnl) ?? 0;
     return { at: valueOf(result, "last_fill_time", valueOf(review, "fact_cutoff")), value: cumulative };
   });
@@ -1801,7 +1861,6 @@ function ReviewsPage() {
           </Box>
           {trendPoints.length >= 2 && <Box sx={{ width: { lg: 360 }, minWidth: 0 }}><Suspense fallback={<LinearProgress aria-label="正在加载盈亏趋势图" />}><CumulativePnlChart points={trendPoints} marketColorScheme={marketColorScheme} /></Suspense></Box>}
         </Stack>
-        <Typography variant="caption" color="text.secondary">最近最多 30 笔可完整计算的闭合交易；汇总只描述当前环境事实，不证明策略有效。</Typography>
         {trendPoints.length >= 2 && <TradingViewAttribution />}
       </Box>
 
@@ -1866,13 +1925,14 @@ function ReviewsPage() {
           </TableHead>
           <TableBody>
             {shownReviews.map((review) => {
-              const result = recordOf(recordOf(review.account_result).trade_result);
+              const result = tradeResultForReview(review);
               const context = recordOf(review.trade_context);
               const ownerConclusion = recordOf(recordOf(review.evaluations).owner_conclusion);
               const strategyId = valueOf(context, "strategy_id");
               const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
               const planName = valueOf(context, "plan_name", "");
               const resultAvailable = result.calculation_complete === true && result.closed === true && finiteNumber(result.net_pnl) !== null;
+              const externalAccountResult = result.result_scope === "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE";
               const reviewId = valueOf(review, "review_id");
               const closedAt = formatUserVisibleTime(valueOf(result, "last_fill_time", valueOf(review, "fact_cutoff")));
               const openReview = () => navigate(`/reviews/${reviewId}`);
@@ -1903,12 +1963,18 @@ function ReviewsPage() {
                     {planName && <Typography variant="caption" color="text.secondary">{strategy?.display_name ?? strategyId}</Typography>}
                   </TableCell>
                   <TableCell className="mono" align="right">{marketPrice(valueOf(result, "average_entry_price"))} / {marketPrice(valueOf(result, "average_exit_price"))}</TableCell>
-                  <TableCell className="mono" align="right">{usdt(valueOf(result, "entry_notional", valueOf(context, "trade_amount")))}</TableCell>
-                  <TableCell className="mono" align="right">{resultAvailable ? <MarketToneText tone={marketToneForSignedValue(result.net_pnl)}>{signedUsdt(result.net_pnl)}</MarketToneText> : "未知"}</TableCell>
+                  <TableCell className="mono" align="right">{finiteNumber(result.entry_notional) === null ? "未知" : usdt(result.entry_notional)}</TableCell>
+                  <TableCell className="mono" align="right">
+                    {resultAvailable ? <MarketToneText tone={marketToneForSignedValue(result.net_pnl)}>{signedUsdt(result.net_pnl)}</MarketToneText> : "未知"}
+                    {externalAccountResult && <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>账户结果</Typography>}
+                  </TableCell>
                   <TableCell className="mono" align="right">{resultAvailable ? usdt(result.commission) : "未知"}</TableCell>
                   <TableCell>{durationText(result.holding_duration_seconds)}<Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{exitReason(result)}</Typography></TableCell>
                   <TableCell>{translatedLabel(reviewResultLabels, valueOf(review, "primary_result"))}</TableCell>
-                  <TableCell>{translatedLabel(evaluationResultLabels, reviewConclusion(review))}<Typography variant="caption" color="text.secondary" sx={{ display: "block", maxWidth: 180 }}>{valueOf(ownerConclusion, "reason", translatedLabel(reviewStatusLabels, valueOf(review, "status")))}</Typography></TableCell>
+                  <TableCell sx={{ minWidth: 160, maxWidth: 200, verticalAlign: "top" }}>
+                    {translatedLabel(evaluationResultLabels, reviewConclusion(review))}
+                    <ClampedTooltipText text={valueOf(ownerConclusion, "reason", translatedLabel(reviewStatusLabels, valueOf(review, "status")))} />
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -1974,9 +2040,7 @@ function ReviewRoute() {
   });
 
   const inputRefs = recordOf(review.input_refs);
-  const persistedTradeResult = recordOf(recordOf(review.account_result).trade_result);
-  const currentTradeResult = recordOf(activationQuery.data?.trade_result);
-  const reviewTradeResult = { ...currentTradeResult, ...persistedTradeResult };
+  const reviewTradeResult = tradeResultForReview(review);
   const tradeContext = recordOf(review.trade_context);
   const reviewPlan = recordOf(activationQuery.data?.plan);
   const planName = valueOf(tradeContext, "plan_name", valueOf(reviewPlan, "plan_name", ""));
@@ -2018,6 +2082,7 @@ function ReviewRoute() {
   const instrumentRef = valueOf(tradeContext, "instrument_ref");
   const direction = valueOf(tradeContext, "direction");
   const reviewClosed = reviewTradeResult.calculation_complete === true && reviewTradeResult.closed === true;
+  const externalAccountResult = reviewTradeResult.result_scope === "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE";
   const tradeExpected = reviewPrimaryResult !== "NO_ACTION";
   const hasAttributedFills = fills.length > 0;
   const ownerConclusion = recordOf(recordOf(review.evaluations).owner_conclusion);
@@ -2050,7 +2115,7 @@ function ReviewRoute() {
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between", alignItems: { sm: "center" }, mb: 1 }}>
             <Box>
               <Typography variant="h2">交易价格回看</Typography>
-              <Typography variant="caption" color="text.secondary">复盘快照值优先；旧版本未保存的成交明细与时间字段由同一激活的当前权威事实补充。止损和止盈线来自当前激活记录。</Typography>
+              <Typography variant="caption" color="text.secondary">成交与盈亏只由该复盘明确引用的交易所成交和手续费事实还原；引用缺失或冲突时保持未知。止损和止盈线来自当前激活记录。</Typography>
             </Box>
             <ToggleButtonGroup
               exclusive
@@ -2073,9 +2138,12 @@ function ReviewRoute() {
           <TradingViewAttribution />
         </Box>
 
+        {externalAccountResult && <Alert severity="warning" variant="outlined" sx={{ mb: 2 }}>
+          出场由明确选定的 Binance 只减仓应急订单完成。以下盈亏是交易所成交与手续费形成的账户结果，不记作 Halpha 策略退出。
+        </Alert>}
         <FactGrid facts={[
-          { label: "净盈亏", value: tradeExpected && reviewClosed ? signedUsdt(reviewTradeResult.net_pnl) : tradeExpected ? "未知" : "不适用", tone: tradeExpected && reviewClosed ? marketToneForSignedValue(reviewTradeResult.net_pnl) : undefined },
-          { label: "毛盈亏", value: tradeExpected && reviewClosed ? signedUsdt(reviewTradeResult.gross_pnl) : tradeExpected ? "未知" : "不适用", tone: tradeExpected && reviewClosed ? marketToneForSignedValue(reviewTradeResult.gross_pnl) : undefined },
+          { label: externalAccountResult ? "账户净盈亏" : "净盈亏", value: tradeExpected && reviewClosed ? signedUsdt(reviewTradeResult.net_pnl) : tradeExpected ? "未知" : "不适用", tone: tradeExpected && reviewClosed ? marketToneForSignedValue(reviewTradeResult.net_pnl) : undefined },
+          { label: externalAccountResult ? "账户毛盈亏" : "毛盈亏", value: tradeExpected && reviewClosed ? signedUsdt(reviewTradeResult.gross_pnl) : tradeExpected ? "未知" : "不适用", tone: tradeExpected && reviewClosed ? marketToneForSignedValue(reviewTradeResult.gross_pnl) : undefined },
           { label: "手续费", value: tradeExpected && hasAttributedFills ? usdt(reviewTradeResult.commission) : tradeExpected ? "未知" : "不适用", note: "净盈亏不含资金费" },
           { label: "持仓周期", value: tradeExpected ? durationText(reviewTradeResult.holding_duration_seconds) : "不适用" },
           { label: "平均入场价", value: tradeExpected && hasAttributedFills ? `${marketPrice(valueOf(reviewTradeResult, "average_entry_price"))} USDT` : tradeExpected ? "未知" : "不适用" },
@@ -2093,7 +2161,7 @@ function ReviewRoute() {
               { label: "首次成交", value: tradeExpected && hasAttributedFills ? formatUserVisibleTime(valueOf(reviewTradeResult, "first_fill_time")) : tradeExpected ? "未知" : "不适用" },
               { label: "末次成交", value: tradeExpected && hasAttributedFills ? formatUserVisibleTime(valueOf(reviewTradeResult, "last_fill_time")) : tradeExpected ? "未知" : "不适用" },
             ]} />
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>触发说明取自当前激活时间线；复盘快照中的结果优先，旧版本缺失字段只由同一激活的当前权威事实补充。</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>触发说明取自同一激活的时间线；成交结果仅使用该复盘明确引用的权威事实，缺失不补猜。</Typography>
           </Box>
 
           <Box component="section" sx={{ ...surfaceFrameSx, p: 2 }}>

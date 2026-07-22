@@ -17,6 +17,7 @@ from halpha.outcomes.models import (
     Review,
     ReviewStatus,
 )
+from halpha.outcomes.account_reconciliation import account_result_role
 from halpha.outcomes.repository import OutcomeConflict, PostgreSQLOutcomeRepository
 from halpha.outcomes.trade_result import summarize_trade_result
 
@@ -166,12 +167,20 @@ class OutcomeApplicationService:
         facts = self._connection.execute(
             """
             SELECT venue_fact_id, schema_version, kind, content_digest, cutoff,
-                   source_time, payload, action_ref
+                   source_time, payload, action_ref, impact_scope,
+                   attribution_class
             FROM halpha.venue_fact
-            WHERE environment_id = %s AND activation_ref = %s AND cutoff <= %s
+            WHERE environment_id = %s AND cutoff <= %s
+              AND (
+                activation_ref = %s
+                OR (
+                  attribution_class IS NULL
+                  AND impact_scope ->> 'account_episode_activation_id' = %s
+                )
+              )
             ORDER BY cutoff, venue_fact_id
             """,
-            (self._environment_id, activation_id, fact_cutoff),
+            (self._environment_id, fact_cutoff, activation_id, activation_id),
         ).fetchall()
         commands = self._connection.execute(
             """
@@ -246,6 +255,9 @@ class OutcomeApplicationService:
         ]
         takeover = str(activation[10]) == "USER" or activation[11] is not None
         has_fill = any(str(row[2]) == "FILL" for row in facts)
+        has_external_closure = any(
+            account_result_role(row[8]) is not None for row in facts
+        )
         if takeover:
             primary_result = PrimaryResult.HANDED_OVER
         elif unknown_action_refs:
@@ -267,6 +279,7 @@ class OutcomeApplicationService:
                     "payload": dict(row[6]),
                     "action_ref": str(row[7]) if row[7] is not None else None,
                     "source_time": row[5].isoformat() if row[5] is not None else None,
+                    "result_role": account_result_role(row[8]),
                 }
                 for row in facts
             ),
@@ -278,7 +291,15 @@ class OutcomeApplicationService:
                 "classification": (
                     "UNKNOWN"
                     if missing_refs or primary_result is PrimaryResult.RESULT_UNKNOWN
-                    else ("NO_EXTERNAL_CHANGE" if not has_fill else "ATTRIBUTED_FACTS_AVAILABLE")
+                    else (
+                        "NO_EXTERNAL_CHANGE"
+                        if not has_fill
+                        else (
+                            "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE"
+                            if has_external_closure
+                            else "ATTRIBUTED_FACTS_AVAILABLE"
+                        )
+                    )
                 ),
                 "venue_fact_refs": [str(row[0]) for row in facts],
                 "missing_refs": missing_refs,

@@ -11,7 +11,10 @@ from typing import Any
 from halpha.domain_values import canonical_decimal
 
 
-_REDUCING_ACTIONS = frozenset({"PROTECTION", "TAKE_PROFIT", "EXIT"})
+_EXTERNAL_CLOSURE = "EXTERNAL_ACCOUNT_CLOSURE"
+_REDUCING_ACTIONS = frozenset(
+    {"PROTECTION", "TAKE_PROFIT", "EXIT", _EXTERNAL_CLOSURE}
+)
 
 
 @dataclass
@@ -49,6 +52,8 @@ def summarize_trade_result(
         if kind == "FILL":
             action_ref = fact.get("action_ref")
             action_kind = action_kinds.get(str(action_ref), "")
+            if action_ref is None and fact.get("result_role") == _EXTERNAL_CLOSURE:
+                action_kind = _EXTERNAL_CLOSURE
             try:
                 price = _positive_decimal(payload.get("last_price"))
                 quantity = _positive_decimal(payload.get("last_quantity"))
@@ -186,6 +191,9 @@ def summarize_trade_result(
         closed=closed,
         fill_times_complete=fill_times_complete,
     )
+    external_closure_count = sum(
+        fill.action_kind == _EXTERNAL_CLOSURE for fill in fills.values()
+    )
     return {
         "fill_count": len(fills),
         "fills": fill_details,
@@ -218,6 +226,13 @@ def summarize_trade_result(
             if holding_duration is not None
             else None
         ),
+        "result_scope": (
+            "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE"
+            if external_closure_count
+            else "HALPHA_ATTRIBUTED_ACTIONS"
+        ),
+        "external_closure_fill_count": external_closure_count,
+        "strategy_attribution_complete": external_closure_count == 0,
     }
 
 

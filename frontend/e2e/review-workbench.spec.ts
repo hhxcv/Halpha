@@ -69,6 +69,18 @@ const professionalThreeTradeResult = tradeResult({
   firstFillTime: "2026-07-21T00:20:00Z",
   lastFillTime: "2026-07-21T00:25:30Z",
 });
+const externalClosureTradeResult = tradeResult({
+  entry: "101",
+  exit: "100",
+  netPnl: "-0.9",
+  grossPnl: "-0.8",
+  commission: "0.1",
+  firstFillTime: "2026-07-21T00:10:00Z",
+  lastFillTime: "2026-07-21T00:15:30Z",
+});
+externalClosureTradeResult.result_scope = "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE";
+externalClosureTradeResult.strategy_attribution_complete = false;
+externalClosureTradeResult.fills[1].action_kind = "EXTERNAL_ACCOUNT_CLOSURE";
 const legacyProfessionalThreeTradeResult = {
   calculation_complete: professionalThreeTradeResult.calculation_complete,
   closed: professionalThreeTradeResult.closed,
@@ -93,6 +105,7 @@ const reviews: JsonRecord[] = [
     evaluations: { owner_conclusion: { result: "AS_EXPECTED", reason: "按计划止盈", evidence_refs: [] } },
     trade_context: { plan_name: "AI BTC 突破复核", instrument_ref: "BTCUSDT-PERP", direction: "LONG", strategy_id: "ONE_SHOT_DONCHIAN_ATR_BREAKOUT", trade_amount: "100" },
     account_result: { trade_result: legacyProfessionalThreeTradeResult },
+    resolved_trade_result: professionalThreeTradeResult,
   },
   {
     review_id: "review-professional-2",
@@ -107,6 +120,7 @@ const reviews: JsonRecord[] = [
     evaluations: { owner_conclusion: { result: "ISSUE_FOUND", reason: "突破后回落", evidence_refs: [] } },
     trade_context: { instrument_ref: "ETHUSDT-PERP", direction: "LONG", strategy_id: "MEAN_REVERSION_TEST", trade_amount: "100" },
     account_result: { trade_result: tradeResult({ entry: "101", exit: "100", netPnl: "-0.9", grossPnl: "-0.8", commission: "0.1", firstFillTime: "2026-07-21T00:10:00Z", lastFillTime: "2026-07-21T00:15:30Z" }) },
+    resolved_trade_result: externalClosureTradeResult,
   },
   {
     review_id: "review-professional-1",
@@ -121,6 +135,7 @@ const reviews: JsonRecord[] = [
     evaluations: { owner_conclusion: { result: "AS_EXPECTED", reason: "保护退出正常", evidence_refs: [] } },
     trade_context: { instrument_ref: "BTCUSDT-PERP", direction: "SHORT", strategy_id: "ONE_SHOT_DONCHIAN_ATR_BREAKOUT", trade_amount: "100" },
     account_result: { trade_result: tradeResult({ entry: "102", exit: "100", netPnl: "1.8", grossPnl: "1.9", commission: "0.1", firstFillTime: "2026-07-21T00:00:00Z", lastFillTime: "2026-07-21T00:05:30Z" }) },
+    resolved_trade_result: tradeResult({ entry: "102", exit: "100", netPnl: "1.8", grossPnl: "1.9", commission: "0.1", firstFillTime: "2026-07-21T00:00:00Z", lastFillTime: "2026-07-21T00:05:30Z" }),
   },
 ];
 
@@ -240,15 +255,20 @@ test("review records support conjunctive strategy, instrument, direction, pnl, r
   await expect(page.getByRole("heading", { name: "交易价格回看" })).toBeVisible();
 });
 
-test("review workbench exposes recent performance and one visual trade narrative", async ({ page }, testInfo) => {
+test("review workbench exposes full-history performance and one visual trade narrative", async ({ page }, testInfo) => {
   await mockProfessionalReviews(page);
   await page.goto("/reviews");
 
-  await expect(page.getByRole("group", { name: "近期已闭合交易累计净盈亏趋势" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "全部已闭合交易累计净盈亏趋势" })).toBeVisible();
   await expect(page.getByText("+3.30 USDT", { exact: true })).toBeVisible();
   await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("-0.90 USDT");
   await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("按计划止盈");
   await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("AI BTC 突破复核");
+  await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("账户结果");
+  await expect(page.getByRole("table", { name: "交易与复盘记录" })).toContainText("外部应急平仓");
+  const firstTradeRow = page.getByRole("table", { name: "交易与复盘记录" }).locator("tbody tr").first();
+  await expect(firstTradeRow.locator("td").nth(3)).toHaveText("100.00 / 102.50");
+  await expect(firstTradeRow.locator("td").nth(4)).toHaveText("100.00 USDT");
   const listScreenshot = testInfo.outputPath(`review-list-${testInfo.project.name}.png`);
   await page.screenshot({ path: listScreenshot, fullPage: true });
   await testInfo.attach(`review-list-${testInfo.project.name}.png`, { path: listScreenshot, contentType: "image/png" });
