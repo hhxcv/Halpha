@@ -63,6 +63,17 @@ def latest_execution_status(facts: Iterable[VenueFact]) -> str | None:
             )
     if not observations:
         return None
+    terminal_observations = tuple(
+        observation
+        for observation in observations
+        if observation[1] in TERMINAL_ORDER_STATUSES
+    )
+    if terminal_observations:
+        # Nautilus can emit a late OrderUpdated callback after OrderFilled.
+        # Retain the raw callback as a fact, but never let a non-terminal
+        # callback reopen a venue order whose terminal result is already
+        # authoritative. Competing terminal facts still resolve by event order.
+        return max(terminal_observations)[1]
     return max(observations)[1]
 
 

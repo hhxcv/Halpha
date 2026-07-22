@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "phase": "development_selection",
+  "generated_at": "2026-07-21T18:09:29.221823+00:00",
+  "input_sha256": "6da9891eeb82b2dc656326c5c1f59208923f8569c3ec5fc39b427cf6c1d99322",
+  "gate_pass_count": 0,
+  "selected_candidates": [],
+  "evaluation_authorized": false,
+  "stop_reason": "NO_TAKER_FLOW_DIRECTION_PASSED_DEVELOPMENT_GATE"
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-22T00:46:53+08:00",
+  "research_type": "STRATEGY_CANDIDATE",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_FUNDING_SIGN_FILTER_2026",
+  "baseline_commit": "bbd2458204389f05b58594a9a255b66062080fe3",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 on BTCUSDT-PERP",
+  "question": "Can one predeclared direction-non-adverse latest-settled-funding filter turn the fixed current one-shot BTCUSDT Donchian/ATR proxy positive after costs, while outperforming its same-direction unfiltered baseline and preserving sequential evidence gates?",
+  "fixed_strategy_parameters": {
+    "channel_lookback_bars_15m": 20,
+    "confirmation_bars_1m": 2,
+    "max_entry_extension_atr": 0.5,
+    "initial_stop_atr_multiple": 1.5,
+    "take_profit_1_fraction": 0.5,
+    "take_profit_1_r": 1.5,
+    "take_profit_2_r": 3.0,
+    "max_hold_bars_15m": 4
+  },
+  "funding_filter": {
+    "observable_time": "latest Binance USD-M funding event settled by the trigger minute close",
+    "carry_forward": "event-time forward fill; no known event means no action",
+    "long_rule": "latest settled funding rate <= 0",
+    "short_rule": "latest settled funding rate >= 0",
+    "zero_rule": "neutral and eligible in either direction",
+    "future_inputs_forbidden": [
+      "next funding rate",
+      "future premium index",
+      "future open interest",
+      "future basis"
+    ]
+  },
+  "search_scope": {
+    "candidate_directions": ["LONG", "SHORT"],
+    "candidate_count": 2,
+    "numeric_funding_threshold_count": 0,
+    "same_direction_unfiltered_baselines": 2,
+    "maximum_selected_after_development": 1
+  },
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "costs_per_side": {
+    "favorable": {"taker_fee": 0.0004, "adverse_execution": 0.0002},
+    "base": {"taker_fee": 0.0004, "adverse_execution": 0.0010},
+    "stress": {"taker_fee": 0.0004, "adverse_execution": 0.0015}
+  },
+  "development_gate": "candidate only; trades >= 100; base and stress mean > 0; at least two of 2021/2022/2023 base means > 0; worst annual base mean >= -0.001; same-direction base improvement over unfiltered >= 0.0005; base p01 >= -0.02; base worst >= -0.05; rank by worst annual base mean, stress mean, base mean, improvement, identity; keep at most one",
+  "evaluation_gate": "fixed candidate trades >= 60; base and stress means > 0; 2024 and 2025 base means > 0; same-direction base improvement over unfiltered >= 0.0005; base p01 >= -0.02; base worst >= -0.05",
+  "confirmation_gate": "fixed candidate trades >= 15; base and stress means > 0; base p01 >= -0.02; base worst >= -0.05; trade-count-weighted evaluation plus confirmation base mean > 0",
+  "known_exposure": "All underlying 2021-2026H1 BTCUSDT bars and funding events are exposed. The exact no-threshold direction-non-adverse funding filter has not been run on the locked current 1h strategy proxy before this checkpoint, so evaluation is only a rule-level sequential holdout.",
+  "source_identity": {
+    "source_manifest_sha256": "eec3389434f11a7d0fdb13bd58e7f3c6cf234fda5b7babb271c0769763a7df5d",
+    "parent_study_sha256": "1450814102dd0fca73903c4221aae9797f0ae6eef11691fb23dea8eeb2eac0ec",
+    "parent_development_csv_sha256": "0c01bba510f149913752a33834adfdde1ff7416ff3c3d858985bbcca90fc7ce3",
+    "next_funding_carry_results_sha256": "f4d1588942591af5472566184f76b6b86c9395526c5153a8e39acb8551ab3fe9",
+    "product_one_shot_sha256": "b4bb68099c345336229d30d7a09ea1088b49e7ecf4e66e6818415ba05310e0b8"
+  },
+  "allowed_fixes_after_checkpoint": [
+    "parsing, timestamp, checksum and data-quality defects",
+    "implementation defects that do not alter the funding rule, strategy parameters, candidates, periods, costs, event order, ranks or gates"
+  ],
+  "forbidden_after_checkpoint": [
+    "adding a funding magnitude, persistence, mean, z-score, open-interest, basis or volatility threshold after viewing results",
+    "changing strategy parameters, costs, periods, ranks or gates",
+    "reading evaluation before one development candidate is fixed",
+    "reading confirmation before the fixed candidate passes evaluation",
+    "presenting exposed underlying market periods as new independent data"
+  ],
+  "study_code_sha256_before_first_result": "3dc692689fb279df88105868391e33de49726e83df36914234c774ba20b3b41c",
+  "product_effects": "NONE"
+}

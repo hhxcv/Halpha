@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-07-22T08:08:00+08:00",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "evaluation_opened": false,
+  "confirmation_opened": false,
+  "demo_authorized_by_evidence": false,
+  "reason": "All six fixed candidates were positive in development, but none passed the predeclared development selection gate. The nearest candidate, LONG_BALANCED_4, had only a marginal Sharpe advantage over the volatility-matched continuous-long benchmark and a six-trial deflated Sharpe probability of 0.749772, below the fixed 0.80 threshold.",
+  "nearest_candidate_descriptive_only": {
+    "candidate_id": "LONG_BALANCED_4",
+    "lookbacks_days": [20, 30, 60, 90],
+    "base_total_return": 0.08379323414288598,
+    "stress_total_return": 0.08082501078843918,
+    "base_cagr": 0.027204209485433894,
+    "base_sharpe": 0.4731166216753555,
+    "base_max_drawdown": -0.08455527843013522,
+    "base_calmar": 0.3217328354954409,
+    "annual_base_returns": {
+      "2021": 0.02105486061147266,
+      "2022": -0.050961150663650145,
+      "2023": 0.11844174284697373
+    },
+    "deflated_sharpe_probability": 0.7497724468979448,
+    "funding_pnl_on_initial_equity": -0.047189172757739865,
+    "fee_and_slippage_cost_on_initial_equity": 0.007764381886432481
+  },
+  "benchmark_base": {
+    "id": "continuous_vol_target_long",
+    "total_return": 0.13916917798050266,
+    "sharpe": 0.469100694765545,
+    "max_drawdown": -0.18633265166041402,
+    "calmar": 0.23839707455745865
+  },
+  "paper_scale_diagnostic": {
+    "target_volatility": 0.25,
+    "max_absolute_weight": 2.0,
+    "base_total_return": 0.15822621191745623,
+    "base_sharpe": 0.42225090981352675,
+    "base_max_drawdown": -0.2350553343146986,
+    "product_candidate": false
+  },
+  "post_result_non_selection_audits": {
+    "LONG_BALANCED_4_rebalance_thresholds": {
+      "trade_every_day_0pct": {"base_total_return": 0.08462386528606358, "sharpe": 0.48810477226911636},
+      "predeclared_20pct": {"base_total_return": 0.08379323414288598, "sharpe": 0.4731166216753555},
+      "diagnostic_50pct": {"base_total_return": 0.09980550866613824, "sharpe": 0.5257566818520599}
+    },
+    "LONG_BALANCED_4_zero_cost_actual_funding": {"total_return": 0.09214761912244973, "sharpe": 0.515108583956499},
+    "LONG_BALANCED_4_base_cost_no_funding": {"total_return": 0.13436197318925558, "sharpe": 0.7238066618061868},
+    "funding_mark_fallback_sensitivity": {
+      "development_fallback_events": 24,
+      "daily_open_total_return": 0.08379323414288598,
+      "daily_close_total_return": 0.08379350064597135,
+      "difference": 2.665030853776784e-7
+    }
+  },
+  "independent_replay": {
+    "development_csv_sha256": "638028838ef0558ecc9e2f4548478d287c8365ac5e3c3e1d02b1b66cad417669",
+    "development_daily_returns_sha256": "a6213bf269d93fadc6c5f248051721750582c3ba1e5d7ca3fd9ae096934db629",
+    "byte_identical": true,
+    "development_json_semantic_equal_ignoring_generated_at": true,
+    "selection_semantic_equal_ignoring_generated_at_and_source_hash": true
+  },
+  "data_limit": "2021-2026H1 BTCUSDT history had prior repository exposure; only the exact rule family was held out. Evaluation and confirmation remain unread by this study.",
+  "product_effects": "NONE",
+  "next_action": "Do not implement or create a Demo plan for this family. A future study needs genuinely new market data or a distinct externally specified mechanism and must count this six-candidate search in its selection-bias budget."
+}

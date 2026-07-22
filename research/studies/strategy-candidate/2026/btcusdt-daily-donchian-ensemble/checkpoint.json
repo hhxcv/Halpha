@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-22T07:42:36+08:00",
+  "research_type": "STRATEGY_CANDIDATE",
+  "candidate_family_id": "RESEARCH_BTCUSDT_DAILY_DONCHIAN_ENSEMBLE_2026",
+  "baseline_commit": "bbd2458204389f05b58594a9a255b66062080fe3",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 on BTCUSDT-PERP; comparison background only",
+  "formal_strategy_file_sha256": {
+    "src/halpha/planning/registry.py": "f6f7ff4af3bb7e1981038187b1f49170cb9006fbfc82f0cd1f1d3c93f9981071",
+    "src/halpha/planning/strategies/one_shot.py": "b4bb68099c345336229d30d7a09ea1088b49e7ecf4e66e6818415ba05310e0b8",
+    "src/halpha/planning/bar_evaluation.py": "268bf606dd03ae20e6f6eefccc51a293ea0c955c6557fbd641ac1db6c2668551"
+  },
+  "question": "Can a small predeclared family of literature-derived daily Donchian channel ensembles on Binance USD-M BTCUSDT perpetual remain profitable after actual funding, market-order costs and sequential time gates, while fitting a single-owner product risk cap?",
+  "primary_claim": "At least one fixed daily Donchian ensemble has positive base and stress net performance in development, evaluation and confirmation, improves risk-adjusted performance over a volatility-matched continuous long benchmark, and is stable across nearby published horizon groups.",
+  "instrument": "Binance USD-M BTCUSDT perpetual",
+  "signal_and_execution": {
+    "bar": "1d UTC Binance USD-M kline",
+    "channel_input": "completed daily closes",
+    "entry": "long when close equals the n-day rolling maximum; symmetric short candidates enter when close equals the n-day rolling minimum",
+    "exit": "long exits when close is at or below a non-decreasing Donchian midpoint trailing stop; short exits symmetrically at or above a non-increasing midpoint trailing stop",
+    "initial_trailing_stop": "channel midpoint on entry",
+    "action_time": "signal and desired weight fixed after day t close; trade at day t+1 open",
+    "take_profit": "none",
+    "maximum_hold": "none",
+    "pyramiding": "none",
+    "signal_aggregation": "equal mean of component states",
+    "volatility": "90 completed close-to-close returns, annualized with sqrt(365)",
+    "candidate_target_volatility": 0.10,
+    "candidate_max_absolute_weight": 0.50,
+    "rebalance_threshold": "entry, exit or sign change always trades; otherwise rebalance only when absolute target-current weight exceeds 20% of max(abs(target), abs(current)); zero-to-zero does not trade",
+    "funding": "all actual Binance funding events; positive funding debits longs and credits shorts using event mark price when present; events within 60 seconds after the daily open apply to the carried pre-rebalance quantity, which is conservative for a close-triggered order submitted around the funding boundary",
+    "accounting": "linear perpetual quantity and USDT equity, marked from one daily open to the next"
+  },
+  "eligible_candidates": [
+    {"id": "LONG_FULL_9", "direction": "LONG_ONLY", "lookbacks_days": [5, 10, 20, 30, 60, 90, 150, 250, 360]},
+    {"id": "LONG_FAST_4", "direction": "LONG_ONLY", "lookbacks_days": [5, 10, 20, 30]},
+    {"id": "LONG_BALANCED_4", "direction": "LONG_ONLY", "lookbacks_days": [20, 30, 60, 90]},
+    {"id": "LONG_SLOW_5", "direction": "LONG_ONLY", "lookbacks_days": [60, 90, 150, 250, 360]},
+    {"id": "LONG_SHORT_FULL_9", "direction": "LONG_SHORT", "lookbacks_days": [5, 10, 20, 30, 60, 90, 150, 250, 360]},
+    {"id": "LONG_SHORT_BALANCED_4", "direction": "LONG_SHORT", "lookbacks_days": [20, 30, 60, 90]}
+  ],
+  "diagnostics_not_eligible_for_selection": [
+    "published LONG_FULL_9 at 25% annual volatility target and 2.0x cap",
+    "continuous volatility-targeted long with the candidate 10% target and 0.5x cap",
+    "cash at 0%",
+    "individual published lookback components for neighborhood and concentration diagnostics"
+  ],
+  "periods": {
+    "warmup": ["2020-01-01T00:00:00Z", "2021-01-01T00:00:00Z"],
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "costs_per_unit_turnover": {
+    "favorable": {"taker_fee": 0.0004, "adverse_execution": 0.0002},
+    "base": {"taker_fee": 0.0004, "adverse_execution": 0.0010},
+    "stress": {"taker_fee": 0.0004, "adverse_execution": 0.0015}
+  },
+  "development_gate": "data PASS; base and stress total return > 0; base Sharpe > 0.30; base maximum drawdown > -20%; at least two of 2021/2022/2023 base returns > 0; base Sharpe and Calmar both exceed the volatility-matched continuous-long benchmark; component concentration leaves at least two lookback groups with positive base return; DSR probability computed across the six eligible trials >= 0.80; rank passers by worst annual base return, stress Sharpe, base Sharpe, then fewer lookbacks and candidate id; keep at most two",
+  "evaluation_gate": "evaluate only development-selected candidates; base and stress total return > 0; base maximum drawdown > -18%; both 2024 and 2025 are not below -8% and at least one is positive; base Sharpe and Calmar both exceed the same benchmark; first development-ranked passer only",
+  "confirmation_gate": "evaluate only the single evaluation passer; base and stress total return >= 0; base maximum drawdown > -12%; combined evaluation plus confirmation base and stress total return > 0; no execution, funding or data-quality exception",
+  "conclusion_rule": "SUPPORTS_WITHIN_SCOPE only if all sequential gates pass and independent replay matches. A non-positive development/evaluation/confirmation net result or failure of an economic gate is DOES_NOT_SUPPORT for this fixed family. A data, replay or effective-sample limitation that prevents a valid economic decision is INSUFFICIENT_EVIDENCE.",
+  "robustness_if_authorized": [
+    "full candidate distribution and annual/subperiod returns",
+    "published 25%/2.0x scale diagnostic",
+    "individual lookback component concentration",
+    "cost and funding decomposition",
+    "20% rebalance band versus trade-every-day diagnostic without changing selection",
+    "one-day execution lag and daily intrabar adverse-path checks",
+    "independent replay from immutable archive hashes"
+  ],
+  "known_exposure": "The underlying 2021-2026H1 BTCUSDT market history has already been viewed in other Halpha studies. This study therefore provides a predeclared rule-level sequential holdout, not untouched market data. The exact daily midpoint-trailing ensemble family has not previously been run in the repository. Genuine new-market evidence can only come from later forward Demo observation.",
+  "allowed_fixes_after_checkpoint": [
+    "download, checksum, parsing, timestamp and data-quality defects",
+    "implementation defects that do not alter candidates, signals, timing, sizing, costs, funding, periods, ranks or gates",
+    "adding explanatory text or diagnostics that cannot affect candidate selection"
+  ],
+  "forbidden_after_checkpoint": [
+    "adding or removing candidates or lookbacks after viewing results",
+    "changing target volatility, cap, rebalance threshold, costs, periods, ranks or gates",
+    "adding ATR, volume, funding-sign, regime or discretionary filters",
+    "reading evaluation before development selection authorizes it",
+    "reading confirmation before evaluation authorizes it",
+    "using paper-scale leverage to qualify a product candidate"
+  ],
+  "external_anchor": "Zarattini, Pagani and Barbon (2025), Catching Crypto Trends; A Tactical Approach for Bitcoin and Altcoins, Swiss Finance Institute Research Paper 25-80",
+  "framework": "vectorbt 1.1.0 for return statistics and selection-bias metrics; deterministic NumPy/Pandas state simulation for funding-aware linear-perpetual accounting",
+  "study_code_sha256_before_first_result": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+  "data_manifest_sha256_before_first_result": "2e0de6c4396e48c00fc64b87dee7dedf509be8cc0ea56f0fc970f89218eb3e3d",
+  "pre_result_data_revision": "Before any candidate return was calculated, the first funding quality load found 4,198 historical funding records without markPrice. The source manifest and loader were extended with official Binance 8h mark-price klines. They backfill 4,173 events; 25 events at six official mark-price timeline gaps conservatively use that UTC day's perpetual open. Candidate definitions, periods, costs, ranks and gates did not change.",
+  "product_effects": "NONE until all gates pass, an owner-authorized product handoff is implemented, and Demo-only validation is explicitly created with creator_kind AI"
+}

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-21T23:34:00+08:00",
+  "research_type": "STRATEGY_CANDIDATE",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_ENTRY_SELECTIVITY_2026",
+  "baseline_commit": "bbd2458204389f05b58594a9a255b66062080fe3",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 on BTCUSDT-PERP",
+  "formal_strategy_file_sha256": {
+    "src/halpha/planning/registry.py": "f6f7ff4af3bb7e1981038187b1f49170cb9006fbfc82f0cd1f1d3c93f9981071",
+    "src/halpha/planning/strategies/one_shot.py": "b4bb68099c345336229d30d7a09ea1088b49e7ecf4e66e6818415ba05310e0b8",
+    "src/halpha/planning/bar_evaluation.py": "268bf606dd03ae20e6f6eefccc51a293ea0c955c6557fbd641ac1db6c2668551",
+    "src/halpha/planning/transitions.py": "b880b65d29889a29cf9e8740447a53917eac646d080947386f7b85be5a4e7001"
+  },
+  "question": "Can a small predeclared entry-selectivity family for the current one-shot BTCUSDT Donchian/ATR strategy remain positive after market-order costs and actual funding in sequential development, evaluation, and confirmation periods while holding all exit parameters fixed?",
+  "instrument": "Binance USD-M BTCUSDT perpetual",
+  "data_cutoff_exclusive": "2026-07-01T00:00:00Z",
+  "search_space": {
+    "channel_lookback_15m": [4, 12, 20, 32, 48, 64],
+    "confirmation_bars_1m": [1, 2, 3],
+    "max_entry_extension_atr": [0.25, 0.5],
+    "direction": ["LONG", "SHORT"]
+  },
+  "fixed_exit_parameters": {
+    "initial_stop_atr_multiple": 1.5,
+    "take_profit_1_fraction": 0.5,
+    "take_profit_1_r": 1.5,
+    "take_profit_2_r": 3.0,
+    "max_hold_bars_15m": 4
+  },
+  "benchmarks": [
+    "same-direction formal default 20/2/0.5",
+    "same-direction historical aggressive entry 4/1/0.5",
+    "no trade at 0"
+  ],
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "costs_per_side": {
+    "favorable": {"taker_fee": 0.0004, "adverse_execution": 0.0002},
+    "base": {"taker_fee": 0.0004, "adverse_execution": 0.0010},
+    "stress": {"taker_fee": 0.0004, "adverse_execution": 0.0015}
+  },
+  "development_gate": "trades >= 100; base and stress mean net return per trade > 0; at least two of 2021/2022/2023 base means > 0; worst annual base mean >= -0.001; rank by worst annual base mean, stress mean, base mean, then deterministic selectivity tie-break; keep at most 3",
+  "evaluation_gate": "trades >= 60; base and stress means > 0; 2024 and 2025 base means > 0; same-direction base mean exceeds 20/2/0.5 by at least 0.0005; first development-ranked passer only",
+  "confirmation_gate": "trades >= 15; base and stress means > 0; combined evaluation plus confirmation base mean > 0",
+  "known_exposure": "The underlying 2021-2026H1 public BTCUSDT data and an older 20/2/0.5, 96x15m proxy have been exposed. The locked current 4x15m exit and full 72-configuration entry matrix have not previously been executed in the repository.",
+  "allowed_fixes_after_checkpoint": [
+    "parsing, timestamp, checksum and data-quality defects",
+    "implementation defects that do not alter search space, periods, costs, execution order, exit rules, ranks or gates"
+  ],
+  "forbidden_after_checkpoint": [
+    "adding or removing parameter values after viewing results",
+    "changing costs, periods, gates or tie-breaks",
+    "optimizing stop, take-profit, fraction or hold duration",
+    "reading evaluation before development candidates are fixed",
+    "reading confirmation before one evaluation candidate is fixed"
+  ],
+  "study_code_sha256_before_first_result": "b306946e84b6ab6d07d987238c99a153cf22f585048c2e3cab8e4afc3d711b4c",
+  "study_code_sha256_parsing_fix_before_first_result": "1450814102dd0fca73903c4221aae9797f0ae6eef11691fb23dea8eeb2eac0ec",
+  "study_code_revision_reason": "Before any configuration result existed, detect the open_time header present in newer Binance monthly CSV archives while retaining headerless parsing for older archives. No research rule, parameter, period, cost, ordering, rank or gate changed.",
+  "product_effects": "NONE"
+}

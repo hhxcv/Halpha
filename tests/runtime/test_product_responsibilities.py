@@ -274,6 +274,16 @@ class _Coordinator:
         action.state = ExecutionActionState.CLOSED
         return action
 
+    def reconcile_cancel_from_target_fact(
+        self,
+        action_id: str,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        self.reconciliations.append({"action_id": action_id, **kwargs})
+        action = self.actions[action_id]
+        action.state = ExecutionActionState.CLOSED
+        return action
+
     def close_activation(self, **kwargs: object) -> str:
         self.closures.append(kwargs)
         return "c" * 64
@@ -808,6 +818,9 @@ def test_flat_terminal_actions_are_reconciled_and_activation_closes() -> None:
                 kind,
                 state=ExecutionActionState.OPEN,
                 terms={},
+                client_order_id=(
+                    "a" * 32 if kind is ExecutionActionKind.PROTECTION else None
+                ),
             )
             trade_id = f"{action_id}-trade"
             coordinator.facts[action_id] = (
@@ -832,6 +845,18 @@ def test_flat_terminal_actions_are_reconciled_and_activation_closes() -> None:
             received_at=NOW,
             venue_fact_id="position-zero-fact",
         )
+        coordinator.actions["cancel-action"] = _action(
+            "cancel-action",
+            ExecutionActionKind.CANCEL,
+            state=ExecutionActionState.UNKNOWN,
+            terms={"action_profile": "CANCEL_ORDER"},
+            cancel_target={
+                "client_order_id": coordinator.actions[
+                    "protection-action"
+                ].client_order_id,
+                "endpoint": "ALGO",
+            },
+        )
         boundary = ProductResponsibilityBoundary(
             loop=asyncio.get_running_loop(),
             coordinator=coordinator,
@@ -851,6 +876,7 @@ def test_flat_terminal_actions_are_reconciled_and_activation_closes() -> None:
     coordinator = asyncio.run(scenario())
 
     assert [item["action_id"] for item in coordinator.reconciliations] == [
+        "cancel-action",
         "entry-action",
         "protection-action",
     ]

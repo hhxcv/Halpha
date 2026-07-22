@@ -39,7 +39,11 @@ from halpha.planning.transitions import (
     proposed_take_profits_from_fill,
     venue_source_identity,
 )
-from halpha.venue_integration.facts import build_venue_fact, order_is_working
+from halpha.venue_integration.facts import (
+    build_venue_fact,
+    order_is_working,
+    terminal_order_status,
+)
 from halpha.venue_integration.gateway import (
     PersistedActionGate,
     VenueDefinitelyNotSubmitted,
@@ -350,6 +354,20 @@ class HalphaCoordinator:
                 observed_at=observed_at,
             )
 
+    def reconcile_cancel_from_target_fact(
+        self,
+        execution_action_id: str,
+        *,
+        target_fact: VenueFact,
+        observed_at: datetime,
+    ) -> ExecutionAction:
+        with self._connection.transaction():
+            return self._execution.reconcile_cancel_from_target_fact(
+                execution_action_id,
+                target_fact=target_fact,
+                observed_at=observed_at,
+            )
+
     def recover_unresolved_actions(self, *, observed_at: datetime) -> tuple[ExecutionAction, ...]:
         """Make crash-window actions query-only, then query their original UUIDs.
 
@@ -452,8 +470,7 @@ class HalphaCoordinator:
                         observed_at=observed_at,
                     )
                 if (
-                    fact.kind is VenueFactKind.ORDER_STATE
-                    and fact.payload.get("status") == "CANCELLED"
+                    terminal_order_status((fact,)) is not None
                     and normalized.client_order_id is not None
                 ):
                     cancel_action = self._action_repository.find_open_cancel_for_target(
@@ -686,10 +703,7 @@ class HalphaCoordinator:
                     pending_action_digest=None,
                     observed_at=observed_at,
                 )
-            if (
-                fact.kind is VenueFactKind.ORDER_STATE
-                and fact.payload.get("status") == "CANCELLED"
-            ):
+            if terminal_order_status((fact,)) is not None:
                 target_client_order_id = fact.payload.get("client_order_id")
                 if isinstance(target_client_order_id, str):
                     cancel_action = (

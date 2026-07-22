@@ -280,7 +280,7 @@ def test_exact_uuid_absence_closes_only_an_unknown_action() -> None:
     ]
 
 
-def test_cancelled_target_fact_reconciles_its_open_cancel_action() -> None:
+def test_terminal_target_fact_reconciles_its_open_cancel_action() -> None:
     observed_at = datetime(2026, 7, 20, 1, 35, tzinfo=UTC)
     target_client_order_id = "a" * 32
     target = SimpleNamespace(
@@ -289,13 +289,6 @@ def test_cancelled_target_fact_reconciles_its_open_cancel_action() -> None:
         state=ExecutionActionState.OPEN,
     )
     cancel = SimpleNamespace(execution_action_id="cancel-action-001")
-    fact = SimpleNamespace(
-        kind=VenueFactKind.ORDER_STATE,
-        payload={
-            "status": "CANCELLED",
-            "client_order_id": target_client_order_id,
-        },
-    )
     reconciled: list[tuple[str, object, datetime]] = []
 
     class Execution:
@@ -324,10 +317,38 @@ def test_cancelled_target_fact_reconciles_its_open_cancel_action() -> None:
         )
     )
 
-    updated = coordinator.apply_venue_fact(fact, observed_at=observed_at)
+    facts = (
+        SimpleNamespace(
+            venue_fact_id="cancelled-fact",
+            kind=VenueFactKind.ORDER_STATE,
+            payload={
+                "status": "CANCELLED",
+                "client_order_id": target_client_order_id,
+            },
+            source_time=observed_at,
+            cutoff=observed_at,
+            received_at=observed_at,
+        ),
+        SimpleNamespace(
+            venue_fact_id="filled-fact",
+            kind=VenueFactKind.FILL,
+            payload={
+                "leaves_quantity": "0",
+                "client_order_id": target_client_order_id,
+            },
+            source_time=observed_at,
+            cutoff=observed_at,
+            received_at=observed_at,
+        ),
+    )
 
-    assert updated is target
-    assert reconciled == [("cancel-action-001", fact, observed_at)]
+    for fact in facts:
+        updated = coordinator.apply_venue_fact(fact, observed_at=observed_at)
+        assert updated is target
+
+    assert reconciled == [
+        ("cancel-action-001", fact, observed_at) for fact in facts
+    ]
 
 
 def test_expired_empty_entry_window_closes_and_creates_review(monkeypatch) -> None:

@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-07-21T23:58:00+08:00",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_ENTRY_SELECTIVITY_2026",
+  "reason": "All 72 predeclared direction and entry-selectivity configurations had negative development-period mean net returns in favorable, base, and stress costs. No configuration passed the locked development gate, so evaluation and confirmation remained unopened.",
+  "development": {
+    "period": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "data_quality": "PASS",
+    "configurations": 72,
+    "base_positive_configurations": 0,
+    "stress_positive_configurations": 0,
+    "favorable_positive_configurations": 0,
+    "gate_pass_count": 0,
+    "evaluation_authorized": false,
+    "best_base": {
+      "config_id": "LONG:64:2:0.5",
+      "trades": 943,
+      "mean_net_return_per_trade": -0.002904362526228,
+      "stress_mean_net_return_per_trade": -0.0040964935424039,
+      "annual_base_means": {
+        "2021": -0.0029854193648348,
+        "2022": -0.003130643378349,
+        "2023": -0.0024138590695493
+      }
+    },
+    "best_favorable": {
+      "config_id": "LONG:64:3:0.25",
+      "trades": 672,
+      "mean_net_return_per_trade": -0.0012439444507783
+    },
+    "formal_default": {
+      "LONG:20:2:0.5": {
+        "base_trades": 2049,
+        "base_mean_net_return_per_trade": -0.0032467817287371
+      },
+      "SHORT:20:2:0.5": {
+        "base_trades": 1981,
+        "base_mean_net_return_per_trade": -0.0036864815506483
+      }
+    },
+    "historical_aggressive_entry": {
+      "LONG:4:1:0.5": {
+        "base_trades": 8175,
+        "base_mean_net_return_per_trade": -0.0030506280224764
+      },
+      "SHORT:4:1:0.5": {
+        "base_trades": 8063,
+        "base_mean_net_return_per_trade": -0.0029952897005514
+      }
+    }
+  },
+  "evaluation": "NOT_OPENED_NO_DEVELOPMENT_CANDIDATE",
+  "confirmation": "NOT_OPENED_NO_DEVELOPMENT_CANDIDATE",
+  "strongest_support": "Longer lookback reduced trade frequency and LONG 64/2/0.5 improved the base mean by about 3.42 bps per trade versus the same-direction formal default.",
+  "strongest_counterevidence": "Even the best favorable-cost configuration lost about 12.44 bps per trade. Seventy of 72 base configurations were negative in every development calendar year; the other two were positive only in 2023 and remained negative overall.",
+  "interpretation": "The first narrowing result points away from tuning entry selectivity alone. Under a 60-minute maximum hold, the event family did not produce enough gross edge to absorb conservative market-order costs. This does not evaluate a longer holding horizon or a different economic mechanism.",
+  "artifact_sha256": {
+    "study.py": "1450814102dd0fca73903c4221aae9797f0ae6eef11691fb23dea8eeb2eac0ec",
+    "development.csv": "0c01bba510f149913752a33834adfdde1ff7416ff3c3d858985bbcca90fc7ce3",
+    "development.json": "e08cb74ab868f8c933522fb21e45835a66165f17d450735fff9106d26b57b51c",
+    "selection.json": "7d1e5cb0b86289179731e4316d460bf0ff65e3efdc35a7b15e679fa8aa860351",
+    "source_manifest.json": "eec3389434f11a7d0fdb13bd58e7f3c6cf234fda5b7babb271c0769763a7df5d"
+  },
+  "product_effects": "NONE"
+}

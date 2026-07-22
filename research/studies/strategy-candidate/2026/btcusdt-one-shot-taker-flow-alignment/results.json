@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "conclusion": "DOES_NOT_SUPPORT",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "candidate_id": "RESEARCH_BTCUSDT_ONE_SHOT_TAKER_FLOW_ALIGNMENT_2026",
+  "phase_completed": "development",
+  "period": [
+    "2021-01-01T00:00:00Z",
+    "2024-01-01T00:00:00Z"
+  ],
+  "data_quality": {
+    "bars": 1576861,
+    "archives_verified": 37,
+    "archive_bytes": 70193234,
+    "funding_events": 3286,
+    "taker_flow_valid_bars": 1576620,
+    "taker_flow_invalid_bars": 241,
+    "taker_flow_zero_bars": 16,
+    "raw_triggers_with_unknown_flow": 0
+  },
+  "candidates": [
+    {
+      "direction": "LONG",
+      "raw_triggers": 15401,
+      "eligible_triggers": 9192,
+      "eligible_fraction": 0.5968443607557951,
+      "base_trades": 1763,
+      "base_mean": -0.003296380013654362,
+      "unfiltered_base_mean": -0.0032467817287371464,
+      "improvement_bps_per_trade": -0.4959828491721572,
+      "stress_mean": -0.004484983059546791,
+      "base_p01": -0.021041355934082604,
+      "base_worst": -0.0353156022311353
+    },
+    {
+      "direction": "SHORT",
+      "raw_triggers": 13683,
+      "eligible_triggers": 8448,
+      "eligible_fraction": 0.6174084630563473,
+      "base_trades": 1684,
+      "base_mean": -0.003721998898300224,
+      "unfiltered_base_mean": -0.0036864815506483448,
+      "improvement_bps_per_trade": -0.3551734765187918,
+      "stress_mean": -0.005077137604861541,
+      "base_p01": -0.025535898665853235,
+      "base_worst": -0.05995369107287469
+    }
+  ],
+  "development_gate": {
+    "gate_pass_count": 0,
+    "selected_candidates": [],
+    "evaluation_authorized": false,
+    "stop_reason": "NO_TAKER_FLOW_DIRECTION_PASSED_DEVELOPMENT_GATE"
+  },
+  "unopened_periods": [
+    "evaluation:2024-01-01T00:00:00Z/2026-01-01T00:00:00Z",
+    "confirmation:2026-01-01T00:00:00Z/2026-07-01T00:00:00Z"
+  ],
+  "evidence_sha256": {
+    "study_py": "cc8fac83d6cbe107a50550f74b571e4963481d8ae2f3a48d542be0cac3d63f7e",
+    "development_csv": "6da9891eeb82b2dc656326c5c1f59208923f8569c3ec5fc39b427cf6c1d99322",
+    "development_json": "38cb1a7a66759df852d5943c976caa14bd9b9c6c8f1b4692678b5782dfd1aca9",
+    "selection_json": "673baca073867e020e0020dbb5aac9507cac8c80c9297cf7e7cdb7695d9db3a5"
+  },
+  "reproduction": {
+    "development_csv_identical": true,
+    "selection_semantics_identical": true
+  },
+  "product_effects": "NONE"
+}
