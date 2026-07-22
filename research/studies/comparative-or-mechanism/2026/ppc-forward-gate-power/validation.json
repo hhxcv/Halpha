@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "source_identity_valid": true,
+  "results_content_digest_valid": true,
+  "deterministic_recalculation_matches": true,
+  "power_curve_matches": true,
+  "sealed_market_stage_opened": false,
+  "product_effects": "NONE",
+  "content_digest": "c9d4d69b05ccb260456dbec19eaa455f2941fde0c9941227e51a0fbb9be8ff2b"
+}

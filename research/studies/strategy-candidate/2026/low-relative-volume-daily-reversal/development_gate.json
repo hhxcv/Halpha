@@ -1,0 +1,21 @@
+{
+  "generated_at_utc": "2026-07-22T00:30:22.532102Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "trades_at_least_120": true,
+    "base_total_positive": false,
+    "stress_total_positive": false,
+    "base_bootstrap_lower_positive": false,
+    "base_positive_symbols_at_least_4": true,
+    "volume_filter_improves_base_daily_mean": false
+  },
+  "failed_checks": [
+    "base_total_positive",
+    "stress_total_positive",
+    "base_bootstrap_lower_positive",
+    "volume_filter_improves_base_daily_mean"
+  ],
+  "result_digest": "eb1744f11a3933b99699bbff30606f5624ba56b394232d7d8fdf947b8de31f09",
+  "content_digest": "0fd8196015bb81623cc167bb367815d5254c27cbcab2834f6d13978bb7fb9b01"
+}

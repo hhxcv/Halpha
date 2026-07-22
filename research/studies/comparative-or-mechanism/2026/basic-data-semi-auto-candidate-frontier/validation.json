@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "frontier_content_digest_valid": true,
+  "evidence_files_checked": 45,
+  "public_exchange_snapshot_checked": true,
+  "current_core_qualification_ready": 0,
+  "content_digest": "a708c528a7deab6d87189b3d70c43fe7b79166726ccfaa134cc56278f5404c82"
+}

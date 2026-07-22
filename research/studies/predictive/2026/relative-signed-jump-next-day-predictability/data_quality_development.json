@@ -1,0 +1,266 @@
+{
+  "checked_at_utc": "2026-07-22T12:35:00.525068+00:00",
+  "stage": "development",
+  "status": "PASS",
+  "expected_decision_days": 462,
+  "symbols": {
+    "1000XECUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "AAVEUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "AVAXUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "BCHUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "BNBUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "CRVUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "DASHUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "ENSUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "ETCUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "HBARUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "KAVAUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "LINKUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "LTCUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "NEARUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "RUNEUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "SNXUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "SOLUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "TRXUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "UNIUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "VETUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "XLMUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "XMRUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 462,
+      "complete_fraction": 1.0
+    },
+    "XRPUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "ZECUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    },
+    "ZILUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_signal_and_target_days": 457,
+      "complete_fraction": 0.9891774891774892
+    }
+  },
+  "current_exchange": {
+    "present": 25,
+    "all_trading_perpetual": true
+  },
+  "source_manifest_digest": "ca419060bd58d89a86c8b652446008e005952dbf4b178daebc34dd56105aa4ff",
+  "archive_count": 425,
+  "archive_bytes": 50798433,
+  "content_digest": "3bdbd6794fff18ca3b554cce7a72384b5961a107a703fc625c0818dd7fa9b4bf"
+}

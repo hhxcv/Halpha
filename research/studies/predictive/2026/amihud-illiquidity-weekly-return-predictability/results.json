@@ -1,0 +1,27 @@
+{
+  "generated_at_utc": "2026-07-22T11:58:38.188732+00:00",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "claim": "Predictive relationship only; no strategy qualification or long-term profitability claim",
+  "available_stages": [
+    "development"
+  ],
+  "stage_gate_status": {
+    "development": "FAIL"
+  },
+  "stage_failed_checks": {
+    "development": [
+      "spread_bootstrap_lower_positive",
+      "spread_positive_fraction_at_least_55pct",
+      "rank_ic_positive",
+      "rank_ic_one_sided_hac_p_lt_10pct",
+      "proxy_bootstrap_lower_positive",
+      "spread_both_halves_positive",
+      "diagnostic_14d_spread_nonnegative",
+      "diagnostic_56d_spread_nonnegative",
+      "score_not_control_duplicate"
+    ]
+  },
+  "next_step": "No strategy conversion; family stop remains binding",
+  "product_effects": "NONE",
+  "content_digest": "21f7f1584600da07cde38a285d1b76dd4d91df65de898de804884ef4a06dbe79"
+}

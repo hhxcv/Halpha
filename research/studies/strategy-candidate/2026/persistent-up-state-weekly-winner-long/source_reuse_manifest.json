@@ -1,0 +1,541 @@
+{
+  "source_study": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\liquid-perp-weekly-loser-continuation",
+  "source_manifest_path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\liquid-perp-weekly-loser-continuation\\source_manifest.json",
+  "source_manifest_sha256": "23566d464f3b57eca11288160d8331610862210e20ec0b04c08306ee21e33fe0",
+  "source_manifest_content_digest": "6439571f81e2a7f74ab7f41b4795c17725f61c91cac2eabbecfd9f683f4bcbfe",
+  "files": 66,
+  "bytes": 7669925,
+  "items": [
+    {
+      "symbol": "BTCUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1d&startTime=1608422400000&endTime=1751327999999&limit=1500",
+      "bytes": 225805,
+      "sha256": "550bd88b554b70bcde029b49189d030fb5a58bf3897f7346e83d629418e9c21c"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1d&startTime=1737936000001&endTime=1751327999999&limit=1500",
+      "bytes": 23392,
+      "sha256": "cd0c01221bb54ed52ff30e1090a230306c6cd8e75af076c24e8439bb939902fd"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1608393600000&endTime=1751327999999&limit=1500",
+      "bytes": 183301,
+      "sha256": "9019ad01c3ef42393382b1132e764f7c5c597e501dc225ab3401d7ca1b462ec5"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1651564800001&endTime=1751327999999&limit=1500",
+      "bytes": 182119,
+      "sha256": "cc3cda24a5dd6ddcc2b93666e2aded107baab1de5a8a269896969ac1cf0354bc"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines\\openTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1694764800001&endTime=1751327999999&limit=1500",
+      "bytes": 181205,
+      "sha256": "26f99d5d1b077c14f789f7610551f63251719a4b6cac46929e35b4514bf53882"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines\\openTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1737964800001&endTime=1751327999999&limit=1500",
+      "bytes": 56251,
+      "sha256": "05e823d555c656b1c5bb529e6b6f1353a9e297a56e31172bda3d38e4625ddd5b"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1608422400000&endTime=1751327999999&limit=1000",
+      "bytes": 91079,
+      "sha256": "960b84fee371eee8b6bbba739c9d0928ba795c2465a20ef6df983281a8dfa33f"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1637193600018&endTime=1751327999999&limit=1000",
+      "bytes": 91194,
+      "sha256": "a618b6612184281202213571a564d50e06dd765e870c9df92ea4fe21156e11a9"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1665993600011&endTime=1751327999999&limit=1000",
+      "bytes": 91125,
+      "sha256": "3fdc099c2bc19705a9940aa6573edb4792dae230c5572de838b3326efae92f54"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1694793600001&endTime=1751327999999&limit=1000",
+      "bytes": 103163,
+      "sha256": "5eea8642196cf7d5e011e183f52018146bf4090d7c5eb850531ea829bf24146d"
+    },
+    {
+      "symbol": "BTCUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-004.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1723593600001&endTime=1751327999999&limit=1000",
+      "bytes": 101398,
+      "sha256": "f883b8bffe5729155f5ad850fd937b57be739f847e6913629d247698da876e6b"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=1d&startTime=1608422400000&endTime=1751327999999&limit=1500",
+      "bytes": 221646,
+      "sha256": "9b43355c8f05a4835d1990caa0870edac1dcad000eec92dcc6f4f7b99476f77f"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=1d&startTime=1737936000001&endTime=1751327999999&limit=1500",
+      "bytes": 22910,
+      "sha256": "e687a43c26fd297830bfba9dadbaed652323d76069c1ec12facb0b1388eb9590"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1608393600000&endTime=1751327999999&limit=1500",
+      "bytes": 179007,
+      "sha256": "629c79bbef357a3b7dc9dbe22dcacd3d7f24a9b288034fc3768b03f523526607"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1651564800001&endTime=1751327999999&limit=1500",
+      "bytes": 179410,
+      "sha256": "9a81d2cd92a50158d6177a1a77a72a4e8ac6df90be9b2fa3fa5559285cde4316"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines\\openTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1694764800001&endTime=1751327999999&limit=1500",
+      "bytes": 179182,
+      "sha256": "b74a31657a706c0c4b6387fba8e6c167882d83cbadef98a310dc4b14a5fd689d"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines\\openTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1737964800001&endTime=1751327999999&limit=1500",
+      "bytes": 55219,
+      "sha256": "7c6d14213178ddbbc0714ba4a6dd3d5a2dc4fb871d15b88da403235bddde23a4"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1608422400000&endTime=1751327999999&limit=1000",
+      "bytes": 91042,
+      "sha256": "a92e9f6cbbd3a55b5d870f71ee579998269dab8f6e1cc221221d9ab883579021"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1637193600018&endTime=1751327999999&limit=1000",
+      "bytes": 91308,
+      "sha256": "ad15b6336a8b6050fffdac90bd6a56e65ee8cdd6c93d20d67dbac063e03e0854"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1665993600011&endTime=1751327999999&limit=1000",
+      "bytes": 91164,
+      "sha256": "ed29787de33af400658320fba78cc3d62c245c4f7f213cd188b9003242c390b8"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1694793600001&endTime=1751327999999&limit=1000",
+      "bytes": 102261,
+      "sha256": "2c01d5f260febd083bc72659c3b1942f3361f6f5c958fc3fe22f49fab0f20b95"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-004.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1723593600001&endTime=1751327999999&limit=1000",
+      "bytes": 100179,
+      "sha256": "1f838c4e7cdafcd3aa92201b1b9d46005e02420f715bcb6e3340dc92150cc588"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BNBUSDT&interval=1d&startTime=1608422400000&endTime=1751327999999&limit=1500",
+      "bytes": 213414,
+      "sha256": "987d23f28745534c969a5ca070add08f53f0080aa2404f39f63a0d4a1f71e565"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BNBUSDT&interval=1d&startTime=1737936000001&endTime=1751327999999&limit=1500",
+      "bytes": 21824,
+      "sha256": "72c723002ac170ef9ed29a8275427bdaed2b90fe536b1a6975c01c1b975e36d9"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\mark-price-klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BNBUSDT&interval=8h&startTime=1608393600000&endTime=1751327999999&limit=1500",
+      "bytes": 173064,
+      "sha256": "77b114b5466e5073df1cea73aa2efb2cc25b6e908baa733217da3772ecf3cd61"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\mark-price-klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BNBUSDT&interval=8h&startTime=1651564800001&endTime=1751327999999&limit=1500",
+      "bytes": 173656,
+      "sha256": "7f4cf18a9e1bf07fbbb1eb6a355c87f8714535f5299029dce8cae21518f60286"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\mark-price-klines\\openTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BNBUSDT&interval=8h&startTime=1694764800001&endTime=1751327999999&limit=1500",
+      "bytes": 173641,
+      "sha256": "4aeeba274ad520d8c419c9247a04ee9363d76a68bea9b6c8807bb20d8ccfcdbc"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\mark-price-klines\\openTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BNBUSDT&interval=8h&startTime=1737964800001&endTime=1751327999999&limit=1500",
+      "bytes": 53547,
+      "sha256": "8d57af329cd89519086609e58145eee37f120e2171f56515a90ceff753b78324"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\funding\\fundingTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BNBUSDT&startTime=1608422400000&endTime=1751327999999&limit=1000",
+      "bytes": 91208,
+      "sha256": "b478835f1436fff086eb0c51c6595e51577eecfebc2739b6e40d40d747959826"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\funding\\fundingTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BNBUSDT&startTime=1637193600018&endTime=1751327999999&limit=1000",
+      "bytes": 91473,
+      "sha256": "c02f377e1863600e5fd9d531b82e8220ed9c6499f30595bd33b9695bf103f0f8"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\funding\\fundingTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BNBUSDT&startTime=1665993600011&endTime=1751327999999&limit=1000",
+      "bytes": 91390,
+      "sha256": "d632efc4039452cc9b6e8dd4f260c43f877d41d9b00a3705b1e8802f006c6ea4"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\funding\\fundingTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BNBUSDT&startTime=1694793600001&endTime=1751327999999&limit=1000",
+      "bytes": 101610,
+      "sha256": "dbebd982078b50f4730654659df3375108e683d70b0cef983a1b8e40ea06831a"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\BNBUSDT\\raw\\funding\\fundingTime-004.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BNBUSDT&startTime=1723593600001&endTime=1751327999999&limit=1000",
+      "bytes": 99293,
+      "sha256": "e66112694cbe1252ca9aebfceb9f3a0d92bc664db2ed3b347a0f83af36f7e03c"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XRPUSDT&interval=1d&startTime=1608422400000&endTime=1751327999999&limit=1500",
+      "bytes": 213781,
+      "sha256": "2f4730d79b9e5c279d1f0080d84efd1aac4ca40715648f33ea0b7d5cffdc2da9"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XRPUSDT&interval=1d&startTime=1737936000001&endTime=1751327999999&limit=1500",
+      "bytes": 22088,
+      "sha256": "3ded216eae1a48fb3fed81f6bf4bcdee184400c8cf0ef7812aa4a5ae0f0e6395"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\mark-price-klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=XRPUSDT&interval=8h&startTime=1608393600000&endTime=1751327999999&limit=1500",
+      "bytes": 161992,
+      "sha256": "2793f680b4fd7a1d34bb9e58aee3f1ae79e793881862cae10ef8e79a2712d2cb"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\mark-price-klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=XRPUSDT&interval=8h&startTime=1651564800001&endTime=1751327999999&limit=1500",
+      "bytes": 161998,
+      "sha256": "88e36b998a91460426f7d271e165a276585387e82e023b5366638ce717a74823"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\mark-price-klines\\openTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=XRPUSDT&interval=8h&startTime=1694764800001&endTime=1751327999999&limit=1500",
+      "bytes": 162001,
+      "sha256": "f756bfc11f640c5690cb9c4731a3e9788bb509545f18a80a82c4000c8840f5d1"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\mark-price-klines\\openTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=XRPUSDT&interval=8h&startTime=1737964800001&endTime=1751327999999&limit=1500",
+      "bytes": 50005,
+      "sha256": "955713c5763b5c4245eaa8a7d87165c4b9fb03fe9c0fc13def384facfd20db8e"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\funding\\fundingTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XRPUSDT&startTime=1608422400000&endTime=1751327999999&limit=1000",
+      "bytes": 91047,
+      "sha256": "c90e6536a8a422ba91525430f6d841bf050a34de4558f875712ab0b9acc4dba3"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\funding\\fundingTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XRPUSDT&startTime=1637193600018&endTime=1751327999999&limit=1000",
+      "bytes": 91345,
+      "sha256": "04fe14528ad009b1c0cc739b75b82b7d5555770bfdd606213f873f7922a1655e"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\funding\\fundingTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XRPUSDT&startTime=1665993600011&endTime=1751327999999&limit=1000",
+      "bytes": 91262,
+      "sha256": "d76376c51b58b629e53534831096ad4bad95abce7c28a253026d875ee539e41d"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\funding\\fundingTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XRPUSDT&startTime=1694793600001&endTime=1751327999999&limit=1000",
+      "bytes": 99707,
+      "sha256": "7697345c3dfc7c04e99fe42dcfef84ac107984785481e653036f33832cc0e97a"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\XRPUSDT\\raw\\funding\\fundingTime-004.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XRPUSDT&startTime=1723593600001&endTime=1751327999999&limit=1000",
+      "bytes": 97379,
+      "sha256": "e062f9f83d2aefea12ad6ad7a6b7078c11778aa2ce697472d282687b781e3630"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=DOGEUSDT&interval=1d&startTime=1608422400000&endTime=1751327999999&limit=1500",
+      "bytes": 224486,
+      "sha256": "b4283da37d4e89acfcc3025680dea71ba83fa54b4309639f7af1f1705c14e2a7"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=DOGEUSDT&interval=1d&startTime=1737936000001&endTime=1751327999999&limit=1500",
+      "bytes": 23190,
+      "sha256": "0798d2230531da52d34222ba0d8b9364543fb71d3ed1e67ea85f96b0b350b31d"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\mark-price-klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=DOGEUSDT&interval=8h&startTime=1608393600000&endTime=1751327999999&limit=1500",
+      "bytes": 162001,
+      "sha256": "eef5c799fd25253f38f931e99befe6e26a6bb201d69f83272ec1d9bb209c972a"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\mark-price-klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=DOGEUSDT&interval=8h&startTime=1651564800001&endTime=1751327999999&limit=1500",
+      "bytes": 161998,
+      "sha256": "dda41f9906ccdf42ea4a01efe0b76db08bed282598669d12bae6f6d2b0eed1e2"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\mark-price-klines\\openTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=DOGEUSDT&interval=8h&startTime=1694764800001&endTime=1751327999999&limit=1500",
+      "bytes": 162001,
+      "sha256": "291fa07cb931a717040f4fb6a98aba669b13e1b56f773c6249262f7f3b66afd9"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\mark-price-klines\\openTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=DOGEUSDT&interval=8h&startTime=1737964800001&endTime=1751327999999&limit=1500",
+      "bytes": 50005,
+      "sha256": "13b94cb80873636b74aafba99dfd953afc19364bee26c1a43d10483c9f84ee98"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\funding\\fundingTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=DOGEUSDT&startTime=1608422400000&endTime=1751327999999&limit=1000",
+      "bytes": 92082,
+      "sha256": "249680807c63534de83f374c486bcd3396e7b214962230ffb3fa4d250af32a5e"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\funding\\fundingTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=DOGEUSDT&startTime=1637193600018&endTime=1751327999999&limit=1000",
+      "bytes": 92243,
+      "sha256": "adb1168213e32a689e4ecf9102fd536934372471df7083751b485814eff7af3a"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\funding\\fundingTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=DOGEUSDT&startTime=1665993600011&endTime=1751327999999&limit=1000",
+      "bytes": 92139,
+      "sha256": "08e6194a4431b5e4164351a44db9fe82e3a6d02d76921638b44f68c596378b21"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\funding\\fundingTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=DOGEUSDT&startTime=1694793600001&endTime=1751327999999&limit=1000",
+      "bytes": 100715,
+      "sha256": "05e79e659569aa7283de79dba526ac250b079b9a6bd232aa419df20abf328f77"
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\DOGEUSDT\\raw\\funding\\fundingTime-004.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=DOGEUSDT&startTime=1723593600001&endTime=1751327999999&limit=1000",
+      "bytes": 98333,
+      "sha256": "c539273097f206cf367bde67c5df8ac0ec11b8f162c9402c8aec57640641e9f9"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ADAUSDT&interval=1d&startTime=1608422400000&endTime=1751327999999&limit=1500",
+      "bytes": 211994,
+      "sha256": "e7b7058efcfab0e359eae4140f65ff2773588b00d6925abcc17232bead731a72"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "kline_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ADAUSDT&interval=1d&startTime=1737936000001&endTime=1751327999999&limit=1500",
+      "bytes": 21864,
+      "sha256": "bc9a8c0dafb4fa0e65baf41d9a5e9d080828df3dc4009e241e221400553c9256"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\mark-price-klines\\openTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ADAUSDT&interval=8h&startTime=1608393600000&endTime=1751327999999&limit=1500",
+      "bytes": 162001,
+      "sha256": "f53b03b26aa30e92ee0eda11a81ab032d7466de114300525ce251ea0f23cfa15"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\mark-price-klines\\openTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ADAUSDT&interval=8h&startTime=1651564800001&endTime=1751327999999&limit=1500",
+      "bytes": 161998,
+      "sha256": "e1c9eda1d1d9398bc930cfbe61b45d7a7a7250d628f68bb29cbbb0d6d2fff4a1"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\mark-price-klines\\openTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ADAUSDT&interval=8h&startTime=1694764800001&endTime=1751327999999&limit=1500",
+      "bytes": 162001,
+      "sha256": "a39288bacd6e5492abdd443da11c4650fb3a257364579ca8a603d1b35ce279bb"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "mark_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\mark-price-klines\\openTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ADAUSDT&interval=8h&startTime=1737964800001&endTime=1751327999999&limit=1500",
+      "bytes": 50005,
+      "sha256": "191eb4ddb5a231b8217e5d4b7a0e21095bd50aece4959c7c9d5eeb3ebaf3303d"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\funding\\fundingTime-000.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ADAUSDT&startTime=1608422400000&endTime=1751327999999&limit=1000",
+      "bytes": 91067,
+      "sha256": "ac7c298f03241a7342d5be4ccd81c9efa2c3e547dc834c020722589d610d411a"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\funding\\fundingTime-001.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ADAUSDT&startTime=1637193600018&endTime=1751327999999&limit=1000",
+      "bytes": 91379,
+      "sha256": "2a1cce026145641ffc0142e908404fa553961aa41e85ab7468fdfe6165b20547"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\funding\\fundingTime-002.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ADAUSDT&startTime=1665993600011&endTime=1751327999999&limit=1000",
+      "bytes": 91243,
+      "sha256": "b85c3af962c4e5435d63ca2691a401ade7bf4d5cc914ffa31464d873f7aa80e7"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\funding\\fundingTime-003.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ADAUSDT&startTime=1694793600001&endTime=1751327999999&limit=1000",
+      "bytes": 99720,
+      "sha256": "8c4334e7ae2785aec27b45e0ae2b0445afac0f79561e96874adf1ad6119b7a10"
+    },
+    {
+      "symbol": "ADAUSDT",
+      "family": "funding_pages",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1\\ADAUSDT\\raw\\funding\\fundingTime-004.json",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ADAUSDT&startTime=1723593600001&endTime=1751327999999&limit=1000",
+      "bytes": 97375,
+      "sha256": "2c7c54c5953e84f6fc0bf9333aba7d2b71eb655705b5b96a8675a87a4f562019"
+    }
+  ],
+  "retrieval_rule": "Use each recorded Binance public REST URL and require the recorded SHA-256; no credentials.",
+  "created_at_utc": "2026-07-22T06:00:37.009924Z",
+  "content_digest": "c225770a10f3014ff8753412722fb78d4823026597a7e4b073d68858c1b56858"
+}

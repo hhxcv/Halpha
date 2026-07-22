@@ -1,0 +1,80 @@
+{
+  "generated_at_utc": "2026-07-22T01:33:42.965533Z",
+  "status": "PASS",
+  "manifest_hash_mismatches": [],
+  "symbols": {
+    "BTCUSDT": {
+      "bars": 918720,
+      "expected_bars": 918720,
+      "missing_minutes": 0,
+      "extra_minutes": 0,
+      "ohlc_bad": 0,
+      "volume_bad": 0,
+      "funding_rows": 1914,
+      "funding_missing_rate_or_mark": 0,
+      "maximum_funding_gap_hours": 8.000004444444444,
+      "status": "PASS"
+    },
+    "ETHUSDT": {
+      "bars": 918720,
+      "expected_bars": 918720,
+      "missing_minutes": 0,
+      "extra_minutes": 0,
+      "ohlc_bad": 0,
+      "volume_bad": 0,
+      "funding_rows": 1914,
+      "funding_missing_rate_or_mark": 0,
+      "maximum_funding_gap_hours": 8.000004444444444,
+      "status": "PASS"
+    },
+    "SOLUSDT": {
+      "bars": 918720,
+      "expected_bars": 918720,
+      "missing_minutes": 0,
+      "extra_minutes": 0,
+      "ohlc_bad": 0,
+      "volume_bad": 0,
+      "funding_rows": 1914,
+      "funding_missing_rate_or_mark": 0,
+      "maximum_funding_gap_hours": 8.000004444444444,
+      "status": "PASS"
+    },
+    "XRPUSDT": {
+      "bars": 918720,
+      "expected_bars": 918720,
+      "missing_minutes": 0,
+      "extra_minutes": 0,
+      "ohlc_bad": 0,
+      "volume_bad": 0,
+      "funding_rows": 1914,
+      "funding_missing_rate_or_mark": 0,
+      "maximum_funding_gap_hours": 8.000004444444444,
+      "status": "PASS"
+    },
+    "DOGEUSDT": {
+      "bars": 918720,
+      "expected_bars": 918720,
+      "missing_minutes": 0,
+      "extra_minutes": 0,
+      "ohlc_bad": 0,
+      "volume_bad": 0,
+      "funding_rows": 1914,
+      "funding_missing_rate_or_mark": 0,
+      "maximum_funding_gap_hours": 8.000004444444444,
+      "status": "PASS"
+    },
+    "ADAUSDT": {
+      "bars": 918720,
+      "expected_bars": 918720,
+      "missing_minutes": 0,
+      "extra_minutes": 0,
+      "ohlc_bad": 0,
+      "volume_bad": 0,
+      "funding_rows": 1914,
+      "funding_missing_rate_or_mark": 0,
+      "maximum_funding_gap_hours": 8.000004444444444,
+      "status": "PASS"
+    }
+  },
+  "content_digest": "bb79573db2cc65cb11ad784b49ae8ac7f4eae819edfe8c39a1852a47760720c2"
+}

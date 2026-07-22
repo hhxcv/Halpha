@@ -1,0 +1,80 @@
+{
+  "created_at_utc": "2026-07-22T08:20:48.639800Z",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "failed_stage": "development",
+  "failed_checks": [
+    "base_beats_highvol_scheduled",
+    "minimum_positive_categories",
+    "positive_pnl_concentration_below_limit"
+  ],
+  "handoff_generated": false,
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "family_disposition": "CLOSED_NO_FURTHER_MEDIUM_HORIZON_REVERSAL_CONDITION_SEARCH",
+  "summary": {
+    "trades": 125,
+    "entry_dates": 50,
+    "symbols": 21,
+    "base_after_hurdle": 0.006200301613272389,
+    "stress_after_hurdle": 0.005304289450936745,
+    "stress_bootstrap_95pct": [
+      -0.004645720765882085,
+      0.017541306386616804
+    ],
+    "base_max_drawdown": -0.1264737191861267,
+    "base_vs_unconditional": {
+      "main_mean": 0.006967424900943621,
+      "baseline_mean": 0.0044301011008341775,
+      "difference_mean": 0.0025373238001094446,
+      "difference_bootstrap_95pct": [
+        -0.0017659318590651269,
+        0.00819691619959353
+      ],
+      "positive_date_fraction": 0.52,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "base_vs_lowvol": {
+      "main_mean": 0.006967424900943621,
+      "baseline_mean": 0.0016141429622796915,
+      "difference_mean": 0.005353281938663929,
+      "difference_bootstrap_95pct": [
+        -0.0014656801518736328,
+        0.013616374514159443
+      ],
+      "positive_date_fraction": 0.5,
+      "baseline_no_action_dates_filled_as_cash": 4
+    },
+    "base_vs_highvol_scheduled": {
+      "main_mean": 0.006967424900943621,
+      "baseline_mean": 0.007125950190930199,
+      "difference_mean": -0.00015852528998657907,
+      "difference_bootstrap_95pct": [
+        -0.006309099812756383,
+        0.004949387571924234
+      ],
+      "positive_date_fraction": 0.52,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "base_vs_highvol_winner": {
+      "main_mean": 0.006967424900943621,
+      "baseline_mean": 0.004612980089378665,
+      "difference_mean": 0.0023544448115649565,
+      "difference_bootstrap_95pct": [
+        -0.004065366856842401,
+        0.008143339309857103
+      ],
+      "positive_date_fraction": 0.46,
+      "baseline_no_action_dates_filled_as_cash": 4
+    },
+    "gross_vs_market": {
+      "main_mean": 0.008417686818595472,
+      "market_mean": 0.005492769676364091,
+      "difference_mean": 0.002924917142231381,
+      "difference_bootstrap_95pct": [
+        -0.0011672850031481767,
+        0.007976641496357814
+      ]
+    },
+    "largest_positive_pnl_share": 0.29005334843334335
+  },
+  "content_digest": "28a1865a558a8ea604a320e4c60a3d22c0baf22b798b3eae7ce2eef842e93482"
+}

@@ -1,0 +1,48 @@
+{
+  "generated_at_utc": "2026-07-22T09:17:28.214351Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "vectorbt_reconciled": true,
+    "excluded_trade_fraction_at_most_2pct": true,
+    "trades_at_least_50": true,
+    "entry_dates_at_least_20": true,
+    "symbols_at_least_15": true,
+    "each_half_at_least_8_dates": true,
+    "base_after_hurdle_positive": true,
+    "stress_after_hurdle_positive": true,
+    "stress_bootstrap_lower_positive": false,
+    "both_halves_base_after_hurdle_positive": false,
+    "base_increment_vs_mom14_positive": true,
+    "base_increment_vs_mom14_bootstrap_lower_positive": false,
+    "gross_excess_vs_market_positive": true,
+    "gross_excess_vs_market_bootstrap_lower_positive": false,
+    "three_of_four_neighbors_stress_positive": true,
+    "four_positive_categories": false,
+    "half_targets_positive": false,
+    "largest_positive_pnl_share_at_most_25pct": false,
+    "worst_target_drawdown_above_minus_30pct": true
+  },
+  "failed_checks": [
+    "stress_bootstrap_lower_positive",
+    "both_halves_base_after_hurdle_positive",
+    "base_increment_vs_mom14_bootstrap_lower_positive",
+    "gross_excess_vs_market_bootstrap_lower_positive",
+    "four_positive_categories",
+    "half_targets_positive",
+    "largest_positive_pnl_share_at_most_25pct"
+  ],
+  "diagnostics": {
+    "excluded_trade_fraction": 0.0,
+    "neighbor_stress_after_hurdle": [
+      0.00018977278738440624,
+      -0.002469452068514926,
+      0.0038508132021560105,
+      0.0035119327992699126
+    ],
+    "positive_categories": 2
+  },
+  "evidence_digest": "92c5cb161412af9d74002b757e46425c609b3de7109f510deaa081426a74c985",
+  "content_digest": "a14baad0ac02efd9a3948cf04e64cd662661c811f81536a9d7dd1fca09cca32f"
+}

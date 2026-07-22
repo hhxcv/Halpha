@@ -1,0 +1,51 @@
+{
+  "created_at_utc": "2026-07-22T08:03:51.950638Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checkpoint_digest": "55bf5a197669f6d84f2dbc49c51100a273136ee3acdc9e9d83fab721b5d4ac8a",
+  "checks": {
+    "data_quality_pass": true,
+    "minimum_trades": true,
+    "minimum_20_symbols": true,
+    "minimum_entry_dates": true,
+    "excluded_funding_or_marks_at_most_2pct": true,
+    "base_after_hurdle_positive": false,
+    "stress_after_hurdle_positive": false,
+    "both_halves_base_positive": false,
+    "date_portfolio_drawdown_above_minus_15pct": false,
+    "worst_symbol_drawdown_above_minus_30pct": true,
+    "base_beats_mom7": false,
+    "base_beats_winner70": false,
+    "base_beats_scheduled_long": true,
+    "gross_excess_vs_market_positive": true,
+    "at_least_two_of_three_neighbors_stress_nonnegative": false,
+    "at_least_half_selected_targets_positive": false,
+    "at_least_four_categories_positive": false,
+    "largest_positive_pnl_share_at_most_20pct": false,
+    "vectorbt_manual_reconciliation": true,
+    "stress_bootstrap_lower_positive": false,
+    "gross_market_excess_bootstrap_lower_positive": false
+  },
+  "failed": [
+    "base_after_hurdle_positive",
+    "stress_after_hurdle_positive",
+    "both_halves_base_positive",
+    "date_portfolio_drawdown_above_minus_15pct",
+    "base_beats_mom7",
+    "base_beats_winner70",
+    "at_least_two_of_three_neighbors_stress_nonnegative",
+    "at_least_half_selected_targets_positive",
+    "at_least_four_categories_positive",
+    "largest_positive_pnl_share_at_most_20pct",
+    "stress_bootstrap_lower_positive",
+    "gross_market_excess_bootstrap_lower_positive"
+  ],
+  "diagnostics": {
+    "excluded_fraction": 0.013157894736842105,
+    "positive_targets": 9,
+    "positive_categories": 3,
+    "neighbor_positive": 0
+  },
+  "evidence_digest": "76961c816aeb43ffc779c2acef6df102d0cdd6152fae6df991397b144ccabd7a",
+  "content_digest": "fdbe39473a82be600a7ac56ba88d14ccfd0427f62bbeb5f9a33c41694feab4e3"
+}

@@ -1,0 +1,53 @@
+{
+  "generated_at_utc": "2026-07-22T09:40:41.721169Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "vectorbt_reconciled": true,
+    "excluded_trade_fraction_at_most_2pct": true,
+    "trades_at_least_50": true,
+    "entry_dates_at_least_20": true,
+    "symbols_at_least_15": true,
+    "each_half_at_least_8_dates": true,
+    "base_after_hurdle_positive": false,
+    "stress_after_hurdle_positive": false,
+    "stress_bootstrap_lower_positive": false,
+    "both_halves_base_after_hurdle_positive": false,
+    "base_increment_vs_mom52_positive": true,
+    "base_increment_vs_mom52_bootstrap_lower_positive": false,
+    "gross_excess_vs_market_positive": false,
+    "gross_excess_vs_market_bootstrap_lower_positive": false,
+    "two_of_three_neighbors_stress_positive": false,
+    "four_positive_categories": false,
+    "half_targets_positive": false,
+    "largest_positive_pnl_share_at_most_25pct": false,
+    "date_portfolio_drawdown_above_minus_20pct": false,
+    "worst_target_drawdown_above_minus_30pct": true
+  },
+  "failed_checks": [
+    "base_after_hurdle_positive",
+    "stress_after_hurdle_positive",
+    "stress_bootstrap_lower_positive",
+    "both_halves_base_after_hurdle_positive",
+    "base_increment_vs_mom52_bootstrap_lower_positive",
+    "gross_excess_vs_market_positive",
+    "gross_excess_vs_market_bootstrap_lower_positive",
+    "two_of_three_neighbors_stress_positive",
+    "four_positive_categories",
+    "half_targets_positive",
+    "largest_positive_pnl_share_at_most_25pct",
+    "date_portfolio_drawdown_above_minus_20pct"
+  ],
+  "diagnostics": {
+    "excluded_trade_fraction": 0.0,
+    "neighbor_stress_after_hurdle": [
+      -0.005065555588492785,
+      0.0034787431855706264,
+      -0.001803125176384165
+    ],
+    "positive_categories": 3
+  },
+  "evidence_digest": "ccf632527a73efd8f5779458d6b8335983cd4668d857fabcdfab05d8ba2232f8",
+  "content_digest": "2cbe4d873223c70c3ceb1b38278877afdb47b7d93ae197b283349edd85943905"
+}

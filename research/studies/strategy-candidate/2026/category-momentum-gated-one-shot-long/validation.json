@@ -1,0 +1,58 @@
+{
+  "validated_at_utc": "2026-07-22T02:52:23.2649794Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "checkpoint_digest": "5daae3b3faf810b2246f1a9296660d64b17076bf491d73768eb3567332ba3a38",
+  "source_manifest_digest": "e4dc8ba124ddf6662b8f10624c22c53f61f548022f8aaed7b8855f3940a66dd7",
+  "data_quality_digest": "549f7f859e5cc404127721274514859c92041bd9688fb97eb17d0b6a5de2916e",
+  "first_complete_run": {
+    "development_result_digest": "5f2b58e88d8a4e832c5ce56a0a4a32345f7732763d2807e0986125264ed3ac8c",
+    "main_trade_csv_sha256": "061261b227948eb1456cf1653e6db130acb9ec9243fff1114815637af38552ef",
+    "diagnostic_csv_sha256": {
+      "formation_14d": "4daf28116f186d1560949106f47d9ee93d72d346d754975ac0d38ff5af065e66",
+      "hold_3d": "138ae20c9fbd14d5d18f18f8268f228b8c0cd9618c600567bb7f70de7f605d69",
+      "top_1": "05d418e7660495bf706ff82b01736fc70122ca40ae491251f096914106261020",
+      "own_momentum": "c9921fe77be49e006c5538280c291d18a7c9675b9920202b547e63fb8a315ec4",
+      "scheduled_long": "46475607c395c6db011d2e7541204e809a2d67ac8d199893f4d9b42b38db660d"
+    }
+  },
+  "cache_only_rerun": {
+    "development_result_digest": "6472eb2cbb78bbc30d0e4195d9f54bba853c2ac8f4dfd23eeb54c53a624fe498",
+    "main_trade_csv_sha256": "061261b227948eb1456cf1653e6db130acb9ec9243fff1114815637af38552ef",
+    "diagnostic_csv_sha256": {
+      "formation_14d": "4daf28116f186d1560949106f47d9ee93d72d346d754975ac0d38ff5af065e66",
+      "hold_3d": "138ae20c9fbd14d5d18f18f8268f228b8c0cd9618c600567bb7f70de7f605d69",
+      "top_1": "05d418e7660495bf706ff82b01736fc70122ca40ae491251f096914106261020",
+      "own_momentum": "c9921fe77be49e006c5538280c291d18a7c9675b9920202b547e63fb8a315ec4",
+      "scheduled_long": "46475607c395c6db011d2e7541204e809a2d67ac8d199893f4d9b42b38db660d"
+    },
+    "trade_and_diagnostic_csv_bytes_identical": true,
+    "economic_summary_identical": true,
+    "gate_failed_checks_identical": true,
+    "json_digest_difference_reason": "generated_at_utc changes on rerun"
+  },
+  "observed_result": {
+    "trades": 821,
+    "base_cohort_mean_after_hurdle": -0.0030188257799890696,
+    "stress_cohort_mean_after_hurdle": -0.004638974831466023,
+    "development_gate": "FAIL",
+    "failed_check_count": 13,
+    "conclusion": "DOES_NOT_SUPPORT",
+    "evaluation_opened": false,
+    "confirmation_opened": false,
+    "handoff_generated": false,
+    "product_effects": "NONE"
+  },
+  "referenced_input_inventory": {
+    "daily_kline_pages": 74,
+    "funding_monthly_archives": 600,
+    "mark_8h_monthly_archives": 600,
+    "mark_1m_gap_monthly_archives": 57,
+    "files_including_checksums": 2588,
+    "bytes": 55680248
+  },
+  "external_cache_inventory_including_failed_attempts": {
+    "files": 2761,
+    "bytes": 62063944,
+    "path": "D:/projects/Codex/CodexHome/research-data/halpha/category-momentum-gated-one-shot-long/2026-07-22-v1/"
+  }
+}

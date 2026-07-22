@@ -1,0 +1,73 @@
+{
+  "created_at_utc": "2026-07-22T07:07:52.277553Z",
+  "question": "Does paper-defined two-week risk-adjusted momentum qualify a fixed-target weekly one-shot perpetual LONG after retail costs, funding, raw-momentum/low-vol/market baselines, robustness, breadth and sequential time evidence?",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "development_gate": "FAIL",
+  "development_digest": "4655fbf7ebfe31c53e8d0d6d9cebe0f8267b93453f2456db5c968ab0a25d8cd1",
+  "gate_digest": "7c55d890b6a81353caf107e47f992607a203f5da0f40103794d1611994217da8",
+  "later_stage_outputs": 0,
+  "handoff_generated": false,
+  "summary": {
+    "trades": 171,
+    "entry_dates": 51,
+    "symbols": 25,
+    "base_mean_after_hurdle": 0.00897119871302594,
+    "stress_mean_after_hurdle": 0.007184022104434406,
+    "stress_bootstrap_95pct": [
+      -0.00746390143569142,
+      0.024318819606619118
+    ],
+    "base_max_drawdown": -0.2642093635005577,
+    "base_vs_mom14": {
+      "main_mean": 0.009738322000697172,
+      "baseline_mean": 0.010506524650330626,
+      "difference_mean": -0.0007682026496334554,
+      "difference_bootstrap_95pct": [
+        -0.011205999420440411,
+        0.010545994694368403
+      ],
+      "positive_date_fraction": 0.47058823529411764,
+      "baseline_no_action_dates_filled_as_cash": 0,
+      "common_date_difference_mean": -0.0007682026496334554,
+      "common_dates": 51
+    },
+    "base_vs_lowvol14": {
+      "main_mean": 0.009738322000697172,
+      "baseline_mean": 0.0029737360483118483,
+      "difference_mean": 0.006764585952385323,
+      "difference_bootstrap_95pct": [
+        -0.005665546943553179,
+        0.020959141348067103
+      ],
+      "positive_date_fraction": 0.5098039215686274,
+      "baseline_no_action_dates_filled_as_cash": 1,
+      "common_date_difference_mean": 0.006728500441308001,
+      "common_dates": 50
+    },
+    "gross_excess_vs_market": {
+      "main_mean": 0.011421612181579898,
+      "market_mean": 0.00950377449939269,
+      "difference_mean": 0.0019178376821872066,
+      "difference_bootstrap_95pct": [
+        -0.006528146783395388,
+        0.0126970483106107
+      ]
+    },
+    "rank_correlation_with_mom14": {
+      "median": 0.9130434782608694,
+      "minimum": 0.20869565217391303,
+      "maximum": 0.9892307692307692,
+      "weeks": 52
+    },
+    "largest_positive_pnl_share": 0.23846677859257095,
+    "failed_checks": [
+      "stress_bootstrap_lower_positive",
+      "both_halves_base_positive",
+      "date_portfolio_drawdown_above_minus_20pct",
+      "base_beats_mom14",
+      "gross_excess_bootstrap_lower_positive",
+      "largest_positive_pnl_share_at_most_20pct"
+    ]
+  },
+  "content_digest": "9fcb9614dc928814749410c7397122de5840cc02034aa5125496d0b8de8a9e2e"
+}

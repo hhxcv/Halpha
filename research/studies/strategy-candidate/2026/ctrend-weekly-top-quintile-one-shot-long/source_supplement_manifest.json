@@ -1,0 +1,236 @@
+{
+  "created_at_utc": "2026-07-22T06:31:23.665546Z",
+  "stage": "development",
+  "checkpoint_digest": "9ba29fb9c5dc01a6b3cca8a33f4d75c665d1d8637ac5de2b3625a367df17e095",
+  "source": "Binance public USD-M REST; no credentials",
+  "items": [
+    {
+      "symbol": "1000XECUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=1000XECUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\1000XECUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 8396,
+      "sha256": "9117aa14994f0a7b68c1a17df58d3df6428fe7b5156b77a1006b1cf400221ede",
+      "rows": 61,
+      "reused": true
+    },
+    {
+      "symbol": "AAVEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AAVEUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\AAVEUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 53738,
+      "sha256": "c281db82a2f74f928d509ed2bcca1bac4bb47c2fa21daf2ffced16b3d77413a7",
+      "rows": 397,
+      "reused": true
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AVAXUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\AVAXUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 55797,
+      "sha256": "0288092356b723b31eb8d16c603751184762494d82a69e09a0b84a597992bb5f",
+      "rows": 420,
+      "reused": true
+    },
+    {
+      "symbol": "BCHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BCHUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\BCHUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 73920,
+      "sha256": "9c45dfe07a36af68c8af52649f5c886d4a3e591e23174794896de43704cc4694",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "BNBUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BNBUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\BNBUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 75178,
+      "sha256": "996510847c36a1d29e3cc7d705937a659f5e90adf63bcd8f380932dd83a67ebe",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "CRVUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=CRVUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\CRVUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 58091,
+      "sha256": "40c50f7c8781e4420a7c17deefc6c8efc5b05f319918ee19512ba288dd1d25a3",
+      "rows": 442,
+      "reused": true
+    },
+    {
+      "symbol": "DASHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=DASHUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\DASHUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 71578,
+      "sha256": "c75439b37c8f1f2f42959f3ba30dccb121c5d30b9e56408da6525837721a8347",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "ENSUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ENSUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ENSUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "rows": 0,
+      "reused": true
+    },
+    {
+      "symbol": "ETCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETCUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ETCUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 72752,
+      "sha256": "60dd6abda0c2b903d36597d16f52e2be697ff0502e28e9a1851b9b52acef5e89",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "HBARUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=HBARUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\HBARUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 33775,
+      "sha256": "ffe1ba79207cf82553b7c970c67ebb6ea49b7d8079585f7f246abaa9ecb183f6",
+      "rows": 245,
+      "reused": true
+    },
+    {
+      "symbol": "KAVAUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=KAVAUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\KAVAUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 64462,
+      "sha256": "1d4043914e8f8de847282ed8aac8e5afefbf2bfe620a09a1b591cf8d7b587e6b",
+      "rows": 477,
+      "reused": true
+    },
+    {
+      "symbol": "LINKUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LINKUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\LINKUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 74638,
+      "sha256": "a2a46115db4259d790c86465ad461cca1dcf3197858fe63e3f7dc5b566abc3ab",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "LTCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LTCUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\LTCUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 74074,
+      "sha256": "a2231641cd1ccf48becbcfdab88ea25dd639a04f028d187171935c8f9dbd6c9e",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "NEARUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=NEARUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\NEARUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 51625,
+      "sha256": "ec19deda4d101d0b5eac63dc63bba9b6e7575742508cba9de0a46b9b04f086bf",
+      "rows": 398,
+      "reused": true
+    },
+    {
+      "symbol": "RUNEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=RUNEUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\RUNEUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 57243,
+      "sha256": "27b95aa57dd7ef5e14c333aa58acbf27f51196f883fd456559a8a96d5e394210",
+      "rows": 439,
+      "reused": true
+    },
+    {
+      "symbol": "SNXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SNXUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\SNXUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 60065,
+      "sha256": "282f35f9ad2b677e7e41c2c926bd52c7d83ef8f47785a9830ab2cd0d6908cc40",
+      "rows": 460,
+      "reused": true
+    },
+    {
+      "symbol": "SOLUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SOLUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\SOLUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 57503,
+      "sha256": "0ab3e91652efdf80b6a57613b44cba1b040e4844184d99088a0f35ba32c3d232",
+      "rows": 429,
+      "reused": true
+    },
+    {
+      "symbol": "TRXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=TRXUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\TRXUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 75253,
+      "sha256": "d18920f4c596b99570273eed753e6219f61ac6f2fed83f8e4edbd03a25649217",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "UNIUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=UNIUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\UNIUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 56906,
+      "sha256": "f0f7beca1dbc0fe9a40205ab565fda61bd05aa73ca893f781ec1dcda9b652cea",
+      "rows": 425,
+      "reused": true
+    },
+    {
+      "symbol": "VETUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=VETUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\VETUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 78304,
+      "sha256": "5490441b95be6149c7aa7c4dc925b71bca0b10dd09521d2e656092ab8f501e36",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "XLMUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XLMUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\XLMUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 74374,
+      "sha256": "a5fb6fcb22e24c776236dc928e3bf4c6e465290ae6a24cc7a527dac350148bb4",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "XMRUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XMRUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\XMRUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 72022,
+      "sha256": "ee4585a3ee5bb9696f3d1a4d455930aaee63b4b7dc77fab23a6b0550ffd7f394",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "XRPUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XRPUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\XRPUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 75879,
+      "sha256": "a572449fe26b517b73a5820497abfcf085697bcade33f0ccc24eb76b0aa3ef4d",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "ZECUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZECUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ZECUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 71853,
+      "sha256": "158331040c35a7e8002b64f45b173efd3be7e81dc03f76a80ac87ecda5f12533",
+      "rows": 534,
+      "reused": true
+    },
+    {
+      "symbol": "ZILUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZILUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ZILUSDT\\klines-2020-06-01_2021-11-17.json",
+      "bytes": 71480,
+      "sha256": "e8a2ae3bb9b114fca6b79fddeb38897be86d34cb3b02259c883b05dd5e328f5f",
+      "rows": 517,
+      "reused": true
+    }
+  ],
+  "files": 25,
+  "bytes": 1518908,
+  "content_digest": "6ec7acdce382f45b79fe564b7e7bb8cea8de6424df2324be08b6e4f70fc17d9a"
+}

@@ -1,0 +1,124 @@
+{
+  "created_at_utc": "2026-07-22T12:32:23.728121+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP",
+    "role": "fixed comparison context; shares 15-minute bar semantics only"
+  },
+  "research_kind": "PREDICTIVE",
+  "predictor_id": "RESEARCH_RSJ15_LOW_NEXT_DAY_V1",
+  "question": "Does low daily relative signed jump from closed 15-minute bars predict higher next-24-hour mature-perpetual returns?",
+  "replication_status": "15-minute Binance-perpetual operational transfer; not a numerical replication of 5-minute spot evidence.",
+  "source_sample_end": "2021-06-30",
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "stages": {
+    "development": [
+      "2022-03-26T00:00:00Z",
+      "2023-07-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2023-07-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2026-07-20T00:00:00Z"
+    ]
+  },
+  "expected_days": {
+    "development": 462,
+    "evaluation": 550,
+    "confirmation": 565
+  },
+  "resolutions": {
+    "primary_15m": 1,
+    "diagnostic_30m": 2,
+    "diagnostic_1h": 4
+  },
+  "controls": [
+    "prior_return_1d",
+    "realized_variance_15m",
+    "mom14",
+    "beta84",
+    "total_vol28",
+    "max28",
+    "log_volume30"
+  ],
+  "config": {
+    "predictor_id": "RESEARCH_RSJ15_LOW_NEXT_DAY_V1",
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "minimum_rankable": 20,
+    "tail_fraction": 0.2,
+    "beta_days": 84,
+    "entry_delay_minutes": 15,
+    "target_hours": 24,
+    "stress_round_trip_underlying": 0.0052,
+    "economic_notional_fraction": 0.25,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_days": 7,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 7,
+    "minimum_eligible_days": 440,
+    "minimum_expected_day_fraction": 0.95,
+    "minimum_symbol_source_complete_fraction": 0.9,
+    "minimum_positive_spread_fraction": 0.52,
+    "minimum_selected_symbols": 10,
+    "minimum_positive_symbol_fraction": 0.5,
+    "maximum_positive_contribution_share": 0.4,
+    "maximum_abs_score_control_correlation": 0.9,
+    "download_workers": 8
+  },
+  "data_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\relative-signed-jump-next-day-predictability\\2026-07-22-v1",
+  "parent_daily_manifest": {
+    "path": "research/studies/predictive/2026/intermediate-vix-beta-weekly-return-predictability/source_manifest.json",
+    "sha256": "07d0c80a4ea858e767960c53bc9ef5345cecc1a07fb482d9d2d87b862fb50693",
+    "content_digest": "d8cab91fb7ccdc39204aa2b783d13376b92ba0137fb3cb8e6a164cb432ed3514"
+  },
+  "frozen_file_sha256": {
+    "README.md": "6ac4bd2c32fd846f614bc265f279878a0d271d4c5bf2d8ccf8b0e2adc2791557",
+    "sources.md": "f9ea8ce43b00ff182a8b2cdc4aa46df7d2fa87d4021cd45179f869f117c391d2",
+    "preregistration.md": "dab702d7a675ed7a6bfb6f7605b248d1dbf3da971a7e5dc407b8e244af1c6580",
+    "study.py": "58727b7a0cb7181dd32687a18266e5841814cfa30b10d556f5d23ae7031b2cf6"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "framework_decision": "Predictive statistics use pandas/statsmodels; vectorbt and exact funding are deferred until three predictive gates pass.",
+  "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS",
+  "content_digest": "0f3ea9c0a177a565d15e69a0cfac725fefe9683ab1190a6c56e765597c485491"
+}

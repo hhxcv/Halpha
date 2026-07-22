@@ -1,0 +1,32 @@
+{
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 / BTCUSDT-PERP",
+  "created_at": "2026-07-21T00:00:00+08:00",
+  "last_resealed_at": "2026-07-23T00:00:00+08:00",
+  "reseal_reason": "The relationship monitor's documented post-result tokenized-asset taxonomy correction changed its narrative result artifact without changing the 402 analyzed pairs, statistics, conclusion, or analysis identity; the current artifact passed its independent validator before this synthesis was resealed.",
+  "research_kind": "COMPARATIVE_OR_MECHANISM",
+  "question": "Does the evidence available under Halpha's current personal, small-capital, basic-public-data and conservative-cost constraints support a new strategy candidate derived directly from BTC correlation?",
+  "claim_scope": "Retrospective evidence synthesis only; no new predictive result, no claim that all possible BTC-related alpha is absent.",
+  "input_sha256": {
+    "docs/L4/HALPHA-PLAN-001-current-plan.yaml": "8f90b80c65cddca91d7742c31dd83132919866c55238e642da4add47139a7c28",
+    "research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/result.md": "fcd5d14235cc0808af454e447b8368249547dd019ed26a0a9646f59f5a029c09",
+    "research/studies/legacy/2026/ethusdt-2h-extreme-reversal/results.json": "313d517d7508f688830a857253cc86216fac846ed743a33788c99d8f0a503b61",
+    "research/studies/legacy/2026/mature-alt-spot-top2-momentum/results.json": "59dc642a4f57e24f143d923911083c38f0e5b0e7a60f468a604c83991b6448a6",
+    "research/studies/legacy/2026/btc-eth-spot-dual-momentum/results.json": "6ee9de23574e1d677d35e00dd752d84f2c08b592426bbaf0ceca48e3076e6996",
+    "research/studies/legacy/2026/core-perp-conservative-volscaled-tsmom/results.json": "8cd262656e690d48e7d53fe43944c8ce3607c05461293b3f4f6d592aaf2d3dd2",
+    "research/studies/legacy/2026/mature-alt-continuous-cash-carry-basket/results.json": "5d05b69b53cd0a3898bc1c00db5bbe56624c2e0c9a3aefcb10cf357c8ce6bfaa",
+    "research/studies/predictive/2026/btc-shock-beta-gap-predictability/development.json": "dfb3eec79b8503df7bdfa99ae6e9aab77aa0cded46cdc1e8386165bda86c8785",
+    "research/studies/predictive/2026/btc-neutral-alt-residual-reversal/development.json": "cf3eb584e4addcd5b94e8675bef2a9d3725c6dfd774b82b43fba06ce09a46c83",
+    "research/studies/predictive/2026/btc-shock-mid-activity-beta-gap/development.json": "4553b4ee1ddd6dd0a0d2020589a003ec2fb0c2c9e5f76ad40f4d1596ee974ae4",
+    "research/studies/predictive/2026/btc-shock-beta-gap-predictability/source_manifest_development.json": "847588d0721c162374b794bc6720dced970c94095bebc1c0d9c965bc59737b81",
+    "research/studies/predictive/2026/btc-shock-mid-activity-beta-gap/source_manifest_development.json": "15c5509240d118b7db10bd43f7a1655507c89ab0b47c5cd87392f715537d5528"
+  },
+  "conclusion_rule": "DOES_NOT_SUPPORT if no direct BTC-correlation return path passes its preregistered predictive and economic gate; supported funding/carry evidence remains a separate mechanism and does not satisfy this question.",
+  "audit_code_sha256": "37eb47968e97c3e8ebeefe8ee81a3508bfca69124daec72a4cafde184dd297f2",
+  "audit_outcome": {
+    "conclusion": "DOES_NOT_SUPPORT",
+    "new_btc_correlation_strategy_candidate": false,
+    "current_scope_substantially_covered": true,
+    "audit_json_sha256": "b3d6d416138432eefc43cd52626e4d59630148a91dbf0860c695a0b487093b78"
+  }
+}

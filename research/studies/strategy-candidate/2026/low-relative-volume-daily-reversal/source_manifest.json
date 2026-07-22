@@ -1,0 +1,478 @@
+{
+  "accessed_at_utc": "2026-07-22T00:26:10.659416Z",
+  "checkpoint_digest": "f27a624392bf391ac6f7cb2f927d4fe41b329524125ee815a0c09975a0e342cd",
+  "source": "Binance public USD-M REST market data; no credentials",
+  "data_start": "2020-11-01T00:00:00Z",
+  "data_end_exclusive": "2025-07-01T00:00:00Z",
+  "symbols": {
+    "ALGOUSDT": {
+      "kline_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ALGOUSDT&interval=1d&startTime=1604188800000&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\klines\\openTime-000.json",
+          "bytes": 206800,
+          "sha256": "078699cfdad0f298a3de4e819065bb21f28fa06feb1338b9171966ac6e9490a9",
+          "rows": 1500,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1733702400000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ALGOUSDT&interval=1d&startTime=1733702400001&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\klines\\openTime-001.json",
+          "bytes": 28157,
+          "sha256": "b7ae2d5383a836f3e99d1e97ea70db23997c9a3058ee2816fb4eaeb1085c4c42",
+          "rows": 203,
+          "first_time_ms": 1733788800000,
+          "last_time_ms": 1751241600000
+        }
+      ],
+      "funding_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ALGOUSDT&startTime=1604188800000&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\funding\\fundingTime-000.json",
+          "bytes": 92006,
+          "sha256": "b1ecb783e4f8ee6b84ba2b593bed32c6a11a88af20b6abecae2241d57ab5ccdb",
+          "rows": 1000,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1632960000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ALGOUSDT&startTime=1632960000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\funding\\fundingTime-001.json",
+          "bytes": 92129,
+          "sha256": "1caf916c1f07bc8a328181dfced1f531ae7044e89ce5d40662dba2e04e782025",
+          "rows": 1000,
+          "first_time_ms": 1632988800004,
+          "last_time_ms": 1661760000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ALGOUSDT&startTime=1661760000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\funding\\fundingTime-002.json",
+          "bytes": 92142,
+          "sha256": "38db751e8ecf8b55e5208d65a27bc6265e29509853c7168cd4ceb3c49815e2b5",
+          "rows": 1000,
+          "first_time_ms": 1661788800001,
+          "last_time_ms": 1690560000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ALGOUSDT&startTime=1690560000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\funding\\fundingTime-003.json",
+          "bytes": 99258,
+          "sha256": "bbde410ce6b3489ebe71186278377ed356e2f3c2455a9e24caeb065b9ddb0ddc",
+          "rows": 1000,
+          "first_time_ms": 1690588800000,
+          "last_time_ms": 1719360000002
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ALGOUSDT&startTime=1719360000003&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\funding\\fundingTime-004.json",
+          "bytes": 102256,
+          "sha256": "efbe3ded99338e7122fa63b790aa333204dbd0dcad4c1e51764bcd34001ce177",
+          "rows": 1000,
+          "first_time_ms": 1719388800000,
+          "last_time_ms": 1748160000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ALGOUSDT&startTime=1748160000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ALGOUSDT\\raw\\funding\\fundingTime-005.json",
+          "bytes": 11166,
+          "sha256": "615ad0e5ceff33948635c42c93ef9c49f0d26b79c3f83293ae4bdd96d69904d9",
+          "rows": 109,
+          "first_time_ms": 1748188800000,
+          "last_time_ms": 1751299200002
+        }
+      ]
+    },
+    "COMPUSDT": {
+      "kline_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=COMPUSDT&interval=1d&startTime=1604188800000&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\klines\\openTime-000.json",
+          "bytes": 200963,
+          "sha256": "35ef75167888a556bfc135a6eb81b1a1f061536aff473c84334d6cb1482cad10",
+          "rows": 1500,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1733702400000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=COMPUSDT&interval=1d&startTime=1733702400001&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\klines\\openTime-001.json",
+          "bytes": 26856,
+          "sha256": "82802b586c94f7bd60acec508220e647a46f3c91ab86f753d9467bf7cfd72ce2",
+          "rows": 203,
+          "first_time_ms": 1733788800000,
+          "last_time_ms": 1751241600000
+        }
+      ],
+      "funding_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=COMPUSDT&startTime=1604188800000&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\funding\\fundingTime-000.json",
+          "bytes": 92081,
+          "sha256": "b0d7bbc92edcd8f12a6748c1272bc27210237d4e92915eb3a33196b015aea52c",
+          "rows": 1000,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1632960000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=COMPUSDT&startTime=1632960000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\funding\\fundingTime-001.json",
+          "bytes": 92199,
+          "sha256": "340493a2c2be89876e7068c8f1991913d006e391815c022990a4c6795558ef00",
+          "rows": 1000,
+          "first_time_ms": 1632988800004,
+          "last_time_ms": 1661760000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=COMPUSDT&startTime=1661760000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\funding\\fundingTime-002.json",
+          "bytes": 92312,
+          "sha256": "542fc60217ae1bdb3206f09496a9545f696d19a7af8795cdf53d0d46059dff0e",
+          "rows": 1000,
+          "first_time_ms": 1661788800001,
+          "last_time_ms": 1690560000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=COMPUSDT&startTime=1690560000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\funding\\fundingTime-003.json",
+          "bytes": 100041,
+          "sha256": "fca9c4f970608713e7a160eb867d094a1fa4371fc7dcf8424f968bdea92ce666",
+          "rows": 1000,
+          "first_time_ms": 1690588800000,
+          "last_time_ms": 1719360000002
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=COMPUSDT&startTime=1719360000003&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\funding\\fundingTime-004.json",
+          "bytes": 103396,
+          "sha256": "b2c3d2d2d5dab134ee505ad8d9d9a86df368b66871eb20332d036b2066e32152",
+          "rows": 1000,
+          "first_time_ms": 1719388800000,
+          "last_time_ms": 1748160000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=COMPUSDT&startTime=1748160000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\COMPUSDT\\raw\\funding\\fundingTime-005.json",
+          "bytes": 11256,
+          "sha256": "be7677dc7d1cae837fef10dec444a395e7efd131e491921db5c095a4a29af56c",
+          "rows": 109,
+          "first_time_ms": 1748188800000,
+          "last_time_ms": 1751299200002
+        }
+      ]
+    },
+    "THETAUSDT": {
+      "kline_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=THETAUSDT&interval=1d&startTime=1604188800000&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\klines\\openTime-000.json",
+          "bytes": 205417,
+          "sha256": "6b0d4da0c15f3451a441193a75d6f42966652546717676b2dc2b15d3e99f6102",
+          "rows": 1500,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1733702400000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=THETAUSDT&interval=1d&startTime=1733702400001&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\klines\\openTime-001.json",
+          "bytes": 27600,
+          "sha256": "d1b20e20d0f1ae86c8bee5eb8acedf9123edc36c71e2dc918286b844ebc73c44",
+          "rows": 203,
+          "first_time_ms": 1733788800000,
+          "last_time_ms": 1751241600000
+        }
+      ],
+      "funding_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=THETAUSDT&startTime=1604188800000&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\funding\\fundingTime-000.json",
+          "bytes": 93174,
+          "sha256": "36dfebb1e3d62f0ea795af0e12a226618e78925fbb485b8f936a5840aa1bcf1e",
+          "rows": 1000,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1632960000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=THETAUSDT&startTime=1632960000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\funding\\fundingTime-001.json",
+          "bytes": 93172,
+          "sha256": "46211357a8a3d36074ac031b1464c0d364eaa7807979fefe84dc9bb84b8bb5f9",
+          "rows": 1000,
+          "first_time_ms": 1632988800004,
+          "last_time_ms": 1661760000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=THETAUSDT&startTime=1661760000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\funding\\fundingTime-002.json",
+          "bytes": 93077,
+          "sha256": "fb6d49559a6767bd8ab01a38d0257ab702c833cecce337aaf1742e47d895d154",
+          "rows": 1000,
+          "first_time_ms": 1661788800001,
+          "last_time_ms": 1690560000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=THETAUSDT&startTime=1690560000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\funding\\fundingTime-003.json",
+          "bytes": 100250,
+          "sha256": "d3521767784e4e0de003ec130590275d0f6793375cdca6cdf3946c62d02649d1",
+          "rows": 1000,
+          "first_time_ms": 1690588800000,
+          "last_time_ms": 1719360000002
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=THETAUSDT&startTime=1719360000003&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\funding\\fundingTime-004.json",
+          "bytes": 103144,
+          "sha256": "28bac5771411a1a352dca541987180f24c62e8e4ae9110db9660e19c1d80e6ea",
+          "rows": 1000,
+          "first_time_ms": 1719388800000,
+          "last_time_ms": 1748160000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=THETAUSDT&startTime=1748160000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\THETAUSDT\\raw\\funding\\fundingTime-005.json",
+          "bytes": 11248,
+          "sha256": "499d92d8461184349a71325e474059a52fbf361406011f6241e4538b9d18c486",
+          "rows": 109,
+          "first_time_ms": 1748188800000,
+          "last_time_ms": 1751299200002
+        }
+      ]
+    },
+    "VETUSDT": {
+      "kline_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=VETUSDT&interval=1d&startTime=1604188800000&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\klines\\openTime-000.json",
+          "bytes": 218362,
+          "sha256": "9b74fa737490c6e691ae3f5f5adbaba760372a2997906284d1e721caa5213855",
+          "rows": 1500,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1733702400000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=VETUSDT&interval=1d&startTime=1733702400001&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\klines\\openTime-001.json",
+          "bytes": 29481,
+          "sha256": "74473607f92ba83625ee2b69879280b8f29931ca757601d4a1814c009d6dedf8",
+          "rows": 203,
+          "first_time_ms": 1733788800000,
+          "last_time_ms": 1751241600000
+        }
+      ],
+      "funding_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=VETUSDT&startTime=1604188800000&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\funding\\fundingTime-000.json",
+          "bytes": 91030,
+          "sha256": "d1c268bddbdd15fa7237f3a81e1b6beedec75c390c144ce6c1ea95952860fbba",
+          "rows": 1000,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1632960000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=VETUSDT&startTime=1632960000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\funding\\fundingTime-001.json",
+          "bytes": 91160,
+          "sha256": "1cde6a9d6c60a9a6ed6775e27f0f7e207950735dcda55d200585ec9b3d844686",
+          "rows": 1000,
+          "first_time_ms": 1632988800004,
+          "last_time_ms": 1661760000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=VETUSDT&startTime=1661760000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\funding\\fundingTime-002.json",
+          "bytes": 91103,
+          "sha256": "5c8569b67f8730afec7455480374eed634920f98c7b45f78418c5681504a7c42",
+          "rows": 1000,
+          "first_time_ms": 1661788800001,
+          "last_time_ms": 1690560000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=VETUSDT&startTime=1690560000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\funding\\fundingTime-003.json",
+          "bytes": 98316,
+          "sha256": "ce7a7374d9d64e553aabe6cbded1d21927d651a0d3e5b0e26cf2a49d2720d11e",
+          "rows": 1000,
+          "first_time_ms": 1690588800000,
+          "last_time_ms": 1719360000002
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=VETUSDT&startTime=1719360000003&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\funding\\fundingTime-004.json",
+          "bytes": 101097,
+          "sha256": "fa00eb0d5ade8afa0c4403a8bbd41f0cb082c82d3e57dd86f1bb95f1eea0341d",
+          "rows": 1000,
+          "first_time_ms": 1719388800000,
+          "last_time_ms": 1748160000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=VETUSDT&startTime=1748160000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\VETUSDT\\raw\\funding\\fundingTime-005.json",
+          "bytes": 11027,
+          "sha256": "d8a65a5087b6f4aabdeb7fb43e1898d9209476a7173ada9163d65b81f550bc5d",
+          "rows": 109,
+          "first_time_ms": 1748188800000,
+          "last_time_ms": 1751299200002
+        }
+      ]
+    },
+    "XTZUSDT": {
+      "kline_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XTZUSDT&interval=1d&startTime=1604188800000&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\klines\\openTime-000.json",
+          "bytes": 194818,
+          "sha256": "8750db5add3d6dd80edad909ce9cb5146cb7273f6a044e59cf4ad56dd7752dbc",
+          "rows": 1500,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1733702400000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XTZUSDT&interval=1d&startTime=1733702400001&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\klines\\openTime-001.json",
+          "bytes": 26185,
+          "sha256": "e4c4e6499239ba79495983a4c653e2257989bd8fc7414c51405422bce6235712",
+          "rows": 203,
+          "first_time_ms": 1733788800000,
+          "last_time_ms": 1751241600000
+        }
+      ],
+      "funding_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XTZUSDT&startTime=1604188800000&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\funding\\fundingTime-000.json",
+          "bytes": 91015,
+          "sha256": "543c94f3f4c420b6fe42602ad08ab1b6e1f08ab286c85c70819562e923a5bd53",
+          "rows": 1000,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1632960000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XTZUSDT&startTime=1632960000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\funding\\fundingTime-001.json",
+          "bytes": 91178,
+          "sha256": "b537bbcb06b8292fa9021e3cbd3e901094e528d9dd4b2b85e76a4a09001a8d84",
+          "rows": 1000,
+          "first_time_ms": 1632988800004,
+          "last_time_ms": 1661760000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XTZUSDT&startTime=1661760000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\funding\\fundingTime-002.json",
+          "bytes": 91132,
+          "sha256": "b192bcc7260d66f99d41b38105ac1c8070d64e9b7aa364249410041283437faf",
+          "rows": 1000,
+          "first_time_ms": 1661788800001,
+          "last_time_ms": 1690560000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XTZUSDT&startTime=1690560000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\funding\\fundingTime-003.json",
+          "bytes": 98273,
+          "sha256": "0cce72390af84e70daca4fc7bbc459676b0c202cec5d02a3c60788c304a0ecba",
+          "rows": 1000,
+          "first_time_ms": 1690588800000,
+          "last_time_ms": 1719360000002
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XTZUSDT&startTime=1719360000003&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\funding\\fundingTime-004.json",
+          "bytes": 101284,
+          "sha256": "f49e187963989114d5b7e78a0f24ead8209f2a365c9edf882ec95b1f66ae97a3",
+          "rows": 1000,
+          "first_time_ms": 1719388800000,
+          "last_time_ms": 1748160000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XTZUSDT&startTime=1748160000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\XTZUSDT\\raw\\funding\\fundingTime-005.json",
+          "bytes": 11061,
+          "sha256": "b34dcf5d6a37cd21af0bbe198863b2c302104337050932fffcdcde00c8525a64",
+          "rows": 109,
+          "first_time_ms": 1748188800000,
+          "last_time_ms": 1751299200002
+        }
+      ]
+    },
+    "ZECUSDT": {
+      "kline_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZECUSDT&interval=1d&startTime=1604188800000&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\klines\\openTime-000.json",
+          "bytes": 201007,
+          "sha256": "243a51ac7d3f302b7476c554935001470fae17e8199178241fc804948843576b",
+          "rows": 1500,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1733702400000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZECUSDT&interval=1d&startTime=1733702400001&endTime=1751327999999&limit=1500",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\klines\\openTime-001.json",
+          "bytes": 26609,
+          "sha256": "9c01c364acaaa95d2ee12e3421518ede7bf79f712061983d59d9fa820e1f9f6e",
+          "rows": 203,
+          "first_time_ms": 1733788800000,
+          "last_time_ms": 1751241600000
+        }
+      ],
+      "funding_pages": [
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ZECUSDT&startTime=1604188800000&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\funding\\fundingTime-000.json",
+          "bytes": 91006,
+          "sha256": "81183644e3ea4f9d0a2bef20c1247fc460778509b9a4a684f537df170d976564",
+          "rows": 1000,
+          "first_time_ms": 1604188800000,
+          "last_time_ms": 1632960000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ZECUSDT&startTime=1632960000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\funding\\fundingTime-001.json",
+          "bytes": 91127,
+          "sha256": "ede3dc64bbf105dee0798cad733b7b117187a0d8461f6a015dd5a534a33f6521",
+          "rows": 1000,
+          "first_time_ms": 1632988800004,
+          "last_time_ms": 1661760000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ZECUSDT&startTime=1661760000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\funding\\fundingTime-002.json",
+          "bytes": 91133,
+          "sha256": "f3487d5a864a44221a541f0ab25d741b37c8bfd80d929fe07c7e96ea4fcbdfce",
+          "rows": 1000,
+          "first_time_ms": 1661788800001,
+          "last_time_ms": 1690560000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ZECUSDT&startTime=1690560000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\funding\\fundingTime-003.json",
+          "bytes": 98950,
+          "sha256": "b4a5fbe23c529c7d76ea031d47c293d15876497384d4cfbba7b88b7f0221792b",
+          "rows": 1000,
+          "first_time_ms": 1690588800000,
+          "last_time_ms": 1719360000002
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ZECUSDT&startTime=1719360000003&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\funding\\fundingTime-004.json",
+          "bytes": 102135,
+          "sha256": "9f0bf10e1c4918dd0d4f0e45c909cc9579d303748bc747486fdd3e940f784d0e",
+          "rows": 1000,
+          "first_time_ms": 1719388800000,
+          "last_time_ms": 1748160000000
+        },
+        {
+          "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ZECUSDT&startTime=1748160000001&endTime=1751327999999&limit=1000",
+          "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1\\ZECUSDT\\raw\\funding\\fundingTime-005.json",
+          "bytes": 11182,
+          "sha256": "951a74ce8a26e1b8c2fb717de8b21a4dcd31c00465db3f72a8131ba2f96aac2e",
+          "rows": 109,
+          "first_time_ms": 1748188800000,
+          "last_time_ms": 1751299200002
+        }
+      ]
+    }
+  },
+  "content_digest": "1968de1e2a001cab702fc846b00e011e3b4418d87dc250132487b6de2be3550b"
+}

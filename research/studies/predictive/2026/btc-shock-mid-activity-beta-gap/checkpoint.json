@@ -1,0 +1,40 @@
+{
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 / BTCUSDT-PERP",
+  "created_at": "2026-07-21T00:00:00+08:00",
+  "research_kind": "PREDICTIVE",
+  "candidate_id": "BTC_SHOCK_MID_ACTIVITY_BETA_GAP_V1",
+  "parent_question": "btc-shock-beta-gap-predictability",
+  "parent_conclusion": "DOES_NOT_SUPPORT",
+  "parent_code_sha256": "3c2d83c79881c81fdc08e9ea0e55a568ecd677c3809b0a86a1f8905fdfff1ea6",
+  "market_universe_snapshot": {
+    "snapshot_id": "2026-07-21T064230Z",
+    "universe_csv_sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+    "source_manifest_sha256": "56a359cce180850f7b4cba894ac6bf5b5ed8ed99764254036fac1cde93806493"
+  },
+  "selection_rule": "BINANCE_USD_M currently trading perpetual; CRYPTO_NATIVE; USDT suffix; CRYPTO_ALT_MID_ACTIVITY_PROVISIONAL; age_days>=1100; current relative_spread_bps<=3.5; no OFFICIAL_MEME_SUBTYPE; symbol does not start with a digit; exclude BTCDOMUSDT; sort current 24h notional proxy descending; take first 12",
+  "anchor": "BTCUSDT",
+  "symbols": [
+    "BELUSDT", "ANKRUSDT", "JASMYUSDT", "ZENUSDT", "TRBUSDT", "MANAUSDT",
+    "QTUMUSDT", "QNTUSDT", "ENJUSDT", "CFXUSDT", "EGLDUSDT", "IOTAUSDT"
+  ],
+  "primary_and_sensitivities": "Exactly the parent study: 30d beta, q97.5 BTC shock, 30m cooldown, next-open 15m target; seven one-at-a-time sensitivities beta7/90, q95/99, target5/30m, extra5m latency",
+  "periods": {
+    "development_warmup_start": "2023-10-01T00:00:00Z",
+    "development": ["2024-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "evaluation": ["2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "development_gate": "Exactly the parent gate: data PASS; >=300 event observations; mean available assets>=8; primary mean and daily-cluster CI low >0; both halves >0; beat BTC-sign and own-sign baselines; no shock direction significantly negative; primary mean>=12bp to release evaluation",
+  "economic_reference_round_trip_bps": {"favorable": 12, "base": 32, "stress": 52},
+  "known_exposure": "BTC 5m path and parent mature-alt output are exposed. No 5m Kline or beta-gap output for these 12 fixed mid-activity symbols was viewed before this checkpoint.",
+  "holdout_rule": "Fetch 2025 only after fixed development gate and >=12bp; fetch 2026H1 only after unchanged evaluation passes; no symbol/threshold/window/sign selection from results.",
+  "study_code_sha256": "6690b380465717696c790baa3bfda89876c99bd432c92002470eafd992676709",
+  "development_outcome": {
+    "conclusion": "DOES_NOT_SUPPORT",
+    "release_next_phase": false,
+    "development_json_sha256": "4553b4ee1ddd6dd0a0d2020589a003ec2fb0c2c9e5f76ad40f4d1596ee974ae4",
+    "source_manifest_development_sha256": "15c5509240d118b7db10bd43f7a1655507c89ab0b47c5cd87392f715537d5528",
+    "evaluation_and_confirmation": "NOT_DOWNLOADED_NOT_VIEWED"
+  }
+}

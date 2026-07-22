@@ -1,0 +1,296 @@
+{
+  "generated_at_utc": "2026-07-22T01:38:04.873484Z",
+  "stage": "development",
+  "main": {
+    "trades": 1464,
+    "funding_events": 2217,
+    "longs": 741,
+    "shorts": 723,
+    "maximum_vectorbt_reconciliation_error": 8.847089727481716e-17,
+    "maximum_adverse_price_return": -0.06645569620253167,
+    "by_symbol_base": {
+      "ADAUSDT": -0.042918392372912506,
+      "BTCUSDT": -0.2564881598159646,
+      "DOGEUSDT": -0.29122521888532293,
+      "ETHUSDT": -0.014124822446287766,
+      "SOLUSDT": -0.35058176276601316,
+      "XRPUSDT": -0.13072754941514553
+    },
+    "by_month_base": {
+      "2024-11": -0.02886258923035434,
+      "2024-12": -0.0026845497475286306,
+      "2025-01": -0.012242703812353817,
+      "2025-02": -0.003227344247856423,
+      "2025-03": -0.07135940642792915,
+      "2025-04": -0.05039420288992624,
+      "2025-05": -0.0012723128934163386,
+      "2025-06": -0.030765432733646292
+    },
+    "positive_symbol_count": 0,
+    "positive_month_count": 0,
+    "largest_positive_symbol_share": 1.0,
+    "scenarios": {
+      "favorable": {
+        "total_return": -0.0802969250048402,
+        "annualized_return": -0.1186041018295304,
+        "slot_max_drawdown": -0.10463517964530544,
+        "slot_mean_bootstrap_95pct": [
+          -0.00046096655621820793,
+          0.00011321412410518169
+        ],
+        "return_after_4pct_annual_hurdle": -0.10390448998873103,
+        "arithmetic_sum": -0.08102897705493697
+      },
+      "base": {
+        "total_return": -0.18599588714903825,
+        "annualized_return": -0.2668357574062681,
+        "slot_max_drawdown": -0.18988262981690895,
+        "slot_mean_bootstrap_95pct": [
+          -0.0007181482003963088,
+          -0.00014559618413982706
+        ],
+        "return_after_4pct_annual_hurdle": -0.20689029917585966,
+        "arithmetic_sum": -0.2030676202048181
+      },
+      "stress": {
+        "total_return": -0.2820935150379198,
+        "annualized_return": -0.39338619027184596,
+        "slot_max_drawdown": -0.2834370328934436,
+        "slot_mean_bootstrap_95pct": [
+          -0.0009880450060496175,
+          -0.00041089862935870706
+        ],
+        "return_after_4pct_annual_hurdle": -0.30052122769527734,
+        "arithmetic_sum": -0.328605793103093
+      }
+    },
+    "gross_slot_mean_bootstrap_95pct": [
+      -0.0003056931991294611,
+      0.0002684851968611449
+    ],
+    "gross_slot_mean": -1.613087058091174e-05
+  },
+  "diagnostics": {
+    "delayed5": {
+      "trades": 1464,
+      "funding_events": 2217,
+      "longs": 741,
+      "shorts": 723,
+      "maximum_vectorbt_reconciliation_error": 8.239936510889834e-17,
+      "maximum_adverse_price_return": -0.0655237694572991,
+      "by_symbol_base": {
+        "ADAUSDT": -0.03974503711154598,
+        "BTCUSDT": -0.2561727437295003,
+        "DOGEUSDT": -0.28935398486841746,
+        "ETHUSDT": -0.016398657994667665,
+        "SOLUSDT": -0.35878791597335324,
+        "XRPUSDT": -0.1821111973199897
+      },
+      "by_month_base": {
+        "2024-11": -0.024484758673604445,
+        "2024-12": -0.007583881282170912,
+        "2025-01": -0.01278220417260889,
+        "2025-02": -0.009060235656755733,
+        "2025-03": -0.0758596330636182,
+        "2025-04": -0.04804019680411331,
+        "2025-05": -0.0036408851268316944,
+        "2025-06": -0.030846344861632735
+      },
+      "positive_symbol_count": 0,
+      "positive_month_count": 0,
+      "largest_positive_symbol_share": 1.0,
+      "scenarios": {
+        "favorable": {
+          "total_return": -0.09096649340515983,
+          "annualized_return": -0.13398079683413733,
+          "slot_max_drawdown": -0.11431491164480712,
+          "slot_mean_bootstrap_95pct": [
+            -0.0004888320392070322,
+            8.844368940248934e-05
+          ],
+          "return_after_4pct_annual_hurdle": -0.11430018463978442,
+          "arithmetic_sum": -0.09277554948057379
+        },
+        "base": {
+          "total_return": -0.19544972480028244,
+          "annualized_return": -0.2796405970983491,
+          "slot_max_drawdown": -0.19998644356902906,
+          "slot_mean_bootstrap_95pct": [
+            -0.0007498566381013748,
+            -0.00017191038159163443
+          ],
+          "return_after_4pct_annual_hurdle": -0.21610146928279872,
+          "arithmetic_sum": -0.21482444465096273
+        },
+        "stress": {
+          "total_return": -0.2904405314662222,
+          "annualized_return": -0.4039925311647321,
+          "slot_max_drawdown": -0.29207480647104966,
+          "slot_mean_bootstrap_95pct": [
+            -0.00101931193948009,
+            -0.00043836524015384963
+          ],
+          "return_after_4pct_annual_hurdle": -0.3086539872203353,
+          "arithmetic_sum": -0.3403728884390606
+        }
+      },
+      "gross_slot_mean_bootstrap_95pct": [
+        -0.00033270298232524083,
+        0.00024481999781110914
+      ],
+      "gross_slot_mean": -4.115988741512205e-05
+    },
+    "placebo": {
+      "trades": 1485,
+      "funding_events": 2244,
+      "longs": 745,
+      "shorts": 740,
+      "maximum_vectorbt_reconciliation_error": 8.044780119842443e-17,
+      "maximum_adverse_price_return": -0.08143354793191643,
+      "by_symbol_base": {
+        "ADAUSDT": -0.08531589192507738,
+        "BTCUSDT": -0.11563867190010846,
+        "DOGEUSDT": -0.2817337828295532,
+        "ETHUSDT": -0.23264273805589064,
+        "SOLUSDT": -0.2476900000828285,
+        "XRPUSDT": -0.3435063885367171
+      },
+      "by_month_base": {
+        "2024-11": -0.0336582844504687,
+        "2024-12": 0.05064504556891691,
+        "2025-01": -0.05719178928769797,
+        "2025-02": -0.04762386930045137,
+        "2025-03": -0.028685962698710155,
+        "2025-04": -0.06458671681725447,
+        "2025-05": -0.03400321898296832,
+        "2025-06": -0.021549966024293488
+      },
+      "positive_symbol_count": 0,
+      "positive_month_count": 1,
+      "largest_positive_symbol_share": 1.0,
+      "scenarios": {
+        "favorable": {
+          "total_return": -0.11389421887707285,
+          "annualized_return": -0.166713489430397,
+          "slot_max_drawdown": -0.16808352891706435,
+          "slot_mean_bootstrap_95pct": [
+            -0.000672483477886277,
+            0.00014303518091224573
+          ],
+          "return_after_4pct_annual_hurdle": -0.136639385637085,
+          "arithmetic_sum": -0.11781129301609052
+        },
+        "base": {
+          "total_return": -0.2171183158059108,
+          "annualized_return": -0.3087014360749749,
+          "slot_max_drawdown": -0.24152636597390098,
+          "slot_mean_bootstrap_95pct": [
+            -0.000942966316949613,
+            -0.00012486638242063195
+          ],
+          "return_after_4pct_annual_hurdle": -0.2372138561349535,
+          "arithmetic_sum": -0.2415958930384063
+        },
+        "stress": {
+          "total_return": -0.3108495648697117,
+          "annualized_return": -0.4296587220478729,
+          "slot_max_drawdown": -0.3133875803710918,
+          "slot_mean_bootstrap_95pct": [
+            -0.0012184699718725673,
+            -0.00039832303796237984
+          ],
+          "return_after_4pct_annual_hurdle": -0.32853914765282954,
+          "arithmetic_sum": -0.3690056598773338
+        }
+      },
+      "gross_slot_mean_bootstrap_95pct": [
+        -0.0005096040719856982,
+        0.0003015508848832655
+      ],
+      "gross_slot_mean": -9.34821702292076e-05
+    },
+    "momentum": {
+      "trades": 1464,
+      "funding_events": 2217,
+      "longs": 729,
+      "shorts": 735,
+      "maximum_vectorbt_reconciliation_error": 8.847089727481716e-17,
+      "maximum_adverse_price_return": -0.06645569620253167,
+      "by_symbol_base": {
+        "ADAUSDT": -0.20055841277377306,
+        "BTCUSDT": -0.2381910294426176,
+        "DOGEUSDT": -0.10990907145214535,
+        "ETHUSDT": -0.2775047409150253,
+        "SOLUSDT": -0.20626220062274336,
+        "XRPUSDT": -0.13112365726688213
+      },
+      "by_month_base": {
+        "2024-11": 0.017605185437284954,
+        "2024-12": -0.08008414608031833,
+        "2025-01": -0.010982437949885071,
+        "2025-02": 0.013158802874390751,
+        "2025-03": -0.03945821021022,
+        "2025-04": -0.060523667149935956,
+        "2025-05": 0.015305604552835694,
+        "2025-06": -0.059125886056332067
+      },
+      "positive_symbol_count": 0,
+      "positive_month_count": 3,
+      "largest_positive_symbol_share": 1.0,
+      "scenarios": {
+        "favorable": {
+          "total_return": -0.08639719398861434,
+          "annualized_return": -0.12740681184634794,
+          "slot_max_drawdown": -0.12630697833665405,
+          "slot_mean_bootstrap_95pct": [
+            -0.0005587215677741049,
+            0.00018442967222349554
+          ],
+          "return_after_4pct_annual_hurdle": -0.10984817311303696,
+          "arithmetic_sum": -0.08741489958204834
+        },
+        "base": {
+          "total_return": -0.19138954500385696,
+          "annualized_return": -0.27415056396602133,
+          "slot_max_drawdown": -0.2175905716076485,
+          "slot_mean_bootstrap_95pct": [
+            -0.0008230316285235976,
+            -7.036534625167233e-05
+          ],
+          "return_after_4pct_annual_hurdle": -0.2121455089469757,
+          "arithmetic_sum": -0.20945354625773227
+        },
+        "stress": {
+          "total_return": -0.2868447750554225,
+          "annualized_return": -0.3994312258589585,
+          "slot_max_drawdown": -0.3031488981458713,
+          "slot_mean_bootstrap_95pct": [
+            -0.001096213282697902,
+            -0.0003335033387847434
+          ],
+          "return_after_4pct_annual_hurdle": -0.30515052913433427,
+          "arithmetic_sum": -0.334991722681809
+        }
+      },
+      "gross_slot_mean_bootstrap_95pct": [
+        -0.0004001096408439541,
+        0.0003400149858684777
+      ],
+      "gross_slot_mean": -2.8660373812595146e-05
+    }
+  },
+  "incremental": {
+    "main_minus_placebo_base_slot_mean": 8.010035932138926e-05,
+    "main_minus_placebo_bootstrap_95pct": [
+      -0.0003393047062884548,
+      0.0005019507599313656
+    ],
+    "main_minus_momentum_base_slot_mean": 1.3616047021138932e-05,
+    "main_minus_momentum_bootstrap_95pct": [
+      -0.000449542333831751,
+      0.0005060653174507171
+    ]
+  },
+  "portfolio_interpretation": "six equal capital sleeves; each sleeve uses at most 0.25x, so aggregate maximum simultaneous notional is 0.25x",
+  "content_digest": "b66fbf17c6ad7de1c9a5d8295af7f74bfc8395eeaee183919733c379af1039a1"
+}

@@ -1,0 +1,91 @@
+{
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+  "formal_strategy_version": "1.0.1",
+  "formal_strategy_instrument": "BTCUSDT-PERP",
+  "created_at": "2026-07-22T00:00:00+08:00",
+  "research_kind": "PREDICTIVE",
+  "candidate_id": "QUARTER_HOUR_KLINE_ORDER_FLOW_PREDICTABILITY_V1",
+  "question": "Does completed first-minute aggressor-volume imbalance at true UTC quarter-hour openings in four Binance USD-M perpetuals incrementally predict the next actionable 12-hour return relative to fixed shifted-boundary placebos and simple price-volume controls?",
+  "venue": "BINANCE_USD_M",
+  "symbols": ["BNBUSDT", "LINKUSDT", "UNIUSDT", "FILUSDT"],
+  "bar_interval": "1m",
+  "signal": {
+    "order_imbalance_proxy": "2 * taker_buy_base_volume / base_volume - 1",
+    "true_boundary_minutes": [0, 15, 30, 45],
+    "known_after_bar_close": true
+  },
+  "primary": {
+    "horizon_minutes": 720,
+    "entry_delay_minutes": 1,
+    "controls": ["current_1m_log_return", "prior_15m_log_return", "log1p_quote_volume"],
+    "effect": "equal-weight mean across assets of per-asset OLS order-imbalance interquartile effect in basis points",
+    "placebo_offsets_minutes": [2, 4, 7, 11]
+  },
+  "fixed_robustness": {
+    "horizon_minutes": [480],
+    "entry_delay_minutes": [5],
+    "exclude_top_of_hour": true,
+    "exclude_funding_openings_utc": ["00:00", "08:00", "16:00"],
+    "sign_only_order_imbalance": true,
+    "asset_and_calendar_year_splits": true
+  },
+  "inference": {
+    "method": "joint moving-block bootstrap with OLS refit",
+    "calendar_block_days": 4,
+    "replications": 999,
+    "seed": 20260722,
+    "joint_across_assets": true
+  },
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"],
+    "evaluation": ["2023-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "confirmation": ["2024-01-01T00:00:00Z", "2024-11-01T00:00:00Z"]
+  },
+  "development_gate": {
+    "data_quality": "PASS",
+    "minimum_total_primary_events": 100000,
+    "primary_mean_iqr_effect_gt_bps": 0,
+    "primary_bootstrap_ci_low_gt_bps": 0,
+    "true_minus_mean_placebo_gt_bps": 0,
+    "placebo_difference_ci_low_gt_bps": 0,
+    "all_asset_effects_gt_bps": 0,
+    "all_development_year_effects_gt_bps": 0,
+    "delayed_5m_effect_gt_bps": 0,
+    "exclude_top_of_hour_effect_gt_bps": 0,
+    "exclude_funding_effect_gt_bps": 0,
+    "minimum_primary_mean_iqr_effect_to_release_bps": 12
+  },
+  "economic_reference_round_trip_bps": {
+    "favorable": 12,
+    "base": 32,
+    "stress": 52
+  },
+  "holdout_release_rule": "Download evaluation only if every development predictive and 12 bp economic-relevance gate passes; download confirmation only if the unchanged evaluation gate passes. Never revise the rule after release.",
+  "known_exposure": "Prior Halpha work viewed BNB/LINK prices in other questions and UNI/FIL spot daily returns only for 2025-07-21 through 2026-07-20. This question's 2021-2024 1m taker-buy proxy and outputs were not viewed before checkpoint.",
+  "registered_data_integrity_repairs": {
+    "FILUSDT-1m-2022-02.zip": {
+      "observed_before_any_outcome_calculation": "Official checksum-valid monthly archive ends at 2022-02-25 23:59 UTC and omits exactly 2022-02-26 through 2022-02-28 (4,320 bars).",
+      "repair": "Append only the three matching official Binance daily 1m archives and their official checksums; require an exact full-month grid after append.",
+      "outcome_exposure": "None; only timestamps, row counts, HTTP availability, byte sizes, and checksums were inspected before refreezing code."
+    },
+    "FILUSDT-1m-2022-04.zip": {
+      "observed_before_any_outcome_calculation": "Official checksum-valid monthly archive starts at 2022-04-03 00:00 UTC and omits exactly 2022-04-01 through 2022-04-02 (2,880 bars).",
+      "repair": "Append only the two matching official Binance daily 1m archives and their official checksums; require an exact full-month grid after append.",
+      "outcome_exposure": "None; a timestamp-only scan of all 96 development month files found exactly the February and April gaps before any regression or outcome calculation."
+    }
+  },
+  "search_disclosure": "Four fixed assets; one primary configuration; four fixed phase-shift placebos; one 8h horizon; one 5m extra delay; exclusions for top-of-hour and funding openings; sign-only proxy; asset and year splits.",
+  "large_data_root": "D:/projects/Codex/CodexHome/research-data/halpha/quarter-hour-kline-order-flow-predictability",
+  "study_code_sha256": "db13443403c90d51a2bc812b34e596ed230eb3a57f05dcf48466d663dfe09ec3",
+  "allowed_fixes_after_result_release": [
+    "download retries and official checksum verification",
+    "parser fixes that do not reveal or change outcomes",
+    "corrections to an unambiguous implementation mismatch with this checkpoint while retaining all prior outputs and recording the change"
+  ],
+  "forbidden_after_result_release": [
+    "changing symbols, phases, boundary offsets, target, controls, costs, gates, or conclusion semantics",
+    "opening later phases after a failed gate",
+    "renaming a predictive result as a net-cost strategy"
+  ]
+}

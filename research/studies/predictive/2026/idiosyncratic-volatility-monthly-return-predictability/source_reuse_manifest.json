@@ -1,0 +1,54 @@
+{
+  "created_at_utc": "2026-07-22T10:46:36.645240+00:00",
+  "entries": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\cross-sectional-dispersion-momentum-state-predictability\\checkpoint.json",
+      "role": "immediate public-data adapter checkpoint",
+      "bytes": 3852,
+      "sha256": "e7cbe9a5cf47d739b9e946d501cc248b6456d785e1a0d7efee3e31219dd22604"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\cross-sectional-dispersion-momentum-state-predictability\\source_reuse_manifest.json",
+      "role": "immediate public-data identity chain",
+      "bytes": 1889,
+      "sha256": "a68ed4836c10a4acf62016b403d784a7563f75bb180b118c0bfab281c084abdc"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\cross-sectional-dispersion-momentum-state-predictability\\data_quality_development.json",
+      "role": "reused 2022-2023 source quality evidence",
+      "bytes": 22742,
+      "sha256": "1fb50499de32020d9289ce0a0e5a011db5ea534b92a31fb3ef3bac8708c067cb"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\prospect-theory-value-weekly-one-shot-long\\checkpoint.json",
+      "role": "public-data loader checkpoint",
+      "bytes": 5110,
+      "sha256": "effffe20864da7561f5f771d8c30eb60b78c30cdd64bb426d151c68d37c60d1c"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\prospect-theory-value-weekly-one-shot-long\\source_reuse_manifest.json",
+      "role": "development source identity chain",
+      "bytes": 6140,
+      "sha256": "bfd08f30ec629f07c045911f016eec8e0758f957a3dbc2ec2e1a8700178da0d2"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\checkpoint.json",
+      "role": "sealed 2024 public-data adapter checkpoint",
+      "bytes": 5266,
+      "sha256": "bb92d5cf079117805d433fe93ddce38a6f1102bd25dfcb2c13949f0de44ec0f6"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\data_quality_development.json",
+      "role": "2024 source quality evidence",
+      "bytes": 8461,
+      "sha256": "8b2445e48b6469d935cba7db0190cedba637e87e7a8d4487581c721523f72855"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+      "role": "frozen current target universe and categories",
+      "bytes": 3383646,
+      "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc"
+    }
+  ],
+  "content_digest": "01dc696f7060353eacb02494869ef71313ec8c53fbeb1ab0982450745f691123"
+}

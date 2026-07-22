@@ -1,0 +1,76 @@
+{
+  "created_at_utc": "2026-07-22T00:24:42.062480Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does a fixed one-day extreme-return reversal conditioned on low relative volume survive realistic costs and funding in long-lived Binance USD-M perps?",
+  "symbols": [
+    "ALGOUSDT",
+    "COMPUSDT",
+    "THETAUSDT",
+    "VETUSDT",
+    "XTZUSDT",
+    "ZECUSDT"
+  ],
+  "data_start": "2020-11-01T00:00:00Z",
+  "data_end_exclusive": "2025-07-01T00:00:00Z",
+  "stages": {
+    "development": [
+      "2021-01-01T00:00:00Z",
+      "2023-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2023-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2025-07-01T00:00:00Z"
+    ]
+  },
+  "config": {
+    "strategy_id": "RESEARCH_LOW_RELATIVE_VOLUME_DAILY_REVERSAL_30D_1P5Z_V1",
+    "return_vol_window_days": 30,
+    "volume_window_days": 30,
+    "return_z_threshold": 1.5,
+    "volume_shock_max": 0.0,
+    "min_median_quote_volume_30d": 5000000.0,
+    "hold_hours": 24,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002
+      }
+    },
+    "diagnostics": [
+      "unconditional_extreme_reversal",
+      "low_volume_extreme_momentum",
+      "volume_window_60d"
+    ]
+  },
+  "stage_open_rule": "development first; evaluation only after development_gate PASS; confirmation only after evaluation_gate PASS",
+  "allowed_fixes": "retrieval, parsing, completeness, deterministic statistics, or implementation bugs that do not change the economic rule; record every outcome-affecting fix",
+  "study_py_sha256": "8b7aa88d91191e536bc197126ece40718e614194ad34330d77f5951da4ae56c0",
+  "readme_sha256": "df9555992f4a7cbab335e60c263ed4baa68a735cc1079020c4ba38ae6504214c",
+  "sources_sha256": "1cd8eaa9ffeef90829b84dceaf78695a65cec8a4e07e25792118b2df392074f1",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1",
+  "content_digest": "f27a624392bf391ac6f7cb2f927d4fe41b329524125ee815a0c09975a0e342cd"
+}

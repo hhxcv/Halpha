@@ -1,0 +1,92 @@
+{
+  "checked_at_utc": "2026-07-22T01:12:10.168432Z",
+  "status": "PASS",
+  "symbols": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 13994397884.72284,
+      "minimum_30d_median_quote_volume": 3988385882.30132
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 6725190185.04486,
+      "minimum_30d_median_quote_volume": 2497570384.7281647
+    },
+    "BNBUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 466295061.419075,
+      "minimum_30d_median_quote_volume": 144408749.14090002
+    },
+    "XRPUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 696021127.573765,
+      "minimum_30d_median_quote_volume": 260673766.26967
+    },
+    "DOGEUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 518623334.91846,
+      "minimum_30d_median_quote_volume": 23048753.682997502
+    },
+    "ADAUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 377042732.07705,
+      "minimum_30d_median_quote_volume": 91040358.1627
+    }
+  },
+  "source_manifest_sha256": "23566d464f3b57eca11288160d8331610862210e20ec0b04c08306ee21e33fe0",
+  "content_digest": "78b7a9406e37bf7e6346321f3db2d27d9f0b6aa1f281fb203cd2eeb35f40d51d"
+}

@@ -1,0 +1,75 @@
+{
+  "checked_at_utc": "2026-07-22T11:30:25.075626Z",
+  "status": "PASS",
+  "bars": {
+    "rows": 1677,
+    "first": "2021-12-01T00:00:00+00:00",
+    "last": "2026-07-04T00:00:00+00:00",
+    "missing": 0,
+    "duplicates": 0,
+    "invalid_ohlc": 0,
+    "invalid_range": 0,
+    "median_quote_volume": 13165741479.13575,
+    "minimum_quote_volume": 1320072681.1707
+  },
+  "funding": {
+    "rows": 5029,
+    "first": "2021-12-01T00:00:00+00:00",
+    "last": "2026-07-04T00:00:00+00:00",
+    "missing_mark_price": 0,
+    "mark_price_from_funding_response": 2931,
+    "mark_price_filled_from_official_8h_kline": 2098,
+    "maximum_absolute_mark_match_delta_ms": 32.0,
+    "maximum_gap_hours": 8.000008611111111,
+    "interval_hours_counts": {
+      "7.999991": 2,
+      "7.999992": 4,
+      "7.999993": 2,
+      "7.999994": 19,
+      "7.999995": 44,
+      "7.999996": 115,
+      "7.999997": 134,
+      "7.999998": 303,
+      "7.999999": 470,
+      "8.0": 2839,
+      "8.000001": 479,
+      "8.000002": 293,
+      "8.000003": 140,
+      "8.000004": 119,
+      "8.000005": 28,
+      "8.000006": 21,
+      "8.000007": 14,
+      "8.000008": 1,
+      "8.000009": 1
+    }
+  },
+  "current_exchange_snapshot": {
+    "status": "TRADING",
+    "contract_type": "PERPETUAL",
+    "onboard_date": "2019-09-08T17:55:00+00:00",
+    "price_filter": {
+      "tickSize": "0.10",
+      "minPrice": "556.80",
+      "maxPrice": "4529764",
+      "filterType": "PRICE_FILTER"
+    },
+    "lot_size": {
+      "stepSize": "0.001",
+      "minQty": "0.001",
+      "filterType": "LOT_SIZE",
+      "maxQty": "1000"
+    },
+    "market_lot_size": {
+      "filterType": "MARKET_LOT_SIZE",
+      "minQty": "0.001",
+      "stepSize": "0.001",
+      "maxQty": "120"
+    },
+    "min_notional": {
+      "filterType": "MIN_NOTIONAL",
+      "notional": "50"
+    }
+  },
+  "source_manifest_sha256": "a4787a7502446ecb247de629ffb8474dd14c6e406679cd8ef91b2061bcf50262",
+  "content_digest": "69c34189b28bb8ed9db83363943076ef5408df62dcfcd3c40184ce1678e73058"
+}

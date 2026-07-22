@@ -1,0 +1,275 @@
+{
+  "checked_at_utc": "2026-07-22T08:02:48.395869Z",
+  "stage": "development",
+  "status": "PASS",
+  "checkpoint_digest": "55bf5a197669f6d84f2dbc49c51100a273136ee3acdc9e9d83fab721b5d4ac8a",
+  "source_manifest_sha256": "b00bdb5af23ed0a3fff248418f62184e303cbc370282b1ebb6abb285182edc05",
+  "parent_data_quality_sha256": "aa5eff14c82a10e975a2db2ab88a65242472e4bf4567a00c329927e7777a8ecf",
+  "required_daily_range_inclusive": [
+    "2021-11-21T00:00:00+00:00",
+    "2024-01-01T00:00:00+00:00"
+  ],
+  "source_overlap": {
+    "overlap_rows": 0,
+    "overlap_mismatch_rows": 0
+  },
+  "decision_input_availability": {
+    "minimum_rankable": 24,
+    "maximum_rankable": 25,
+    "dates_below_minimum": {}
+  },
+  "symbols": {
+    "1000XECUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "AAVEUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "AVAXUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "BCHUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "BNBUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "CRVUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "DASHUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "ENSUSDT": {
+      "daily_rows": 763,
+      "missing_days": 9,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "ETCUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "HBARUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "KAVAUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "LINKUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "LTCUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "NEARUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "RUNEUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "SNXUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "SOLUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2133,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "TRXUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "UNIUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "VETUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "XLMUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "XMRUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "XRPUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "ZECUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    },
+    "ZILUSDT": {
+      "daily_rows": 772,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2058,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "status": "PASS"
+    }
+  },
+  "rule": "OHLCV is calendar-reindexed and never imputed. A target with any gap in its rolling 85-day input window is NO_ACTION; the stage remains valid only when every decision still has at least 20 rankable targets. Missing funding marks exclude the spanning opportunity under the frozen 2% gate. Funding gaps over 24h fail source integrity.",
+  "content_digest": "d33e422517b33e8540079852eb54163336ba52860692c22a112ddf70da784154"
+}

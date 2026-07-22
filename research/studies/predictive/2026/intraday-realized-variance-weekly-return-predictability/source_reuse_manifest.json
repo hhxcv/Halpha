@@ -1,0 +1,15 @@
+{
+  "created_at_utc": "2026-07-22T14:58:54.394591+00:00",
+  "purpose": "reuse official 15m archives without copying or redownloading",
+  "upstream": {
+    "kind": "verified_reuse",
+    "path": "research/studies/predictive/2026/relative-signed-jump-next-day-predictability/source_manifest_development.json",
+    "sha256": "8f0404a9d1b6e1d03db1b977a534706a5496a24324afc11cf1d9e53183ae8d8c",
+    "content_digest": "ca419060bd58d89a86c8b652446008e005952dbf4b178daebc34dd56105aa4ff",
+    "archive_count": 425,
+    "archive_bytes": 50798433
+  },
+  "verification": "every archive is re-read with stored bytes/SHA-256/upstream checksum by parent loader",
+  "product_data_used": false,
+  "content_digest": "2722eda9db304a5a6187d7a59737e34d99bb5439d73616af80f991cc6cc5ebbb"
+}

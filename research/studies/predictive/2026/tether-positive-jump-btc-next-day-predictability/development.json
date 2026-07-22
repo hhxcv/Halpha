@@ -1,0 +1,151 @@
+{
+  "stage": "development",
+  "checkpoint_digest": "15fb7c82ccc1492283eeaecf373c102e831592118cef694cef9244acc2275733",
+  "source_manifest_digest": "d6ab5994055a71cdf967a59e2a1989b1558217c8bef38cad7f74d8aaf96ceb38",
+  "data_quality_digest": "1611b831ac39d404c9cbd6e1b09706796aa4396ae1d3dbf154cd4d552131f072",
+  "expected_days": 549,
+  "eligible_days": 546,
+  "eligible_fraction": 0.994535519125683,
+  "signal_quality": {
+    "median_nonzero_hourly_returns": 15.0,
+    "median_unique_hourly_closes": 5.0,
+    "positive_bns_events": 74,
+    "positive_bns_event_fraction": 0.13553113553113552,
+    "positive_fixed_events": 214,
+    "event_quarters": 6,
+    "median_bns_z": 1.0264658719604753,
+    "maximum_bns_z": 279.6779892332487
+  },
+  "regressions": {
+    "source_near": {
+      "n": 546,
+      "coefficient": -13.401446095249016,
+      "effect_for_one_percent_usdt_return": -0.13401446095249017,
+      "standard_error_hac": 14.926728517455176,
+      "tvalue": -0.8978153571680151,
+      "one_sided_p_negative": 0.18464199796330344,
+      "r_squared": 0.001483547363023252
+    },
+    "controlled_primary": {
+      "n": 546,
+      "coefficient": -13.298989918318696,
+      "effect_for_one_percent_usdt_return": -0.13298989918318696,
+      "standard_error_hac": 14.97419835499121,
+      "tvalue": -0.8881270037327821,
+      "one_sided_p_negative": 0.18723621927024897,
+      "r_squared": 0.0025890027908572755,
+      "rank": 6,
+      "columns": [
+        "const",
+        "usdt_daily_log_return",
+        "positive_bns_jump",
+        "interaction",
+        "btc_prior_log_return",
+        "btc_realized_variance"
+      ]
+    },
+    "controlled_halves": [
+      {
+        "n": 273,
+        "coefficient": -56.54447549730402,
+        "effect_for_one_percent_usdt_return": -0.5654447549730403,
+        "standard_error_hac": 50.69457535104823,
+        "tvalue": -1.1153949925755682,
+        "one_sided_p_negative": 0.13234059720391977,
+        "r_squared": 0.03091382663399045,
+        "rank": 6,
+        "columns": [
+          "const",
+          "usdt_daily_log_return",
+          "positive_bns_jump",
+          "interaction",
+          "btc_prior_log_return",
+          "btc_realized_variance"
+        ]
+      },
+      {
+        "n": 273,
+        "coefficient": 3.883293365637653,
+        "effect_for_one_percent_usdt_return": 0.03883293365637653,
+        "standard_error_hac": 16.402352111707998,
+        "tvalue": 0.23675222548513383,
+        "one_sided_p_negative": 0.5935754917891477,
+        "r_squared": 0.00988888981844871,
+        "rank": 6,
+        "columns": [
+          "const",
+          "usdt_daily_log_return",
+          "positive_bns_jump",
+          "interaction",
+          "btc_prior_log_return",
+          "btc_realized_variance"
+        ]
+      }
+    ],
+    "fixed_threshold_controlled": {
+      "n": 546,
+      "coefficient": -7.844263506475051,
+      "effect_for_one_percent_usdt_return": -0.07844263506475051,
+      "standard_error_hac": 13.5274758301513,
+      "tvalue": -0.5798763645905783,
+      "one_sided_p_negative": 0.2809989977735676,
+      "r_squared": 0.002090094974497081,
+      "rank": 6,
+      "columns": [
+        "const",
+        "usdt_daily_log_return",
+        "positive_fixed_jump",
+        "fixed_interaction",
+        "btc_prior_log_return",
+        "btc_realized_variance"
+      ]
+    }
+  },
+  "event_screen": {
+    "event_count": 74,
+    "gross_short_mean": 0.002833792282431779,
+    "gross_short_median": 0.002677581131188964,
+    "gross_short_positive_fraction": 0.5675675675675675,
+    "gross_short_half_means": [
+      -0.003285410195244773,
+      0.00749604178923296
+    ],
+    "gross_short_bootstrap": {
+      "valid_repetitions": 5000,
+      "lower_95": -0.006500937381083529,
+      "median": 0.002700186245132354,
+      "upper_95": 0.011617685700261038
+    },
+    "unconditional_scheduled_short_mean": 0.0012932513943207256,
+    "event_minus_unconditional_short": 0.0015405408881110532,
+    "daily_plan_feasibility_mean": -0.0001897627458120298,
+    "daily_plan_feasibility_half_means": [
+      -0.0003582457501140523,
+      -2.1279741510007327e-05
+    ],
+    "daily_plan_feasibility_bootstrap": {
+      "valid_repetitions": 5000,
+      "lower_95": -0.0004787956977546287,
+      "median": -0.00019067568989046904,
+      "upper_95": 0.00011623184350282411
+    },
+    "positive_quarter_contribution_max_share": 0.7563197310718657,
+    "quarter_net_pnl": {
+      "2021Q3": -0.050569237232489565,
+      "2021Q4": -0.0016328417598819459,
+      "2022Q1": -0.04548942174766886,
+      "2022Q2": 0.022220228006091386,
+      "2022Q3": -0.035298369181813026,
+      "2022Q4": 0.0071591827023937725
+    },
+    "funding_included": false,
+    "qualification_effect": "screen only; cannot qualify a strategy"
+  },
+  "outputs": {
+    "daily_csv": "development_daily.csv",
+    "daily_csv_sha256": "60e084527a4e0f08ac42794d4674eaec1e88fda971e38ae88e638dcd8aace01d",
+    "events_csv": "development_events.csv",
+    "events_csv_sha256": "6defa7e977705947899d39f6e4ff0c98484dc7399acf89f8addd1be87453049c"
+  },
+  "content_digest": "1bb01a250b7953cfff2e2e9ea8db6e68fce42094eb99976b93cf5988f57a887c"
+}

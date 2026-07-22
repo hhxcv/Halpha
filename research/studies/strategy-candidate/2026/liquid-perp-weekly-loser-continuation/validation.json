@@ -1,0 +1,58 @@
+{
+  "validated_at_utc": "2026-07-22T01:18:00Z",
+  "status": "PASS",
+  "scope": "development evidence and sequential-stop integrity",
+  "checks": {
+    "checkpoint_source_hashes_match": true,
+    "source_manifest_json_parses": true,
+    "data_quality_pass": true,
+    "development_json_parses": true,
+    "development_gate_fail_is_reproduced": true,
+    "results_json_parses": true,
+    "stable_trade_csv_reproduced": true,
+    "vectorbt_max_error_below_1e_minus_12": true,
+    "evaluation_outputs_absent": true,
+    "confirmation_outputs_absent": true,
+    "handoff_absent": true,
+    "study_py_compiles": true,
+    "git_diff_check_research_passes": true
+  },
+  "replay": {
+    "analyze_command": "research\\.venv\\Scripts\\python.exe research/studies/strategy-candidate/2026/liquid-perp-weekly-loser-continuation/study.py analyze --stage development",
+    "analyze_result": {
+      "weeks": 104,
+      "base_total": -0.19381320746789943,
+      "selection_mean": 0.004344557939580019
+    },
+    "gate_command": "research\\.venv\\Scripts\\python.exe research/studies/strategy-candidate/2026/liquid-perp-weekly-loser-continuation/study.py gate --stage development",
+    "gate_status": "FAIL",
+    "failed_checks": [
+      "base_total_positive",
+      "stress_total_positive",
+      "stress_after_hurdle_positive",
+      "each_full_year_base_positive",
+      "daily_drawdown_above_minus_15pct",
+      "selection_bootstrap_lower_positive",
+      "largest_positive_pnl_share_at_most_half"
+    ]
+  },
+  "sha256": {
+    "checkpoint.json": "aa2ee49b5f873b6951cca0c9fc5009f7d34bc9ba6db17b367417cc1d038407f6",
+    "source_manifest.json": "23566d464f3b57eca11288160d8331610862210e20ec0b04c08306ee21e33fe0",
+    "data_quality.json": "7e6be479ee32e30ff920199794e5bcac770bfb9e29faa1a32c0e6dc5ac846913",
+    "development.json": "9a96521cea08782b7ee5b97b73881724e2645310b55807a626b3b65e2d728552",
+    "development_gate.json": "217ac7b7afd3acf139651d5a9fae47cd6be2ee5a5d3d10ddeebcaea89717feb7",
+    "results.json": "3eb0ee0be3a3cb66adb08b1d85483e55afe7e131c991a36c0513deeaa0fe5296",
+    "development_trades.csv": "5364f5d672da25e0a0c75f888d69d774d14c97bfbb649a9c05a4b5d8502a4ed0"
+  },
+  "checkpoint_bound_sha256": {
+    "study.py": "3d347a37715db0098a9d575e3a56def685569ad199145d4f10b8bd1d21fbbc31",
+    "preregistration.md": "376323457a5a1e35e0350618010d86f466771c621f7f16da5e9ce9dc6ef5e782",
+    "sources.md": "c7a1564891a9a5f1a904c1f82a3cba6f15ac213e0c0e21d707e7756b1106d1af"
+  },
+  "notes": [
+    "Rerun timestamps make generated JSON byte hashes time-specific; the trade CSV and economic outputs reproduced exactly.",
+    "A failing development gate is the expected validated outcome, not a validation failure.",
+    "No later-stage economic output was opened or generated."
+  ]
+}

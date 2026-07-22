@@ -1,0 +1,127 @@
+{
+  "created_at_utc": "2026-07-22T11:13:37.298729+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy_background": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 / BTCUSDT-PERP",
+  "research_kind": "PREDICTIVE",
+  "question": "Does trailing BTC downside beta positively predict next-month mature-perpetual returns incrementally?",
+  "hypothesis_direction": "positive downside-beta slope, high-minus-low spread and rank IC",
+  "stages": {
+    "development": [
+      "2022-01-01T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2026-01-01T00:00:00Z"
+    ]
+  },
+  "config": {
+    "predictor_id": "RESEARCH_BTC_DOWN_BETA60_MONTHLY_RETURN_V1",
+    "main_variant": "down_beta60",
+    "minimum_negative_btc_days": 15,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "history_returns": 120,
+    "tail_fraction": 0.2,
+    "gap_full_days": 1,
+    "notional_fraction": 0.25,
+    "stress_round_trip_underlying": 0.0052,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_months": 3,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 3
+  },
+  "universe": {
+    "symbols": [
+      "1000XECUSDT",
+      "AAVEUSDT",
+      "AVAXUSDT",
+      "BCHUSDT",
+      "BNBUSDT",
+      "CRVUSDT",
+      "DASHUSDT",
+      "ENSUSDT",
+      "ETCUSDT",
+      "HBARUSDT",
+      "KAVAUSDT",
+      "LINKUSDT",
+      "LTCUSDT",
+      "NEARUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "UNIUSDT",
+      "VETUSDT",
+      "XLMUSDT",
+      "XMRUSDT",
+      "XRPUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ],
+    "categories": {
+      "DeFi": [
+        "AAVEUSDT",
+        "CRVUSDT",
+        "KAVAUSDT",
+        "RUNEUSDT",
+        "SNXUSDT",
+        "UNIUSDT"
+      ],
+      "Infrastructure": [
+        "ENSUSDT",
+        "LINKUSDT"
+      ],
+      "Layer-1": [
+        "AVAXUSDT",
+        "BNBUSDT",
+        "HBARUSDT",
+        "NEARUSDT",
+        "SOLUSDT",
+        "TRXUSDT",
+        "VETUSDT"
+      ],
+      "Layer-2": [
+        "XLMUSDT"
+      ],
+      "Payment": [
+        "1000XECUSDT",
+        "BCHUSDT",
+        "LTCUSDT",
+        "XRPUSDT"
+      ],
+      "PoW": [
+        "DASHUSDT",
+        "ETCUSDT",
+        "XMRUSDT",
+        "ZECUSDT",
+        "ZILUSDT"
+      ]
+    },
+    "market_proxy": "BTCUSDT"
+  },
+  "family_stop_rule": "Any stage failure seals later stages and forbids adjacent beta/window/tail searches.",
+  "frozen_file_sha256": {
+    "README.md": "5688f36fd16c37f1053ef77a3c6bf33c6624891ce9de6e10ec326d285d0b66cb",
+    "sources.md": "669328d1a316aee08d1564f784607e4192d8526221dc692aaf22f48acb1e429e",
+    "preregistration.md": "4e92ab6c6f03e41e37d6da4f47be9f3b5e0a1206073668261ec7e9ee976114a3",
+    "study.py": "806b60d05d49048dd07754ed498c2d4ca3293c7cf373d671e6361c072bba88bb"
+  },
+  "source_reuse_digest": "b9c3c6554483d75eede47df8dd6559873f352bb839a17c90103c9830cf7ee33a",
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btc-downside-beta-monthly-return-predictability\\2026-07-22-v1",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "content_digest": "88cf807b2fde3c6911ad66f3ec2d619317f5a5f1f08e40c583a411a65f409e32"
+}

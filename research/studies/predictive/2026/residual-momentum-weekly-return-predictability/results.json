@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-07-22T12:19:23.878860+00:00",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "claim": "Predictive relationship only; no strategy qualification or long-term profitability claim",
+  "available_stages": [
+    "development"
+  ],
+  "stage_gate_status": {
+    "development": "FAIL"
+  },
+  "stage_failed_checks": {
+    "development": [
+      "spread_bootstrap_lower_positive",
+      "spread_positive_fraction_at_least_55pct",
+      "spread_both_halves_positive",
+      "rank_ic_positive",
+      "rank_ic_one_sided_hac_p_lt_10pct",
+      "controlled_slope_positive",
+      "controlled_slope_one_sided_hac_p_lt_10pct",
+      "proxy_bootstrap_lower_positive",
+      "proxy_both_halves_positive",
+      "proxy_contribution_not_concentrated",
+      "score_not_control_duplicate"
+    ]
+  },
+  "next_step": "No strategy conversion; residual-momentum family stop remains binding",
+  "product_effects": "NONE",
+  "content_digest": "dd99dce413d37c1bda6d392da782de93ce346e8857d34c2ae96aaff24c6bfd1a"
+}

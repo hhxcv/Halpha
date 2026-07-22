@@ -1,0 +1,84 @@
+{
+  "created_at_utc": "2026-07-22T09:38:05.711836Z",
+  "entries": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\study.py",
+      "bytes": 45198,
+      "sha256": "47d62bbe4132a7609b539bb532acd9b6338c67b321a8f4cc9d1ea96ecf97c015",
+      "role": "reused 2024-2025 public daily/funding adapter and cost/statistics primitives"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\checkpoint.json",
+      "bytes": 5266,
+      "sha256": "bb92d5cf079117805d433fe93ddce38a6f1102bd25dfcb2c13949f0de44ec0f6",
+      "role": "frozen Q20 adapter identity"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\amendment-001.json",
+      "bytes": 1191,
+      "sha256": "d13e0fd5f64c2cb27ebda79df5bb0458bf3043184afb2ea1a81bdc1eb6a17f84",
+      "role": "Q20 implementation amendment chain"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\amendment-002.json",
+      "bytes": 1251,
+      "sha256": "ba7deb809270602b13a68f77edea4613c421892a2d2b34972a28acf1655580bb",
+      "role": "Q20 implementation amendment chain"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\source_reuse_manifest.json",
+      "bytes": 3671,
+      "sha256": "be614d9900ead4cfa777960f5a4d2d9a9bee3bb33b4240a05c421530344b77e3",
+      "role": "Q20 public-source identity chain"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\price-path-continuity-weekly-winner-long\\data_quality_development.json",
+      "bytes": 8461,
+      "sha256": "8b2445e48b6469d935cba7db0190cedba637e87e7a8d4487581c721523f72855",
+      "role": "Q20 2024 source quality evidence"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\study.py",
+      "bytes": 53360,
+      "sha256": "41d1766dda1bf10b338d6fbba704baa8bfdeff9d8e381a65ba63e079796cc201",
+      "role": "reused pre-2024 public daily warm-up adapter"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\checkpoint.json",
+      "bytes": 16384,
+      "sha256": "594370293434c77da46206fdf183c4dac1763b53ed1faab26bc87f0ba04f2724",
+      "role": "frozen CTREND adapter identity"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\amendment-001.json",
+      "bytes": 882,
+      "sha256": "d6b446910148fca2f1d6285feb6dadcbf2a7a9fefd4f961f2d278cf6c4d71e0d",
+      "role": "CTREND implementation amendment chain"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\source_reuse_manifest.json",
+      "bytes": 864841,
+      "sha256": "11e8e0820def6d6dd473bc2a9d8234176dc2fa69a9f07ab13820bd702cf4f730",
+      "role": "CTREND public-source identity chain"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\source_supplement_manifest.json",
+      "bytes": 13382,
+      "sha256": "40fcdd99357b213075a462377aaf19b620ad2df4f11834247ad16d6b4f7a73cc",
+      "role": "pre-2024 public daily file identities"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\data_quality_development.json",
+      "bytes": 8786,
+      "sha256": "76cacab8cc9826b35917cd5ab7992e96fd4ad401dcc37d2d123b7ecf767328da",
+      "role": "pre-2024 source quality evidence"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+      "bytes": 3383646,
+      "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+      "role": "frozen current target universe"
+    }
+  ],
+  "content_digest": "70407b25a98047775bd71f27de298aab652eefe200f4653106989e542e8eddce"
+}

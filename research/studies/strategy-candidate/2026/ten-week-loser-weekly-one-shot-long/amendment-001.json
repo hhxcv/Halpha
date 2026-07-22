@@ -1,0 +1,15 @@
+{
+  "created_at_utc": "2026-07-22T08:01:54.5196361Z",
+  "checkpoint_digest": "55bf5a197669f6d84f2dbc49c51100a273136ee3acdc9e9d83fab721b5d4ac8a",
+  "original_study_sha256": "3f390ba9f127f16544543cca7bf331aefc786c2c251e69c96403e99168004ee2",
+  "amended_study_sha256": "325d93903f110be175a556850871c2ad49c54cf469491feecafd28bfd6c42865",
+  "economic_rule_changed": false,
+  "reason": "Development preparation exposed nine early ENS daily gaps. The frozen rule says an incomplete target is NO_ACTION while the cross-section remains valid with at least 20 rankable targets; the implementation incorrectly failed the whole stage and shifted by observed rows instead of UTC calendar days.",
+  "changes": [
+    "Reindex each symbol to a complete UTC daily calendar before 7/56/70/84-day shifts.",
+    "Require an explicit contiguous 85-day OHLCV completeness flag for a target to be rankable.",
+    "Treat individual missing bars as target NO_ACTION and fail stage quality only if a decision has fewer than 20 complete targets.",
+    "Preserve all frozen symbols, signal, costs, stages, thresholds, baselines and conclusion gates."
+  ],
+  "content_digest": "828b3982468d43a118cf67f33d120284b692d2c8ecfd6e85f11f627af264aa2f"
+}

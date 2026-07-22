@@ -1,0 +1,147 @@
+{
+  "accessed_at_utc": "2026-07-22T00:55:42.171140Z",
+  "checkpoint_digest": "f7707dcdf41f6e9449a5c5f4bf32637ae29b8433e2105910bb422b5496cc5060",
+  "source": "Binance public USD-M REST market data; no credentials",
+  "symbol": "TRXUSDT",
+  "data_start": "2020-10-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-02T00:00:00Z",
+  "kline_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=TRXUSDT&interval=1d&startTime=1601510400000&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\klines\\openTime-000.json",
+      "bytes": 210352,
+      "sha256": "d353b7ca38fc323851c1f772cd57e808ca72e8c444e590ce8be06a0f49665c9d",
+      "rows": 1500,
+      "first_time_ms": 1601510400000,
+      "last_time_ms": 1731024000000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=TRXUSDT&interval=1d&startTime=1731024000001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\klines\\openTime-001.json",
+      "bytes": 83635,
+      "sha256": "4ed4c8b0bd043c510e442e67a46ce75960b55263a3784816e90d6a325a3fa323",
+      "rows": 600,
+      "first_time_ms": 1731110400000,
+      "last_time_ms": 1782864000000
+    }
+  ],
+  "mark_price_kline_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=TRXUSDT&interval=8h&startTime=1601481600000&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-000.json",
+      "bytes": 161997,
+      "sha256": "ee8defe63e450d46af089986b71f184171de132950cf7142cf39e2fc97daee52",
+      "rows": 1500,
+      "first_time_ms": 1601481600000,
+      "last_time_ms": 1644652800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=TRXUSDT&interval=8h&startTime=1644652800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-001.json",
+      "bytes": 161998,
+      "sha256": "47324800fb48780d6fb241a1b2d0242358a592a2867ada9c510df174fde6cdb3",
+      "rows": 1500,
+      "first_time_ms": 1644681600000,
+      "last_time_ms": 1687852800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=TRXUSDT&interval=8h&startTime=1687852800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-002.json",
+      "bytes": 162001,
+      "sha256": "e0679af3086f2441757da5a49f01c0dcd775d8183809eeca98a5d2f7938b7769",
+      "rows": 1500,
+      "first_time_ms": 1687881600000,
+      "last_time_ms": 1731052800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=TRXUSDT&interval=8h&startTime=1731052800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-003.json",
+      "bytes": 163171,
+      "sha256": "21bd5659f8ff0db8cfe7087316e46504d58ad7f4a66d403e464511b53c89064b",
+      "rows": 1500,
+      "first_time_ms": 1731081600000,
+      "last_time_ms": 1774252800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=TRXUSDT&interval=8h&startTime=1774252800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-004.json",
+      "bytes": 32527,
+      "sha256": "cc4a08369c0bd7985c0162d34d400ea4ddce837ebf75b9e5ef1025bdd9fd0ffb",
+      "rows": 301,
+      "first_time_ms": 1774281600000,
+      "last_time_ms": 1782921600000
+    }
+  ],
+  "funding_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=TRXUSDT&startTime=1601510400000&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\funding\\fundingTime-000.json",
+      "bytes": 91138,
+      "sha256": "dddc668a416ef6508091ac617a0b574e9cb38605549394de2e6ef21b83c1b1cc",
+      "rows": 1000,
+      "first_time_ms": 1601510400000,
+      "last_time_ms": 1630281600013
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=TRXUSDT&startTime=1630281600014&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\funding\\fundingTime-001.json",
+      "bytes": 91325,
+      "sha256": "7d32afcd58b03ed001c22b0f2cea589d5897ca4f5d3fd272ff3264dbdf4b562d",
+      "rows": 1000,
+      "first_time_ms": 1630310400008,
+      "last_time_ms": 1659081600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=TRXUSDT&startTime=1659081600001&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\funding\\fundingTime-002.json",
+      "bytes": 91659,
+      "sha256": "9ae69275a76ce33773a50cf6589d96553f42cc8bf1f2a6931fa465fa1f47b785",
+      "rows": 1000,
+      "first_time_ms": 1659110400000,
+      "last_time_ms": 1687881600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=TRXUSDT&startTime=1687881600001&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\funding\\fundingTime-003.json",
+      "bytes": 97534,
+      "sha256": "e1d965a01986e82e0c08314f6b7958723b0dc554865093102af0118a7ac839d1",
+      "rows": 1000,
+      "first_time_ms": 1687910400000,
+      "last_time_ms": 1716681600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=TRXUSDT&startTime=1716681600001&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\funding\\fundingTime-004.json",
+      "bytes": 101355,
+      "sha256": "620171899064cef9176fbe6e18b6f4ff0e5caadd9cf24a6e7ea6273217664290",
+      "rows": 1000,
+      "first_time_ms": 1716710400000,
+      "last_time_ms": 1745481600001
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=TRXUSDT&startTime=1745481600002&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\funding\\fundingTime-005.json",
+      "bytes": 101449,
+      "sha256": "69f190584638f7f288db0f4e69883440e8d21f56a9af2a5a003f3f7d8d61cae8",
+      "rows": 1000,
+      "first_time_ms": 1745510400001,
+      "last_time_ms": 1774281600002
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=TRXUSDT&startTime=1774281600003&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\funding\\fundingTime-006.json",
+      "bytes": 30468,
+      "sha256": "8c572156b12107d02cb16998283722248925c1548121786a7ae8c1c9e82dea68",
+      "rows": 300,
+      "first_time_ms": 1774310400000,
+      "last_time_ms": 1782921600000
+    }
+  ],
+  "exchange_info": {
+    "url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\TRXUSDT\\raw\\exchangeInfo-20260722T005542Z.json",
+    "bytes": 1042646,
+    "sha256": "7bb2bccc29f1bb860a01b41f8f75a14296696725fe772e569c1e6d736192b6e5"
+  },
+  "content_digest": "a83e5652f13ca74a30b2ea8b453dff3e27843bf1e69639b902cf1c92e0df0796"
+}

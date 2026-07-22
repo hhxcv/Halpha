@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "audit_content_digest_valid": true,
+  "evidence_files_checked": 10,
+  "active_forward_incubations": 1,
+  "core_qualification_ready": 0,
+  "content_digest": "72be240cf3f16095a0b97aef218dd1729b6802cba8ff6a18da8eda8e360f14fa"
+}

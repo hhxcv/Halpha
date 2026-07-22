@@ -1,0 +1,25 @@
+{
+  "generated_at_utc": "2026-07-22T11:03:00.046965Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "all_plans_present": true,
+    "vectorbt_reconciled": true,
+    "base_total_positive": true,
+    "stress_after_4pct_hurdle_positive": false,
+    "base_after_6pct_combined_hurdle_positive": false,
+    "base_drawdown_better_than_fixed_quarter": true,
+    "base_sharpe_better_than_fixed_quarter": false,
+    "neighbor_6pct_base_nonnegative": true,
+    "neighbor_10pct_base_nonnegative": true,
+    "worst_calendar_year_above_minus_10pct": true
+  },
+  "failed_checks": [
+    "stress_after_4pct_hurdle_positive",
+    "base_after_6pct_combined_hurdle_positive",
+    "base_sharpe_better_than_fixed_quarter"
+  ],
+  "result_digest": "234032eb687727333ee43db93d49287ea717cf1e2020e5ea6ebebbab91755789",
+  "content_digest": "52b06078ccd8ba2a406ff853e947d3418885566e6ae01f3f7f49040aeab6f3ca"
+}

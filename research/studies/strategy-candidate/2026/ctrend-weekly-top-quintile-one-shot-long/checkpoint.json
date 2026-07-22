@@ -1,0 +1,367 @@
+{
+  "created_at_utc": "2026-07-22T06:27:57.902095Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does a paper-guided 28-signal CTREND top-quintile filter qualify a user-fixed weekly one-shot perpetual LONG after realistic retail costs, funding, simple trend and market baselines, robustness, model stability, and staged time evidence?",
+  "evidence_boundary": "The source paper ends in May 2022 and exact Halpha CTREND outputs are unviewed. Some underlying market paths were exposed by unrelated studies; the current-survivor universe is not point-in-time history.",
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "categories": {
+    "1000XECUSDT": "Payment",
+    "AAVEUSDT": "DeFi",
+    "AVAXUSDT": "Layer-1",
+    "BCHUSDT": "Payment",
+    "BNBUSDT": "Layer-1",
+    "CRVUSDT": "DeFi",
+    "DASHUSDT": "PoW",
+    "ENSUSDT": "Infrastructure",
+    "ETCUSDT": "PoW",
+    "HBARUSDT": "Layer-1",
+    "KAVAUSDT": "DeFi",
+    "LINKUSDT": "Infrastructure",
+    "LTCUSDT": "Payment",
+    "NEARUSDT": "Layer-1",
+    "RUNEUSDT": "DeFi",
+    "SNXUSDT": "DeFi",
+    "SOLUSDT": "Layer-1",
+    "TRXUSDT": "Layer-1",
+    "UNIUSDT": "DeFi",
+    "VETUSDT": "Layer-1",
+    "XLMUSDT": "Layer-2",
+    "XMRUSDT": "PoW",
+    "XRPUSDT": "Payment",
+    "ZECUSDT": "PoW",
+    "ZILUSDT": "PoW"
+  },
+  "features": [
+    "rsi14",
+    "stoch_rsi14",
+    "stoch_k14",
+    "stoch_d3",
+    "cci20",
+    "sma_3",
+    "sma_5",
+    "sma_10",
+    "sma_20",
+    "sma_50",
+    "sma_100",
+    "sma_200",
+    "macd",
+    "macd_diff",
+    "volsma_3",
+    "volsma_5",
+    "volsma_10",
+    "volsma_20",
+    "volsma_50",
+    "volsma_100",
+    "volsma_200",
+    "volmacd",
+    "volmacd_diff",
+    "chaikin21",
+    "boll_low",
+    "boll_mid",
+    "boll_high",
+    "boll_width"
+  ],
+  "stages": {
+    "development": [
+      "2023-01-02T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ]
+  },
+  "config": {
+    "strategy_id": "RESEARCH_CTREND_TOP_QUINTILE_WEEKLY_ONE_SHOT_LONG_0P5X_V1",
+    "direction": "LONG_ONLY",
+    "hold_days": 7,
+    "notional_fraction": 0.5,
+    "top_fraction": 0.2,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "main_training_weeks": 52,
+    "elastic_net_l1_ratio": 0.5,
+    "elastic_net_alpha_grid": [
+      1e-06,
+      1.333521432163324e-06,
+      1.778279410038923e-06,
+      2.3713737056616552e-06,
+      3.162277660168379e-06,
+      4.216965034285822e-06,
+      5.623413251903491e-06,
+      7.498942093324558e-06,
+      1e-05,
+      1.333521432163324e-05,
+      1.778279410038923e-05,
+      2.3713737056616554e-05,
+      3.1622776601683795e-05,
+      4.216965034285822e-05,
+      5.623413251903491e-05,
+      7.498942093324559e-05,
+      0.0001,
+      0.0001333521432163324,
+      0.00017782794100389227,
+      0.00023713737056616554,
+      0.00031622776601683794,
+      0.00042169650342858224,
+      0.0005623413251903491,
+      0.0007498942093324559,
+      0.001,
+      0.001333521432163324,
+      0.0017782794100389228,
+      0.0023713737056616554,
+      0.0031622776601683794,
+      0.004216965034285823,
+      0.005623413251903491,
+      0.007498942093324558,
+      0.01,
+      0.01333521432163324,
+      0.01778279410038923,
+      0.023713737056616554,
+      0.03162277660168379,
+      0.042169650342858224,
+      0.05623413251903491,
+      0.07498942093324558,
+      0.1
+    ],
+    "annual_capital_hurdle": 0.04,
+    "cooldown_full_days": 1,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "diagnostics": {
+      "window26": {
+        "training_weeks": 26,
+        "features": "all",
+        "combination": "elastic_net"
+      },
+      "window78": {
+        "training_weeks": 78,
+        "features": "all",
+        "combination": "elastic_net"
+      },
+      "no_volume": {
+        "training_weeks": 52,
+        "features": "non_volume",
+        "combination": "elastic_net"
+      },
+      "naive_all": {
+        "training_weeks": 52,
+        "features": "all",
+        "combination": "naive_all"
+      }
+    }
+  },
+  "source_supplement_plan": [
+    {
+      "symbol": "1000XECUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=1000XECUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\1000XECUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "AAVEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AAVEUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\AAVEUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AVAXUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\AVAXUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "BCHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BCHUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\BCHUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BNBUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\BNBUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "CRVUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=CRVUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\CRVUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "DASHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=DASHUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\DASHUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "ENSUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ENSUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ENSUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "ETCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETCUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ETCUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "HBARUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=HBARUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\HBARUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "KAVAUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=KAVAUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\KAVAUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "LINKUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LINKUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\LINKUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "LTCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LTCUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\LTCUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "NEARUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=NEARUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\NEARUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "RUNEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=RUNEUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\RUNEUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "SNXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SNXUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\SNXUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SOLUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\SOLUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "TRXUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=TRXUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\TRXUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "UNIUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=UNIUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\UNIUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "VETUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=VETUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\VETUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "XLMUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XLMUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\XLMUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "XMRUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XMRUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\XMRUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XRPUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\XRPUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "ZECUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZECUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ZECUSDT\\klines-2020-06-01_2021-11-17.json"
+    },
+    {
+      "symbol": "ZILUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZILUSDT&interval=1d&startTime=1590969600000&endTime=1637107199999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1\\supplement\\ZILUSDT\\klines-2020-06-01_2021-11-17.json"
+    }
+  ],
+  "stage_open_rule": "development -> evaluation -> confirmation; later-stage retrieval and output are forbidden until the prior exact-rule gate passes",
+  "allowed_fixes": "Only retrieval, parsing, identity, deterministic-statistic, or implementation defects that preserve the frozen economic rule; append the old and new identities to attempts.md.",
+  "forbidden_after_checkpoint": [
+    "selecting favorable features, target, direction, rank cutoff, holding period, cost or training window",
+    "promoting a diagnostic after seeing its result",
+    "opening a later stage after a gate failure",
+    "calling current survivors a historical point-in-time universe",
+    "calling a positive backtest proof of long-term alpha"
+  ],
+  "files": {
+    "study_py_sha256": "a8af46cdd0672f7b5ab96af1388c7a4ba6af25ea93b0746b45d388010303c581",
+    "preregistration_sha256": "57d3f48c52f3ec29760813d6ef8d5d5b69b34ffe64f329176fd7d1431672ded9",
+    "sources_sha256": "343f7e5bfaa1f610b7edaf063da9989e9cb9f3330f21a66d47864277f6fcd6ad",
+    "source_reuse_manifest_sha256": "11e8e0820def6d6dd473bc2a9d8234176dc2fa69a9f07ab13820bd702cf4f730",
+    "universe_sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "scikit_learn": "1.9.0",
+    "vectorbt": "1.1.0"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ctrend-weekly-top-quintile-one-shot-long\\2026-07-22-v1",
+  "content_digest": "9ba29fb9c5dc01a6b3cca8a33f4d75c665d1d8637ac5de2b3625a367df17e095"
+}

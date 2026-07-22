@@ -1,0 +1,12 @@
+{
+  "created_at_utc": "2026-07-22T07:25:00Z",
+  "amendment_id": "002",
+  "checkpoint_digest": "71e39b8cf161f5f92040209b344c5f13751a4473ad47f402cc02f8061df821e1",
+  "original_study_sha256": "3ef98bc9eecd7526cfc544d0ad8e6b5d9e553435d031c73e3c972243fb2638ed",
+  "amended_study_sha256": "22ddcbe23065a351421dc6234c75311188ddedd5b25fc7833ad7e9772ed98225",
+  "economic_rule_changed": false,
+  "reason": "The preregistered LOWVOL14 baseline had no proposal on one main entry date because all selected targets were in cooldown; the reused comparison helper incorrectly required a baseline trade on every main date.",
+  "change": "Align each baseline to the main strategy schedule, treat a preregistered no-proposal cooldown date as zero cash return, retain common-date difference and missing-date counts, and validate a continuous numbered amendment chain.",
+  "outcome_exposure_before_fix": "Eight trade CSVs were written. No development JSON, comparison summary, gate or conclusion existed. The missing comparison date 2023-09-11 was inspected.",
+  "content_digest": "976f96770c3c3bb36a0edb29fa4dba8c75dfb66e802936a36ce052e83f82c13e"
+}

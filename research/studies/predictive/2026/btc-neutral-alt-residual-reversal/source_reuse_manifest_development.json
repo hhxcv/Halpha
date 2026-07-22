@@ -1,0 +1,15 @@
+{
+  "phase": "development",
+  "validated_at_utc": "2026-07-21T13:57:16.229194+00:00",
+  "shared_cache": "D:/projects/Codex/CodexHome/research-data/halpha/btc-shock-beta-gap-predictability",
+  "manifests": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\btc-shock-beta-gap-predictability\\source_manifest_development.json",
+      "sha256": "847588d0721c162374b794bc6720dced970c94095bebc1c0d9c965bc59737b81",
+      "file_count": 240
+    }
+  ],
+  "validated_file_count": 240,
+  "validated_zip_bytes": 85688452,
+  "status": "PASS"
+}

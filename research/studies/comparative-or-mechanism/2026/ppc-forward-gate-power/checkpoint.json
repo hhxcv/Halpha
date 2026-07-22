@@ -1,0 +1,49 @@
+{
+  "as_of": "2026-07-22",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "source_path": "research/studies/strategy-candidate/2026/price-path-continuity-weekly-winner-long/development_main_trades.csv",
+  "source_sha256": "8c3b0ce004fba8bf788c0b28a0b70d63475ffd2c1e3cfc1c6fc06a6930adbf3e",
+  "source_entry_dates": 40,
+  "config": {
+    "candidate_id": "RESEARCH_PPC14_TOP_TERCILE_MOM14_TOP_TERCILE_WEEKLY_LONG_0P25X_V1",
+    "annual_capital_hurdle": 0.04,
+    "hold_days": 7,
+    "expected_trades": 88,
+    "expected_entry_dates": 40,
+    "block_lengths": [
+      1,
+      4,
+      8
+    ],
+    "primary_block_length": 4,
+    "sample_sizes": [
+      26,
+      52,
+      78,
+      104,
+      156,
+      208,
+      260,
+      312,
+      416,
+      520
+    ],
+    "effects": [
+      0.0,
+      0.0025,
+      0.005,
+      0.0075,
+      0.01
+    ],
+    "primary_effect": 0.005,
+    "draws": 25000,
+    "exact_outer_draws": 5000,
+    "exact_inner_draws": 5000,
+    "exact_inner_seed": 20260722,
+    "seed": 2026072201,
+    "power_target": 0.8,
+    "false_positive_limit": 0.05
+  },
+  "study_py_sha256": "5f42b195bdd323316cb7b0da592aba8b8b053ed4711754a1b43a1e5ca17332c6",
+  "content_digest": "78ece326398366622dbb0cb92c0036a54ec10e00b37d47931dd3befb0f1dccfc"
+}

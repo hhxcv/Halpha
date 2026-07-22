@@ -1,0 +1,62 @@
+{
+  "validated_at_utc": "2026-07-22T05:13:34.3120069Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "checkpoint_digest": "05dfa43d2a3e01e24a561de99e10f1d1f6114bad76a32d41c1f33f0cc8117a25",
+  "manifest_digest": "9cf25139af8c29619eb1c8f91f4cad245ae9c0e334d7b994dbe2179d3e2e6715",
+  "data_quality_digest": "6d64dd51d6ffa16f0bc9850934fe12138fc14526d2767450a747ca90c8fa2bd0",
+  "evaluation_result_digest": "f8e1f94aa8a3a8a1206da327a10423ee6165cbab9656eabce152e5d07d0e5b2c",
+  "evaluation_gate_digest": "fbd12a6f08bbe7f614c78fd847d918612bc21064720d1083c6a349658f8e02e0",
+  "final_results_digest": "22da46b9530684423558b7cb38d4beb89feb09b5b6990c677dff71b1ebaedfd9",
+  "bound_file_sha256": {
+    "study.py": "5853383d64afb2cd3dd2ec2bc39224ebff285eedd47cd7a87d8ea80044629bdd",
+    "checkpoint.json": "95266544c29486c5f9ec9347cd776ef840f3454b1a407bbf886fb8fcaf2283d9",
+    "source_manifest_evaluation.json": "6b1d278190241070c748890337f2c2211f8603672b73b710b366a4e84449c661",
+    "data_quality_evaluation.json": "59949fe0490db3b3d7c60953a8915edd733206c813ecb7907222f13d378818f0",
+    "evaluation.json": "6ff9e6b8749b779de50beb702d6280ba7d20bf69e709f1741e1f5205c6bacef3",
+    "evaluation_gate.json": "6e38f2869820bcec491466f4a1d4074c4a6e5dc33b1a8211fdcd6ed06486baf9",
+    "results.json": "da81c9f3fed613186523272b3854a886c1b2964e479b4a588a21e0be4bdf6616"
+  },
+  "cache_manifest": {
+    "unique_referenced_files": 652,
+    "existing_referenced_files": 652,
+    "referenced_bytes": 6946877,
+    "root": "D:/projects/Codex/CodexHome/research-data/halpha/category-momentum-gated-one-shot-long/2026-07-22-v1/"
+  },
+  "trade_csv_sha256": {
+    "evaluation_trades.csv": "56a090ff7bf3ddac4f09e983c4e4e1741387d5599f9d9c5ea7c86e3518e3c3cb",
+    "evaluation_premium3_trades.csv": "f9662ece8b50632dc73270534e8ca0ce970b0e9541927dc5ed74d813d2fb401f",
+    "evaluation_premium5_trades.csv": "7b708c416ad7b3bcc0392fce0882b5301f2cf6a362ea2dd4eeb216a62d9641fa",
+    "evaluation_top5_trades.csv": "f71134cb21309c881492673275739bc4f8ea235c2d88368f2e426968a57d5a4e",
+    "evaluation_funding1_trades.csv": "9d7ec6bb7b788cf06166dac4e29281f2eb53cdc1c2b5ea8fa75eedd7c3a48655",
+    "evaluation_winner5_trades.csv": "97a07a1cb0c8728c02bac7e0c5a4b743d28c2dd8d3b8d83199d15ac5e7343a6b",
+    "evaluation_scheduled_long_trades.csv": "5450cb3b206dc0bbb0342687bd9d909ffd4d36598a2a6dde3f709dec88447773"
+  },
+  "rerun": {
+    "all_trade_csv_hashes_stable": true,
+    "key_statistics_stable": true,
+    "gate_failed_checks_stable": [
+      "base_after_hurdle_positive",
+      "stress_after_hurdle_positive",
+      "stress_bootstrap_lower_positive",
+      "required_year_slices_positive",
+      "positive_target_fraction_at_least_half",
+      "positive_categories_at_least_minimum",
+      "beats_funding1",
+      "beats_winner5",
+      "beats_scheduled_long",
+      "two_of_three_neighborhoods_stress_positive",
+      "largest_positive_target_share_at_most_25pct"
+    ]
+  },
+  "conclusion": "DOES_NOT_SUPPORT",
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "handoff": "NOT_GENERATED",
+  "product_effects": "NONE"
+}

@@ -1,0 +1,23 @@
+{
+  "created_at_utc": "2026-07-22T04:14:55.471895Z",
+  "checkpoint_digest": "5f4514f10e2136347b4f955a0c2e75f5e6ef50c8332e06d3bb037a6f112f2f18",
+  "classification": "ALLOWED_DATA_COMPLETENESS_FIX",
+  "reason": "ENSUSDT listed on 2021-11-30 after the generic 2021-11-17 fetch start; the original quality check incorrectly required pre-listing rows. Formal signals start 2022-01-01 and require only the prior 30 complete days. The fix narrows quality-required coverage to start minus 30 days and does not alter fetched bytes, signal, universe, returns, costs, diagnostics, stages, or gates.",
+  "previous_files": {
+    "study_py_sha256": "fc178d72705f04b51c956a7cdef6d960a5168185b68e28d04ca07316fccdc3d5",
+    "engine_py_sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+    "preregistration_sha256": "2cee5f1e789bcfec612fad4e8b012b3cb94fc74d085cb25eda44a9e4b8911120",
+    "sources_sha256": "779c3bfbb955dbbcf61765d722eaf9588432770394ae32709b91f62d51a3fd5b"
+  },
+  "current_files": {
+    "study_py_sha256": "298d7cb1df86952b379a833e23e059801f28ecc106dbd825b5cde2621d6399b8",
+    "engine_py_sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+    "preregistration_sha256": "2cee5f1e789bcfec612fad4e8b012b3cb94fc74d085cb25eda44a9e4b8911120",
+    "sources_sha256": "779c3bfbb955dbbcf61765d722eaf9588432770394ae32709b91f62d51a3fd5b"
+  },
+  "economic_method_changed": false,
+  "outputs_viewed_before_fix": [
+    "data_quality_development.json only; no signal, trade, return, diagnostic, or gate output existed"
+  ],
+  "content_digest": "5c5f2f3960ce204cc527dd430af2a2768660b2aa7d2eae8d1f36a639724f07c3"
+}

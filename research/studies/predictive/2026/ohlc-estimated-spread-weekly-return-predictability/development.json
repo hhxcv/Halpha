@@ -1,0 +1,261 @@
+{
+  "generated_at_utc": "2026-07-22T14:38:34.873170+00:00",
+  "stage": "development",
+  "period": {
+    "start": "2023-03-04T00:00:00Z",
+    "end_exclusive": "2024-03-02T00:00:00Z"
+  },
+  "data_quality_digest": "5c57c7f17f0eb030a016dc0f6c873462548fa97003ca9329e3c9207925a65f66",
+  "reference_benchmark_digest": "39f7cffd28fdf89873d8db0020ca80b20e65e639a9470e4ad939622869559a51",
+  "summaries": {
+    "primary_28p": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.008693700750351736,
+        "block_bootstrap_95pct": [
+          -0.014817074298830276,
+          0.03482062930770366
+        ],
+        "positive_fraction": 0.46153846153846156,
+        "first_half_mean": -0.015039314554830168,
+        "second_half_mean": 0.03242671605553365
+      },
+      "rank_ic": {
+        "mean": -0.04845728554142564,
+        "hac_t": -1.1172309793864696,
+        "hac_two_sided_p": 0.2638955779327685,
+        "hac_one_sided_p": 0.8680522110336157
+      },
+      "controlled_chl_slope": {
+        "mean": 0.003911098179252243,
+        "hac_t": 0.8840168476632464,
+        "hac_two_sided_p": 0.37668711819661616,
+        "hac_one_sided_p": 0.18834355909830808
+      },
+      "simple_explanations": {
+        "amihud_high_minus_low_mean": 0.0024524880989799636,
+        "volatility_high_minus_low_mean": 0.008578122916852244,
+        "main_minus_amihud": {
+          "mean": 0.006241212651371774,
+          "block_bootstrap_95pct": [
+            -0.028923359197596494,
+            0.04205175030107758
+          ]
+        },
+        "main_minus_volatility": {
+          "mean": 0.0001155778334994921,
+          "block_bootstrap_95pct": [
+            -0.015284610118164607,
+            0.01534179804367551
+          ]
+        },
+        "monthly_corrected_chl_spread_mean": -0.0024696826218519367
+      },
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.0031080269085247874,
+        "block_bootstrap_95pct": [
+          -0.0064002435944679635,
+          0.014718631176155343
+        ],
+        "positive_fraction": 0.4230769230769231,
+        "first_half_mean": -0.009290430651480379,
+        "second_half_mean": 0.015506484468529954,
+        "selected_symbols": 10,
+        "positive_symbol_fraction": 0.5,
+        "maximum_positive_contribution_share": 0.5973426589172139
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "log_amihud": 0.23782608695652174,
+          "market_beta": 0.5822073578595318,
+          "mom7": 0.20503952569169961,
+          "mom28": 0.21832015810276678,
+          "vol28": 0.7340654997176735,
+          "max28": 0.5605894677404974,
+          "log_volume30": 0.18219367588932806
+        },
+        "maximum_median_absolute": 0.7340654997176735
+      }
+    },
+    "diagnostic_14p": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.0038909267443374995,
+        "block_bootstrap_95pct": [
+          -0.0196833081357755,
+          0.028945662428531464
+        ],
+        "positive_fraction": 0.4423076923076923,
+        "first_half_mean": -0.020222605137499468,
+        "second_half_mean": 0.028004458626174473
+      },
+      "rank_ic": {
+        "mean": -0.04624658742067647,
+        "hac_t": -1.1323233882196666,
+        "hac_two_sided_p": 0.25749850073593916,
+        "hac_one_sided_p": 0.8712507496320304
+      },
+      "controlled_chl_slope": {
+        "mean": 0.0025528171765649816,
+        "hac_t": 0.588786416825613,
+        "hac_two_sided_p": 0.5560045588551411,
+        "hac_one_sided_p": 0.27800227942757055
+      },
+      "simple_explanations": {
+        "amihud_high_minus_low_mean": 0.0024524880989799636,
+        "volatility_high_minus_low_mean": 0.008578122916852244,
+        "main_minus_amihud": {
+          "mean": 0.0014384386453575352,
+          "block_bootstrap_95pct": [
+            -0.034802186593729245,
+            0.0356389985924458
+          ]
+        },
+        "main_minus_volatility": {
+          "mean": -0.004687196172514745,
+          "block_bootstrap_95pct": [
+            -0.024585532722040865,
+            0.014446820607349723
+          ]
+        },
+        "monthly_corrected_chl_spread_mean": 0.00892917824488345
+      },
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.007256686181947126,
+        "block_bootstrap_95pct": [
+          -0.003539056047032804,
+          0.01924247304663523
+        ],
+        "positive_fraction": 0.4230769230769231,
+        "first_half_mean": -0.004351477022061529,
+        "second_half_mean": 0.01886484938595578,
+        "selected_symbols": 12,
+        "positive_symbol_fraction": 0.5833333333333334,
+        "maximum_positive_contribution_share": 0.34182651257907776
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "log_amihud": 0.17182382834556748,
+          "market_beta": 0.457562631876133,
+          "mom7": 0.16142140468227423,
+          "mom28": 0.19263171610997698,
+          "vol28": 0.6369762845849802,
+          "max28": 0.5027009832272991,
+          "log_volume30": 0.17315076228119708
+        },
+        "maximum_median_absolute": 0.6369762845849802
+      }
+    },
+    "diagnostic_56p": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.010218690483357624,
+        "block_bootstrap_95pct": [
+          -0.012902478998061564,
+          0.0347143145567432
+        ],
+        "positive_fraction": 0.46153846153846156,
+        "first_half_mean": -0.015710310687640498,
+        "second_half_mean": 0.036147691654355746
+      },
+      "rank_ic": {
+        "mean": -0.028946895825526352,
+        "hac_t": -0.5961692809804167,
+        "hac_two_sided_p": 0.5510621450670667,
+        "hac_one_sided_p": 0.7244689274664666
+      },
+      "controlled_chl_slope": {
+        "mean": 0.008496117115158207,
+        "hac_t": 1.8781305582250674,
+        "hac_two_sided_p": 0.06036330687700442,
+        "hac_one_sided_p": 0.03018165343850221
+      },
+      "simple_explanations": {
+        "amihud_high_minus_low_mean": 0.0024524880989799636,
+        "volatility_high_minus_low_mean": 0.008578122916852244,
+        "main_minus_amihud": {
+          "mean": 0.007766202384377665,
+          "block_bootstrap_95pct": [
+            -0.026275552217748983,
+            0.040150311667997755
+          ]
+        },
+        "main_minus_volatility": {
+          "mean": 0.0016405675665053803,
+          "block_bootstrap_95pct": [
+            -0.015133432370658822,
+            0.017591624765507373
+          ]
+        },
+        "monthly_corrected_chl_spread_mean": 0.0034782462550063497
+      },
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.006316896674307884,
+        "block_bootstrap_95pct": [
+          -0.002545194088268153,
+          0.016505807985168708
+        ],
+        "positive_fraction": 0.5192307692307693,
+        "first_half_mean": -0.004080966376029045,
+        "second_half_mean": 0.016714759724644816,
+        "selected_symbols": 9,
+        "positive_symbol_fraction": 0.5555555555555556,
+        "maximum_positive_contribution_share": 0.4875851035172428
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "log_amihud": 0.22467532467532467,
+          "market_beta": 0.6356521739130434,
+          "mom7": 0.1882699908786865,
+          "mom28": 0.2939723320158103,
+          "vol28": 0.7302508361204014,
+          "max28": 0.5617391304347825,
+          "log_volume30": 0.1565810276679842
+        },
+        "maximum_median_absolute": 0.7302508361204014
+      }
+    }
+  },
+  "csv_sha256": {
+    "development_primary_28p_panel.csv": "4d96ce1ab24b27d711b9e0b9d528d662a2f28ef761df250bd46115bf94aa4c0d",
+    "development_primary_28p_weekly.csv": "d903d33f1d989359947659107ac7436f8353fc357e679cd7a6a537941748f185",
+    "development_primary_28p_selected.csv": "2c55db9020c5b202519500e9cb4294b90b99c2a2b0da61521f00ea52a7a8ff2f",
+    "development_diagnostic_14p_panel.csv": "808f7ec059b90437002cc5adb1c56cd373872550d9829a2bf386b6740a33a1db",
+    "development_diagnostic_14p_weekly.csv": "5c2b18daacfbf0300edab547058cacd019a14b2e250762048cd1e27ec10eb6ec",
+    "development_diagnostic_14p_selected.csv": "ee58d3212faeb49e73f0b781ebc9df6828ae9919ea1a37db49d14c8607049a33",
+    "development_diagnostic_56p_panel.csv": "d0cf79c113e1b5481dfcd6722a7c3b1064d356f3fa789ce33189722b5015e07e",
+    "development_diagnostic_56p_weekly.csv": "b78303618fabef63f3f39a9175445ab136e4256b7aabcea655efddbe4586a254",
+    "development_diagnostic_56p_selected.csv": "10ae8b8e8526ec93ee86aabb489c26fecba6c55a9b9bc1f1eeaf27dea90e70e7"
+  },
+  "search_disclosure": {
+    "selectable_primary_configurations": 1,
+    "main": "28-pair two-day-corrected CHL; high-minus-low quintile",
+    "diagnostics_only": [
+      "14-pair two-day-corrected CHL",
+      "56-pair two-day-corrected CHL",
+      "28-pair monthly-corrected CHL",
+      "Amihud and volatility simple explanations"
+    ],
+    "source_calendar_overlap": true,
+    "prior_broad_market_path_exposure": true
+  },
+  "content_digest": "53f5b85424e6b78836bc3be924d67f88ae65bd7e7e16cdc4d3987a0c7e47b3e9"
+}

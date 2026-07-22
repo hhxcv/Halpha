@@ -1,0 +1,88 @@
+{
+  "created_at_utc": "2026-07-22T06:00:37.010557Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does a fixed weekly winner LONG only in consecutive positive four-week market states survive realistic costs, funding, beta baselines, robustness, and staged time evidence?",
+  "evidence_boundary": "Exact rule outputs are unviewed, but all 2021-2025H1 underlying market paths were exposed by the reused parent study; no stage is truly untouched market evidence.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT"
+  ],
+  "data_start": "2020-12-20T00:00:00Z",
+  "data_end_exclusive": "2025-07-01T00:00:00Z",
+  "stages": {
+    "development": [
+      "2021-02-15T00:00:00Z",
+      "2023-01-02T00:00:00Z"
+    ],
+    "evaluation": [
+      "2023-01-02T00:00:00Z",
+      "2025-01-06T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-06T00:00:00Z",
+      "2025-06-30T00:00:00Z"
+    ]
+  },
+  "config": {
+    "strategy_id": "RESEARCH_PERSISTENT_UP_STATE_WEEKLY_WINNER_LONG_0P25X_V1",
+    "formation_days": 7,
+    "hold_days": 7,
+    "state_window_weeks": 4,
+    "state_transition": "CURRENT_AND_PREVIOUS_COMPOUNDED_EQUAL_WEIGHT_MARKET_RETURN_GT_ZERO",
+    "winner_count": 1,
+    "winner_must_be_positive": true,
+    "total_notional_fraction": 0.25,
+    "annual_capital_hurdle": 0.04,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    }
+  },
+  "stage_open_rule": "development -> evaluation -> confirmation; open the next exact-rule output only after every prior gate passes",
+  "support_limit": "Even all historical gates passing yields INSUFFICIENT_EVIDENCE until a genuinely new forward interval passes the frozen rule.",
+  "allowed_fixes": "Only parsing, identity, deterministic-statistic, or implementation fixes that preserve the economic rule and are recorded before rerun.",
+  "study_py_sha256": "8f93f95a56f0157be5d1f624c9d780fe9d6f6ea41e718e0ecfa2c1f8d55b6247",
+  "preregistration_sha256": "93932b0c8c0948ca74eaf5f36a42ce60603b5d28cba1b13dfd0275a2d9550bd4",
+  "sources_sha256": "545494040d468eb06aaf3238cf5c73a200f9b7112ba6d5623a1ceb83b5dc82f0",
+  "source_reuse_manifest_sha256": "385c95500bbc6182a0c97c87d99d8f5b85ab20c0b2111cd73a44de0eb0334049",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "content_digest": "344dedd90b2d9baf04ea924989f8fce85fe44538f1c0e331d5819c04981706a0"
+}

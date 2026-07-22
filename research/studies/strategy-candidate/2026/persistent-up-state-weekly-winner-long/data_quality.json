@@ -1,0 +1,86 @@
+{
+  "checked_at_utc": "2026-07-22T06:00:41.033912Z",
+  "status": "PASS",
+  "symbols": {
+    "BTCUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 13994397884.72284
+    },
+    "ETHUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 6725190185.04486
+    },
+    "BNBUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 466295061.419075
+    },
+    "XRPUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 696021127.573765
+    },
+    "DOGEUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 518623334.91846
+    },
+    "ADAUSDT": {
+      "status": "PASS",
+      "bars": 1654,
+      "missing_bars": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 4962,
+      "missing_mark_price": 0,
+      "mark_from_funding_response": 1826,
+      "mark_from_official_8h_kline": 3136,
+      "maximum_mark_match_delta_ms": 48.0,
+      "median_daily_quote_volume": 377042732.07705
+    }
+  },
+  "source_reuse_manifest_sha256": "385c95500bbc6182a0c97c87d99d8f5b85ab20c0b2111cd73a44de0eb0334049",
+  "content_digest": "62e61f344015affad1144e9a952c02c95296e1cdfc0899cf3f9111aba984d9b3"
+}

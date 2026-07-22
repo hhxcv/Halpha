@@ -1,0 +1,25 @@
+{
+  "validated_at_utc": "2026-07-22T13:43:01.959719+00:00",
+  "status": "PASS",
+  "checkpoint_digest": "15fb7c82ccc1492283eeaecf373c102e831592118cef694cef9244acc2275733",
+  "checks": {
+    "formula_selftest": true,
+    "development_source_bytes": true,
+    "development_data_quality_recompute": true,
+    "development_analysis_recompute": true,
+    "development_daily_csv": true,
+    "development_events_csv": true,
+    "development_gate_recompute": true,
+    "development_actual_formula_finite": true,
+    "result_markdown_exists": true,
+    "result_baseline": true,
+    "no_core_qualification": true
+  },
+  "recomputed": {
+    "development": {
+      "analysis_digest": "1bb01a250b7953cfff2e2e9ea8db6e68fce42094eb99976b93cf5988f57a887c",
+      "gate_digest": "10ca66354bad7e12f9fd6643f5c086ba2e5b6ef045bb7a67f50168bb2577137e"
+    }
+  },
+  "content_digest": "107374e698b02fd58134ea1bba64b762b2299ab4dd34fd91643dd5e8a772e3a5"
+}

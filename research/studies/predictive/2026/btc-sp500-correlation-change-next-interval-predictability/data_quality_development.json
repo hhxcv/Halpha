@@ -1,0 +1,83 @@
+{
+  "generated_at_utc": "2026-07-22T14:07:49.339974+00:00",
+  "stage": "development",
+  "status": "PASS",
+  "checks": {
+    "manifest_verified": true,
+    "positive_prices": true,
+    "valid_ohlc": true,
+    "daily_on_grid": true,
+    "intraday_on_grid": true,
+    "calibration_rows": true,
+    "stage_rows": true,
+    "action_coverage": true,
+    "btc_garch_converged": true,
+    "sp500_garch_converged": true,
+    "dcc_converged": true,
+    "garch_stationary": true,
+    "dcc_stationary": true,
+    "positive_definite": true,
+    "low_events": true,
+    "high_events": true,
+    "event_quarters": true
+  },
+  "counts": {
+    "daily_rows": 1545,
+    "intraday_rows": 148249,
+    "fred_rows": 1055,
+    "calibration_rows": 709,
+    "expected_stage_rows": 316,
+    "eligible_stage_rows": 316,
+    "low_events": 50,
+    "high_events": 44,
+    "event_quarters": 6
+  },
+  "action_coverage": 1.0,
+  "model": {
+    "btc_garch": {
+      "success": 1.0,
+      "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+      "objective": 1496.3717228784485,
+      "mean_percent": 0.11478613657533815,
+      "omega": 3.5282769107541836,
+      "alpha": 0.11699359817754806,
+      "beta": 0.748218637289625,
+      "persistence": 0.8652122354671731,
+      "initial_variance_percent2": 23.431937265874
+    },
+    "sp500_garch": {
+      "success": 1.0,
+      "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+      "objective": 425.1163484294724,
+      "mean_percent": 0.044910893733194145,
+      "omega": 0.06166823620535992,
+      "alpha": 0.2556198090000617,
+      "beta": 0.7294333278806044,
+      "persistence": 0.9850531368806661,
+      "initial_variance_percent2": 2.4029436724324205
+    },
+    "dcc": {
+      "success": true,
+      "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+      "objective": 680.8616476699387,
+      "a": 0.021513254652256144,
+      "b": 0.9639362633915654,
+      "persistence": 0.9854495180438215,
+      "qbar": [
+        [
+          0.996871597929028,
+          0.31524188684515325
+        ],
+        [
+          0.31524188684515325,
+          0.993264751551561
+        ]
+      ],
+      "minimum_calibration_correlation_eigenvalue": 0.45552777384210563,
+      "minimum_full_correlation_eigenvalue": 0.45552777384210563
+    }
+  },
+  "manifest_content_digest": "0ca504d0b5f20e3d9a48a51092fcdef96f220fbc289759bb4650fc3f98315363",
+  "source_identity_digest": "9d3e1eb25c9286c56d26b02f0ad59dd69fee6ed51adf60254852a7a084788a8d",
+  "content_digest": "7f319e7dcd50665e08ebac9f15d015ce84046ecf34c9debc4ae595eaea7d0e0d"
+}

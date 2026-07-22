@@ -1,0 +1,41 @@
+{
+  "generated_at_utc": "2026-07-22T11:58:22.052102+00:00",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "all_action_weeks_present": true,
+    "median_rankable_at_least_20": true,
+    "spread_mean_positive": true,
+    "spread_bootstrap_lower_positive": false,
+    "spread_positive_fraction_at_least_55pct": false,
+    "rank_ic_positive": false,
+    "rank_ic_one_sided_hac_p_lt_10pct": false,
+    "controlled_slope_positive": true,
+    "controlled_slope_one_sided_hac_p_lt_10pct": true,
+    "proxy_mean_after_cost_hurdle_positive": true,
+    "proxy_bootstrap_lower_positive": false,
+    "spread_both_halves_positive": false,
+    "proxy_both_halves_positive": true,
+    "diagnostic_14d_spread_nonnegative": false,
+    "diagnostic_56d_spread_nonnegative": false,
+    "proxy_selected_symbol_breadth": true,
+    "proxy_positive_symbol_fraction": true,
+    "proxy_contribution_not_concentrated": true,
+    "score_not_control_duplicate": false
+  },
+  "failed_checks": [
+    "spread_bootstrap_lower_positive",
+    "spread_positive_fraction_at_least_55pct",
+    "rank_ic_positive",
+    "rank_ic_one_sided_hac_p_lt_10pct",
+    "proxy_bootstrap_lower_positive",
+    "spread_both_halves_positive",
+    "diagnostic_14d_spread_nonnegative",
+    "diagnostic_56d_spread_nonnegative",
+    "score_not_control_duplicate"
+  ],
+  "economic_failed_checks": [],
+  "result_digest": "162444553c6b519ee259dd76d7ac6fe33d2760e67f6c5596594b38d0e01c5042",
+  "content_digest": "a1bf6c40d11aaf0316bcaf2edb6c208c80ec11b043ae81e200fcd79fdc5509a6"
+}

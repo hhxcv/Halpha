@@ -1,0 +1,43 @@
+{
+  "generated_at_utc": "2026-07-22T01:38:10.795086Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "vectorbt_reconciled": true,
+    "minimum_trades": true,
+    "favorable_total_positive": false,
+    "base_total_positive": false,
+    "stress_total_positive": false,
+    "stress_after_hurdle_positive": false,
+    "gross_mean_positive": false,
+    "gross_bootstrap_lower_positive": false,
+    "main_minus_placebo_mean_positive": true,
+    "main_minus_placebo_bootstrap_lower_positive": false,
+    "main_minus_momentum_mean_positive": true,
+    "main_minus_momentum_bootstrap_lower_positive": false,
+    "delayed5_stress_positive": false,
+    "at_least_four_symbols_positive": false,
+    "positive_months_over_half": false,
+    "slot_drawdown_within_limit": false,
+    "single_plan_adverse_within_limit": true,
+    "largest_positive_symbol_share_at_most_half": false
+  },
+  "failed_checks": [
+    "favorable_total_positive",
+    "base_total_positive",
+    "stress_total_positive",
+    "stress_after_hurdle_positive",
+    "gross_mean_positive",
+    "gross_bootstrap_lower_positive",
+    "main_minus_placebo_bootstrap_lower_positive",
+    "main_minus_momentum_bootstrap_lower_positive",
+    "delayed5_stress_positive",
+    "at_least_four_symbols_positive",
+    "positive_months_over_half",
+    "slot_drawdown_within_limit",
+    "largest_positive_symbol_share_at_most_half"
+  ],
+  "result_digest": "b66fbf17c6ad7de1c9a5d8295af7f74bfc8395eeaee183919733c379af1039a1",
+  "content_digest": "ca3cb67f2ce825eca60b350a9925ede6683cd1a9b80a32f0e6f6639c3846da76"
+}

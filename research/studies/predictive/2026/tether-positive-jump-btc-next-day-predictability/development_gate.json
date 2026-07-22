@@ -1,0 +1,43 @@
+{
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "eligible_fraction": true,
+    "bitfinex_hour_fraction": true,
+    "median_nonzero_hourly_returns": true,
+    "median_unique_hourly_closes": true,
+    "minimum_positive_bns_events": true,
+    "minimum_event_quarters": true,
+    "controlled_coefficient_negative": true,
+    "controlled_one_sided_hac": false,
+    "source_near_coefficient_negative": true,
+    "controlled_halves_negative": false,
+    "gross_event_short_positive": true,
+    "gross_event_short_positive_fraction": true,
+    "gross_event_short_halves": false,
+    "gross_event_short_bootstrap_lower": false,
+    "event_exceeds_unconditional_short": true,
+    "daily_plan_feasibility_positive": false,
+    "daily_plan_feasibility_halves": false,
+    "daily_plan_feasibility_bootstrap_lower": false,
+    "quarter_concentration": false,
+    "fixed_threshold_coefficient_negative": true,
+    "fixed_threshold_one_sided_hac": false
+  },
+  "failed_checks": [
+    "controlled_one_sided_hac",
+    "controlled_halves_negative",
+    "gross_event_short_halves",
+    "gross_event_short_bootstrap_lower",
+    "daily_plan_feasibility_positive",
+    "daily_plan_feasibility_halves",
+    "daily_plan_feasibility_bootstrap_lower",
+    "quarter_concentration",
+    "fixed_threshold_one_sided_hac"
+  ],
+  "analysis_digest": "1bb01a250b7953cfff2e2e9ea8db6e68fce42094eb99976b93cf5988f57a887c",
+  "data_quality_digest": "1611b831ac39d404c9cbd6e1b09706796aa4396ae1d3dbf154cd4d552131f072",
+  "later_stage_status": "sealed_or_not_applicable",
+  "content_digest": "10ca66354bad7e12f9fd6643f5c086ba2e5b6ef045bb7a67f50168bb2577137e"
+}

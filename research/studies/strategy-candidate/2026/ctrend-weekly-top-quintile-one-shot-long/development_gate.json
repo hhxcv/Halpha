@@ -1,0 +1,38 @@
+{
+  "created_at_utc": "2026-07-22T06:41:14.769025Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "minimum_150_trades": true,
+    "minimum_20_symbols": true,
+    "minimum_45_entry_dates": false,
+    "excluded_missing_marks_at_most_2pct": true,
+    "model_failure_fraction_at_most_5pct": false,
+    "median_at_least_5_selected_features": true,
+    "base_after_hurdle_positive": true,
+    "stress_after_hurdle_positive": true,
+    "stress_bootstrap_lower_positive": false,
+    "both_halves_base_positive": true,
+    "date_portfolio_drawdown_above_minus_20pct": true,
+    "worst_symbol_drawdown_above_minus_45pct": true,
+    "base_beats_mom21": true,
+    "base_beats_sma20": true,
+    "base_beats_scheduled_long": true,
+    "gross_excess_vs_market_positive": true,
+    "gross_excess_bootstrap_lower_positive": true,
+    "at_least_two_of_three_neighbors_stress_nonnegative": true,
+    "at_least_half_eligible_targets_positive": true,
+    "at_least_four_categories_positive": true,
+    "largest_positive_pnl_share_at_most_20pct": false,
+    "vectorbt_manual_reconciliation": true
+  },
+  "failed": [
+    "minimum_45_entry_dates",
+    "model_failure_fraction_at_most_5pct",
+    "stress_bootstrap_lower_positive",
+    "largest_positive_pnl_share_at_most_20pct"
+  ],
+  "evidence_digest": "2e22b61e6f1492441d09fcd0fe54dc3ee4861b41a652283712f9ba12e372e644",
+  "content_digest": "dab7260fb06aeebc62b82c32fff9ea00d50ed278b5f32e574faae4d4d839ae0e"
+}

@@ -1,0 +1,38 @@
+{
+  "generated_at_utc": "2026-07-22T14:37:42.783677+00:00",
+  "dataset": "Zaremba (2026) RepOD V1 weekly crypto factor portfolio returns",
+  "persistent_id": "doi:10.18150/IIVQQE",
+  "license": "CC0-1.0",
+  "tabular_sha256": "8d7683c6fed20afac76f73cf728b7e77392b21655377631310ec76a452b4e0af",
+  "equal_weighted_bidask": {
+    "usable_observations": 325,
+    "dated_observations": 325,
+    "undated_numeric_observations": 0,
+    "first_date": "2018-01-01",
+    "last_date": "2024-06-24",
+    "weekly_mean": 0.006607541294086967,
+    "annualized_arithmetic_mean": 0.3435921472925223,
+    "conventional_iid_t": 2.177841119247604,
+    "positive_fraction": 0.56,
+    "first_half_weekly_mean": 0.004224050504964809,
+    "second_half_weekly_mean": 0.008976409440331075
+  },
+  "value_weighted_bidask": {
+    "usable_observations": 325,
+    "dated_observations": 324,
+    "undated_numeric_observations": 1,
+    "first_date": "2018-01-08",
+    "last_date": "2024-06-24",
+    "weekly_mean": 0.020853693083079394,
+    "annualized_arithmetic_mean": 1.0843920403201284,
+    "conventional_iid_t": 3.864821338109993,
+    "positive_fraction": 0.6369230769230769,
+    "first_half_weekly_mean": 0.018341218042149006,
+    "second_half_weekly_mean": 0.02335075416670345
+  },
+  "paper_reported_value_weighted_zero_cost_annualized_mean": 1.0781,
+  "absolute_difference_from_reported": 0.0062920403201283115,
+  "interpretation": "Approximate independent check only: the Dataverse tabular export has an early malformed value-weighted row, one trailing numeric value without a date, and may not preserve all paper formatting conventions.",
+  "used_in_halpha_gate": false,
+  "content_digest": "39f7cffd28fdf89873d8db0020ca80b20e65e639a9470e4ad939622869559a51"
+}

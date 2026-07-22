@@ -1,0 +1,110 @@
+{
+  "created_at_utc": "2026-07-22T11:43:53.314328+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "PREDICTIVE",
+  "question": "Does intermediate market-controlled VIX-innovation beta predict next-week mature-perpetual returns at strategy-worthy magnitude?",
+  "replication_status": "Operational post-publication adaptation of Han 2024; not a numerical replication.",
+  "evidence_boundary": "All stages start after the paper sample, but broad crypto paths were exposed in earlier Halpha work.",
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "data_start": "2022-01-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-22T00:00:00Z",
+  "stages": {
+    "development": [
+      "2023-03-04T00:00:00Z",
+      "2024-03-02T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-03-02T00:00:00Z",
+      "2025-03-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-03-01T00:00:00Z",
+      "2026-07-18T00:00:00Z"
+    ]
+  },
+  "expected_weeks": {
+    "development": 52,
+    "evaluation": 52,
+    "confirmation": 72
+  },
+  "windows": {
+    "primary_36w": 36,
+    "diagnostic_26w": 26,
+    "diagnostic_52w": 52
+  },
+  "config": {
+    "predictor_id": "RESEARCH_INTERMEDIATE_VIX_BETA_36W_NEXT_WEEK_V1",
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "minimum_rankable": 20,
+    "tail_fraction": 0.2,
+    "vix_ar_minimum_weeks": 52,
+    "vix_ar_start": "2019-01-05T00:00:00Z",
+    "action_gap_days": 2,
+    "target_days": 7,
+    "stress_round_trip_underlying": 0.0052,
+    "economic_notional_fraction": 0.25,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 4,
+    "minimum_positive_spread_fraction": 0.55,
+    "minimum_selected_symbols": 10,
+    "minimum_positive_symbol_fraction": 0.5,
+    "maximum_positive_contribution_share": 0.4,
+    "maximum_abs_score_control_correlation": 0.9
+  },
+  "sources": {
+    "cboe_vix": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv",
+    "binance_base": "https://fapi.binance.com"
+  },
+  "frozen_file_sha256": {
+    "README.md": "abd5242aa187be2c4822bd28bf42bda79338e23bc59b2e580d9fc55e5106bb32",
+    "sources.md": "504aff46f82f3f73210b1d6316a811bf7053c848c331c2e0bd4cf2a8535f6bc0",
+    "preregistration.md": "128444718daa7ec9f2b875a9a03aceecf9e6ad3fa84a734409fa4a5264b8622d",
+    "study.py": "48366f4a52a157c0258626abd010ec2cbbfe878eca2e0dcae0f4232888a05236"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1",
+  "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS",
+  "content_digest": "b07b8e6290531c4a2754d683028319fffcc34689bc7192825483cd616eab7c85"
+}

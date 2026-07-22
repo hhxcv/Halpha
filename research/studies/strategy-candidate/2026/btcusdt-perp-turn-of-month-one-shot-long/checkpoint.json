@@ -1,0 +1,106 @@
+{
+  "created_at_utc": "2026-07-22T11:29:52.874962Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Can the conventional BTC turn-of-month window qualify as a realistic monthly one-shot perpetual plan?",
+  "evidence_boundary": "Primary published samples end in 2021, so development is post-publication; broad BTC paths were exposed by earlier Halpha work, but this exact rule was not calculated.",
+  "symbol": "BTCUSDT",
+  "data_start": "2021-12-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-05T00:00:00Z",
+  "research_cutoff": "2026-07-04T00:00:00Z",
+  "stages": {
+    "development": [
+      "2022-01-01T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ]
+  },
+  "expected_plans": {
+    "development": 24,
+    "evaluation": 12,
+    "confirmation": 18
+  },
+  "variants": {
+    "primary": {
+      "schedule": "tom",
+      "entry_offset": 0,
+      "exit_offset": 4
+    },
+    "tom3": {
+      "schedule": "tom",
+      "entry_offset": 0,
+      "exit_offset": 3
+    },
+    "tom5": {
+      "schedule": "tom",
+      "entry_offset": 1,
+      "exit_offset": 4
+    },
+    "midmonth": {
+      "schedule": "midmonth"
+    },
+    "month_long": {
+      "schedule": "month_long"
+    }
+  },
+  "config": {
+    "strategy_id": "RESEARCH_BTCUSDT_TOM_LAST_TO_DAY4_LONG_0P5X_V1",
+    "weight": 0.5,
+    "annual_capital_hurdle": 0.04,
+    "annual_research_program_haircut": 0.02,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "funding_stress": {
+      "positive_rate_multiplier": 1.5,
+      "negative_rate_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_months": 3,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 7,
+    "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS"
+  },
+  "study_py_sha256": "ad8545363bd4da25f63a78628ced2454e323a1db5a342b6c306dd1039ff88a76",
+  "engine_path": "research\\studies\\strategy-candidate\\2026\\trxusdt-perp-monthly-one-shot-voltarget\\study.py",
+  "engine_sha256": "083f152198a9ac488c65da1b9e7801983409397bdf82707fad13273f3d0e7e6a",
+  "preregistration_sha256": "cdd92cceddcd7857c9a65a53c811748c5a0ba0d3ca5a6fed14598d4eb91ec233",
+  "sources_sha256": "797f6addc718820e444670ff921938c7a5c3c6fb32e69a923cdc143cfbb80d72",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1",
+  "content_digest": "427ab6c636fa834a3241aff5d93ee3487f58390113b699def9efb3972f3ef745"
+}

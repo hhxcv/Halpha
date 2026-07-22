@@ -1,0 +1,92 @@
+{
+  "checked_at_utc": "2026-07-22T00:26:39.867133Z",
+  "symbols": {
+    "ALGOUSDT": {
+      "status": "PASS",
+      "bar_rows": 1703,
+      "bar_first": "2020-11-01T00:00:00+00:00",
+      "bar_last": "2025-06-30T00:00:00+00:00",
+      "missing_daily_bars": 0,
+      "missing_first_10": [],
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 5109,
+      "funding_first": "2020-11-01T00:00:00+00:00",
+      "funding_last": "2025-06-30T16:00:00.002000+00:00",
+      "median_quote_volume": 47605428.76927
+    },
+    "COMPUSDT": {
+      "status": "PASS",
+      "bar_rows": 1703,
+      "bar_first": "2020-11-01T00:00:00+00:00",
+      "bar_last": "2025-06-30T00:00:00+00:00",
+      "missing_daily_bars": 0,
+      "missing_first_10": [],
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 5109,
+      "funding_first": "2020-11-01T00:00:00+00:00",
+      "funding_last": "2025-06-30T16:00:00.002000+00:00",
+      "median_quote_volume": 31438136.14198
+    },
+    "THETAUSDT": {
+      "status": "PASS",
+      "bar_rows": 1703,
+      "bar_first": "2020-11-01T00:00:00+00:00",
+      "bar_last": "2025-06-30T00:00:00+00:00",
+      "missing_daily_bars": 0,
+      "missing_first_10": [],
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 5109,
+      "funding_first": "2020-11-01T00:00:00+00:00",
+      "funding_last": "2025-06-30T16:00:00.002000+00:00",
+      "median_quote_volume": 45523835.61967
+    },
+    "VETUSDT": {
+      "status": "PASS",
+      "bar_rows": 1703,
+      "bar_first": "2020-11-01T00:00:00+00:00",
+      "bar_last": "2025-06-30T00:00:00+00:00",
+      "missing_daily_bars": 0,
+      "missing_first_10": [],
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 5109,
+      "funding_first": "2020-11-01T00:00:00+00:00",
+      "funding_last": "2025-06-30T16:00:00.002000+00:00",
+      "median_quote_volume": 35758951.27974
+    },
+    "XTZUSDT": {
+      "status": "PASS",
+      "bar_rows": 1703,
+      "bar_first": "2020-11-01T00:00:00+00:00",
+      "bar_last": "2025-06-30T00:00:00+00:00",
+      "missing_daily_bars": 0,
+      "missing_first_10": [],
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 5109,
+      "funding_first": "2020-11-01T00:00:00+00:00",
+      "funding_last": "2025-06-30T16:00:00.002000+00:00",
+      "median_quote_volume": 30710583.6141
+    },
+    "ZECUSDT": {
+      "status": "PASS",
+      "bar_rows": 1703,
+      "bar_first": "2020-11-01T00:00:00+00:00",
+      "bar_last": "2025-06-30T00:00:00+00:00",
+      "missing_daily_bars": 0,
+      "missing_first_10": [],
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "funding_rows": 5109,
+      "funding_first": "2020-11-01T00:00:00+00:00",
+      "funding_last": "2025-06-30T16:00:00.002000+00:00",
+      "median_quote_volume": 34008120.04373
+    }
+  },
+  "overall": "PASS",
+  "source_manifest_sha256": "57f63438fef28c70fe4c7ed9f345b700e0c70058e3f9cf1798c71054107c82b3",
+  "content_digest": "863bbff6568b5e3b48ee25d3b083e4a30c54ee514bbbca8cde3b5482d2f2d9b9"
+}

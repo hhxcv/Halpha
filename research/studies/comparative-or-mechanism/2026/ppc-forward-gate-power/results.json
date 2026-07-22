@@ -1,0 +1,167 @@
+{
+  "as_of": "2026-07-22",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "research_kind": "COMPARATIVE_OR_MECHANISM",
+  "question": "Can 26 eligible frozen PPC forward weeks reliably detect a 50 bp weekly net edge under the existing core evidence gate?",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "source": {
+    "path": "research/studies/strategy-candidate/2026/price-path-continuity-weekly-winner-long/development_main_trades.csv",
+    "sha256": "8c3b0ce004fba8bf788c0b28a0b70d63475ffd2c1e3cfc1c6fc06a6930adbf3e",
+    "trades": 88,
+    "entry_dates": 40
+  },
+  "empirical_calibration": {
+    "observed_mean_disclosed_not_used_as_effect": 0.0050566131619865185,
+    "standard_deviation": 0.04867436804524297,
+    "minimum": -0.049969032871418836,
+    "maximum": 0.22200259707986697,
+    "skew": 2.6779829577466923,
+    "excess_kurtosis": 9.820852018289669,
+    "centered_mean_used_in_simulation": 6.938893903907229e-19
+  },
+  "primary_26_weeks": {
+    "effect": 0.005,
+    "block_weeks": 4,
+    "method": "EXACT_NESTED_PERCENTILE_BOOTSTRAP",
+    "mean_gate_power": 0.0614,
+    "mean_gate_wilson_95pct": [
+      0.055076678775241784,
+      0.06839674937096234
+    ],
+    "joint_power": 0.0592,
+    "joint_wilson_95pct": [
+      0.05299073527956573,
+      0.06608607075519665
+    ],
+    "null_joint_false_positive": 0.0178,
+    "null_joint_false_positive_wilson_95pct": [
+      0.014487945592163865,
+      0.02185242616364923
+    ]
+  },
+  "exact_26_week_effect_curve": {
+    "0.0000": {
+      "effect": 0.0,
+      "mean_gate_power": 0.0186,
+      "mean_gate_wilson_95pct": [
+        0.015207890540775303,
+        0.0227312528919257
+      ],
+      "joint_power": 0.0178,
+      "joint_wilson_95pct": [
+        0.014487945592163865,
+        0.02185242616364923
+      ],
+      "outer_draws": 5000,
+      "inner_draws": 5000
+    },
+    "0.0025": {
+      "effect": 0.0025,
+      "mean_gate_power": 0.0342,
+      "mean_gate_wilson_95pct": [
+        0.029509294247072167,
+        0.03960589688494306
+      ],
+      "joint_power": 0.0328,
+      "joint_wilson_95pct": [
+        0.02821060570117788,
+        0.03810673499628352
+      ],
+      "outer_draws": 5000,
+      "inner_draws": 5000
+    },
+    "0.0050": {
+      "effect": 0.005,
+      "mean_gate_power": 0.0614,
+      "mean_gate_wilson_95pct": [
+        0.055076678775241784,
+        0.06839674937096234
+      ],
+      "joint_power": 0.0592,
+      "joint_wilson_95pct": [
+        0.05299073527956573,
+        0.06608607075519665
+      ],
+      "outer_draws": 5000,
+      "inner_draws": 5000
+    },
+    "0.0075": {
+      "effect": 0.0075,
+      "mean_gate_power": 0.1082,
+      "mean_gate_wilson_95pct": [
+        0.09988869229197203,
+        0.11711287895217476
+      ],
+      "joint_power": 0.1048,
+      "joint_wilson_95pct": [
+        0.09661131057076798,
+        0.11359548104660518
+      ],
+      "outer_draws": 5000,
+      "inner_draws": 5000
+    },
+    "0.0100": {
+      "effect": 0.01,
+      "mean_gate_power": 0.1786,
+      "mean_gate_wilson_95pct": [
+        0.16823145223116925,
+        0.18946202657911354
+      ],
+      "joint_power": 0.1734,
+      "joint_wilson_95pct": [
+        0.1631579025116181,
+        0.18414356039889324
+      ],
+      "outer_draws": 5000,
+      "inner_draws": 5000
+    }
+  },
+  "first_horizon_reaching_80pct_joint_power_for_50bp": "NOT_DETERMINED; long-horizon curve is non-equivalent diagnostic only",
+  "reference_threshold_curve_max_50bp_joint_power_not_gate_equivalent": 0.48536,
+  "planning_interpretation": "26 eligible weeks remains the first checkpoint, not a decision-ready horizon",
+  "strategy_rule_changed": false,
+  "sealed_market_stage_opened": false,
+  "product_effects": "NONE",
+  "config": {
+    "candidate_id": "RESEARCH_PPC14_TOP_TERCILE_MOM14_TOP_TERCILE_WEEKLY_LONG_0P25X_V1",
+    "annual_capital_hurdle": 0.04,
+    "hold_days": 7,
+    "expected_trades": 88,
+    "expected_entry_dates": 40,
+    "block_lengths": [
+      1,
+      4,
+      8
+    ],
+    "primary_block_length": 4,
+    "sample_sizes": [
+      26,
+      52,
+      78,
+      104,
+      156,
+      208,
+      260,
+      312,
+      416,
+      520
+    ],
+    "effects": [
+      0.0,
+      0.0025,
+      0.005,
+      0.0075,
+      0.01
+    ],
+    "primary_effect": 0.005,
+    "draws": 25000,
+    "exact_outer_draws": 5000,
+    "exact_inner_draws": 5000,
+    "exact_inner_seed": 20260722,
+    "seed": 2026072201,
+    "power_target": 0.8,
+    "false_positive_limit": 0.05
+  },
+  "study_py_sha256": "5f42b195bdd323316cb7b0da592aba8b8b053ed4711754a1b43a1e5ca17332c6",
+  "content_digest": "528a87c1982cd4a632ed5b781b979c3e1f01a91b4ea57c0f91d8780b175e0a11"
+}

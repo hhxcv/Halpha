@@ -1,0 +1,79 @@
+{
+  "created_at_utc": "2026-07-22T01:29:30.873687Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does a maintainable 1-minute proxy for quarter-hour opening order imbalance predict tradeable 12-hour USD-M returns after costs and funding?",
+  "evidence_boundary": "The source paper ends 2024-10-31. Other paths on these assets are exposed; this exact 1m proxy and staged economic output are unviewed.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT"
+  ],
+  "data_start": "2024-10-01T00:00:00+00:00",
+  "data_end_exclusive": "2026-07-01T00:00:00+00:00",
+  "stages": {
+    "development": [
+      "2024-11-01T00:00:00+00:00",
+      "2025-07-01T00:00:00+00:00"
+    ],
+    "evaluation": [
+      "2025-07-01T00:00:00+00:00",
+      "2026-01-01T00:00:00+00:00"
+    ],
+    "confirmation": [
+      "2026-01-01T00:00:00+00:00",
+      "2026-07-01T00:00:00+00:00"
+    ]
+  },
+  "config": {
+    "strategy_id": "RESEARCH_QH_1M_TAKER_IMBALANCE_12H_0P25X_V1",
+    "signal_hours": [
+      0,
+      12
+    ],
+    "signal_minute": 15,
+    "placebo_minute": 22,
+    "rolling_observations": 60,
+    "lower_quantile": 0.25,
+    "upper_quantile": 0.75,
+    "hold_hours": 12,
+    "notional_fraction": 0.25,
+    "annual_capital_hurdle": 0.04,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    }
+  },
+  "study_py_sha256": "5e959bc8ec7a603f9a9a514b1f8e7cf482a746adf3e23c259e9d73e69337a908",
+  "preregistration_sha256": "a903c9f8a86226b07f3621f766eb2db3ae7270f3b9af23646ad23404ef65eded",
+  "sources_sha256": "23ffc2a132cab5d3bb9df131eb40b8d92b5ae657d8c4ab4ef1d332638f916262",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1",
+  "content_digest": "20618eafa5d3c9fb2d1083835020f7522eaa66765fdf02284aeb56164d968b6e"
+}

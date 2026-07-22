@@ -1,0 +1,173 @@
+{
+  "created_at_utc": "2026-07-22T08:19:11.882364Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does the externally-prioritized high-volatility concentration of medium-horizon crypto reversal qualify a fixed-target RV28-high-half/MOM70-bottom30 0.25x LONG 7d plan after retail costs, funding, hurdle, conditional/simple baselines, robustness, risk and sequential 2024-2026Q2 evidence?",
+  "known_exposure": "Q17 unconditional MOM70 2022-2023 is DOES_NOT_SUPPORT. High-vol conditioning was externally specified before Q17 outcome and has not been computed on 2024. External literature overlaps 2024-2026Q1; only 2026Q2 is a short post-paper slice.",
+  "family_stop_rule": "If this fixed high-volatility condition fails, do not search size, volatility cutoff, formation window, symbol or direction neighbors in the medium-horizon reversal family.",
+  "configuration": {
+    "strategy_id": "RESEARCH_RV28_HIGH_HALF_MOM70_BOTTOM30_WEEKLY_LONG_0P25X_V1",
+    "direction": "LONG_ONLY",
+    "hold_days": 7,
+    "notional_fraction": 0.25,
+    "high_volatility_fraction": 0.5,
+    "loser_fraction": 0.3,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "annual_capital_hurdle": 0.04,
+    "cooldown_full_days": 1,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "main": {
+      "volatility_days": 28,
+      "momentum_days": 70
+    },
+    "diagnostics": [
+      "rv21",
+      "rv42",
+      "mom56",
+      "lowvol_loser",
+      "unconditional_loser",
+      "highvol_winner",
+      "highvol_scheduled",
+      "market_long"
+    ]
+  },
+  "stages": {
+    "development": [
+      "2024-01-01T00:00:00Z",
+      "2024-12-30T00:00:00Z"
+    ],
+    "evaluation": [
+      "2025-01-06T00:00:00Z",
+      "2025-12-29T00:00:00Z"
+    ],
+    "confirmation": [
+      "2026-04-06T00:00:00Z",
+      "2026-06-29T00:00:00Z"
+    ]
+  },
+  "fetch_stage": {
+    "confirmation": {
+      "fetch_start": "2026-01-01T00:00:00Z",
+      "start": "2026-04-01T00:00:00Z",
+      "end_exclusive": "2026-07-01T00:00:00Z"
+    }
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "categories": {
+    "DeFi": [
+      "AAVEUSDT",
+      "CRVUSDT",
+      "KAVAUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "UNIUSDT"
+    ],
+    "Infrastructure": [
+      "ENSUSDT",
+      "LINKUSDT"
+    ],
+    "Layer-1": [
+      "AVAXUSDT",
+      "BNBUSDT",
+      "HBARUSDT",
+      "NEARUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "VETUSDT"
+    ],
+    "Layer-2": [
+      "XLMUSDT"
+    ],
+    "Payment": [
+      "1000XECUSDT",
+      "BCHUSDT",
+      "LTCUSDT",
+      "XRPUSDT"
+    ],
+    "PoW": [
+      "DASHUSDT",
+      "ETCUSDT",
+      "XMRUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ]
+  },
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "computed_columns": 9
+  },
+  "stage_open_rule": "development -> evaluation -> confirmation fetch/analyze",
+  "frozen_file_sha256": {
+    "README.md": "986022176decedbd557a8a8ab41ccc132d8490de78344f5ddeb6f6504613a9f5",
+    "preregistration.md": "2cf53f2c84b91762bacb537a6102bc1c7dd97b3e31334527cc14dc14ba880503",
+    "sources.md": "ad2a43bdee5974c87a10ccc05a68448c9c4e66c7bffe8dfaf7a286ce88ecd63e",
+    "study.py": "b0bb45b04ac0ef420f61a251149912b7569441c310c7a8d8dd4a0708d3ccaae2"
+  },
+  "source_reuse_digest": "704aa9c4c656eb349c9e6d4cdad6fc234c7099b2e502261a6811ff0b7a2ad92e",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "vectorbt": "1.1.0"
+  },
+  "confirmation_cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\high-volatility-ten-week-loser\\2026-07-22-v1",
+  "allowed_after_checkpoint": "Create deterministic stage artifacts and, only after evaluation PASS, fetch the frozen public confirmation range. Implementation-only fixes require amendments; no economic-rule changes.",
+  "content_digest": "e55ade04b3f464e1347884d4c3da6c295d3b6a176fd28a1d24299f48a0760d05"
+}

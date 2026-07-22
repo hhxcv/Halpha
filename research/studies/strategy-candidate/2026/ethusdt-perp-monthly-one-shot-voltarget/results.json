@@ -1,0 +1,145 @@
+{
+  "generated_at_utc": "2026-07-22T11:03:52.972414Z",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "claim": "ETH monthly capped volatility-target risk-premium plan, not Alpha proof",
+  "available_stages": [
+    "development"
+  ],
+  "stage_gate_status": {
+    "development": "FAIL"
+  },
+  "stage_primary": {
+    "development": {
+      "plans": 24,
+      "mean_weight": 0.08868088019712982,
+      "minimum_weight": 0.049315680583167036,
+      "maximum_weight": 0.13049280787191941,
+      "funding_events": 2191,
+      "actual_funding_return_arithmetic_sum": -0.04098171222304042,
+      "stress_funding_return_arithmetic_sum": -0.06542524029951602,
+      "maximum_vectorbt_reconciliation_error": 2.0816681711721685e-17,
+      "by_year": {
+        "2021": {
+          "favorable": 0.13471751273116683,
+          "base": 0.1323505894192767,
+          "stress": 0.10768735531905227
+        },
+        "2022": {
+          "favorable": -0.09340320881646025,
+          "base": -0.09542983789770432,
+          "stress": -0.1011333355231454
+        }
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": 0.028731255941843337,
+          "annualized_return": 0.014263898569718103,
+          "annualized_volatility": 0.09601361843998737,
+          "sharpe_zero_rf": 0.1958295122145138,
+          "daily_max_drawdown": -0.1336962273393062,
+          "monthly_mean_bootstrap_95pct": [
+            -0.00804366381384421,
+            0.00991861560594983
+          ],
+          "return_after_4pct_annual_hurdle": -0.048880125793414164,
+          "return_after_6pct_combined_hurdle": -0.08443284448038169
+        },
+        "base": {
+          "total_return": 0.02429055622762477,
+          "annualized_return": 0.012072406613096387,
+          "annualized_volatility": 0.09598320631254671,
+          "sharpe_zero_rf": 0.1737439914402234,
+          "daily_max_drawdown": -0.13493325017673063,
+          "monthly_mean_bootstrap_95pct": [
+            -0.008219316791353171,
+            0.00974655443099616
+          ],
+          "return_after_4pct_annual_hurdle": -0.052985802304341134,
+          "return_after_6pct_combined_hurdle": -0.08838505141720843
+        },
+        "stress": {
+          "total_return": -0.004336761641175246,
+          "annualized_return": -0.002170736869866685,
+          "annualized_volatility": 0.09601630650151664,
+          "sharpe_zero_rf": 0.026548744149406656,
+          "daily_max_drawdown": -0.142586654574259,
+          "monthly_mean_bootstrap_95pct": [
+            -0.009061907771633723,
+            0.008024099956521709
+          ],
+          "return_after_4pct_annual_hurdle": -0.07945336690197424,
+          "return_after_6pct_combined_hurdle": -0.11386326240759648
+        }
+      }
+    }
+  },
+  "stage_fixed_quarter_long": {
+    "development": {
+      "plans": 24,
+      "mean_weight": 0.25,
+      "minimum_weight": 0.25,
+      "maximum_weight": 0.25,
+      "funding_events": 2191,
+      "actual_funding_return_arithmetic_sum": -0.12574330914105913,
+      "stress_funding_return_arithmetic_sum": -0.19964356789950813,
+      "maximum_vectorbt_reconciliation_error": 7.28583859910259e-17,
+      "by_year": {
+        "2021": {
+          "favorable": 0.45236181527543007,
+          "base": 0.44325064250620727,
+          "stress": 0.3510476441534345
+        },
+        "2022": {
+          "favorable": -0.18374606097344393,
+          "base": -0.1885423163777249,
+          "stress": -0.20214241858403648
+        }
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": 0.1854960526103293,
+          "annualized_return": 0.08880487352432875,
+          "annualized_volatility": 0.25829351059411654,
+          "sharpe_zero_rf": 0.45903308751513566,
+          "daily_max_drawdown": -0.28747842259665335,
+          "monthly_mean_bootstrap_95pct": [
+            -0.014748013310349433,
+            0.031814892800320585
+          ],
+          "return_after_4pct_annual_hurdle": 0.09605774094889896,
+          "return_after_6pct_combined_hurdle": 0.055087266474127095
+        },
+        "base": {
+          "total_return": 0.17113682325444723,
+          "annualized_return": 0.08219075178752444,
+          "annualized_volatility": 0.2582610431796932,
+          "sharpe_zero_rf": 0.4359183538432933,
+          "daily_max_drawdown": -0.2899393495278756,
+          "monthly_mean_bootstrap_95pct": [
+            -0.015235412435169439,
+            0.03127486266170218
+          ],
+          "return_after_4pct_annual_hurdle": 0.0827818262337714,
+          "return_after_6pct_combined_hurdle": 0.04230760346604412
+        },
+        "stress": {
+          "total_return": 0.07794360574199444,
+          "annualized_return": 0.03824062998035016,
+          "annualized_volatility": 0.2588276601799789,
+          "sharpe_zero_rf": 0.27584787672499433,
+          "daily_max_drawdown": -0.29715527878010595,
+          "monthly_mean_bootstrap_95pct": [
+            -0.017370955287107876,
+            0.02570274098070852
+          ],
+          "return_after_4pct_annual_hurdle": -0.0033805420284815924,
+          "return_after_6pct_combined_hurdle": -0.04063402835351171
+        }
+      }
+    }
+  },
+  "evidence_limit": "Earlier Halpha research exposed the ETH market paths. Sequential exact-rule evidence and program haircut reduce, but do not eliminate, research-program selection risk.",
+  "handoff_status": "RESEARCH_ONLY; product qualification required; no product object generated",
+  "product_effects": "NONE",
+  "content_digest": "7c4b83fab9a404fffd90398c52b2c69eddba493bd1e38096409cd788859137cc"
+}

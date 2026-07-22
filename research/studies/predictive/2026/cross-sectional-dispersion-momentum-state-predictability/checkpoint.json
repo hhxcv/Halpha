@@ -1,0 +1,104 @@
+{
+  "created_at_utc": "2026-07-22T10:30:25.623461+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "PREDICTIVE",
+  "question": "Does lagged cross-sectional daily-return dispersion incrementally predict weaker next-week MOM20 top-minus-bottom returns, and does the low-dispersion state leave enough gross room for a separate semi-automatic one-shot strategy study?",
+  "replication_status": "Transparent weekly top-long Halpha adaptation of Zhang-Makgolo 2026; not a performance replication of their dynamic daily long-short CoinGecko study.",
+  "known_exposure": "Underlying 2022-2023 prices were viewed in prior Halpha questions, but daily CSSD states, conditional MOM20 spreads and regressions were not calculated before this checkpoint.",
+  "support_limit": "A pass releases only a separate strategy-cost question; it is not a strategy handoff or long-term profitability claim.",
+  "family_stop_rule": "On failure do not search dispersion smoothing, threshold, lookback, momentum window, universe, state direction or holding period without new independent evidence.",
+  "configuration": {
+    "predictor_id": "RESEARCH_CSSD_MOM20_STATE_PREDICTABILITY_V1",
+    "state_history_start": "2021-01-01T00:00:00Z",
+    "main_momentum_days": 20,
+    "neighbor_momentum_days": [
+      14,
+      30
+    ],
+    "daily_history_days": 61,
+    "minimum_dispersion_history_days": 252,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "market_volatility_days": 30,
+    "correlation_days": 60,
+    "tail_fraction": 0.2,
+    "target_days": 7,
+    "notional_fraction": 0.25,
+    "stress_round_trip_underlying": 0.0052,
+    "annual_full_plan_hurdle": 0.04,
+    "conditional_underlying_floor": 0.008276923076923078,
+    "minimum_action_weeks": 80,
+    "minimum_state_weeks": 30,
+    "minimum_selected_symbols": 15,
+    "minimum_positive_symbol_fraction": 0.5,
+    "maximum_positive_contribution_share": 0.4,
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_lags": 4
+  },
+  "stages": {
+    "development": [
+      "2022-01-03T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2024-12-30T00:00:00Z"
+    ]
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "fixed_neighbor_checks": 3
+  },
+  "stage_open_rule": "development -> evaluation; evaluation sealed until all development hard gates pass",
+  "frozen_file_sha256": {
+    "README.md": "f54a8519866f48687faffe5b2c78dd250ab528daf72b09b90602e672bcee9249",
+    "sources.md": "7d1d65a83b6cb3f119925d5f3fea4f05d1dcd7b01942f8d182b74a8f2644cf9e",
+    "preregistration.md": "cc7fb4a9bee202622255d1b3f96829d19c5d191d33427256f71c6f74776e22b9",
+    "study.py": "b38856ef0cf305b274469227bb374edf8f41610207ee0ad275c0fae96e3913dd"
+  },
+  "source_reuse_digest": "13384ebcf9ad50e23009e5e7f28fe99c48fbf09801042717bdb4d6e3e5beb02f",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "content_digest": "61dc5e7ad9c5a2827561fceb9509402e87867d266cea58137969520cd996f373"
+}

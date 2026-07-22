@@ -1,0 +1,14 @@
+{
+  "created_at_utc": "2026-07-22T09:35:00Z",
+  "checkpoint_digest": "d1173deb1f62dca2e90a37a9031d0232c524e29263d0190ae87a652911cbabce",
+  "original_study_sha256": "b47c515f1b86cc6a9498fb81b29eea6434ba7b05badcc47d44a5a58204e5c27b",
+  "amended_study_sha256": "47d62bbe4132a7609b539bb532acd9b6338c67b321a8f4cc9d1ea96ecf97c015",
+  "reason": "Development analysis completed trade calculations but stopped before writing the evidence summary because the cooldown-matched scheduled-long diagnostic naturally has global NO_ACTION weeks while the comparison helper incorrectly required a trade on every main entry date. Frozen semantics require those diagnostic baseline NO_ACTION dates to remain cash, while MOM14 and no-cooldown market baselines still require exact date coverage.",
+  "changes": [
+    "Allow only an explicitly requested diagnostic comparison to fill baseline NO_ACTION dates as zero cash return.",
+    "Record the count of cash-filled diagnostic dates in the comparison output.",
+    "Keep MOM14 and market baseline comparisons strict; do not change signals, trades, costs, gates or any primary economic rule."
+  ],
+  "economic_rule_changed": false,
+  "content_digest": "bddb12970a7a467aad7f9d9a2529b972243c814bd88f76f4adda5910a430ca80"
+}

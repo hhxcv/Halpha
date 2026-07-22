@@ -1,0 +1,290 @@
+{
+  "checked_at_utc": "2026-07-22T09:51:59.118889Z",
+  "stage": "development",
+  "status": "PASS",
+  "checkpoint_digest": "f995c7ee55aa5f1acc5710a1fe433fd6cc08521c96c87049250df1e79e1ee8aa",
+  "source_overlap": {
+    "overlap_mismatch_rows": 0,
+    "sources": [
+      "ctrend",
+      "category-development"
+    ]
+  },
+  "required_daily_range_inclusive": [
+    "2020-07-04T00:00:00+00:00",
+    "2024-01-01T00:00:00+00:00"
+  ],
+  "decision_input_availability": {
+    "minimum_rankable_on_action_weeks": 20,
+    "maximum_rankable": 25,
+    "global_no_action_dates": [
+      "2022-01-03T00:00:00+00:00",
+      "2022-01-10T00:00:00+00:00",
+      "2022-01-17T00:00:00+00:00",
+      "2022-01-24T00:00:00+00:00",
+      "2022-01-31T00:00:00+00:00",
+      "2022-02-07T00:00:00+00:00",
+      "2022-02-14T00:00:00+00:00",
+      "2022-02-21T00:00:00+00:00",
+      "2022-02-28T00:00:00+00:00",
+      "2022-03-07T00:00:00+00:00",
+      "2022-03-14T00:00:00+00:00",
+      "2022-03-21T00:00:00+00:00"
+    ]
+  },
+  "symbols": {
+    "1000XECUSDT": {
+      "daily_rows": 837,
+      "missing_days": 440,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "AAVEUSDT": {
+      "daily_rows": 1173,
+      "missing_days": 104,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "AVAXUSDT": {
+      "daily_rows": 1196,
+      "missing_days": 81,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "BCHUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "BNBUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "CRVUSDT": {
+      "daily_rows": 1218,
+      "missing_days": 59,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "DASHUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "ENSUSDT": {
+      "daily_rows": 763,
+      "missing_days": 514,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "ETCUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "HBARUSDT": {
+      "daily_rows": 1021,
+      "missing_days": 256,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "KAVAUSDT": {
+      "daily_rows": 1253,
+      "missing_days": 24,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "LINKUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 8,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "LTCUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "NEARUSDT": {
+      "daily_rows": 1174,
+      "missing_days": 103,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "RUNEUSDT": {
+      "daily_rows": 1215,
+      "missing_days": 62,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "SNXUSDT": {
+      "daily_rows": 1236,
+      "missing_days": 41,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "SOLUSDT": {
+      "daily_rows": 1205,
+      "missing_days": 72,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2259,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "TRXUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "UNIUSDT": {
+      "daily_rows": 1201,
+      "missing_days": 76,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "VETUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "XLMUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "XMRUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "XRPUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "ZECUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    },
+    "ZILUSDT": {
+      "daily_rows": 1277,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 2184,
+      "missing_mark_rows": 5,
+      "max_funding_gap_hours": 8.000007222222223,
+      "source_integrity": "PASS"
+    }
+  },
+  "parent_data_quality_sha256": "aa5eff14c82a10e975a2db2ab88a65242472e4bf4567a00c329927e7777a8ecf",
+  "rule": "No interpolation. Exact Saturday feature cutoff, full Sunday gap, Monday action; incomplete 547d or fewer than 20 targets is NO_ACTION.",
+  "content_digest": "589edd5e6be8cc7b51911625957dff048b5fed60070b8ccded1d642f3c199613"
+}

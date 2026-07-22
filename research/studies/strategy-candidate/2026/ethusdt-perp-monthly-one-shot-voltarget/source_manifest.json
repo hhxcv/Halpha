@@ -1,0 +1,147 @@
+{
+  "accessed_at_utc": "2026-07-22T11:02:28.325621Z",
+  "checkpoint_digest": "472823c9b055e624222dc755e9af98bcce27ff7b6760fef9983a0ff432894e11",
+  "source": "Binance public USD-M REST market data; no credentials",
+  "symbol": "ETHUSDT",
+  "data_start": "2020-10-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-02T00:00:00Z",
+  "kline_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=1d&startTime=1601510400000&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\klines\\openTime-000.json",
+      "bytes": 221093,
+      "sha256": "05ee72fbe0825f470cd9fa973375033f2dd60f6255b8465f372ed8c2a00d0a7d",
+      "rows": 1500,
+      "first_time_ms": 1601510400000,
+      "last_time_ms": 1731024000000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=1d&startTime=1731024000001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\klines\\openTime-001.json",
+      "bytes": 89299,
+      "sha256": "cf01f779109f2c2c29e87303d9c844ab211526a8cd3767c147542b522270fb97",
+      "rows": 600,
+      "first_time_ms": 1731110400000,
+      "last_time_ms": 1782864000000
+    }
+  ],
+  "mark_price_kline_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1601481600000&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-000.json",
+      "bytes": 178151,
+      "sha256": "7f2a7797a50f1e8bdc2424169ff8d4b1c6fa1ed8b79d5a4910f744cea922a05f",
+      "rows": 1500,
+      "first_time_ms": 1601481600000,
+      "last_time_ms": 1644652800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1644652800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-001.json",
+      "bytes": 179365,
+      "sha256": "28b7e7c9cfbc19b907311ee2630ae33aa2c05252200af19fd5eada90264ed6d2",
+      "rows": 1500,
+      "first_time_ms": 1644681600000,
+      "last_time_ms": 1687852800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1687852800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-002.json",
+      "bytes": 179236,
+      "sha256": "bc7a2680f6208deb36824cbb02537b88d5e048c5157f0a0bd3d3a92493dfe95b",
+      "rows": 1500,
+      "first_time_ms": 1687881600000,
+      "last_time_ms": 1731052800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1731052800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-003.json",
+      "bytes": 180100,
+      "sha256": "e2261cb80d655d0bf5a77a0e9dc7edaa354153d49f69e3339c80f5b19c7073b3",
+      "rows": 1500,
+      "first_time_ms": 1731081600000,
+      "last_time_ms": 1774252800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&interval=8h&startTime=1774252800001&endTime=1782950399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-004.json",
+      "bytes": 36139,
+      "sha256": "5e46563ebadc04f970d3f80ead1fe19c86abc882a3c00970ad3f6b61947cd659",
+      "rows": 301,
+      "first_time_ms": 1774281600000,
+      "last_time_ms": 1782921600000
+    }
+  ],
+  "funding_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1601510400000&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-000.json",
+      "bytes": 91043,
+      "sha256": "7510045b3bd4a13edf257112c3c5303a88600df56206c55c8415eb2bb4d18d85",
+      "rows": 1000,
+      "first_time_ms": 1601510400000,
+      "last_time_ms": 1630281600013
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1630281600014&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-001.json",
+      "bytes": 91209,
+      "sha256": "9f8e836c073fb1d5d8d16c0733d4c73c25abbf89ad19c5d828c0c5105d1f2bff",
+      "rows": 1000,
+      "first_time_ms": 1630310400008,
+      "last_time_ms": 1659081600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1659081600001&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-002.json",
+      "bytes": 91226,
+      "sha256": "1c7e58bab800df554356ba4d3608b64ae9744da21f98303718a8091db359c60b",
+      "rows": 1000,
+      "first_time_ms": 1659110400000,
+      "last_time_ms": 1687881600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1687881600001&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-003.json",
+      "bytes": 99168,
+      "sha256": "8dc417adbce81c8c2640b549c6e4df69f3fc28201f96bf0ed5d38e99e66c7a3f",
+      "rows": 1000,
+      "first_time_ms": 1687910400000,
+      "last_time_ms": 1716681600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1716681600001&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-004.json",
+      "bytes": 104118,
+      "sha256": "1f8840b30cb2ef30630f587d25df06326670775dfd4821b1ad11ca17a8c9c151",
+      "rows": 1000,
+      "first_time_ms": 1716710400000,
+      "last_time_ms": 1745481600001
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1745481600002&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-005.json",
+      "bytes": 104207,
+      "sha256": "99da6effbc85cc7c5d7ff940c92e1eaa3e7896203df34e6f5aec6eb61f18545e",
+      "rows": 1000,
+      "first_time_ms": 1745510400001,
+      "last_time_ms": 1774281600002
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1774281600003&endTime=1782950399999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\funding\\fundingTime-006.json",
+      "bytes": 31325,
+      "sha256": "e10a9a883bc976594af481eeb61bc83d3e1951f1aa25334d2c6b74a829628620",
+      "rows": 300,
+      "first_time_ms": 1774310400000,
+      "last_time_ms": 1782921600000
+    }
+  ],
+  "exchange_info": {
+    "url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1\\ETHUSDT\\raw\\exchangeInfo.json",
+    "bytes": 1042623,
+    "sha256": "a1797a6a832ad61d8ab16db3aeedd4c61bfb4813dc2920dc1e21ab543cf23244"
+  },
+  "content_digest": "183d5f6e449fd8475cb0466cfe73b0ddfd0c63962bcc2f02655c141ff9632b7c"
+}

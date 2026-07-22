@@ -1,0 +1,161 @@
+{
+  "created_at_utc": "2026-07-22T09:08:08.574929Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does a fixed configured liquid Binance USD-M target qualify a weekly 0.25x LONG only when its lagged 14-day return and rank-weighted price-path continuity are both in the cross-sectional top tercile, after a full-day gap, retail costs, funding, hurdle, simple baselines, robustness, breadth and sequential 2024-2025 evidence?",
+  "known_exposure": "Kim 2026 selected and tested PPC on a broad 2020-April-2026 crypto sample, and Halpha has viewed the underlying 2024-2025 market paths in other questions. Exact target-plan outputs remain unviewed, so sequencing prevents adaptation but cannot create post-publication market evidence.",
+  "support_limit": "Even if both historical stages pass, the current conclusion is capped at INSUFFICIENT_EVIDENCE. At least 26 eligible frozen-rule weeks spanning two market states must accrue after this checkpoint and pass unchanged gates before a separate question can consider product handoff.",
+  "family_stop_rule": "On failure, close this fixed PPC-conditioned long conversion; do not search nearby terciles, lookbacks, gaps, holds, symbols, categories, costs, states or directions without genuinely new forward evidence or an independent mechanism.",
+  "configuration": {
+    "strategy_id": "RESEARCH_PPC14_TOP_TERCILE_MOM14_TOP_TERCILE_WEEKLY_LONG_0P25X_V1",
+    "direction": "LONG_ONLY",
+    "formation_days": 14,
+    "hold_days": 7,
+    "gap_full_days": 1,
+    "top_fraction": 0.3333333333333333,
+    "notional_fraction": 0.25,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "cooldown_full_days": 1,
+    "annual_capital_hurdle": 0.04,
+    "max_excluded_trade_fraction": 0.02,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "diagnostics": [
+      "mom14",
+      "ppc14",
+      "formation7",
+      "formation21",
+      "inverse_max_share",
+      "directional_smoothness",
+      "scheduled_long",
+      "market_long"
+    ]
+  },
+  "stages": {
+    "development": [
+      "2024-01-01T00:00:00Z",
+      "2024-12-30T00:00:00Z"
+    ],
+    "evaluation": [
+      "2025-01-06T00:00:00Z",
+      "2025-12-29T00:00:00Z"
+    ]
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "categories": {
+    "DeFi": [
+      "AAVEUSDT",
+      "CRVUSDT",
+      "KAVAUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "UNIUSDT"
+    ],
+    "Infrastructure": [
+      "ENSUSDT",
+      "LINKUSDT"
+    ],
+    "Layer-1": [
+      "AVAXUSDT",
+      "BNBUSDT",
+      "HBARUSDT",
+      "NEARUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "VETUSDT"
+    ],
+    "Layer-2": [
+      "XLMUSDT"
+    ],
+    "Payment": [
+      "1000XECUSDT",
+      "BCHUSDT",
+      "LTCUSDT",
+      "XRPUSDT"
+    ],
+    "PoW": [
+      "DASHUSDT",
+      "ETCUSDT",
+      "XMRUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ]
+  },
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "computed_columns": 9
+  },
+  "stage_open_rule": "development -> evaluation; evaluation sealed until development PASS",
+  "frozen_file_sha256": {
+    "README.md": "de9eff9a12169b247513df7aed02a23222a2721f729bb4c9ba9f7262ad1308e1",
+    "preregistration.md": "b85afea83da24839a35d17907425e286d91ef1877e1908f73d4d0e1b528832fa",
+    "sources.md": "0279b8dc1e4a67a285db7c63f5c46ac2409bf3df459f34db12931cc68edb46a9",
+    "study.py": "c6d091dc5be0f26bafbd18b58152e382b45e655122b56b9c39a8c8651bf89cb3"
+  },
+  "source_reuse_digest": "896ba41bbf67a771274d1d0fbe857e09b58a3b8e27ea267964bcd3274baaccbd",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "vectorbt": "1.1.0"
+  },
+  "allowed_after_checkpoint": "Only deterministic stage artifacts and documented implementation-only amendments that preserve the economic rule; no market endpoint requiring credentials and no product/runtime change.",
+  "content_digest": "d1173deb1f62dca2e90a37a9031d0232c524e29263d0190ae87a652911cbabce"
+}

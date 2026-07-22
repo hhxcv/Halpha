@@ -1,0 +1,2605 @@
+{
+  "analyzed_at_utc": "2026-07-22T08:48:23.332765Z",
+  "stage": "development",
+  "checkpoint_digest": "b07ead78a7aab58fd0805814ca59136395d0060b8917ab49c268eb491fdfa242",
+  "data_quality_digest": "fccd676aa5babf009318fa23c65e48ae3f8ba5da132407e0efbc5e53572306f0",
+  "panel_rows": 270,
+  "panel_months": 12,
+  "opportunity_counts": {
+    "main": {
+      "planned": 72,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 28
+    },
+    "rv60": {
+      "planned": 72,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 25
+    },
+    "rv120": {
+      "planned": 72,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 28
+    },
+    "extreme5": {
+      "planned": 120,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 52
+    },
+    "reverse": {
+      "planned": 72,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 28
+    },
+    "momentum90": {
+      "planned": 72,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 20
+    },
+    "scheduled_long": {
+      "planned": 270,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 130
+    },
+    "scheduled_short": {
+      "planned": 270,
+      "excluded_missing_marks": 0,
+      "excluded_missing_funding": 0,
+      "cooldown_skips": 130
+    }
+  },
+  "summaries": {
+    "main": {
+      "trades": 44,
+      "entry_dates": 12,
+      "targets": 14,
+      "categories": 6,
+      "funding_events": 3988,
+      "selection_counts": {
+        "1000XECUSDT": 1,
+        "BNBUSDT": 3,
+        "CRVUSDT": 2,
+        "ENSUSDT": 5,
+        "HBARUSDT": 3,
+        "LTCUSDT": 2,
+        "NEARUSDT": 4,
+        "RUNEUSDT": 3,
+        "SOLUSDT": 1,
+        "TRXUSDT": 6,
+        "UNIUSDT": 3,
+        "XLMUSDT": 5,
+        "XMRUSDT": 5,
+        "XRPUSDT": 1
+      },
+      "category_counts": {
+        "DeFi": 8,
+        "Infrastructure": 5,
+        "Layer-1": 17,
+        "Layer-2": 5,
+        "Payment": 4,
+        "PoW": 5
+      },
+      "maximum_vectorbt_reconciliation_error": 2.220446049250313e-16,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": 0.03768580383751497,
+          "trade_mean_after_hurdle": 0.03428714493554819,
+          "cohort_mean_after_hurdle": 0.03097216406299062,
+          "cohort_bootstrap_95pct": [
+            -0.0015263394827814015,
+            0.07894272936786163
+          ],
+          "trade_win_rate_after_hurdle": 0.6136363636363636,
+          "trade_median_after_hurdle": 0.011223397796217616,
+          "trade_5pct_after_hurdle": -0.05981958002124474
+        },
+        "base": {
+          "trade_mean_net_return": 0.03716511513940371,
+          "trade_mean_after_hurdle": 0.03376816075187477,
+          "cohort_mean_after_hurdle": 0.03045343028873818,
+          "cohort_bootstrap_95pct": [
+            -0.0020258881851689006,
+            0.07836353729748673
+          ],
+          "trade_win_rate_after_hurdle": 0.6136363636363636,
+          "trade_median_after_hurdle": 0.01072309137556593,
+          "trade_5pct_after_hurdle": -0.06037631844534729
+        },
+        "stress": {
+          "trade_mean_net_return": 0.0347628949151306,
+          "trade_mean_after_hurdle": 0.03137381882254561,
+          "cohort_mean_after_hurdle": 0.02800615118184727,
+          "cohort_bootstrap_95pct": [
+            -0.004361346621968261,
+            0.07566297200983575
+          ],
+          "trade_win_rate_after_hurdle": 0.5909090909090909,
+          "trade_median_after_hurdle": 0.009100423897511534,
+          "trade_5pct_after_hurdle": -0.06210815705353875
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": 0.03045343028873818
+      },
+      "by_target_base_after_hurdle": {
+        "1000XECUSDT": {
+          "trades": 1,
+          "mean": 0.07620513440611831,
+          "sum": 0.07620513440611831,
+          "max_drawdown": 0.0
+        },
+        "BNBUSDT": {
+          "trades": 3,
+          "mean": 0.008102190575908774,
+          "sum": 0.024306571727726323,
+          "max_drawdown": -0.006692826080848868
+        },
+        "CRVUSDT": {
+          "trades": 2,
+          "mean": -0.002282822792849082,
+          "sum": -0.004565645585698164,
+          "max_drawdown": -0.02492608833199883
+        },
+        "ENSUSDT": {
+          "trades": 5,
+          "mean": 0.02296944127237168,
+          "sum": 0.11484720636185841,
+          "max_drawdown": -0.04157511947968884
+        },
+        "HBARUSDT": {
+          "trades": 3,
+          "mean": -0.040141239490759796,
+          "sum": -0.1204237184722794,
+          "max_drawdown": -0.14270669037229378
+        },
+        "LTCUSDT": {
+          "trades": 2,
+          "mean": -0.025622656828641677,
+          "sum": -0.05124531365728335,
+          "max_drawdown": -0.05059405782229209
+        },
+        "NEARUSDT": {
+          "trades": 4,
+          "mean": 0.05295848012344523,
+          "sum": 0.21183392049378091,
+          "max_drawdown": 0.0
+        },
+        "RUNEUSDT": {
+          "trades": 3,
+          "mean": 0.02465854097951477,
+          "sum": 0.07397562293854432,
+          "max_drawdown": -0.026374850474760625
+        },
+        "SOLUSDT": {
+          "trades": 1,
+          "mean": 0.010605908836743394,
+          "sum": 0.010605908836743394,
+          "max_drawdown": 0.0
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "mean": -0.0006322157946063353,
+          "sum": -0.0037932947676380113,
+          "max_drawdown": -0.056813452052605906
+        },
+        "UNIUSDT": {
+          "trades": 3,
+          "mean": -0.014935520564054746,
+          "sum": -0.04480656169216424,
+          "max_drawdown": -0.06369417708634584
+        },
+        "XLMUSDT": {
+          "trades": 5,
+          "mean": 0.22803052287019526,
+          "sum": 1.1401526143509764,
+          "max_drawdown": -0.06489682698221744
+        },
+        "XMRUSDT": {
+          "trades": 5,
+          "mean": 0.01104150236723842,
+          "sum": 0.0552075118361921,
+          "max_drawdown": -0.024857299978620517
+        },
+        "XRPUSDT": {
+          "trades": 1,
+          "mean": 0.003499116305612615,
+          "sum": 0.003499116305612615,
+          "max_drawdown": 0.0
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 8,
+          "mean": 0.0030754269575852394
+        },
+        "Infrastructure": {
+          "trades": 5,
+          "mean": 0.02296944127237168
+        },
+        "Layer-1": {
+          "trades": 17,
+          "mean": 0.003395517246232979
+        },
+        "Layer-2": {
+          "trades": 5,
+          "mean": 0.22803052287019526
+        },
+        "Payment": {
+          "trades": 4,
+          "mean": 0.007114734263611894
+        },
+        "PoW": {
+          "trades": 5,
+          "mean": 0.01104150236723842
+        }
+      },
+      "positive_target_fraction": 0.6666666666666666,
+      "target_max_drawdown_median": -0.025650469403379728,
+      "target_max_drawdown_worst": -0.14270669037229378,
+      "positive_category_count": 6,
+      "largest_positive_target_pnl_share": 0.6665089528895916,
+      "gross_price_trade_mean": 0.03741105527718571,
+      "actual_funding_trade_mean": 0.0005871752471759206,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "LONG": {
+          "trades": 21,
+          "entry_dates": 11,
+          "targets": 6,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": 0.05829623857082744,
+              "trade_mean_after_hurdle": 0.05483423948904115,
+              "cohort_mean_after_hurdle": 0.033757353626015535,
+              "cohort_bootstrap_95pct": [
+                -0.01627815447620297,
+                0.11437716557563643
+              ],
+              "trade_win_rate_after_hurdle": 0.5714285714285714,
+              "trade_median_after_hurdle": 0.005025898561902498,
+              "trade_5pct_after_hurdle": -0.037641597267792926
+            },
+            "base": {
+              "trade_mean_net_return": 0.057735385180949554,
+              "trade_mean_after_hurdle": 0.054275219209755206,
+              "cohort_mean_after_hurdle": 0.033218785891771324,
+              "cohort_bootstrap_95pct": [
+                -0.016765494626034282,
+                0.113756640503827
+              ],
+              "trade_win_rate_after_hurdle": 0.5714285714285714,
+              "trade_median_after_hurdle": 0.004517201910898105,
+              "trade_5pct_after_hurdle": -0.03810924153026729
+            },
+            "stress": {
+              "trade_mean_net_return": 0.055117363555638885,
+              "trade_mean_after_hurdle": 0.05166577060143988,
+              "cohort_mean_after_hurdle": 0.030427543832557333,
+              "cohort_bootstrap_95pct": [
+                -0.01915170427829351,
+                0.11031187834268512
+              ],
+              "trade_win_rate_after_hurdle": 0.5238095238095238,
+              "trade_median_after_hurdle": 0.0026140198791029245,
+              "trade_5pct_after_hurdle": -0.040768641118869686
+            }
+          }
+        },
+        "SHORT": {
+          "trades": 23,
+          "entry_dates": 12,
+          "targets": 9,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": 0.018867580820142716,
+              "trade_mean_after_hurdle": 0.015526754256272016,
+              "cohort_mean_after_hurdle": 0.004324923016565538,
+              "cohort_bootstrap_95pct": [
+                -0.012427047288451712,
+                0.02460276193363441
+              ],
+              "trade_win_rate_after_hurdle": 0.6521739130434783,
+              "trade_median_after_hurdle": 0.028828333482915802,
+              "trade_5pct_after_hurdle": -0.06092468627318354
+            },
+            "base": {
+              "trade_mean_net_return": 0.018383564231905326,
+              "trade_mean_after_hurdle": 0.015044324768592621,
+              "cohort_mean_after_hurdle": 0.0038311712883979305,
+              "cohort_bootstrap_95pct": [
+                -0.012937080209256897,
+                0.024129622143792172
+              ],
+              "trade_win_rate_after_hurdle": 0.6521739130434783,
+              "trade_median_after_hurdle": 0.028347602390726756,
+              "trade_5pct_after_hurdle": -0.061482271325680134
+            },
+            "stress": {
+              "trade_mean_net_return": 0.016178380069449116,
+              "trade_mean_after_hurdle": 0.012846384589642157,
+              "cohort_mean_after_hurdle": 0.0015335660355119674,
+              "cohort_bootstrap_95pct": [
+                -0.015339144389061208,
+                0.02216660260094935
+              ],
+              "trade_win_rate_after_hurdle": 0.6521739130434783,
+              "trade_median_after_hurdle": 0.02179795010952601,
+              "trade_5pct_after_hurdle": -0.06309940338673545
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": 0.011085521840280417
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": 0.04982133873719594
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    },
+    "rv60": {
+      "trades": 47,
+      "entry_dates": 12,
+      "targets": 18,
+      "categories": 6,
+      "funding_events": 4261,
+      "selection_counts": {
+        "1000XECUSDT": 1,
+        "AAVEUSDT": 1,
+        "AVAXUSDT": 1,
+        "BCHUSDT": 1,
+        "BNBUSDT": 3,
+        "CRVUSDT": 2,
+        "ENSUSDT": 5,
+        "HBARUSDT": 2,
+        "LINKUSDT": 1,
+        "LTCUSDT": 2,
+        "NEARUSDT": 3,
+        "RUNEUSDT": 3,
+        "SOLUSDT": 1,
+        "TRXUSDT": 6,
+        "UNIUSDT": 3,
+        "XLMUSDT": 5,
+        "XMRUSDT": 5,
+        "XRPUSDT": 2
+      },
+      "category_counts": {
+        "DeFi": 9,
+        "Infrastructure": 6,
+        "Layer-1": 16,
+        "Layer-2": 5,
+        "Payment": 6,
+        "PoW": 5
+      },
+      "maximum_vectorbt_reconciliation_error": 6.158268339717665e-17,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": 0.008331712814666445,
+          "trade_mean_after_hurdle": 0.00502589293261754,
+          "cohort_mean_after_hurdle": 0.004183035913335961,
+          "cohort_bootstrap_95pct": [
+            -0.0016719878352851182,
+            0.010568118865819936
+          ],
+          "trade_win_rate_after_hurdle": 0.574468085106383,
+          "trade_median_after_hurdle": 0.0058648229139275365,
+          "trade_5pct_after_hurdle": -0.08084453380752826
+        },
+        "base": {
+          "trade_mean_net_return": 0.00782920434761675,
+          "trade_mean_after_hurdle": 0.004525031023599256,
+          "cohort_mean_after_hurdle": 0.003681416338856311,
+          "cohort_bootstrap_95pct": [
+            -0.002182638633903153,
+            0.010074438010803464
+          ],
+          "trade_win_rate_after_hurdle": 0.574468085106383,
+          "trade_median_after_hurdle": 0.00535863201569331,
+          "trade_5pct_after_hurdle": -0.08130951402545204
+        },
+        "stress": {
+          "trade_mean_net_return": 0.005400290596654683,
+          "trade_mean_after_hurdle": 0.002104083760348385,
+          "cohort_mean_after_hurdle": 0.0013277527156873737,
+          "cohort_bootstrap_95pct": [
+            -0.004505651586884307,
+            0.00749024354454279
+          ],
+          "trade_win_rate_after_hurdle": 0.574468085106383,
+          "trade_median_after_hurdle": 0.0030422862566701347,
+          "trade_5pct_after_hurdle": -0.08268015986356
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": 0.003681416338856311
+      },
+      "by_target_base_after_hurdle": {
+        "1000XECUSDT": {
+          "trades": 1,
+          "mean": 0.07620513440611831,
+          "sum": 0.07620513440611831,
+          "max_drawdown": 0.0
+        },
+        "AAVEUSDT": {
+          "trades": 1,
+          "mean": -0.12016430938436795,
+          "sum": -0.12016430938436795,
+          "max_drawdown": -0.12016430938436795
+        },
+        "AVAXUSDT": {
+          "trades": 1,
+          "mean": -0.05750442459957372,
+          "sum": -0.05750442459957372,
+          "max_drawdown": -0.05750442459957372
+        },
+        "BCHUSDT": {
+          "trades": 1,
+          "mean": 0.08482105623623504,
+          "sum": 0.08482105623623504,
+          "max_drawdown": 0.0
+        },
+        "BNBUSDT": {
+          "trades": 3,
+          "mean": 0.04969593724744037,
+          "sum": 0.1490878117423211,
+          "max_drawdown": 0.0
+        },
+        "CRVUSDT": {
+          "trades": 2,
+          "mean": 0.011105037950294494,
+          "sum": 0.022210075900588988,
+          "max_drawdown": 0.0
+        },
+        "ENSUSDT": {
+          "trades": 5,
+          "mean": 0.009211019879159687,
+          "sum": 0.04605509939579844,
+          "max_drawdown": -0.08828260212010797
+        },
+        "HBARUSDT": {
+          "trades": 2,
+          "mean": -0.08124543347991897,
+          "sum": -0.16249086695983794,
+          "max_drawdown": -0.1596675325972885
+        },
+        "LINKUSDT": {
+          "trades": 1,
+          "mean": -0.08409140423086736,
+          "sum": -0.08409140423086736,
+          "max_drawdown": -0.08409140423086736
+        },
+        "LTCUSDT": {
+          "trades": 2,
+          "mean": -0.025622656828641677,
+          "sum": -0.05124531365728335,
+          "max_drawdown": -0.05059405782229209
+        },
+        "NEARUSDT": {
+          "trades": 3,
+          "mean": 0.04902493609635106,
+          "sum": 0.14707480828905317,
+          "max_drawdown": 0.0
+        },
+        "RUNEUSDT": {
+          "trades": 3,
+          "mean": -0.025844746616579577,
+          "sum": -0.07753423984973873,
+          "max_drawdown": -0.09921996226879193
+        },
+        "SOLUSDT": {
+          "trades": 1,
+          "mean": 0.010605908836743394,
+          "sum": 0.010605908836743394,
+          "max_drawdown": 0.0
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "mean": -0.0006322157946063353,
+          "sum": -0.0037932947676380113,
+          "max_drawdown": -0.056813452052605906
+        },
+        "UNIUSDT": {
+          "trades": 3,
+          "mean": 0.006206237780378247,
+          "sum": 0.01861871334113474,
+          "max_drawdown": -0.03553866714705933
+        },
+        "XLMUSDT": {
+          "trades": 5,
+          "mean": 0.005867403279802818,
+          "sum": 0.029337016399014093,
+          "max_drawdown": -0.08310817229743739
+        },
+        "XMRUSDT": {
+          "trades": 5,
+          "mean": 0.016394752350810383,
+          "sum": 0.08197376175405191,
+          "max_drawdown": -0.024857299978620517
+        },
+        "XRPUSDT": {
+          "trades": 2,
+          "mean": 0.05175546262870645,
+          "sum": 0.1035109252574129,
+          "max_drawdown": 0.0
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 9,
+          "mean": -0.00680924617207843
+        },
+        "Infrastructure": {
+          "trades": 6,
+          "mean": -0.006339384139178154
+        },
+        "Layer-1": {
+          "trades": 16,
+          "mean": -0.001842855606840607
+        },
+        "Layer-2": {
+          "trades": 5,
+          "mean": 0.005867403279802818
+        },
+        "Payment": {
+          "trades": 6,
+          "mean": 0.026555741384261245
+        },
+        "PoW": {
+          "trades": 5,
+          "mean": 0.016394752350810383
+        }
+      },
+      "positive_target_fraction": 0.75,
+      "target_max_drawdown_median": -0.04306636248467571,
+      "target_max_drawdown_worst": -0.1596675325972885,
+      "positive_category_count": 3,
+      "largest_positive_target_pnl_share": 0.1937462655997799,
+      "gross_price_trade_mean": 0.008016606173059595,
+      "actual_funding_trade_mean": 0.000616614607814901,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "LONG": {
+          "trades": 22,
+          "entry_dates": 12,
+          "targets": 7,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": 0.008649157337547673,
+              "trade_mean_after_hurdle": 0.005333880909092022,
+              "cohort_mean_after_hurdle": -4.337568581286542e-05,
+              "cohort_bootstrap_95pct": [
+                -0.01662935181043528,
+                0.014766956565355923
+              ],
+              "trade_win_rate_after_hurdle": 0.5,
+              "trade_median_after_hurdle": 0.0005298515071611165,
+              "trade_5pct_after_hurdle": -0.04035095016469413
+            },
+            "base": {
+              "trade_mean_net_return": 0.00813791625647816,
+              "trade_mean_after_hurdle": 0.004824320345458619,
+              "cohort_mean_after_hurdle": -0.0005479157369271936,
+              "cohort_bootstrap_95pct": [
+                -0.017117338176546777,
+                0.014245790781914324
+              ],
+              "trade_win_rate_after_hurdle": 0.5,
+              "trade_median_after_hurdle": 2.765898036610759e-05,
+              "trade_5pct_after_hurdle": -0.040814109457236195
+            },
+            "stress": {
+              "trade_mean_net_return": 0.005582943398010835,
+              "trade_mean_after_hurdle": 0.0022777517720952863,
+              "cohort_mean_after_hurdle": -0.0031972879867230423,
+              "cohort_bootstrap_95pct": [
+                -0.019229711559326092,
+                0.010813565619635519
+              ],
+              "trade_win_rate_after_hurdle": 0.5,
+              "trade_median_after_hurdle": -0.0021336868872103842,
+              "trade_5pct_after_hurdle": -0.042332059144705024
+            }
+          }
+        },
+        "SHORT": {
+          "trades": 25,
+          "entry_dates": 12,
+          "targets": 13,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": 0.008052361634530969,
+              "trade_mean_after_hurdle": 0.004754863513319996,
+              "cohort_mean_after_hurdle": 0.0010471114732610047,
+              "cohort_bootstrap_95pct": [
+                -0.012600871667033409,
+                0.014521941081994803
+              ],
+              "trade_win_rate_after_hurdle": 0.64,
+              "trade_median_after_hurdle": 0.01973909642965843,
+              "trade_5pct_after_hurdle": -0.11048681520581966
+            },
+            "base": {
+              "trade_mean_net_return": 0.007557537867818714,
+              "trade_mean_after_hurdle": 0.004261656420363016,
+              "cohort_mean_after_hurdle": 0.0005502442897306492,
+              "cohort_bootstrap_95pct": [
+                -0.013111072334598453,
+                0.014039426939353191
+              ],
+              "trade_win_rate_after_hurdle": 0.64,
+              "trade_median_after_hurdle": 0.019262552737645322,
+              "trade_5pct_after_hurdle": -0.11109513488339094
+            },
+            "stress": {
+              "trade_mean_net_return": 0.005239556131461272,
+              "trade_mean_after_hurdle": 0.0019512559100111114,
+              "cohort_mean_after_hurdle": -0.0017274810976150685,
+              "cohort_bootstrap_95pct": [
+                -0.015545399986388526,
+                0.011948601901247413
+              ],
+              "trade_win_rate_after_hurdle": 0.64,
+              "trade_median_after_hurdle": 0.01776078256279101,
+              "trade_5pct_after_hurdle": -0.11328328561887245
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": 0.002589063783106422
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": 0.004773768894606199
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    },
+    "rv120": {
+      "trades": 44,
+      "entry_dates": 12,
+      "targets": 14,
+      "categories": 6,
+      "funding_events": 3991,
+      "selection_counts": {
+        "1000XECUSDT": 1,
+        "BNBUSDT": 3,
+        "CRVUSDT": 2,
+        "ENSUSDT": 5,
+        "HBARUSDT": 3,
+        "LTCUSDT": 2,
+        "NEARUSDT": 5,
+        "RUNEUSDT": 4,
+        "SOLUSDT": 1,
+        "TRXUSDT": 6,
+        "UNIUSDT": 1,
+        "XLMUSDT": 6,
+        "XMRUSDT": 4,
+        "XRPUSDT": 1
+      },
+      "category_counts": {
+        "DeFi": 7,
+        "Infrastructure": 5,
+        "Layer-1": 18,
+        "Layer-2": 6,
+        "Payment": 4,
+        "PoW": 4
+      },
+      "maximum_vectorbt_reconciliation_error": 6.158268339717665e-17,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": -0.018702672673894614,
+          "trade_mean_after_hurdle": -0.021921438428506714,
+          "cohort_mean_after_hurdle": -0.0169877431632993,
+          "cohort_bootstrap_95pct": [
+            -0.037734524150921725,
+            0.0034768659349519618
+          ],
+          "trade_win_rate_after_hurdle": 0.4772727272727273,
+          "trade_median_after_hurdle": -0.005427277922392004,
+          "trade_5pct_after_hurdle": -0.19590770942709917
+        },
+        "base": {
+          "trade_mean_net_return": -0.019217939973747156,
+          "trade_mean_after_hurdle": -0.022435016765435183,
+          "cohort_mean_after_hurdle": -0.017495192650075323,
+          "cohort_bootstrap_95pct": [
+            -0.03827003224476388,
+            0.002995117893546586
+          ],
+          "trade_win_rate_after_hurdle": 0.45454545454545453,
+          "trade_median_after_hurdle": -0.005923227394271147,
+          "trade_5pct_after_hurdle": -0.19661444266304567
+        },
+        "stress": {
+          "trade_mean_net_return": -0.021607338893669878,
+          "trade_mean_after_hurdle": -0.024816576450376368,
+          "cohort_mean_after_hurdle": -0.019834572227936952,
+          "cohort_bootstrap_95pct": [
+            -0.041073066609884946,
+            0.001393522186550373
+          ],
+          "trade_win_rate_after_hurdle": 0.45454545454545453,
+          "trade_median_after_hurdle": -0.00800498038070313,
+          "trade_5pct_after_hurdle": -0.20546646391609888
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": -0.017495192650075323
+      },
+      "by_target_base_after_hurdle": {
+        "1000XECUSDT": {
+          "trades": 1,
+          "mean": 0.07620513440611831,
+          "sum": 0.07620513440611831,
+          "max_drawdown": 0.0
+        },
+        "BNBUSDT": {
+          "trades": 3,
+          "mean": -0.001733091771229674,
+          "sum": -0.005199275313689022,
+          "max_drawdown": -0.0226333397111661
+        },
+        "CRVUSDT": {
+          "trades": 2,
+          "mean": -0.21005361362735453,
+          "sum": -0.42010722725470906,
+          "max_drawdown": -0.4230547504176527
+        },
+        "ENSUSDT": {
+          "trades": 5,
+          "mean": -0.05555391319145053,
+          "sum": -0.27776956595725266,
+          "max_drawdown": -0.35730038903734085
+        },
+        "HBARUSDT": {
+          "trades": 3,
+          "mean": -0.040141239490759796,
+          "sum": -0.1204237184722794,
+          "max_drawdown": -0.14270669037229378
+        },
+        "LTCUSDT": {
+          "trades": 2,
+          "mean": 0.017785510562431828,
+          "sum": 0.035571021124863655,
+          "max_drawdown": -0.02791715197291844
+        },
+        "NEARUSDT": {
+          "trades": 5,
+          "mean": -0.02549213214154735,
+          "sum": -0.12746066070773676,
+          "max_drawdown": -0.241519748296657
+        },
+        "RUNEUSDT": {
+          "trades": 4,
+          "mean": -0.010825454731430928,
+          "sum": -0.04330181892572371,
+          "max_drawdown": -0.11727744186426803
+        },
+        "SOLUSDT": {
+          "trades": 1,
+          "mean": 0.010605908836743394,
+          "sum": 0.010605908836743394,
+          "max_drawdown": 0.0
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "mean": -0.0006322157946063353,
+          "sum": -0.0037932947676380113,
+          "max_drawdown": -0.056813452052605906
+        },
+        "UNIUSDT": {
+          "trades": 1,
+          "mean": 0.03915567684292309,
+          "sum": 0.03915567684292309,
+          "max_drawdown": 0.0
+        },
+        "XLMUSDT": {
+          "trades": 6,
+          "mean": -0.006738189804223915,
+          "sum": -0.04042913882534349,
+          "max_drawdown": -0.14261154260125963
+        },
+        "XMRUSDT": {
+          "trades": 4,
+          "mean": -0.013315390359897844,
+          "sum": -0.053261561439591376,
+          "max_drawdown": -0.05239651366772757
+        },
+        "XRPUSDT": {
+          "trades": 1,
+          "mean": -0.05693221722583297,
+          "sum": -0.05693221722583297,
+          "max_drawdown": -0.05693221722583297
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 7,
+          "mean": -0.0332564281485505
+        },
+        "Infrastructure": {
+          "trades": 5,
+          "mean": -0.05555391319145053
+        },
+        "Layer-1": {
+          "trades": 18,
+          "mean": -0.009637757590688028
+        },
+        "Layer-2": {
+          "trades": 6,
+          "mean": -0.006738189804223915
+        },
+        "Payment": {
+          "trades": 4,
+          "mean": 0.015069159905002108
+        },
+        "PoW": {
+          "trades": 4,
+          "mean": -0.013315390359897844
+        }
+      },
+      "positive_target_fraction": 0.0,
+      "target_max_drawdown_median": -0.05687283463921944,
+      "target_max_drawdown_worst": -0.4230547504176527,
+      "positive_category_count": 1,
+      "largest_positive_target_pnl_share": 0.4717481737394439,
+      "gross_price_trade_mean": -0.019580619415593217,
+      "actual_funding_trade_mean": 0.0011871000725871472,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "LONG": {
+          "trades": 21,
+          "entry_dates": 12,
+          "targets": 6,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.006454348685727647,
+              "trade_mean_after_hurdle": -0.009712882790422747,
+              "cohort_mean_after_hurdle": -0.009248098018845068,
+              "cohort_bootstrap_95pct": [
+                -0.023034128221885164,
+                0.003969332948801912
+              ],
+              "trade_win_rate_after_hurdle": 0.38095238095238093,
+              "trade_median_after_hurdle": -0.018962394950846395,
+              "trade_5pct_after_hurdle": -0.05648500404326562
+            },
+            "base": {
+              "trade_mean_net_return": -0.006949820380791165,
+              "trade_mean_after_hurdle": -0.010206729473972673,
+              "cohort_mean_after_hurdle": -0.009742511310670237,
+              "cohort_bootstrap_95pct": [
+                -0.023513108477958924,
+                0.0034611603083285693
+              ],
+              "trade_win_rate_after_hurdle": 0.3333333333333333,
+              "trade_median_after_hurdle": -0.01944525441963385,
+              "trade_5pct_after_hurdle": -0.05693221722583297
+            },
+            "stress": {
+              "trade_mean_net_return": -0.009177668031926593,
+              "trade_mean_after_hurdle": -0.01242728001568735,
+              "cohort_mean_after_hurdle": -0.011919480598356971,
+              "cohort_bootstrap_95pct": [
+                -0.025384540625203206,
+                0.0010210492070971775
+              ],
+              "trade_win_rate_after_hurdle": 0.3333333333333333,
+              "trade_median_after_hurdle": -0.02115068761205141,
+              "trade_5pct_after_hurdle": -0.05839703524361506
+            }
+          }
+        },
+        "SHORT": {
+          "trades": 23,
+          "entry_dates": 12,
+          "targets": 9,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.029885925010916626,
+              "trade_mean_after_hurdle": -0.03306838053284425,
+              "cohort_mean_after_hurdle": -0.017750361414700724,
+              "cohort_bootstrap_95pct": [
+                -0.06427906630346233,
+                0.029278231956042483
+              ],
+              "trade_win_rate_after_hurdle": 0.5652173913043478,
+              "trade_median_after_hurdle": 0.011092328284798558,
+              "trade_5pct_after_hurdle": -0.3334526521850471
+            },
+            "base": {
+              "trade_mean_net_return": -0.03041926655862002,
+              "trade_mean_after_hurdle": -0.0335999747272053,
+              "cohort_mean_after_hurdle": -0.018266596415973873,
+              "cohort_bootstrap_95pct": [
+                -0.0648415187256962,
+                0.028811365552406622
+              ],
+              "trade_win_rate_after_hurdle": 0.5652173913043478,
+              "trade_median_after_hurdle": 0.010605908836743394,
+              "trade_5pct_after_hurdle": -0.3342863225790603
+            },
+            "stress": {
+              "trade_mean_net_return": -0.03295616881091375,
+              "trade_mean_after_hurdle": -0.036128542760309815,
+              "cohort_mean_after_hurdle": -0.020759794779896725,
+              "cohort_bootstrap_95pct": [
+                -0.06794891032174599,
+                0.02723252777694987
+              ],
+              "trade_win_rate_after_hurdle": 0.5652173913043478,
+              "trade_median_after_hurdle": 0.008719950752180239,
+              "trade_5pct_after_hurdle": -0.33783790542778547
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": -0.011257582971222146
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": -0.023732802328928503
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    },
+    "extreme5": {
+      "trades": 68,
+      "entry_dates": 12,
+      "targets": 19,
+      "categories": 6,
+      "funding_events": 6181,
+      "selection_counts": {
+        "1000XECUSDT": 1,
+        "AAVEUSDT": 1,
+        "AVAXUSDT": 2,
+        "BCHUSDT": 1,
+        "BNBUSDT": 5,
+        "CRVUSDT": 3,
+        "ENSUSDT": 6,
+        "ETCUSDT": 2,
+        "HBARUSDT": 3,
+        "LINKUSDT": 2,
+        "LTCUSDT": 4,
+        "NEARUSDT": 6,
+        "RUNEUSDT": 6,
+        "SOLUSDT": 2,
+        "TRXUSDT": 6,
+        "UNIUSDT": 3,
+        "XLMUSDT": 6,
+        "XMRUSDT": 5,
+        "XRPUSDT": 4
+      },
+      "category_counts": {
+        "DeFi": 13,
+        "Infrastructure": 8,
+        "Layer-1": 24,
+        "Layer-2": 6,
+        "Payment": 10,
+        "PoW": 7
+      },
+      "maximum_vectorbt_reconciliation_error": 2.220446049250313e-16,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": 0.018584040592930035,
+          "trade_mean_after_hurdle": 0.01523779540630009,
+          "cohort_mean_after_hurdle": 0.012164484857240391,
+          "cohort_bootstrap_95pct": [
+            -0.005504504277679578,
+            0.028082806446570685
+          ],
+          "trade_win_rate_after_hurdle": 0.6029411764705882,
+          "trade_median_after_hurdle": 0.007766310054160508,
+          "trade_5pct_after_hurdle": -0.1216267702114107
+        },
+        "base": {
+          "trade_mean_net_return": 0.018055030354030523,
+          "trade_mean_after_hurdle": 0.014710521910830707,
+          "cohort_mean_after_hurdle": 0.01164416141139614,
+          "cohort_bootstrap_95pct": [
+            -0.006016294555973594,
+            0.027545783093956704
+          ],
+          "trade_win_rate_after_hurdle": 0.5882352941176471,
+          "trade_median_after_hurdle": 0.007256857976029929,
+          "trade_5pct_after_hurdle": -0.12219134022279453
+        },
+        "stress": {
+          "trade_mean_net_return": 0.015595799004342659,
+          "trade_mean_after_hurdle": 0.012259380531235509,
+          "cohort_mean_after_hurdle": 0.009319409174118184,
+          "cohort_bootstrap_95pct": [
+            -0.0088231122692073,
+            0.02533916984094498
+          ],
+          "trade_win_rate_after_hurdle": 0.5735294117647058,
+          "trade_median_after_hurdle": 0.005415064786477686,
+          "trade_5pct_after_hurdle": -0.12533761059946755
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": 0.01164416141139614
+      },
+      "by_target_base_after_hurdle": {
+        "1000XECUSDT": {
+          "trades": 1,
+          "mean": 0.07620513440611831,
+          "sum": 0.07620513440611831,
+          "max_drawdown": 0.0
+        },
+        "AAVEUSDT": {
+          "trades": 1,
+          "mean": 0.017877116934950754,
+          "sum": 0.017877116934950754,
+          "max_drawdown": 0.0
+        },
+        "AVAXUSDT": {
+          "trades": 2,
+          "mean": -0.01900821127829222,
+          "sum": -0.03801642255658444,
+          "max_drawdown": -0.0717053783480901
+        },
+        "BCHUSDT": {
+          "trades": 1,
+          "mean": 0.08482105623623504,
+          "sum": 0.08482105623623504,
+          "max_drawdown": 0.0
+        },
+        "BNBUSDT": {
+          "trades": 5,
+          "mean": 0.030983921130684045,
+          "sum": 0.15491960565342022,
+          "max_drawdown": -0.006692826080848868
+        },
+        "CRVUSDT": {
+          "trades": 3,
+          "mean": -0.13361489150568792,
+          "sum": -0.40084467451706374,
+          "max_drawdown": -0.4230547504176527
+        },
+        "ENSUSDT": {
+          "trades": 6,
+          "mean": 0.02190793718761545,
+          "sum": 0.1314476231256927,
+          "max_drawdown": -0.048733587357480235
+        },
+        "ETCUSDT": {
+          "trades": 2,
+          "mean": 0.09522879966231002,
+          "sum": 0.19045759932462003,
+          "max_drawdown": 0.0
+        },
+        "HBARUSDT": {
+          "trades": 3,
+          "mean": -0.040141239490759796,
+          "sum": -0.1204237184722794,
+          "max_drawdown": -0.14270669037229378
+        },
+        "LINKUSDT": {
+          "trades": 2,
+          "mean": -0.04682288999418699,
+          "sum": -0.09364577998837398,
+          "max_drawdown": -0.0928423391143759
+        },
+        "LTCUSDT": {
+          "trades": 4,
+          "mean": 0.0011589244529393306,
+          "sum": 0.004635697811757322,
+          "max_drawdown": -0.030757862216671983
+        },
+        "NEARUSDT": {
+          "trades": 6,
+          "mean": -0.07419033642965232,
+          "sum": -0.4451420185779139,
+          "max_drawdown": -0.42229829575639344
+        },
+        "RUNEUSDT": {
+          "trades": 6,
+          "mean": 0.04395882480720006,
+          "sum": 0.26375294884320033,
+          "max_drawdown": -0.029481172909041398
+        },
+        "SOLUSDT": {
+          "trades": 2,
+          "mean": -0.023352935625187643,
+          "sum": -0.046705871250375286,
+          "max_drawdown": -0.05731178008711868
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "mean": -0.0006322157946063353,
+          "sum": -0.0037932947676380113,
+          "max_drawdown": -0.056813452052605906
+        },
+        "UNIUSDT": {
+          "trades": 3,
+          "mean": 0.006206237780378247,
+          "sum": 0.01861871334113474,
+          "max_drawdown": -0.03553866714705933
+        },
+        "XLMUSDT": {
+          "trades": 6,
+          "mean": 0.1930600474121369,
+          "sum": 1.1583602844728214,
+          "max_drawdown": -0.04340442170296732
+        },
+        "XMRUSDT": {
+          "trades": 5,
+          "mean": 0.004648791787618766,
+          "sum": 0.023243958938093834,
+          "max_drawdown": -0.025229836889450352
+        },
+        "XRPUSDT": {
+          "trades": 4,
+          "mean": 0.006136882744668087,
+          "sum": 0.02454753097867235,
+          "max_drawdown": -0.05233149037523266
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 13,
+          "mean": -0.016796177502029948
+        },
+        "Infrastructure": {
+          "trades": 8,
+          "mean": 0.005307326198257896
+        },
+        "Layer-1": {
+          "trades": 24,
+          "mean": -0.02711136674708355
+        },
+        "Layer-2": {
+          "trades": 6,
+          "mean": 0.1930600474121369
+        },
+        "Payment": {
+          "trades": 10,
+          "mean": 0.01661814294056922
+        },
+        "PoW": {
+          "trades": 7,
+          "mean": 0.026218485040474138
+        }
+      },
+      "positive_target_fraction": 0.6666666666666666,
+      "target_max_drawdown_median": -0.04340442170296732,
+      "target_max_drawdown_worst": -0.4230547504176527,
+      "positive_category_count": 4,
+      "largest_positive_target_pnl_share": 0.5390512106467351,
+      "gross_price_trade_mean": 0.0183512921822238,
+      "actual_funding_trade_mean": 0.0005501611605111331,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "LONG": {
+          "trades": 33,
+          "entry_dates": 10,
+          "targets": 9,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": 0.04587916408466655,
+              "trade_mean_after_hurdle": 0.04244457174616975,
+              "cohort_mean_after_hurdle": 0.02018512345332118,
+              "cohort_bootstrap_95pct": [
+                -0.017916628592188018,
+                0.07420064458050768
+              ],
+              "trade_win_rate_after_hurdle": 0.5757575757575758,
+              "trade_median_after_hurdle": 0.004015476891626513,
+              "trade_5pct_after_hurdle": -0.05387294329319157
+            },
+            "base": {
+              "trade_mean_net_return": 0.04533038529608212,
+              "trade_mean_after_hurdle": 0.041897593809182856,
+              "cohort_mean_after_hurdle": 0.019660748657262576,
+              "cohort_bootstrap_95pct": [
+                -0.018403754045034314,
+                0.07362237879348175
+              ],
+              "trade_win_rate_after_hurdle": 0.5454545454545454,
+              "trade_median_after_hurdle": 0.003499116305612615,
+              "trade_5pct_after_hurdle": -0.05432360625998707
+            },
+            "stress": {
+              "trade_mean_net_return": 0.042867951754256485,
+              "trade_mean_after_hurdle": 0.03944325448811819,
+              "cohort_mean_after_hurdle": 0.017495330497572063,
+              "cohort_bootstrap_95pct": [
+                -0.020920262411895183,
+                0.07116269140957529
+              ],
+              "trade_win_rate_after_hurdle": 0.5151515151515151,
+              "trade_median_after_hurdle": 0.001001340245925686,
+              "trade_5pct_after_hurdle": -0.05614589853548833
+            }
+          }
+        },
+        "SHORT": {
+          "trades": 35,
+          "entry_dates": 12,
+          "targets": 13,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.007151361556421541,
+              "trade_mean_after_hurdle": -0.010414307999862732,
+              "cohort_mean_after_hurdle": -0.024529979479634815,
+              "cohort_bootstrap_95pct": [
+                -0.07871980647871481,
+                0.01335015984094604
+              ],
+              "trade_win_rate_after_hurdle": 0.6285714285714286,
+              "trade_median_after_hurdle": 0.015966701601252575,
+              "trade_5pct_after_hurdle": -0.18871852467483288
+            },
+            "base": {
+              "trade_mean_net_return": -0.007661732877046693,
+              "trade_mean_after_hurdle": -0.010923003021901316,
+              "cohort_mean_after_hurdle": -0.02505271217068086,
+              "cohort_bootstrap_95pct": [
+                -0.07929577034820758,
+                0.012866348854229584
+              ],
+              "trade_win_rate_after_hurdle": 0.6285714285714286,
+              "trade_median_after_hurdle": 0.015487008822139714,
+              "trade_5pct_after_hurdle": -0.1894102726783797
+            },
+            "stress": {
+              "trade_mean_net_return": -0.010117945017004654,
+              "trade_mean_after_hurdle": -0.013371129199539597,
+              "cohort_mean_after_hurdle": -0.02745214144788757,
+              "cohort_bootstrap_95pct": [
+                -0.08132335811538795,
+                0.010918227018810336
+              ],
+              "trade_win_rate_after_hurdle": 0.6285714285714286,
+              "trade_median_after_hurdle": 0.014349144053248608,
+              "trade_5pct_after_hurdle": -0.19426574367468388
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": 0.000400480456118746
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": 0.02288784236667353
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    },
+    "reverse": {
+      "trades": 44,
+      "entry_dates": 12,
+      "targets": 14,
+      "categories": 6,
+      "funding_events": 3988,
+      "selection_counts": {
+        "1000XECUSDT": 1,
+        "BNBUSDT": 3,
+        "CRVUSDT": 2,
+        "ENSUSDT": 5,
+        "HBARUSDT": 3,
+        "LTCUSDT": 2,
+        "NEARUSDT": 4,
+        "RUNEUSDT": 3,
+        "SOLUSDT": 1,
+        "TRXUSDT": 6,
+        "UNIUSDT": 3,
+        "XLMUSDT": 5,
+        "XMRUSDT": 5,
+        "XRPUSDT": 1
+      },
+      "category_counts": {
+        "DeFi": 8,
+        "Infrastructure": 5,
+        "Layer-1": 17,
+        "Layer-2": 5,
+        "Payment": 4,
+        "PoW": 5
+      },
+      "maximum_vectorbt_reconciliation_error": 0.0004545635189177055,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": -0.038308315031436474,
+          "trade_mean_after_hurdle": -0.041461316069831285,
+          "cohort_mean_after_hurdle": -0.0381364893984475,
+          "cohort_bootstrap_95pct": [
+            -0.08617535938371397,
+            -0.005617078330456615
+          ],
+          "trade_win_rate_after_hurdle": 0.3181818181818182,
+          "trade_median_after_hurdle": -0.018367737850332744,
+          "trade_5pct_after_hurdle": -0.08397827780905316
+        },
+        "base": {
+          "trade_mean_net_return": -0.03882508817986651,
+          "trade_mean_after_hurdle": -0.0419763973051603,
+          "cohort_mean_after_hurdle": -0.03865164519015074,
+          "cohort_bootstrap_95pct": [
+            -0.08674379419683535,
+            -0.006116628428886631
+          ],
+          "trade_win_rate_after_hurdle": 0.3181818181818182,
+          "trade_median_after_hurdle": -0.018868060904625394,
+          "trade_5pct_after_hurdle": -0.08439786284333901
+        },
+        "stress": {
+          "trade_mean_net_return": -0.04122332493105902,
+          "trade_mean_after_hurdle": -0.04436676858135233,
+          "cohort_mean_after_hurdle": -0.041095284251765805,
+          "cohort_bootstrap_95pct": [
+            -0.08967851130028169,
+            -0.008637478693920802
+          ],
+          "trade_win_rate_after_hurdle": 0.3181818181818182,
+          "trade_median_after_hurdle": -0.0204907450163207,
+          "trade_5pct_after_hurdle": -0.08570046106973617
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": -0.03865164519015074
+      },
+      "by_target_base_after_hurdle": {
+        "1000XECUSDT": {
+          "trades": 1,
+          "mean": -0.08398658469309372,
+          "sum": -0.08398658469309372,
+          "max_drawdown": -0.08398658469309372
+        },
+        "BNBUSDT": {
+          "trades": 3,
+          "mean": -0.016316993508225724,
+          "sum": -0.04895098052467717,
+          "max_drawdown": -0.048422447308891226
+        },
+        "CRVUSDT": {
+          "trades": 2,
+          "mean": -0.005962201366268738,
+          "sum": -0.011924402732537476,
+          "max_drawdown": -0.02853448348555021
+        },
+        "ENSUSDT": {
+          "trades": 5,
+          "mean": -0.03096687898124657,
+          "sum": -0.15483439490623285,
+          "max_drawdown": -0.17775879606591027
+        },
+        "HBARUSDT": {
+          "trades": 3,
+          "mean": 0.031771030620528405,
+          "sum": 0.09531309186158521,
+          "max_drawdown": -0.050169548142408704
+        },
+        "LTCUSDT": {
+          "trades": 2,
+          "mean": 0.01744006213792415,
+          "sum": 0.0348801242758483,
+          "max_drawdown": 0.0
+        },
+        "NEARUSDT": {
+          "trades": 4,
+          "mean": -0.06092126843693127,
+          "sum": -0.24368507374772508,
+          "max_drawdown": -0.22249956178163355
+        },
+        "RUNEUSDT": {
+          "trades": 3,
+          "mean": -0.03267742683982625,
+          "sum": -0.09803228051947876,
+          "max_drawdown": -0.11360684042592295
+        },
+        "SOLUSDT": {
+          "trades": 1,
+          "mean": -0.018813538729137713,
+          "sum": -0.018813538729137713,
+          "max_drawdown": -0.018813538729137713
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "mean": -0.007554501807541858,
+          "sum": -0.04532701084525115,
+          "max_drawdown": -0.07272379402367879
+        },
+        "UNIUSDT": {
+          "trades": 3,
+          "mean": 0.00671360737589614,
+          "sum": 0.020140822127688418,
+          "max_drawdown": -0.06248966219212404
+        },
+        "XLMUSDT": {
+          "trades": 5,
+          "mean": -0.2367601060959934,
+          "sum": -1.183800530479967,
+          "max_drawdown": -1.15839474494392
+        },
+        "XMRUSDT": {
+          "trades": 5,
+          "mean": -0.019227630583483025,
+          "sum": -0.09613815291741512,
+          "max_drawdown": -0.09374662063531924
+        },
+        "XRPUSDT": {
+          "trades": 1,
+          "mean": -0.01180256959665893,
+          "sum": -0.01180256959665893,
+          "max_drawdown": -0.01180256959665893
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 8,
+          "mean": -0.011226982640540978
+        },
+        "Infrastructure": {
+          "trades": 5,
+          "mean": -0.03096687898124657
+        },
+        "Layer-1": {
+          "trades": 17,
+          "mean": -0.011543349025672556
+        },
+        "Layer-2": {
+          "trades": 5,
+          "mean": -0.2367601060959934
+        },
+        "Payment": {
+          "trades": 4,
+          "mean": -0.015227257503476088
+        },
+        "PoW": {
+          "trades": 5,
+          "mean": -0.019227630583483025
+        }
+      },
+      "positive_target_fraction": 0.2222222222222222,
+      "target_max_drawdown_median": -0.06760672810790141,
+      "target_max_drawdown_worst": -1.15839474494392,
+      "positive_category_count": 0,
+      "largest_positive_target_pnl_share": 0.6340087245810266,
+      "gross_price_trade_mean": -0.03741105527718571,
+      "actual_funding_trade_mean": -0.0005871752471759208,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "LONG": {
+          "trades": 23,
+          "entry_dates": 12,
+          "targets": 9,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.019448412227183385,
+              "trade_mean_after_hurdle": -0.022663612354304082,
+              "cohort_mean_after_hurdle": -0.011461388860166141,
+              "cohort_bootstrap_95pct": [
+                -0.03171450828294112,
+                0.005275656587823499
+              ],
+              "trade_win_rate_after_hurdle": 0.34782608695652173,
+              "trade_median_after_hurdle": -0.03605628825255347,
+              "trade_5pct_after_hurdle": -0.08400250866320837
+            },
+            "base": {
+              "trade_mean_net_return": -0.01993244798401376,
+              "trade_mean_after_hurdle": -0.023146060947755464,
+              "cohort_mean_after_hurdle": -0.011955146119753004,
+              "cohort_bootstrap_95pct": [
+                -0.0321876783236969,
+                0.0047641461544640305
+              ],
+              "trade_win_rate_after_hurdle": 0.34782608695652173,
+              "trade_median_after_hurdle": -0.036537040459443726,
+              "trade_5pct_after_hurdle": -0.08442205567570639
+            },
+            "stress": {
+              "trade_mean_net_return": -0.02213765131506292,
+              "trade_mean_after_hurdle": -0.025344020232477837,
+              "cohort_mean_after_hurdle": -0.014252756904058134,
+              "cohort_bootstrap_95pct": [
+                -0.03388971206472948,
+                0.0025192749174911496
+              ],
+              "trade_win_rate_after_hurdle": 0.34782608695652173,
+              "trade_median_after_hurdle": -0.0444411559688217,
+              "trade_5pct_after_hurdle": -0.08570705735242379
+            }
+          }
+        },
+        "SHORT": {
+          "trades": 21,
+          "entry_dates": 11,
+          "targets": 6,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.05896439905514222,
+              "trade_mean_after_hurdle": -0.06204927728207536,
+              "cohort_mean_after_hurdle": -0.04093477470674293,
+              "cohort_bootstrap_95pct": [
+                -0.12164676879513796,
+                0.009121081762357767
+              ],
+              "trade_win_rate_after_hurdle": 0.2857142857142857,
+              "trade_median_after_hurdle": -0.012287406796556044,
+              "trade_5pct_after_hurdle": -0.05599884358890084
+            },
+            "base": {
+              "trade_mean_net_return": -0.05951702744199096,
+              "trade_mean_after_hurdle": -0.06260009902993703,
+              "cohort_mean_after_hurdle": -0.04146812711611196,
+              "cohort_bootstrap_95pct": [
+                -0.12225164975915069,
+                0.008633708521001027
+              ],
+              "trade_win_rate_after_hurdle": 0.2857142857142857,
+              "trade_median_after_hurdle": -0.012796115886324344,
+              "trade_5pct_after_hurdle": -0.05655104162659741
+            },
+            "stress": {
+              "trade_mean_net_return": -0.06212668174857856,
+              "trade_mean_after_hurdle": -0.06520120724916727,
+              "cohort_mean_after_hurdle": -0.04425406357739392,
+              "cohort_bootstrap_95pct": [
+                -0.12598009649150863,
+                0.006372013017296211
+              ],
+              "trade_win_rate_after_hurdle": 0.2857142857142857,
+              "trade_median_after_hurdle": -0.015570277854448755,
+              "trade_5pct_after_hurdle": -0.059449501456659726
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": -0.019146144213800693
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": -0.058157146166500785
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    },
+    "momentum90": {
+      "trades": 52,
+      "entry_dates": 12,
+      "targets": 19,
+      "categories": 6,
+      "funding_events": 4721,
+      "selection_counts": {
+        "AAVEUSDT": 2,
+        "AVAXUSDT": 1,
+        "BCHUSDT": 2,
+        "BNBUSDT": 3,
+        "CRVUSDT": 4,
+        "ENSUSDT": 4,
+        "HBARUSDT": 3,
+        "LINKUSDT": 1,
+        "LTCUSDT": 1,
+        "NEARUSDT": 3,
+        "RUNEUSDT": 3,
+        "SNXUSDT": 3,
+        "SOLUSDT": 3,
+        "TRXUSDT": 3,
+        "VETUSDT": 2,
+        "XLMUSDT": 2,
+        "XMRUSDT": 4,
+        "XRPUSDT": 4,
+        "ZECUSDT": 4
+      },
+      "category_counts": {
+        "DeFi": 12,
+        "Infrastructure": 5,
+        "Layer-1": 18,
+        "Layer-2": 2,
+        "Payment": 7,
+        "PoW": 8
+      },
+      "maximum_vectorbt_reconciliation_error": 8.326672684688674e-17,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": -0.005751557577187833,
+          "trade_mean_after_hurdle": -0.009015644802938486,
+          "cohort_mean_after_hurdle": -0.01664467415308984,
+          "cohort_bootstrap_95pct": [
+            -0.03377940249602124,
+            -0.002019093603463645
+          ],
+          "trade_win_rate_after_hurdle": 0.46153846153846156,
+          "trade_median_after_hurdle": -0.008004349374133413,
+          "trade_5pct_after_hurdle": -0.09967430635570165
+        },
+        "base": {
+          "trade_mean_net_return": -0.006260063848815468,
+          "trade_mean_after_hurdle": -0.009522482368481477,
+          "cohort_mean_after_hurdle": -0.017162503980314863,
+          "cohort_bootstrap_95pct": [
+            -0.03432855578711462,
+            -0.002515897359636043
+          ],
+          "trade_win_rate_after_hurdle": 0.46153846153846156,
+          "trade_median_after_hurdle": -0.008502876565550987,
+          "trade_5pct_after_hurdle": -0.10016770746803486
+        },
+        "stress": {
+          "trade_mean_net_return": -0.00875854416690477,
+          "trade_mean_after_hurdle": -0.012012751844125254,
+          "cohort_mean_after_hurdle": -0.019644172272259477,
+          "cohort_bootstrap_95pct": [
+            -0.037092375156447095,
+            -0.004715874657813227
+          ],
+          "trade_win_rate_after_hurdle": 0.46153846153846156,
+          "trade_median_after_hurdle": -0.00971065592877679,
+          "trade_5pct_after_hurdle": -0.1021487964015944
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": -0.017162503980314863
+      },
+      "by_target_base_after_hurdle": {
+        "AAVEUSDT": {
+          "trades": 2,
+          "mean": 0.01041115422097394,
+          "sum": 0.02082230844194788,
+          "max_drawdown": -0.026055508028428376
+        },
+        "AVAXUSDT": {
+          "trades": 1,
+          "mean": -0.04182277465930606,
+          "sum": -0.04182277465930606,
+          "max_drawdown": -0.04182277465930606
+        },
+        "BCHUSDT": {
+          "trades": 2,
+          "mean": -0.0358474854042814,
+          "sum": -0.0716949708085628,
+          "max_drawdown": -0.09256410060766274
+        },
+        "BNBUSDT": {
+          "trades": 3,
+          "mean": -0.013653294331320528,
+          "sum": -0.04095988299396158,
+          "max_drawdown": -0.040439180008352005
+        },
+        "CRVUSDT": {
+          "trades": 4,
+          "mean": -0.10837914413922825,
+          "sum": -0.433516576556913,
+          "max_drawdown": -0.43743573867146945
+        },
+        "ENSUSDT": {
+          "trades": 4,
+          "mean": -0.022005531653708527,
+          "sum": -0.0880221266148341,
+          "max_drawdown": -0.13714194309569205
+        },
+        "HBARUSDT": {
+          "trades": 3,
+          "mean": 0.07586630600093525,
+          "sum": 0.22759891800280574,
+          "max_drawdown": 0.0
+        },
+        "LINKUSDT": {
+          "trades": 1,
+          "mean": -0.10251136403503747,
+          "sum": -0.10251136403503747,
+          "max_drawdown": -0.10251136403503747
+        },
+        "LTCUSDT": {
+          "trades": 1,
+          "mean": 0.019738901314463098,
+          "sum": 0.019738901314463098,
+          "max_drawdown": 0.0
+        },
+        "NEARUSDT": {
+          "trades": 3,
+          "mean": -0.03571130465808392,
+          "sum": -0.10713391397425176,
+          "max_drawdown": -0.10706945781451305
+        },
+        "RUNEUSDT": {
+          "trades": 3,
+          "mean": -0.03546168013434122,
+          "sum": -0.10638504040302366,
+          "max_drawdown": -0.12378346009643693
+        },
+        "SNXUSDT": {
+          "trades": 3,
+          "mean": 0.04809431713694271,
+          "sum": 0.14428295141082814,
+          "max_drawdown": 0.0
+        },
+        "SOLUSDT": {
+          "trades": 3,
+          "mean": 0.0274571466678533,
+          "sum": 0.08237144000355989,
+          "max_drawdown": -0.03475755665127089
+        },
+        "TRXUSDT": {
+          "trades": 3,
+          "mean": 0.016414666423788343,
+          "sum": 0.049243999271365024,
+          "max_drawdown": -0.004461883950166001
+        },
+        "VETUSDT": {
+          "trades": 2,
+          "mean": 0.01481912877570668,
+          "sum": 0.02963825755141336,
+          "max_drawdown": -0.0210916563661272
+        },
+        "XLMUSDT": {
+          "trades": 2,
+          "mean": -0.020597524109004672,
+          "sum": -0.041195048218009345,
+          "max_drawdown": -0.0982501702768509
+        },
+        "XMRUSDT": {
+          "trades": 4,
+          "mean": -0.023749314798477056,
+          "sum": -0.09499725919390822,
+          "max_drawdown": -0.11876911630607356
+        },
+        "XRPUSDT": {
+          "trades": 4,
+          "mean": -0.007411706550225827,
+          "sum": -0.02964682620090331,
+          "max_drawdown": -0.04730400113237632
+        },
+        "ZECUSDT": {
+          "trades": 4,
+          "mean": 0.02225498112532287,
+          "sum": 0.08901992450129148,
+          "max_drawdown": -0.03245137743532711
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 12,
+          "mean": -0.04283731936783973
+        },
+        "Infrastructure": {
+          "trades": 5,
+          "mean": -0.03810669812997432
+        },
+        "Layer-1": {
+          "trades": 18,
+          "mean": 0.018680635341192273
+        },
+        "Layer-2": {
+          "trades": 2,
+          "mean": -0.020597524109004672
+        },
+        "Payment": {
+          "trades": 7,
+          "mean": -0.0160314095309406
+        },
+        "PoW": {
+          "trades": 8,
+          "mean": -0.0016617940934903128
+        }
+      },
+      "positive_target_fraction": 0.4166666666666667,
+      "target_max_drawdown_median": -0.04182277465930606,
+      "target_max_drawdown_worst": -0.43743573867146945,
+      "positive_category_count": 1,
+      "largest_positive_target_pnl_share": 0.34343320129383753,
+      "gross_price_trade_mean": -0.006212347682700161,
+      "actual_funding_trade_mean": 0.0007658916320437559,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "LONG": {
+          "trades": 26,
+          "entry_dates": 12,
+          "targets": 15,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.00022946426599318554,
+              "trade_mean_after_hurdle": -0.0035133480239816347,
+              "cohort_mean_after_hurdle": 0.0035766671565758967,
+              "cohort_bootstrap_95pct": [
+                -0.006151907228861008,
+                0.0121077051888206
+              ],
+              "trade_win_rate_after_hurdle": 0.38461538461538464,
+              "trade_median_after_hurdle": -0.012719593617711022,
+              "trade_5pct_after_hurdle": -0.09258946492218598
+            },
+            "base": {
+              "trade_mean_net_return": -0.0007317530884116119,
+              "trade_mean_after_hurdle": -0.004013986822968974,
+              "cohort_mean_after_hurdle": 0.00306878537404813,
+              "cohort_bootstrap_95pct": [
+                -0.006648173296986438,
+                0.011589464110800229
+              ],
+              "trade_win_rate_after_hurdle": 0.38461538461538464,
+              "trade_median_after_hurdle": -0.013207229742462134,
+              "trade_5pct_after_hurdle": -0.09299997262873719
+            },
+            "stress": {
+              "trade_mean_net_return": -0.00309564090352689,
+              "trade_mean_after_hurdle": -0.006370114445259449,
+              "cohort_mean_after_hurdle": 0.0006264686264125468,
+              "cohort_bootstrap_95pct": [
+                -0.008591022647724303,
+                0.00888042897774975
+              ],
+              "trade_win_rate_after_hurdle": 0.38461538461538464,
+              "trade_median_after_hurdle": -0.015929017618285413,
+              "trade_5pct_after_hurdle": -0.09477351375425974
+            }
+          }
+        },
+        "SHORT": {
+          "trades": 26,
+          "entry_dates": 12,
+          "targets": 15,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.011273650888382478,
+              "trade_mean_after_hurdle": -0.01451794158189534,
+              "cohort_mean_after_hurdle": -0.04197700996654439,
+              "cohort_bootstrap_95pct": [
+                -0.11266800253897628,
+                0.005584622628882085
+              ],
+              "trade_win_rate_after_hurdle": 0.5384615384615384,
+              "trade_median_after_hurdle": 0.02035677023139537,
+              "trade_5pct_after_hurdle": -0.11296574034868384
+            },
+            "base": {
+              "trade_mean_net_return": -0.011788374609219322,
+              "trade_mean_after_hurdle": -0.015030977913993975,
+              "cohort_mean_after_hurdle": -0.04251730090264369,
+              "cohort_bootstrap_95pct": [
+                -0.11327972639798638,
+                0.005092551844096674
+              ],
+              "trade_win_rate_after_hurdle": 0.5384615384615384,
+              "trade_median_after_hurdle": 0.019880329448374923,
+              "trade_5pct_after_hurdle": -0.11358592240696039
+            },
+            "stress": {
+              "trade_mean_net_return": -0.014421447430282647,
+              "trade_mean_after_hurdle": -0.017655389242991062,
+              "cohort_mean_after_hurdle": -0.0450397629370388,
+              "cohort_bootstrap_95pct": [
+                -0.11624989716862956,
+                0.002811090004899148
+              ],
+              "trade_win_rate_after_hurdle": 0.5384615384615384,
+              "trade_median_after_hurdle": 0.01824043582252033,
+              "trade_5pct_after_hurdle": -0.12047738037961528
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": -0.009930742401772004
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": -0.024394265558857722
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    },
+    "scheduled_long": {
+      "trades": 140,
+      "entry_dates": 10,
+      "targets": 25,
+      "categories": 6,
+      "funding_events": 12757,
+      "selection_counts": {
+        "1000XECUSDT": 3,
+        "AAVEUSDT": 6,
+        "AVAXUSDT": 6,
+        "BCHUSDT": 6,
+        "BNBUSDT": 6,
+        "CRVUSDT": 6,
+        "DASHUSDT": 3,
+        "ENSUSDT": 6,
+        "ETCUSDT": 6,
+        "HBARUSDT": 6,
+        "KAVAUSDT": 4,
+        "LINKUSDT": 6,
+        "LTCUSDT": 6,
+        "NEARUSDT": 6,
+        "RUNEUSDT": 6,
+        "SNXUSDT": 6,
+        "SOLUSDT": 6,
+        "TRXUSDT": 6,
+        "UNIUSDT": 6,
+        "VETUSDT": 6,
+        "XLMUSDT": 6,
+        "XMRUSDT": 6,
+        "XRPUSDT": 6,
+        "ZECUSDT": 6,
+        "ZILUSDT": 4
+      },
+      "category_counts": {
+        "DeFi": 34,
+        "Infrastructure": 12,
+        "Layer-1": 42,
+        "Layer-2": 6,
+        "Payment": 21,
+        "PoW": 25
+      },
+      "maximum_vectorbt_reconciliation_error": 2.220446049250313e-16,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": 0.04802483204142959,
+          "trade_mean_after_hurdle": 0.04457516963960223,
+          "cohort_mean_after_hurdle": 0.02025949435778953,
+          "cohort_bootstrap_95pct": [
+            -0.013961845207745488,
+            0.07135246602049852
+          ],
+          "trade_win_rate_after_hurdle": 0.6,
+          "trade_median_after_hurdle": 0.009889287905519684,
+          "trade_5pct_after_hurdle": -0.05836553760183517
+        },
+        "base": {
+          "trade_mean_net_return": 0.047473201116528384,
+          "trade_mean_after_hurdle": 0.044025353203565494,
+          "cohort_mean_after_hurdle": 0.019734364906953503,
+          "cohort_bootstrap_95pct": [
+            -0.014452197693082383,
+            0.07077549880061804
+          ],
+          "trade_win_rate_after_hurdle": 0.5928571428571429,
+          "trade_median_after_hurdle": 0.009377990337041897,
+          "trade_5pct_after_hurdle": -0.05881141324819967
+        },
+        "stress": {
+          "trade_mean_net_return": 0.04485186830414499,
+          "trade_mean_after_hurdle": 0.04141266750746686,
+          "cohort_mean_after_hurdle": 0.01741027194452103,
+          "cohort_bootstrap_95pct": [
+            -0.0168143062632185,
+            0.06803240716610885
+          ],
+          "trade_win_rate_after_hurdle": 0.5714285714285714,
+          "trade_median_after_hurdle": 0.0077935894173633,
+          "trade_5pct_after_hurdle": -0.06039922854472171
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": 0.019734364906953503
+      },
+      "by_target_base_after_hurdle": {
+        "1000XECUSDT": {
+          "trades": 3,
+          "mean": -0.07388124256623563,
+          "sum": -0.22164372769870688,
+          "max_drawdown": -0.20616958494289428
+        },
+        "AAVEUSDT": {
+          "trades": 6,
+          "mean": 0.03615201064659455,
+          "sum": 0.2169120638795673,
+          "max_drawdown": -0.058365218293769616
+        },
+        "AVAXUSDT": {
+          "trades": 6,
+          "mean": 0.040789390730452825,
+          "sum": 0.24473634438271696,
+          "max_drawdown": -0.04182277465930606
+        },
+        "BCHUSDT": {
+          "trades": 6,
+          "mean": 0.06965694227323932,
+          "sum": 0.4179416536394359,
+          "max_drawdown": -0.029036210920244776
+        },
+        "BNBUSDT": {
+          "trades": 6,
+          "mean": 0.024560918561426743,
+          "sum": 0.14736551136856046,
+          "max_drawdown": -0.007554094284859758
+        },
+        "CRVUSDT": {
+          "trades": 6,
+          "mean": 0.05986969187901955,
+          "sum": 0.35921815127411727,
+          "max_drawdown": -0.06815527716486136
+        },
+        "DASHUSDT": {
+          "trades": 3,
+          "mean": -0.04887876857150183,
+          "sum": -0.14663630571450548,
+          "max_drawdown": -0.14047946611887607
+        },
+        "ENSUSDT": {
+          "trades": 6,
+          "mean": 0.11388998328620621,
+          "sum": 0.6833398997172373,
+          "max_drawdown": -0.04851568615441426
+        },
+        "ETCUSDT": {
+          "trades": 6,
+          "mean": 0.041732886106904045,
+          "sum": 0.2503973166414243,
+          "max_drawdown": -0.025550181079277312
+        },
+        "HBARUSDT": {
+          "trades": 6,
+          "mean": 0.09817230725310229,
+          "sum": 0.5890338435186138,
+          "max_drawdown": -0.09919433255560339
+        },
+        "KAVAUSDT": {
+          "trades": 4,
+          "mean": 0.05102489024375592,
+          "sum": 0.20409956097502369,
+          "max_drawdown": -0.0525870640784285
+        },
+        "LINKUSDT": {
+          "trades": 6,
+          "mean": 0.03660719006900507,
+          "sum": 0.21964314041403044,
+          "max_drawdown": -0.030858714050077563
+        },
+        "LTCUSDT": {
+          "trades": 6,
+          "mean": 0.02215803436267849,
+          "sum": 0.13294820617607095,
+          "max_drawdown": -0.02791715197291844
+        },
+        "NEARUSDT": {
+          "trades": 6,
+          "mean": 0.06577576146683739,
+          "sum": 0.39465456880102434,
+          "max_drawdown": -0.06350187759458681
+        },
+        "RUNEUSDT": {
+          "trades": 6,
+          "mean": 0.03638558701516612,
+          "sum": 0.21831352209099675,
+          "max_drawdown": -0.031824640515310976
+        },
+        "SNXUSDT": {
+          "trades": 6,
+          "mean": 0.02948511590510285,
+          "sum": 0.1769106954306171,
+          "max_drawdown": -0.07936148546354516
+        },
+        "SOLUSDT": {
+          "trades": 6,
+          "mean": 0.05742631254439675,
+          "sum": 0.3445578752663805,
+          "max_drawdown": -0.018813538729137713
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "mean": -0.0006322157946063353,
+          "sum": -0.0037932947676380113,
+          "max_drawdown": -0.056813452052605906
+        },
+        "UNIUSDT": {
+          "trades": 6,
+          "mean": 0.038241901275021084,
+          "sum": 0.2294514076501265,
+          "max_drawdown": -0.06248966219212415
+        },
+        "VETUSDT": {
+          "trades": 6,
+          "mean": -0.027289164508499702,
+          "sum": -0.1637349870509982,
+          "max_drawdown": -0.1533860856338527
+        },
+        "XLMUSDT": {
+          "trades": 6,
+          "mean": 0.1930600474121369,
+          "sum": 1.1583602844728214,
+          "max_drawdown": -0.04340442170296732
+        },
+        "XMRUSDT": {
+          "trades": 6,
+          "mean": -0.0059186818985830225,
+          "sum": -0.035512091391498135,
+          "max_drawdown": -0.0453468095568178
+        },
+        "XRPUSDT": {
+          "trades": 6,
+          "mean": 0.12216976844930189,
+          "sum": 0.7330186106958113,
+          "max_drawdown": -0.05233149037523266
+        },
+        "ZECUSDT": {
+          "trades": 6,
+          "mean": 0.008416416174561236,
+          "sum": 0.05049849704736742,
+          "max_drawdown": -0.055066147139193666
+        },
+        "ZILUSDT": {
+          "trades": 4,
+          "mean": -0.009132824579857007,
+          "sum": -0.03653129831942803,
+          "max_drawdown": -0.06756004902494339
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 34,
+          "mean": 0.03946722822892985
+        },
+        "Infrastructure": {
+          "trades": 12,
+          "mean": 0.07524858667760564
+        },
+        "Layer-1": {
+          "trades": 42,
+          "mean": 0.025152725342613924
+        },
+        "Layer-2": {
+          "trades": 6,
+          "mean": 0.1930600474121369
+        },
+        "Payment": {
+          "trades": 21,
+          "mean": 0.031358366284610355
+        },
+        "PoW": {
+          "trades": 25,
+          "mean": 0.0032386806844285987
+        }
+      },
+      "positive_target_fraction": 0.76,
+      "target_max_drawdown_median": -0.0525870640784285,
+      "target_max_drawdown_worst": -0.20616958494289428,
+      "positive_category_count": 6,
+      "largest_positive_target_pnl_share": 0.17106655745598826,
+      "gross_price_trade_mean": 0.051661922054442096,
+      "actual_funding_trade_mean": -0.003306092859779861,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "LONG": {
+          "trades": 140,
+          "entry_dates": 10,
+          "targets": 25,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": 0.04802483204142959,
+              "trade_mean_after_hurdle": 0.04457516963960223,
+              "cohort_mean_after_hurdle": 0.02025949435778953,
+              "cohort_bootstrap_95pct": [
+                -0.013961845207745488,
+                0.07135246602049852
+              ],
+              "trade_win_rate_after_hurdle": 0.6,
+              "trade_median_after_hurdle": 0.009889287905519684,
+              "trade_5pct_after_hurdle": -0.05836553760183517
+            },
+            "base": {
+              "trade_mean_net_return": 0.047473201116528384,
+              "trade_mean_after_hurdle": 0.044025353203565494,
+              "cohort_mean_after_hurdle": 0.019734364906953503,
+              "cohort_bootstrap_95pct": [
+                -0.014452197693082383,
+                0.07077549880061804
+              ],
+              "trade_win_rate_after_hurdle": 0.5928571428571429,
+              "trade_median_after_hurdle": 0.009377990337041897,
+              "trade_5pct_after_hurdle": -0.05881141324819967
+            },
+            "stress": {
+              "trade_mean_net_return": 0.04485186830414499,
+              "trade_mean_after_hurdle": 0.04141266750746686,
+              "cohort_mean_after_hurdle": 0.01741027194452103,
+              "cohort_bootstrap_95pct": [
+                -0.0168143062632185,
+                0.06803240716610885
+              ],
+              "trade_win_rate_after_hurdle": 0.5714285714285714,
+              "trade_median_after_hurdle": 0.0077935894173633,
+              "trade_5pct_after_hurdle": -0.06039922854472171
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 4,
+          "base_cohort_mean_after_hurdle": -0.006025862096251427
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": 0.03690784957575679
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    },
+    "scheduled_short": {
+      "trades": 140,
+      "entry_dates": 10,
+      "targets": 25,
+      "categories": 6,
+      "funding_events": 12757,
+      "selection_counts": {
+        "1000XECUSDT": 3,
+        "AAVEUSDT": 6,
+        "AVAXUSDT": 6,
+        "BCHUSDT": 6,
+        "BNBUSDT": 6,
+        "CRVUSDT": 6,
+        "DASHUSDT": 3,
+        "ENSUSDT": 6,
+        "ETCUSDT": 6,
+        "HBARUSDT": 6,
+        "KAVAUSDT": 4,
+        "LINKUSDT": 6,
+        "LTCUSDT": 6,
+        "NEARUSDT": 6,
+        "RUNEUSDT": 6,
+        "SNXUSDT": 6,
+        "SOLUSDT": 6,
+        "TRXUSDT": 6,
+        "UNIUSDT": 6,
+        "VETUSDT": 6,
+        "XLMUSDT": 6,
+        "XMRUSDT": 6,
+        "XRPUSDT": 6,
+        "ZECUSDT": 6,
+        "ZILUSDT": 4
+      },
+      "category_counts": {
+        "DeFi": 34,
+        "Infrastructure": 12,
+        "Layer-1": 42,
+        "Layer-2": 6,
+        "Payment": 21,
+        "PoW": 25
+      },
+      "maximum_vectorbt_reconciliation_error": 0.0004545635189177055,
+      "scenarios": {
+        "favorable": {
+          "trade_mean_net_return": -0.04868609023425235,
+          "trade_mean_after_hurdle": -0.05182258606646486,
+          "cohort_mean_after_hurdle": -0.027475958705602644,
+          "cohort_bootstrap_95pct": [
+            -0.07860872530638241,
+            0.006799421920762435
+          ],
+          "trade_win_rate_after_hurdle": 0.35714285714285715,
+          "trade_median_after_hurdle": -0.016939714234262992,
+          "trade_5pct_after_hurdle": -0.21746106955133968
+        },
+        "base": {
+          "trade_mean_net_return": -0.049236538442819326,
+          "trade_mean_after_hurdle": -0.05237122359117416,
+          "cohort_mean_after_hurdle": -0.02800025181387244,
+          "cohort_bootstrap_95pct": [
+            -0.07918318143345779,
+            0.0063090057452155224
+          ],
+          "trade_win_rate_after_hurdle": 0.35,
+          "trade_median_after_hurdle": -0.017451027300179445,
+          "trade_5pct_after_hurdle": -0.21817647081650984
+        },
+        "stress": {
+          "trade_mean_net_return": -0.05185666719151446,
+          "trade_mean_after_hurdle": -0.05498270909729631,
+          "cohort_mean_after_hurdle": -0.03032349353868431,
+          "cohort_bootstrap_95pct": [
+            -0.08192371728999877,
+            0.004318951139632718
+          ],
+          "trade_win_rate_after_hurdle": 0.34285714285714286,
+          "trade_median_after_hurdle": -0.019876477358791278,
+          "trade_5pct_after_hurdle": -0.22069442645552892
+        }
+      },
+      "by_year_base_after_hurdle": {
+        "2024": -0.02800025181387244
+      },
+      "by_target_base_after_hurdle": {
+        "1000XECUSDT": {
+          "trades": 3,
+          "mean": 0.06593310901391192,
+          "sum": 0.19779932704173575,
+          "max_drawdown": 0.0
+        },
+        "AAVEUSDT": {
+          "trades": 6,
+          "mean": -0.04446446157911099,
+          "sum": -0.26678676947466595,
+          "max_drawdown": -0.28130882925703926
+        },
+        "AVAXUSDT": {
+          "trades": 6,
+          "mean": -0.04911895954790243,
+          "sum": -0.29471375728741456,
+          "max_drawdown": -0.2997553034255167
+        },
+        "BCHUSDT": {
+          "trades": 6,
+          "mean": -0.07806995062884022,
+          "sum": -0.4684197037730413,
+          "max_drawdown": -0.4291593891885199
+        },
+        "BNBUSDT": {
+          "trades": 6,
+          "mean": -0.032828235396570836,
+          "sum": -0.196969412379425,
+          "max_drawdown": -0.18669645601543772
+        },
+        "CRVUSDT": {
+          "trades": 6,
+          "mean": -0.06826043957689064,
+          "sum": -0.4095626374613438,
+          "max_drawdown": -0.4501021906768674
+        },
+        "DASHUSDT": {
+          "trades": 3,
+          "mean": 0.04083797863523827,
+          "sum": 0.1225139359057148,
+          "max_drawdown": 0.0
+        },
+        "ENSUSDT": {
+          "trades": 6,
+          "mean": -0.12245642659291811,
+          "sum": -0.7347385595575087,
+          "max_drawdown": -0.5780394841902567
+        },
+        "ETCUSDT": {
+          "trades": 6,
+          "mean": -0.050066422349248074,
+          "sum": -0.30039853409548845,
+          "max_drawdown": -0.27643168848568267
+        },
+        "HBARUSDT": {
+          "trades": 6,
+          "mean": -0.1066841564332484,
+          "sum": -0.6401049385994904,
+          "max_drawdown": -0.6818417518806223
+        },
+        "KAVAUSDT": {
+          "trades": 4,
+          "mean": -0.05940741281963707,
+          "sum": -0.2376296512785483,
+          "max_drawdown": -0.26786817789041273
+        },
+        "LINKUSDT": {
+          "trades": 6,
+          "mean": -0.044923691294435054,
+          "sum": -0.26954214776661034,
+          "max_drawdown": -0.25257047903037533
+        },
+        "LTCUSDT": {
+          "trades": 6,
+          "mean": -0.03042828891092118,
+          "sum": -0.18256973346552707,
+          "max_drawdown": -0.19197833698490852
+        },
+        "NEARUSDT": {
+          "trades": 6,
+          "mean": -0.07419033642965232,
+          "sum": -0.4451420185779139,
+          "max_drawdown": -0.42229829575639344
+        },
+        "RUNEUSDT": {
+          "trades": 6,
+          "mean": -0.04470442864668287,
+          "sum": -0.26822657188009724,
+          "max_drawdown": -0.2628491196290277
+        },
+        "SNXUSDT": {
+          "trades": 6,
+          "mean": -0.037777277165280766,
+          "sum": -0.2266636629916846,
+          "max_drawdown": -0.2662382620159066
+        },
+        "SOLUSDT": {
+          "trades": 6,
+          "mean": -0.06581066287577053,
+          "sum": -0.3948639772546232,
+          "max_drawdown": -0.34792812786959393
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "mean": -0.007554501807541858,
+          "sum": -0.04532701084525115,
+          "max_drawdown": -0.07272379402367879
+        },
+        "UNIUSDT": {
+          "trades": 6,
+          "mean": -0.04656325562281136,
+          "sum": -0.2793795337368682,
+          "max_drawdown": -0.29309777427870776
+        },
+        "VETUSDT": {
+          "trades": 6,
+          "mean": 0.01910722416566361,
+          "sum": 0.11464334499398166,
+          "max_drawdown": 0.0
+        },
+        "XLMUSDT": {
+          "trades": 6,
+          "mean": -0.20183215600745075,
+          "sum": -1.2109929360447045,
+          "max_drawdown": -1.1531852050000826
+        },
+        "XMRUSDT": {
+          "trades": 6,
+          "mean": -0.00226333884611137,
+          "sum": -0.013580033076668219,
+          "max_drawdown": -0.0627257957881926
+        },
+        "XRPUSDT": {
+          "trades": 6,
+          "mean": -0.13076227377717545,
+          "sum": -0.7845736426630527,
+          "max_drawdown": -0.7397459440893831
+        },
+        "ZECUSDT": {
+          "trades": 6,
+          "mean": -0.0167147038698142,
+          "sum": -0.1002882232188852,
+          "max_drawdown": -0.153646332015552
+        },
+        "ZILUSDT": {
+          "trades": 4,
+          "mean": 0.0008863861807494045,
+          "sum": 0.003545544722997618,
+          "max_drawdown": -0.10244505069535736
+        }
+      },
+      "by_category_base_after_hurdle": {
+        "DeFi": {
+          "trades": 34,
+          "mean": -0.04779241632891016
+        },
+        "Infrastructure": {
+          "trades": 12,
+          "mean": -0.08369005894367658
+        },
+        "Layer-1": {
+          "trades": 42,
+          "mean": -0.033447954851332
+        },
+        "Layer-2": {
+          "trades": 6,
+          "mean": -0.20183215600745075
+        },
+        "Payment": {
+          "trades": 21,
+          "mean": -0.03964536188295959
+        },
+        "PoW": {
+          "trades": 25,
+          "mean": -0.011454461736405309
+        }
+      },
+      "positive_target_fraction": 0.16,
+      "target_max_drawdown_median": -0.26786817789041273,
+      "target_max_drawdown_worst": -1.1531852050000826,
+      "positive_category_count": 0,
+      "largest_positive_target_pnl_share": 0.451079489210865,
+      "gross_price_trade_mean": -0.051661922054442096,
+      "actual_funding_trade_mean": 0.003306092859779861,
+      "drawdown_target_scope": "all traded targets, including targets with fewer than three trades",
+      "by_direction": {
+        "SHORT": {
+          "trades": 140,
+          "entry_dates": 10,
+          "targets": 25,
+          "scenarios": {
+            "favorable": {
+              "trade_mean_net_return": -0.04868609023425235,
+              "trade_mean_after_hurdle": -0.05182258606646486,
+              "cohort_mean_after_hurdle": -0.027475958705602644,
+              "cohort_bootstrap_95pct": [
+                -0.07860872530638241,
+                0.006799421920762435
+              ],
+              "trade_win_rate_after_hurdle": 0.35714285714285715,
+              "trade_median_after_hurdle": -0.016939714234262992,
+              "trade_5pct_after_hurdle": -0.21746106955133968
+            },
+            "base": {
+              "trade_mean_net_return": -0.049236538442819326,
+              "trade_mean_after_hurdle": -0.05237122359117416,
+              "cohort_mean_after_hurdle": -0.02800025181387244,
+              "cohort_bootstrap_95pct": [
+                -0.07918318143345779,
+                0.0063090057452155224
+              ],
+              "trade_win_rate_after_hurdle": 0.35,
+              "trade_median_after_hurdle": -0.017451027300179445,
+              "trade_5pct_after_hurdle": -0.21817647081650984
+            },
+            "stress": {
+              "trade_mean_net_return": -0.05185666719151446,
+              "trade_mean_after_hurdle": -0.05498270909729631,
+              "cohort_mean_after_hurdle": -0.03032349353868431,
+              "cohort_bootstrap_95pct": [
+                -0.08192371728999877,
+                0.004318951139632718
+              ],
+              "trade_win_rate_after_hurdle": 0.34285714285714286,
+              "trade_median_after_hurdle": -0.019876477358791278,
+              "trade_5pct_after_hurdle": -0.22069442645552892
+            }
+          }
+        }
+      },
+      "by_half": {
+        "H1": {
+          "entry_dates": 4,
+          "base_cohort_mean_after_hurdle": -0.002172701307221775
+        },
+        "H2": {
+          "entry_dates": 6,
+          "base_cohort_mean_after_hurdle": -0.04521861881830622
+        }
+      },
+      "excluded_trade_fraction": 0.0
+    }
+  },
+  "comparisons": {
+    "base_vs_reverse": {
+      "main_mean": 0.03045343028873818,
+      "baseline_mean": -0.03865164519015074,
+      "difference_mean": 0.06910507547888893,
+      "difference_bootstrap_95pct": [
+        0.004090740243717729,
+        0.16510733149432208
+      ],
+      "positive_month_fraction": 0.5
+    },
+    "base_vs_momentum90": {
+      "main_mean": 0.03045343028873818,
+      "baseline_mean": -0.017162503980314863,
+      "difference_mean": 0.04761593426905305,
+      "difference_bootstrap_95pct": [
+        0.006853537739660212,
+        0.11328036152788228
+      ],
+      "positive_month_fraction": 0.75
+    },
+    "stress_vs_reverse": {
+      "main_mean": 0.02800615118184727,
+      "baseline_mean": -0.041095284251765805,
+      "difference_mean": 0.06910143543361308,
+      "difference_bootstrap_95pct": [
+        0.0040907416397603135,
+        0.16509638804888857
+      ],
+      "positive_month_fraction": 0.5
+    }
+  },
+  "trade_csv_sha256": {
+    "development_main_trades.csv": "d05954ceb80baa6e2005af7933aeaec3cb122866cad21f63a7b40daed1acb645",
+    "development_rv60_trades.csv": "c3a9ef7a18f419775d1acd9e1fd3d74e6cd7217db86940883172afe11c198359",
+    "development_rv120_trades.csv": "e9bec2098a0cfa0356c1bd8d4f5445585291b49be05f0c6f6ffc206c4d335fde",
+    "development_extreme5_trades.csv": "66339a7e5e40de5782fb7ce59acdca3c55543d1ae452e196c7866e31e2f15438",
+    "development_reverse_trades.csv": "4dd84c3adae03fef9256dfdb285cf5eb04236d37ae467d6e70c0c41e23a1e401",
+    "development_momentum90_trades.csv": "a010ab90bd4d14f2d4b6ffe117f5c4adf2c996d5c113f9fe2ec70ad58f64f823",
+    "development_scheduled_long_trades.csv": "c7147d874758522bc62980c35700be5d8d00cb52a43f29f9109265829de15ba0",
+    "development_scheduled_short_trades.csv": "0b7717f6bf8a908a64f2509b899a734854a94f04e8ac35412f2f247e3c324e36"
+  },
+  "content_digest": "a1033a7a086a35ac3c813acdc162c8bd45283bd146b7977f5905bb73621ce760"
+}

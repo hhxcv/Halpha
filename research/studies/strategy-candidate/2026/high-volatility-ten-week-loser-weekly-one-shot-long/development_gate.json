@@ -1,0 +1,41 @@
+{
+  "created_at_utc": "2026-07-22T08:20:48.630275Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checkpoint_digest": "e55ade04b3f464e1347884d4c3da6c295d3b6a176fd28a1d24299f48a0760d05",
+  "evidence_digest": "969f8c43da83eaf4b814f6cfb9854ffd1ea5c1f3b3aef2d2cf09da62c957eeae",
+  "checks": {
+    "data_quality_pass": true,
+    "minimum_trades": true,
+    "minimum_entry_dates": true,
+    "minimum_symbols": true,
+    "excluded_at_most_2pct": true,
+    "base_after_hurdle_positive": true,
+    "stress_after_hurdle_positive": true,
+    "date_drawdown_above_limit": true,
+    "worst_symbol_drawdown_above_minus_30pct": true,
+    "base_beats_unconditional_loser": true,
+    "base_beats_highvol_scheduled": false,
+    "gross_market_excess_positive": true,
+    "at_least_two_of_three_neighbors_stress_nonnegative": true,
+    "at_least_half_symbols_positive": true,
+    "minimum_positive_categories": false,
+    "positive_pnl_concentration_below_limit": false,
+    "vectorbt_manual_reconciliation": true,
+    "both_halves_base_positive": true,
+    "base_beats_lowvol_loser": true,
+    "base_beats_highvol_winner": true
+  },
+  "failed": [
+    "base_beats_highvol_scheduled",
+    "minimum_positive_categories",
+    "positive_pnl_concentration_below_limit"
+  ],
+  "diagnostics": {
+    "excluded_fraction": 0.0,
+    "positive_symbols": 15,
+    "positive_categories": 3,
+    "neighbor_positive": 3
+  },
+  "content_digest": "95649756b6ef3e390252d1492132254b0d61bf745dbc8cdccb48dda04a3d3bf7"
+}

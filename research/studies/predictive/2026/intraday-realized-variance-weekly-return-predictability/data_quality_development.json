@@ -1,0 +1,269 @@
+{
+  "checked_at_utc": "2026-07-22T14:59:09.176405+00:00",
+  "stage": "development",
+  "status": "PASS",
+  "expected_decision_weeks": 65,
+  "symbols": {
+    "1000XECUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "AAVEUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "AVAXUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "BCHUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "BNBUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "CRVUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "DASHUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "ENSUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "ETCUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "HBARUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "KAVAUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "LINKUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "LTCUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "NEARUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "RUNEUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "SNXUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "SOLUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "TRXUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "UNIUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "VETUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "XLMUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "XMRUSDT": {
+      "rows": 49728,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 63,
+      "expected_weeks": 65
+    },
+    "XRPUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "ZECUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    },
+    "ZILUSDT": {
+      "rows": 49536,
+      "first": "2022-03-01T00:00:00+00:00",
+      "last": "2023-07-31T23:45:00+00:00",
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "complete_rv35_and_target_weeks": 58,
+      "expected_weeks": 65
+    }
+  },
+  "source": {
+    "kind": "verified_reuse",
+    "path": "research/studies/predictive/2026/relative-signed-jump-next-day-predictability/source_manifest_development.json",
+    "sha256": "8f0404a9d1b6e1d03db1b977a534706a5496a24324afc11cf1d9e53183ae8d8c",
+    "content_digest": "ca419060bd58d89a86c8b652446008e005952dbf4b178daebc34dd56105aa4ff",
+    "archive_count": 425,
+    "archive_bytes": 50798433
+  },
+  "minimum_complete_symbol_weeks": 58,
+  "maximum_complete_symbol_weeks": 63,
+  "content_digest": "a715324529ce0b3eb8e65e78dee389c21ec7d83dfb9a87b084217275aac47886"
+}

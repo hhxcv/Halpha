@@ -1,0 +1,24 @@
+{
+  "checked_at_utc": "2026-07-22T08:47:26.381277Z",
+  "stage": "development",
+  "status": "PASS",
+  "checks": {
+    "data_quality_pass": true,
+    "vectorbt_reconciled": true,
+    "excluded_trade_fraction_at_most_limit": true,
+    "minimum_trades": true,
+    "minimum_entry_months": true,
+    "minimum_targets": true,
+    "minimum_categories": true,
+    "base_after_hurdle_positive": true,
+    "stress_after_hurdle_positive": true,
+    "long_base_positive": true,
+    "long_stress_positive": true,
+    "short_base_positive": true,
+    "short_stress_positive": true
+  },
+  "failed_checks": [],
+  "diagnostics": {},
+  "evidence_digest": "a1033a7a086a35ac3c813acdc162c8bd45283bd146b7977f5905bb73621ce760",
+  "content_digest": "1d8d5377e73d0d961744fae5f179e5cb86fa2ceba7e3c5c6d4738c2dff970c76"
+}

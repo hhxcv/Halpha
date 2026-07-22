@@ -1,0 +1,292 @@
+{
+  "checked_at_utc": "2026-07-22T14:37:42.759065+00:00",
+  "status": "PASS",
+  "symbols": {
+    "1000XECUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 6039034.921
+    },
+    "AAVEUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 95475875.632
+    },
+    "AVAXUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 248826571.785
+    },
+    "BCHUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 126608706.96557
+    },
+    "BNBUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 415267551.48635
+    },
+    "CRVUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 97723120.6286
+    },
+    "DASHUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 16513959.98398
+    },
+    "ENSUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 31524192.5128
+    },
+    "ETCUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 109479117.26104
+    },
+    "HBARUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 32546280.27648
+    },
+    "KAVAUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 18362363.8466
+    },
+    "LINKUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 230879081.02529
+    },
+    "LTCUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 198724972.21726
+    },
+    "NEARUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 154882316.195
+    },
+    "RUNEUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 41876509.58
+    },
+    "SNXUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 23682378.7366
+    },
+    "SOLUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 1832596478.56
+    },
+    "TRXUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 67912143.5326
+    },
+    "UNIUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 78634238.268
+    },
+    "VETUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 21639186.329109
+    },
+    "XLMUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 46101318.66006
+    },
+    "XMRUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 28608181.69606
+    },
+    "XRPUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 672591605.2674
+    },
+    "ZECUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 32479537.10599
+    },
+    "ZILUSDT": {
+      "rows": 1663,
+      "first": "2022-01-01T00:00:00+00:00",
+      "last": "2026-07-21T00:00:00+00:00",
+      "missing": 0,
+      "duplicates": 0,
+      "invalid_ohlc": 0,
+      "invalid_range": 0,
+      "nonpositive_quote_volume": 0,
+      "median_quote_volume": 13345533.94409
+    }
+  },
+  "current_exchange": {
+    "present": 25,
+    "all_trading_perpetual": true
+  },
+  "source_reuse_manifest_digest": "22f6f5f3e1b31f1e8111161657c5454c24165cbbcfa8d7d02a638ce153297584",
+  "reference_dataset": {
+    "status": "PASS",
+    "benchmark_digest": "39f7cffd28fdf89873d8db0020ca80b20e65e639a9470e4ad939622869559a51",
+    "gate_role": "quality/provenance context only; excluded from market stage gates"
+  },
+  "content_digest": "5c57c7f17f0eb030a016dc0f6c873462548fa97003ca9329e3c9207925a65f66"
+}

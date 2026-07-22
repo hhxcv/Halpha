@@ -1,0 +1,353 @@
+{
+  "generated_at_utc": "2026-07-22T01:17:40.316575Z",
+  "stage": "development",
+  "period": {
+    "start": "2021-01-04T00:00:00Z",
+    "end_exclusive": "2023-01-02T00:00:00Z"
+  },
+  "main": {
+    "weeks": 104,
+    "legs": 104,
+    "funding_events": 2184,
+    "selection_counts": {
+      "BTCUSDT": 10,
+      "ETHUSDT": 7,
+      "BNBUSDT": 13,
+      "XRPUSDT": 19,
+      "DOGEUSDT": 30,
+      "ADAUSDT": 25
+    },
+    "maximum_vectorbt_reconciliation_error": 6.938893903907228e-17,
+    "by_year": {
+      "2021": -0.3573914128442506,
+      "2022": 0.25455340723093234
+    },
+    "by_symbol": {
+      "BTCUSDT": 0.08586207032208029,
+      "ETHUSDT": -0.08023418643326938,
+      "BNBUSDT": -0.25169755966908514,
+      "XRPUSDT": -0.3042655746560242,
+      "DOGEUSDT": 0.23799942040455965,
+      "ADAUSDT": 0.15170815099104354
+    },
+    "scenarios": {
+      "favorable": {
+        "total_return": -0.15042513246307154,
+        "annualized_return": -0.0784825197558473,
+        "daily_max_drawdown": -0.4055689217591707,
+        "weekly_mean_bootstrap_95pct": [
+          -0.0068138586972788006,
+          0.004375071345431381
+        ],
+        "return_after_4pct_annual_hurdle": -0.21435145376511922,
+        "arithmetic_sum": -0.10844347615615724
+      },
+      "base": {
+        "total_return": -0.19381320746789943,
+        "annualized_return": -0.10238662116755959,
+        "daily_max_drawdown": -0.4181617641276639,
+        "weekly_mean_bootstrap_95pct": [
+          -0.007321239005404239,
+          0.00387888947888277
+        ],
+        "return_after_4pct_annual_hurdle": -0.254474789981855,
+        "arithmetic_sum": -0.16062767904069522
+      },
+      "stress": {
+        "total_return": -0.2899781841584811,
+        "annualized_return": -0.15776836612241307,
+        "daily_max_drawdown": -0.4618038205277176,
+        "weekly_mean_bootstrap_95pct": [
+          -0.008670062652170183,
+          0.0028264078728444412
+        ],
+        "return_after_4pct_annual_hurdle": -0.34340382616521725,
+        "arithmetic_sum": -0.28572407500939456
+      }
+    },
+    "largest_positive_pnl_share": 0.5004512473608341,
+    "gross_selection_return": {
+      "mean": 0.004344557939580019,
+      "total_arithmetic": 0.4518340257163219,
+      "bootstrap_95pct": [
+        -0.001376297432436218,
+        0.011144252171579133
+      ],
+      "positive_weeks_fraction": 0.5576923076923077
+    }
+  },
+  "diagnostics": {
+    "formation_14d": {
+      "weeks": 104,
+      "legs": 104,
+      "funding_events": 2184,
+      "selection_counts": {
+        "BTCUSDT": 9,
+        "ETHUSDT": 13,
+        "BNBUSDT": 8,
+        "XRPUSDT": 16,
+        "DOGEUSDT": 30,
+        "ADAUSDT": 28
+      },
+      "maximum_vectorbt_reconciliation_error": 7.155734338404329e-17,
+      "by_year": {
+        "2021": -0.3795573486452125,
+        "2022": 0.29819296731169165
+      },
+      "by_symbol": {
+        "BTCUSDT": 0.09951454277083915,
+        "ETHUSDT": 0.03617378809623379,
+        "BNBUSDT": -0.16026649301395296,
+        "XRPUSDT": -0.01727247646323378,
+        "DOGEUSDT": 0.1007276815082832,
+        "ADAUSDT": -0.19154176760251118
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": -0.15115252546806335,
+          "annualized_return": -0.07887818259244828,
+          "daily_max_drawdown": -0.4334000173474354,
+          "weekly_mean_bootstrap_95pct": [
+            -0.007230554371758433,
+            0.005234575490388626
+          ],
+          "return_after_4pct_annual_hurdle": -0.21502411403174182,
+          "arithmetic_sum": -0.08050858212282155
+        },
+        "base": {
+          "total_return": -0.1945457133909957,
+          "annualized_return": -0.10279562245694263,
+          "daily_max_drawdown": -0.4435057978839497,
+          "weekly_mean_bootstrap_95pct": [
+            -0.007738642409274875,
+            0.004739521584025328
+          ],
+          "return_after_4pct_annual_hurdle": -0.25515217844469584,
+          "arithmetic_sum": -0.13266472470434174
+        },
+        "stress": {
+          "total_return": -0.28907585476431896,
+          "annualized_return": -0.15723189183599462,
+          "daily_max_drawdown": -0.4802665905781085,
+          "weekly_mean_bootstrap_95pct": [
+            -0.00911684195192057,
+            0.0037635494496604453
+          ],
+          "return_after_4pct_annual_hurdle": -0.34256939261046326,
+          "arithmetic_sum": -0.2553947104140638
+        }
+      },
+      "largest_positive_pnl_share": 0.4260611643696897,
+      "gross_selection_return": {
+        "mean": 0.004614206756232653,
+        "total_arithmetic": 0.4798775026481959,
+        "bootstrap_95pct": [
+          -0.00019190238778572265,
+          0.00988739334845133
+        ],
+        "positive_weeks_fraction": 0.5769230769230769
+      }
+    },
+    "bottom_2": {
+      "weeks": 104,
+      "legs": 208,
+      "funding_events": 4368,
+      "selection_counts": {
+        "BTCUSDT": 27,
+        "ETHUSDT": 26,
+        "BNBUSDT": 26,
+        "XRPUSDT": 41,
+        "DOGEUSDT": 45,
+        "ADAUSDT": 43
+      },
+      "maximum_vectorbt_reconciliation_error": 3.729655473350135e-17,
+      "by_year": {
+        "2021": -0.37971806362776606,
+        "2022": 0.22079384414348646
+      },
+      "by_symbol": {
+        "BTCUSDT": 0.06781246277533803,
+        "ETHUSDT": 0.003347133444476667,
+        "BNBUSDT": -0.1012836839207751,
+        "XRPUSDT": -0.1881433743326739,
+        "DOGEUSDT": 0.08462098610589788,
+        "ADAUSDT": -0.08412046947151262
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": -0.2019334099390716,
+          "annualized_return": -0.10693102283700717,
+          "daily_max_drawdown": -0.42734134755819164,
+          "weekly_mean_bootstrap_95pct": [
+            -0.00804219705701122,
+            0.004235148714495785
+          ],
+          "return_after_4pct_annual_hurdle": -0.26198398724083827,
+          "arithmetic_sum": -0.16553294003745375
+        },
+        "base": {
+          "total_return": -0.24276363044337512,
+          "annualized_return": -0.13013903666921833,
+          "daily_max_drawdown": -0.44043453070803684,
+          "weekly_mean_bootstrap_95pct": [
+            -0.008551114113219408,
+            0.0037391468860062047
+          ],
+          "return_after_4pct_annual_hurdle": -0.2997419349007734,
+          "arithmetic_sum": -0.2177669453992491
+        },
+        "stress": {
+          "total_return": -0.33019097962493293,
+          "annualized_return": -0.18203180444160572,
+          "daily_max_drawdown": -0.48306277881322857,
+          "weekly_mean_bootstrap_95pct": [
+            -0.00986426670775711,
+            0.002759978026970084
+          ],
+          "return_after_4pct_annual_hurdle": -0.38059080697816516,
+          "arithmetic_sum": -0.3384375121650409
+        }
+      },
+      "largest_positive_pnl_share": 0.5432062510138059,
+      "gross_selection_return": {
+        "mean": 0.00386597511564683,
+        "total_arithmetic": 0.4020614120272703,
+        "bootstrap_95pct": [
+          -0.0001251586327662617,
+          0.009007826046376328
+        ],
+        "positive_weeks_fraction": 0.5480769230769231
+      }
+    },
+    "equal_weight_short": {
+      "weeks": 104,
+      "legs": 624,
+      "funding_events": 13104,
+      "selection_counts": {
+        "BTCUSDT": 104,
+        "ETHUSDT": 104,
+        "BNBUSDT": 104,
+        "XRPUSDT": 104,
+        "DOGEUSDT": 104,
+        "ADAUSDT": 104
+      },
+      "maximum_vectorbt_reconciliation_error": 2.7755575615628914e-17,
+      "by_year": {
+        "2021": -0.5669478292748492,
+        "2022": 0.14301781601996733
+      },
+      "by_symbol": {
+        "BTCUSDT": 0.010090136447902902,
+        "ETHUSDT": -0.042374260686452114,
+        "BNBUSDT": -0.15330188365728079,
+        "XRPUSDT": -0.07955506894134051,
+        "DOGEUSDT": -0.30304942400451973,
+        "ADAUSDT": -0.05836648744811757
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": -0.4779799641566512,
+          "annualized_return": -0.27813531847985806,
+          "daily_max_drawdown": -0.5895266204877304,
+          "weekly_mean_bootstrap_95pct": [
+            -0.015077719867176115,
+            0.0022887896456507462
+          ],
+          "return_after_4pct_annual_hurdle": -0.5172593988628313,
+          "arithmetic_sum": -0.5739206802791363
+        },
+        "base": {
+          "total_return": -0.5050136535950316,
+          "annualized_return": -0.29712662088481046,
+          "daily_max_drawdown": -0.599163760726191,
+          "weekly_mean_bootstrap_95pct": [
+            -0.015594052719617077,
+            0.0017907910624557278
+          ],
+          "return_after_4pct_annual_hurdle": -0.5422589364176609,
+          "arithmetic_sum": -0.6265569882898077
+        },
+        "stress": {
+          "total_return": -0.5644432048685839,
+          "annualized_return": -0.34078576151782636,
+          "daily_max_drawdown": -0.6313605363064002,
+          "weekly_mean_bootstrap_95pct": [
+            -0.017072249045928703,
+            0.0008217586353783773
+          ],
+          "return_after_4pct_annual_hurdle": -0.5972167068809311,
+          "arithmetic_sum": -0.7506182911223742
+        }
+      },
+      "largest_positive_pnl_share": 1.0
+    },
+    "btc_short": {
+      "weeks": 104,
+      "legs": 104,
+      "funding_events": 2184,
+      "selection_counts": {
+        "BTCUSDT": 104,
+        "ETHUSDT": 0,
+        "BNBUSDT": 0,
+        "XRPUSDT": 0,
+        "DOGEUSDT": 0,
+        "ADAUSDT": 0
+      },
+      "maximum_vectorbt_reconciliation_error": 5.898059818321144e-17,
+      "by_year": {
+        "2021": -0.13614348957077227,
+        "2022": 0.19677088662951214
+      },
+      "by_symbol": {
+        "BTCUSDT": 0.06054081868741606,
+        "ETHUSDT": 0.0,
+        "BNBUSDT": 0.0,
+        "XRPUSDT": 0.0,
+        "DOGEUSDT": 0.0,
+        "ADAUSDT": 0.0
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": 0.08900356543899646,
+          "annualized_return": 0.04367556395090144,
+          "daily_max_drawdown": -0.20635346795115617,
+          "weekly_mean_bootstrap_95pct": [
+            -0.0034089466072923374,
+            0.005474599836411213
+          ],
+          "return_after_4pct_annual_hurdle": 0.007061414742898009,
+          "arithmetic_sum": 0.11248619952152356
+        },
+        "base": {
+          "total_return": 0.03383832190706304,
+          "annualized_return": 0.01682488366984436,
+          "daily_max_drawdown": -0.22275672398460689,
+          "weekly_mean_bootstrap_95pct": [
+            -0.00391322834172634,
+            0.0049799432478610205
+          ],
+          "return_after_4pct_annual_hurdle": -0.043952916117910634,
+          "arithmetic_sum": 0.060540818687416106
+        },
+        "stress": {
+          "total_return": -0.06754269103932353,
+          "annualized_return": -0.03445446410778341,
+          "daily_max_drawdown": -0.26395485496559123,
+          "weekly_mean_bootstrap_95pct": [
+            -0.004938851012965664,
+            0.004058681265905554
+          ],
+          "return_after_4pct_annual_hurdle": -0.1377055075382143,
+          "arithmetic_sum": -0.042035188597071727
+        }
+      },
+      "largest_positive_pnl_share": 1.0
+    }
+  },
+  "search_disclosure": {
+    "selectable_primary_configurations": 1,
+    "diagnostics_not_selectable": 4
+  },
+  "trade_csv_sha256": "5364f5d672da25e0a0c75f888d69d774d14c97bfbb649a9c05a4b5d8502a4ed0",
+  "content_digest": "6c2d22c331ff3ae86c488bd3518744af03de0e37674b810d39bdfc5aa85d81f6"
+}

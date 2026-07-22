@@ -1,0 +1,147 @@
+{
+  "accessed_at_utc": "2026-07-22T11:30:20.367817Z",
+  "checkpoint_digest": "427ab6c636fa834a3241aff5d93ee3487f58390113b699def9efb3972f3ef745",
+  "source": "Binance public USD-M REST market data; no credentials",
+  "symbol": "BTCUSDT",
+  "data_start": "2021-12-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-05T00:00:00Z",
+  "kline_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1d&startTime=1601510400000&endTime=1783209599999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\klines\\openTime-000.json",
+      "bytes": 225600,
+      "sha256": "891b527a55c5954fb39aebbf49173a208fd2382b2ca518c38b34dae7da5e0389",
+      "rows": 1500,
+      "first_time_ms": 1601510400000,
+      "last_time_ms": 1731024000000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1d&startTime=1731024000001&endTime=1783209599999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\klines\\openTime-001.json",
+      "bytes": 91360,
+      "sha256": "2e85ec325947c63c78ec2a893c952f0e68c473b199e61bcfca278ee2e956cee9",
+      "rows": 603,
+      "first_time_ms": 1731110400000,
+      "last_time_ms": 1783123200000
+    }
+  ],
+  "mark_price_kline_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1601481600000&endTime=1783209599999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-000.json",
+      "bytes": 183657,
+      "sha256": "5472220df2953875e51b4a7f84208c931c4961e504a6f5bba89a9732e4537ae4",
+      "rows": 1500,
+      "first_time_ms": 1601481600000,
+      "last_time_ms": 1644652800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1644652800001&endTime=1783209599999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-001.json",
+      "bytes": 182353,
+      "sha256": "d73609fdb6fbc747eb06c37cd718df8a3ff50ee183328b2678d2f139c74cac72",
+      "rows": 1500,
+      "first_time_ms": 1644681600000,
+      "last_time_ms": 1687852800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1687852800001&endTime=1783209599999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-002.json",
+      "bytes": 180835,
+      "sha256": "5ff5de639a1fc4cb64690450e2a33241c849d7c8e5d9aa2583de84f1ac6f367f",
+      "rows": 1500,
+      "first_time_ms": 1687881600000,
+      "last_time_ms": 1731052800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1731052800001&endTime=1783209599999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-003.json",
+      "bytes": 184892,
+      "sha256": "6b8df1fbc843278c3766f592846eb0ecc88aa4802b716a0de33dfd3778fc53b7",
+      "rows": 1500,
+      "first_time_ms": 1731081600000,
+      "last_time_ms": 1774252800000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&interval=8h&startTime=1774252800001&endTime=1783209599999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\mark-price-klines-with-prior-boundary\\openTime-004.json",
+      "bytes": 38459,
+      "sha256": "7472a5c5f94e279a208256b68a6c91c71e178c6bdacd9fd79a5e1b8cf3a36924",
+      "rows": 310,
+      "first_time_ms": 1774281600000,
+      "last_time_ms": 1783180800000
+    }
+  ],
+  "funding_pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1601510400000&endTime=1783209599999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-000.json",
+      "bytes": 91103,
+      "sha256": "b5d36c451732080a18a7e7c7bb7a9b707b04eb629a8560e8f378fa02bbe1da83",
+      "rows": 1000,
+      "first_time_ms": 1601510400000,
+      "last_time_ms": 1630281600013
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1630281600014&endTime=1783209599999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-001.json",
+      "bytes": 91153,
+      "sha256": "dbadd7487470e33502016983f0942963fe395156994b7511de4bf569b90db651",
+      "rows": 1000,
+      "first_time_ms": 1630310400008,
+      "last_time_ms": 1659081600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1659081600001&endTime=1783209599999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-002.json",
+      "bytes": 91138,
+      "sha256": "d0d7eec1dc7eb8f28afadb3bf56976a206c60f0df0965fe63e21d7727e981190",
+      "rows": 1000,
+      "first_time_ms": 1659110400000,
+      "last_time_ms": 1687881600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1687881600001&endTime=1783209599999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-003.json",
+      "bytes": 99822,
+      "sha256": "5183aa2aa12ae2401608a09d8826574ad6b6ce170abf6efe059cbd0878ed8379",
+      "rows": 1000,
+      "first_time_ms": 1687910400000,
+      "last_time_ms": 1716681600000
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1716681600001&endTime=1783209599999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-004.json",
+      "bytes": 105205,
+      "sha256": "2efc0bedd4ec856bdf4b612956359c03c69b11787250868172202d0b1a95055c",
+      "rows": 1000,
+      "first_time_ms": 1716710400000,
+      "last_time_ms": 1745481600001
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1745481600002&endTime=1783209599999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-005.json",
+      "bytes": 105752,
+      "sha256": "8b6547ff366928792e9d016883750fe03e3b1c69c65b3fd391fb3d76bff8cccc",
+      "rows": 1000,
+      "first_time_ms": 1745510400001,
+      "last_time_ms": 1774281600002
+    },
+    {
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1774281600003&endTime=1783209599999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\funding\\fundingTime-006.json",
+      "bytes": 32562,
+      "sha256": "3caa6fdf515685de149f3c292f339e1cd2c8cd9f479b1114047fd2a931b98d88",
+      "rows": 309,
+      "first_time_ms": 1774310400000,
+      "last_time_ms": 1783180800007
+    }
+  ],
+  "exchange_info": {
+    "url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-perp-turn-of-month-one-shot-long\\2026-07-22-v1\\BTCUSDT\\raw\\exchangeInfo.json",
+    "bytes": 1042623,
+    "sha256": "f90dfd1e75d63f701200d44aaf9ebd357350261fceb804b7b24b03bfd2b87576"
+  },
+  "content_digest": "a39de3c8716404c5ba6ec13402cd808d3857bb7dc76e06eb4573036bec991ea7"
+}

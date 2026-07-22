@@ -1,0 +1,62 @@
+{
+  "created_at_utc": "2026-07-22T14:03:39.393828+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP",
+    "role": "fixed comparison context only"
+  },
+  "research_kind": "PREDICTIVE",
+  "predictor_id": "RESEARCH_BTC_SP500_DCC_CHANGE_NEXT_INTERVAL_V1",
+  "question": "Does a decrease in recursively filtered BTC-SP500 conditional correlation predict a higher next actionable BTCUSDT perpetual interval return?",
+  "source_sample_end": "2020-12-31",
+  "source_publication": "2022-07-15",
+  "replication_status": "fully post-publication operational transfer with corrected asynchronous close timing; not a numerical replication",
+  "calibration_end_exclusive": "2022-08-01T00:00:00",
+  "stages": {
+    "development": ["2022-08-01T00:00:00", "2023-11-01T00:00:00"],
+    "evaluation": ["2023-11-01T00:00:00", "2025-02-01T00:00:00"],
+    "confirmation": ["2025-02-01T00:00:00", "2026-07-18T00:00:00"]
+  },
+  "config": {
+    "predictor_id": "RESEARCH_BTC_SP500_DCC_CHANGE_NEXT_INTERVAL_V1",
+    "binance_symbol": "BTCUSDT",
+    "fred_series": "SP500",
+    "entry_delay_minutes": 15,
+    "garch_persistence_limit": 0.999,
+    "dcc_persistence_limit": 0.999,
+    "hac_maxlags": 5,
+    "event_low_quantile": 0.2,
+    "event_high_quantile": 0.8,
+    "economic_notional_fraction": 0.25,
+    "stress_round_trip_underlying": 0.0052,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {"block_observations": 10, "repetitions": 5000, "seed": 20260722},
+    "minimum_calibration_rows": 650,
+    "minimum_stage_rows": 300,
+    "minimum_action_coverage": 0.99,
+    "minimum_events_per_tail": 20,
+    "minimum_event_quarters": 5,
+    "download_workers": 4
+  },
+  "data_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btc-sp500-correlation-change-next-interval-predictability\\2026-07-22-v1",
+  "frozen_file_sha256": {
+    "README.md": "0501d86b9362c1e9be9617c1e611bf37785f91c7b163840aa1a1ce3a0aca077e",
+    "sources.md": "87383cfaf7214d158bf751ceb86d530feac13fb30c7bcaaa70de9a95694387c0",
+    "preregistration.md": "1208430c2f95114d4939aace2e80eb1d74c6cc34426845b13bf57649d039fadc",
+    "study.py": "c6c92c8c41b2c7ea7e5eb9a0c02f91ac090752ad61bae64d0ec404d3b1e5b539"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6",
+    "vectorbt": "1.1.0"
+  },
+  "framework_decision": "SciPy/statsmodels implement the predictive econometrics; vectorbt 1.1.0 independently summarizes the frozen feasibility return series.",
+  "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS",
+  "product_effects": "NONE",
+  "content_digest": "708e68bf3d5ed33463d926e1726fd7b3dcc36c921d2ed4b35f996a45a7bbf829"
+}

@@ -1,0 +1,111 @@
+{
+  "created_at_utc": "2026-07-22T07:00:29.253405Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does paper-defined two-week risk-adjusted momentum qualify a fixed-target weekly one-shot perpetual LONG after retail costs, funding, raw-momentum/low-vol/market baselines, robustness, breadth and sequential time evidence?",
+  "development_period": [
+    "2023-01-02T00:00:00Z",
+    "2024-01-01T00:00:00Z"
+  ],
+  "known_exposure": "The same market paths were viewed by other questions; RMOM2 rankings and plan outcomes were not viewed before this checkpoint.",
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "computed_columns": 8
+  },
+  "configuration": {
+    "strategy_id": "RESEARCH_RMOM2_TOP_QUINTILE_WEEKLY_ONE_SHOT_LONG_0P5X_V1",
+    "direction": "LONG_ONLY",
+    "hold_days": 7,
+    "notional_fraction": 0.5,
+    "top_fraction": 0.2,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "annual_capital_hurdle": 0.04,
+    "cooldown_full_days": 1,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "main": {
+      "lookback_days": 14,
+      "score": "mean_daily_return_over_sample_std"
+    },
+    "diagnostics": [
+      "rmom7",
+      "rmom21",
+      "top3",
+      "mom14",
+      "lowvol14",
+      "scheduled_long",
+      "market"
+    ]
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "frozen_file_sha256": {
+    "README.md": "b34b690a17ca99756365e247075de51080ae75d8f374b8f747795f026e9c04fd",
+    "preregistration.md": "45d11050b0b2da5be5f09f56c333257f38c1f42c954d456a7a296ba8d79b9dbf",
+    "sources.md": "ebb88b5ea35af976e36c513415a34bf22074622a3b8668e6392fca04c32314f1",
+    "study.py": "745ec29ff51cf966172a50582052339f543496d69321dd50f5614669f7b4bb49"
+  },
+  "source_reuse_digest": "15f6b622c067e4f5366bb61d79ed387a04b5f94f739aa14f8659a15cef7a4efe",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3"
+  },
+  "allowed_after_checkpoint": "Append attempts and create data/result artifacts. Economic rules may not change; implementation-only fixes require a numbered amendment before rerun.",
+  "content_digest": "71e39b8cf161f5f92040209b344c5f13751a4473ad47f402cc02f8061df821e1"
+}

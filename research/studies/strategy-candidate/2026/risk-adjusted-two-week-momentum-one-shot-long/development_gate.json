@@ -1,0 +1,39 @@
+{
+  "created_at_utc": "2026-07-22T07:07:52.277036Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "minimum_150_trades": true,
+    "minimum_20_symbols": true,
+    "minimum_45_entry_dates": true,
+    "excluded_missing_marks_at_most_2pct": true,
+    "base_after_hurdle_positive": true,
+    "stress_after_hurdle_positive": true,
+    "stress_bootstrap_lower_positive": false,
+    "both_halves_base_positive": false,
+    "date_portfolio_drawdown_above_minus_20pct": false,
+    "worst_symbol_drawdown_above_minus_40pct": true,
+    "base_beats_mom14": false,
+    "base_beats_lowvol14": true,
+    "base_beats_scheduled_long": true,
+    "gross_excess_vs_market_positive": true,
+    "gross_excess_bootstrap_lower_positive": false,
+    "at_least_two_of_three_neighbors_stress_nonnegative": true,
+    "at_least_half_selected_targets_positive": true,
+    "at_least_four_categories_positive": true,
+    "largest_positive_pnl_share_at_most_20pct": false,
+    "vectorbt_manual_reconciliation": true
+  },
+  "failed": [
+    "stress_bootstrap_lower_positive",
+    "both_halves_base_positive",
+    "date_portfolio_drawdown_above_minus_20pct",
+    "base_beats_mom14",
+    "gross_excess_bootstrap_lower_positive",
+    "largest_positive_pnl_share_at_most_20pct"
+  ],
+  "evidence_digest": "4655fbf7ebfe31c53e8d0d6d9cebe0f8267b93453f2456db5c968ab0a25d8cd1",
+  "excluded_missing_mark_fraction": 0.011673151750972763,
+  "content_digest": "7c55d890b6a81353caf107e47f992607a203f5da0f40103794d1611994217da8"
+}

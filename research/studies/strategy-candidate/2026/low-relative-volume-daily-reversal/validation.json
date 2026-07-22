@@ -1,0 +1,18 @@
+{
+  "validated_at_utc": "2026-07-22T00:30:26Z",
+  "replay_from_fixed_cache": true,
+  "checks": {
+    "trade_csv_sha256_same": true,
+    "main_trade_count_same": true,
+    "base_total_return_same": true,
+    "base_block_bootstrap_lower_same": true,
+    "development_gate_same": true,
+    "conclusion_same": true
+  },
+  "main_trade_count": 152,
+  "development_trades_csv_sha256": "42fb9245082e095575c10ecca479b3a49be6268ac6677d4a60968e91398a0dc9",
+  "source_manifest_sha256": "57f63438fef28c70fe4c7ed9f345b700e0c70058e3f9cf1798c71054107c82b3",
+  "external_cache_files": 48,
+  "external_cache_bytes": 4319771,
+  "note": "Generated timestamps intentionally change whole-JSON hashes; deterministic trade rows and reported economic metrics matched exactly."
+}

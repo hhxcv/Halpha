@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-07-22T12:55:26.251693+00:00",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "claim": "Predictive 15-minute operational transfer only; no strategy qualification or long-term profitability claim",
+  "available_stages": [
+    "development"
+  ],
+  "stage_gate_status": {
+    "development": "FAIL"
+  },
+  "stage_failed_checks": {
+    "development": [
+      "spread_mean_positive",
+      "spread_bootstrap_lower_positive",
+      "spread_positive_fraction_at_least_52pct",
+      "spread_both_halves_positive",
+      "rsj_spread_exceeds_reversal",
+      "proxy_mean_after_cost_hurdle_positive",
+      "proxy_bootstrap_lower_positive",
+      "proxy_both_halves_positive",
+      "proxy_positive_symbol_fraction",
+      "diagnostic_30m_spread_nonnegative",
+      "diagnostic_1h_spread_nonnegative"
+    ]
+  },
+  "next_step": "No strategy conversion and no 5-minute rescue search; RSJ15 family stop remains binding",
+  "product_effects": "NONE",
+  "content_digest": "4bf5a38877ea6eac4bb5696cab14ffb7bd63e8a15f3e39e7cb808daf12289ffd"
+}

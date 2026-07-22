@@ -1,0 +1,2621 @@
+{
+  "generated_at_utc": "2026-07-22T01:33:01.599717Z",
+  "access_date": "2026-07-22",
+  "files": [
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2024-10.zip",
+      "bytes": 1878910,
+      "sha256": "aa8c79ad120a8d870e23276d1ad5966f99f59bc0a1886ef5927a3808a5efee36",
+      "official_sha256": "aa8c79ad120a8d870e23276d1ad5966f99f59bc0a1886ef5927a3808a5efee36"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2024-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "0e555481201715ff50f5f2ef793c9bf2397b2eadfcb90146509b299ec8bcec9f"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2024-11.zip",
+      "bytes": 1876449,
+      "sha256": "9c3dad038f4b043ec51d4200f57d15a0a07b3fc32b3ea3dca6a96543b9624941",
+      "official_sha256": "9c3dad038f4b043ec51d4200f57d15a0a07b3fc32b3ea3dca6a96543b9624941"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2024-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d82e1e0ce6b58baff953f5f274adbeb21dfa1f7536ea2da5b75406cb86ef7f7a"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2024-12.zip",
+      "bytes": 1929835,
+      "sha256": "bfce141d2a152c2b94d85b797fe18ebfa195fa0e6091a7ccc06663ae1309466f",
+      "official_sha256": "bfce141d2a152c2b94d85b797fe18ebfa195fa0e6091a7ccc06663ae1309466f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2024-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2024-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "83c6817cdb6392daa9b24f6e61d7d93e898ac32da15a968d37d5f0e4c6aed4ef"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-01.zip",
+      "bytes": 1917878,
+      "sha256": "b69ca5b2c2d1ae00d68d2790d09138cb2a44085ff19e0da5dc98b569ea7e489e",
+      "official_sha256": "b69ca5b2c2d1ae00d68d2790d09138cb2a44085ff19e0da5dc98b569ea7e489e"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "c123a947bd4c1fbc68376ca9df0f641464f880ba91446126fae7882a77629000"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-02.zip",
+      "bytes": 1718529,
+      "sha256": "d84ca981d06ee6491e16597f8d43955f62cab399a9f4b6efc2ee1b4d3a37f0fc",
+      "official_sha256": "d84ca981d06ee6491e16597f8d43955f62cab399a9f4b6efc2ee1b4d3a37f0fc"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "8a6f9eb8bcf69e6b33162a2b68c092a19fabe2966ca4b937550c3e4acf024e68"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-03.zip",
+      "bytes": 1919175,
+      "sha256": "4837163333c9c9978255b8870a5a6de1bc48bd22a6c72fef54665a8d4e70b4df",
+      "official_sha256": "4837163333c9c9978255b8870a5a6de1bc48bd22a6c72fef54665a8d4e70b4df"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "e86ef5ad560f534b417137dc6257d56be5f43cab54c2695e16f5596af25a7982"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-04.zip",
+      "bytes": 1846549,
+      "sha256": "87bca047ca7e8b1d27913091255018e121210276726c5aa445e85da6f56e2dcc",
+      "official_sha256": "87bca047ca7e8b1d27913091255018e121210276726c5aa445e85da6f56e2dcc"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "26d8b002bb82c3f90d42f44490fbf5ba1c092e55b420d58165097a62c173b592"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-05.zip",
+      "bytes": 1904964,
+      "sha256": "7acab7e40a74db53a2d6c35373ebe327eefa85b98f8c92fbe58755881e3841ee",
+      "official_sha256": "7acab7e40a74db53a2d6c35373ebe327eefa85b98f8c92fbe58755881e3841ee"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "bdfed15594b33bf9b64488ddf4a3f781950e2ad12f989dae334275d0752c5993"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-06.zip",
+      "bytes": 1817901,
+      "sha256": "78872b32c4d0bbc2d89a0459539b90cff47de08a9a56fdf8d233943a32e78efc",
+      "official_sha256": "78872b32c4d0bbc2d89a0459539b90cff47de08a9a56fdf8d233943a32e78efc"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "a1aa90190c807f59f5a8e6c994b37b68760d1e5b580ad8798bae461353e58fec"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-07.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-07.zip",
+      "bytes": 1868400,
+      "sha256": "cf5fe0891c80e68d2d613eb5457100b7d886eee8cc913ccdd96ef45e757a5aaf",
+      "official_sha256": "cf5fe0891c80e68d2d613eb5457100b7d886eee8cc913ccdd96ef45e757a5aaf"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-07.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-07.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "429e3e6ae50a2157493e204ac0d01be2bf1b89ec1817863c0ce5bcab774dcd45"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-08.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-08.zip",
+      "bytes": 1871971,
+      "sha256": "eaf41354fc1aa96eac94ee50b3fda603cd595f95030ebf30b2ab5bea7a4462c3",
+      "official_sha256": "eaf41354fc1aa96eac94ee50b3fda603cd595f95030ebf30b2ab5bea7a4462c3"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-08.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-08.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "adeb9d3f56c53250e198b40e1daeff07061d8443d341f637dd578b4deffc1a58"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-09.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-09.zip",
+      "bytes": 1782066,
+      "sha256": "c296ba45c215934e9750ca82846c7b5d14be661649d8e4423eac834cf57330dc",
+      "official_sha256": "c296ba45c215934e9750ca82846c7b5d14be661649d8e4423eac834cf57330dc"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-09.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-09.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "6f4ef936d552be64fd50163a1cb736e834c30387e07686453d3ec923251299a1"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-10.zip",
+      "bytes": 1913274,
+      "sha256": "bb7f53350fe27b6d8e38b5856ffc43f9ecda9d568d5bf31d0db0cd011da7100f",
+      "official_sha256": "bb7f53350fe27b6d8e38b5856ffc43f9ecda9d568d5bf31d0db0cd011da7100f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "c3aef9ec655b43ba9e498bed15dd6517068efef967ad9db7a550351dc9207112"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-11.zip",
+      "bytes": 1856815,
+      "sha256": "981da0b054f99b959fe6245fb363336b46908d358f37251d59bad308f375bc54",
+      "official_sha256": "981da0b054f99b959fe6245fb363336b46908d358f37251d59bad308f375bc54"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d372f7ac44a4f4b1275ee2b81de45d2e9db99a0f61232269d018605582884c69"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-12.zip",
+      "bytes": 1868657,
+      "sha256": "2d5b2e1887dac1dfe450010877de7203a72e19df7a771067b980bbb07ad3069c",
+      "official_sha256": "2d5b2e1887dac1dfe450010877de7203a72e19df7a771067b980bbb07ad3069c"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2025-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "ebf278ea325d7a8d695d073eb004a1e2791e16c743dfd7cb3154fcfb0abb942c"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-01.zip",
+      "bytes": 1852279,
+      "sha256": "58e9c620a6acda209d25766b3cf4262f3104649f5c26f247d933e0da8bb7946f",
+      "official_sha256": "58e9c620a6acda209d25766b3cf4262f3104649f5c26f247d933e0da8bb7946f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "63b325a0a205c6302d50c22cb28961c7d95a7f3ef776603ce21ca9e2392279da"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-02.zip",
+      "bytes": 1743792,
+      "sha256": "805626ad2dc5b704d52c211996d12e9e4b1be234998f3dba4b3d34ff79be0337",
+      "official_sha256": "805626ad2dc5b704d52c211996d12e9e4b1be234998f3dba4b3d34ff79be0337"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "8ed6e3ed7aad0efc2d4dbc731aa640b688f24d829510d0dcc52679a08063a712"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-03.zip",
+      "bytes": 1911731,
+      "sha256": "c472a865f230bf1b5b17e124770a83c083144e3e11a115733288fb8f3e3b8baa",
+      "official_sha256": "c472a865f230bf1b5b17e124770a83c083144e3e11a115733288fb8f3e3b8baa"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "35df21b198248687ff36ef7beb698065f6d739e93924296b82ee15b723d84585"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-04.zip",
+      "bytes": 1810071,
+      "sha256": "515b86570f0c6924f6dc2cf90589d3db90f3de9c6bfd9a22dde0429995dc5405",
+      "official_sha256": "515b86570f0c6924f6dc2cf90589d3db90f3de9c6bfd9a22dde0429995dc5405"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "a33df02f3870bafb37ecd535cc81b299f062835f84cf7cee95392aab0c13c9db"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-05.zip",
+      "bytes": 1845894,
+      "sha256": "d91548e94220d5211bb32447cc4b604ee266d145f2092edc5ec613328cbbc20a",
+      "official_sha256": "d91548e94220d5211bb32447cc4b604ee266d145f2092edc5ec613328cbbc20a"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "f802729319385a1884072b14b5a2c1e46371648dab9d0ac7f4e96fff5bd1eb33"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "BTCUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-06.zip",
+      "bytes": 1838455,
+      "sha256": "9b214199eb5063585c7ed0f59ba19323326d68ac024b85106713989399204490",
+      "official_sha256": "9b214199eb5063585c7ed0f59ba19323326d68ac024b85106713989399204490"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "BTCUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\BTCUSDT\\BTCUSDT-1m-2026-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "4ad3629c9f07704f2de61bf7e1a5508964eed95346b6a32b880089a3ea4b3596"
+    },
+    {
+      "kind": "funding",
+      "symbol": "BTCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1727740800000&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_BTCUSDT_001.json",
+      "rows": 1000,
+      "bytes": 105513,
+      "sha256": "cba2bcaaac1bc72da34c0800465737c45742b0bdc36cba73631a7b2f3463cf41"
+    },
+    {
+      "kind": "funding",
+      "symbol": "BTCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&startTime=1756512000001&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_BTCUSDT_002.json",
+      "rows": 914,
+      "bytes": 96458,
+      "sha256": "b0c6026395c96e0a8301e0af3008427467eec23e0f1dd64370f415f37b7c1263"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "BTCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&startTime=1727740800000&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_BTCUSDT_001.json",
+      "rows": 1500,
+      "bytes": 183317,
+      "sha256": "e1f15bb13624e2d896829fad79d527ff89b8e02dd303887903be6e7bbb0f3f4b"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "BTCUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=BTCUSDT&startTime=1770912000001&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_BTCUSDT_002.json",
+      "rows": 414,
+      "bytes": 52426,
+      "sha256": "590ea3eb20b5c670e48cd3fdccbe888778eb7583d370df41d5b09421b4000afd"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2024-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2024-10.zip",
+      "bytes": 1907533,
+      "sha256": "d1f340994285a075a97d7d0ed5e9aca3d82dadbba8f817b2f886188420a009f1",
+      "official_sha256": "d1f340994285a075a97d7d0ed5e9aca3d82dadbba8f817b2f886188420a009f1"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2024-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2024-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "44aa873ee2f1ddfce02939917f702fbcc6cdddc7099b210a5f85d487a53d8454"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2024-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2024-11.zip",
+      "bytes": 1921220,
+      "sha256": "4170f68dd576e8af35ecc9b19808dcb673c0423838bd560c7c4c1fabefdad5ad",
+      "official_sha256": "4170f68dd576e8af35ecc9b19808dcb673c0423838bd560c7c4c1fabefdad5ad"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2024-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2024-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "bd715d4c57c6e62220b86b0f29c37424373471b2cd02a2645db8009c90d2287a"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2024-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2024-12.zip",
+      "bytes": 1981846,
+      "sha256": "82018947075e35e5ac0a771bb97a22118008db2c6fb6a94f8c1a2c4ebb34d12b",
+      "official_sha256": "82018947075e35e5ac0a771bb97a22118008db2c6fb6a94f8c1a2c4ebb34d12b"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2024-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2024-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d611ef6ceb07f6bdcbdba78b6a97b9c5c8b44fbac45d5c385ccb146ed99ee8c7"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-01.zip",
+      "bytes": 1962399,
+      "sha256": "05e33ba3568c5381a36764097ea93917a7f1a93fadd1a0018e64bedb042526f6",
+      "official_sha256": "05e33ba3568c5381a36764097ea93917a7f1a93fadd1a0018e64bedb042526f6"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "84f22f3bad60df45210d4f200925c94d0c677469a820c67cc8e5846c228d33b7"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-02.zip",
+      "bytes": 1786957,
+      "sha256": "79c07ecaaa04a04d815f428d0617b84cc536afe95f5cb2fc62bd93c10c3adfa1",
+      "official_sha256": "79c07ecaaa04a04d815f428d0617b84cc536afe95f5cb2fc62bd93c10c3adfa1"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "9d81059d2ef683c8fe75dc6084d0905990becfdfaee8d022478d449f7db829a6"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-03.zip",
+      "bytes": 1957769,
+      "sha256": "82351bb41febb62d3680c761cf7cf9e29182435d9b4843e674ded63de3b29a32",
+      "official_sha256": "82351bb41febb62d3680c761cf7cf9e29182435d9b4843e674ded63de3b29a32"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d357ce7460b0b8632a33cf67092a6aa9ea01032763f67e67fc885463442c0a77"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-04.zip",
+      "bytes": 1895060,
+      "sha256": "75ea6a45c8bed04294449ff7d56f047c235a36fac176736816c01d6892bd8687",
+      "official_sha256": "75ea6a45c8bed04294449ff7d56f047c235a36fac176736816c01d6892bd8687"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "e6c0b680d0eb245c13a2e29c788270487b5048a0cbb226d1f7883e6c1c39e773"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-05.zip",
+      "bytes": 1986381,
+      "sha256": "a2560653e2f602444d2201e44e77cdba6e48233649d22fb7e8c703ce9fc6277a",
+      "official_sha256": "a2560653e2f602444d2201e44e77cdba6e48233649d22fb7e8c703ce9fc6277a"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "8aa1f03516b1920a92acd9f96171184d6984bc0950be512338c443af06eefa66"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-06.zip",
+      "bytes": 1904828,
+      "sha256": "189aa2e5daf3621f6f7f9fd58df763e0667592f3baf407270e0ad42399155c69",
+      "official_sha256": "189aa2e5daf3621f6f7f9fd58df763e0667592f3baf407270e0ad42399155c69"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "599f98d8c00783bc005645404d94161614a627e832042dbf3098c01bd0256778"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-07.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-07.zip",
+      "bytes": 1988465,
+      "sha256": "e3af3ee3ac3251d313ad8987169d5c02bfd8c094bf047bbce9373eaf19ee479c",
+      "official_sha256": "e3af3ee3ac3251d313ad8987169d5c02bfd8c094bf047bbce9373eaf19ee479c"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-07.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-07.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "bd9953f3d10d8b37f725b8eab78d0fa936cea08a522d51c8cf026afe0dbc9802"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-08.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-08.zip",
+      "bytes": 2017496,
+      "sha256": "8cd85f1c417c4c65cd32348f3e4e23c8b35dd4e5e59a20a187e2a74777bd6664",
+      "official_sha256": "8cd85f1c417c4c65cd32348f3e4e23c8b35dd4e5e59a20a187e2a74777bd6664"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-08.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-08.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "b0c2ba358593af37f07ae5782b96f80cd0022fef8800951a1e9b2691d0c25ade"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-09.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-09.zip",
+      "bytes": 1900520,
+      "sha256": "dc1f5e05a0b873accd0ed2a854ee14086da03b08a581198b20b5658042c6dc5f",
+      "official_sha256": "dc1f5e05a0b873accd0ed2a854ee14086da03b08a581198b20b5658042c6dc5f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-09.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-09.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "86075f3f478b48625ece61158fb95a647f75365596889f4b569ada046936a7f9"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-10.zip",
+      "bytes": 1996726,
+      "sha256": "c0b8d557384ce1cd77df8f08cb6775f350a531a1792fa9deceb05f51a3939438",
+      "official_sha256": "c0b8d557384ce1cd77df8f08cb6775f350a531a1792fa9deceb05f51a3939438"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "a11c28c32aeb37bac9c0f94302379754fc078b9a3956598c928a6a4732b4a186"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-11.zip",
+      "bytes": 1931576,
+      "sha256": "2dd6ded997100a92d11394eddccc54f1070b0fcf029c5e126859b5af80f6329e",
+      "official_sha256": "2dd6ded997100a92d11394eddccc54f1070b0fcf029c5e126859b5af80f6329e"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d750b329863e0f8f19b3a6028272ac2a35e0f6654b3f4d8729e2f67306bbe1e8"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-12.zip",
+      "bytes": 1941385,
+      "sha256": "8fc3e01faeb240ed9f77e4ba8bbcdf42bb7b0c7004d35fe8010bd0fd9090e4a9",
+      "official_sha256": "8fc3e01faeb240ed9f77e4ba8bbcdf42bb7b0c7004d35fe8010bd0fd9090e4a9"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2025-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2025-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "b3898a59415613d42009693787d8513d44ce10cc8c5e6317543ae2a5ebaaec67"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-01.zip",
+      "bytes": 1928094,
+      "sha256": "0dc9c455c6d0735fe7e177d98a5088ab473c7fc1fa723710e783ff5dd49df4bb",
+      "official_sha256": "0dc9c455c6d0735fe7e177d98a5088ab473c7fc1fa723710e783ff5dd49df4bb"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "6837216dbfbb0d49699e29c2e5dbcaac23ca792269d3fe3b80f63daed5bddc6e"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-02.zip",
+      "bytes": 1790010,
+      "sha256": "2109cab7fa27eee904a7d6d6dd982633579fc4091765dc8fa16c001f2da8a1c2",
+      "official_sha256": "2109cab7fa27eee904a7d6d6dd982633579fc4091765dc8fa16c001f2da8a1c2"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "646eca27a0ea5cf4a761433e025fd3c553305092ff5c3f49d5144342cc4564de"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-03.zip",
+      "bytes": 1958005,
+      "sha256": "d61eeba7aed3067525c6503bfbfd4f8d55585b846b67115eb85eeb1d2f857bf1",
+      "official_sha256": "d61eeba7aed3067525c6503bfbfd4f8d55585b846b67115eb85eeb1d2f857bf1"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "2904953a887b73caadfb9f93ab04a59f2e34e62cdb82cc2baaaac908cbad11e3"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-04.zip",
+      "bytes": 1860146,
+      "sha256": "fd01f08f331a0dcb5d89c718afb199f7cda63f43228b72ddda0bdd08bfd527c7",
+      "official_sha256": "fd01f08f331a0dcb5d89c718afb199f7cda63f43228b72ddda0bdd08bfd527c7"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "09d4e730da29c7960f08172bce70bee36c0579694704056af5738ac31ff13b1c"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-05.zip",
+      "bytes": 1893623,
+      "sha256": "9710b3d1e350bef5bf31b8d1531c5801d35f963d223d0a42e73ae86ddd376e92",
+      "official_sha256": "9710b3d1e350bef5bf31b8d1531c5801d35f963d223d0a42e73ae86ddd376e92"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "6689a76a92acb51fcb0c1d438b0857d1c307a60318aace433917d017509dcd25"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ETHUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-06.zip",
+      "bytes": 1875936,
+      "sha256": "3b771e114b494805ac4cc677b34befb7e5f332bf5bd3a8a368cd21d65cd99cba",
+      "official_sha256": "3b771e114b494805ac4cc677b34befb7e5f332bf5bd3a8a368cd21d65cd99cba"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ETHUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ETHUSDT/1m/ETHUSDT-1m-2026-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ETHUSDT\\ETHUSDT-1m-2026-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "8dc35a179f160719bf2c94d51914eee701663e61aecb960f59c29389b45b0382"
+    },
+    {
+      "kind": "funding",
+      "symbol": "ETHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1727740800000&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_ETHUSDT_001.json",
+      "rows": 1000,
+      "bytes": 104112,
+      "sha256": "abb92424d033f4c1a114e1c4654e601b078de5e971e44acccaf93729b5704f12"
+    },
+    {
+      "kind": "funding",
+      "symbol": "ETHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&startTime=1756512000001&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_ETHUSDT_002.json",
+      "rows": 914,
+      "bytes": 95350,
+      "sha256": "7a4d0114b72ff55a54a868f90f5c88bf83a018b2e98eb45ebb2de95b011bcf08"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "ETHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&startTime=1727740800000&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_ETHUSDT_001.json",
+      "rows": 1500,
+      "bytes": 178885,
+      "sha256": "e36057455fa434fc2e91df351e86a6033cea99d408ad1ea1aff6e98e2b8ff949"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "ETHUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ETHUSDT&startTime=1770912000001&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_ETHUSDT_002.json",
+      "rows": 414,
+      "bytes": 50851,
+      "sha256": "766a01e1e2c8456ed0a663b5ee76ab40c9554e6dbf85f4c0345e587252b7e096"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2024-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2024-10.zip",
+      "bytes": 1602398,
+      "sha256": "f167b2be29ec4eef66fe38a17a6ade84034abf302c49deee31875a6f6cea6f53",
+      "official_sha256": "f167b2be29ec4eef66fe38a17a6ade84034abf302c49deee31875a6f6cea6f53"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2024-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2024-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "a74e4d74f7d4c98a87acbd85c017f3bf2602b003661b482225838f526ff4d608"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2024-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2024-11.zip",
+      "bytes": 1556146,
+      "sha256": "cc26ccf5eb442a5d66daa7396eb589d7c9934ba3301503a753c03ddbe94a4af0",
+      "official_sha256": "cc26ccf5eb442a5d66daa7396eb589d7c9934ba3301503a753c03ddbe94a4af0"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2024-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2024-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "404864c71cb5d4aa70bdfe3cfa6bcc97df3b5350fa981b306d2476539a37488f"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2024-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2024-12.zip",
+      "bytes": 1584587,
+      "sha256": "631fd8d38ebc10376e985bc232f64a388a8ae50ffeb588098c4bcf39de45e05e",
+      "official_sha256": "631fd8d38ebc10376e985bc232f64a388a8ae50ffeb588098c4bcf39de45e05e"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2024-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2024-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "4d95611643d6b735d3b34aee0cc5d4263d620b10764b89f7e732939f962205bb"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-01.zip",
+      "bytes": 1599190,
+      "sha256": "b56b792f9fc9cd63dc0fef4841741692dc2e2cab3282faab66e9d0dc01ce58a1",
+      "official_sha256": "b56b792f9fc9cd63dc0fef4841741692dc2e2cab3282faab66e9d0dc01ce58a1"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "075f9fd05756bfa01a63d4d1eef6c287c6afa4c7e64cc6c2b7a331c51ddb399f"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-02.zip",
+      "bytes": 1444191,
+      "sha256": "d513752226f0aef88958add63769a449ca835c5767a2f20c019eb1f8348da445",
+      "official_sha256": "d513752226f0aef88958add63769a449ca835c5767a2f20c019eb1f8348da445"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "1acff098ce4117cc808873464304d3dd059186dc94680997e4a78a990be0dc88"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-03.zip",
+      "bytes": 1545154,
+      "sha256": "185a2ae8698968f90512a392eda65fdcc04163d7385eae0348387aedcb0763cb",
+      "official_sha256": "185a2ae8698968f90512a392eda65fdcc04163d7385eae0348387aedcb0763cb"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "f39eb89f5a9747d0da677cc82629a4de1edbb0c738c4448fad32c118703bb002"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-04.zip",
+      "bytes": 1688075,
+      "sha256": "e946bbf26b8faf4b0be15d2f7763515d358a04062ddd662ff4a3c286740612b3",
+      "official_sha256": "e946bbf26b8faf4b0be15d2f7763515d358a04062ddd662ff4a3c286740612b3"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d18c6e1ee0659ed2c1e18bc7a2c17957c756ad2abda86dcb4d24ca590d197f57"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-05.zip",
+      "bytes": 1819534,
+      "sha256": "9e2baa8d15fed5768c72f1b97ad19b3119f87c90c8d9847ff3c628c2afb4d37c",
+      "official_sha256": "9e2baa8d15fed5768c72f1b97ad19b3119f87c90c8d9847ff3c628c2afb4d37c"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "24331e1f48ba6e4d9aacf8b94f783b25297075e3a9322bcefbf1bc8edb6c8edf"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-06.zip",
+      "bytes": 1746877,
+      "sha256": "32c17d28dbcfd8ccd5dce996f610f588ff6ec9e969c6eac9c9b43232a543f7aa",
+      "official_sha256": "32c17d28dbcfd8ccd5dce996f610f588ff6ec9e969c6eac9c9b43232a543f7aa"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "47e457abcf597efbb6206264c7c0fab04c46e4aae054ffd5421821d2bffe2bd7"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-07.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-07.zip",
+      "bytes": 1818115,
+      "sha256": "6a11ec2b081657fd4850b61cb1f28e2217913ac1a309c484169f080733320ee7",
+      "official_sha256": "6a11ec2b081657fd4850b61cb1f28e2217913ac1a309c484169f080733320ee7"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-07.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-07.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "fbd81cc4ae2805f41c110b0896fdcca1d5aa4c0fb720a86f5def0ac33e0083ef"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-08.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-08.zip",
+      "bytes": 1848031,
+      "sha256": "9916be68e1e354b1d2ad30e09ca2f0552ddbf9a3ad64d2854bd54016463b56a6",
+      "official_sha256": "9916be68e1e354b1d2ad30e09ca2f0552ddbf9a3ad64d2854bd54016463b56a6"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-08.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-08.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "611c049f9d2bbc72cda36d51d8a384b67220ec4fc470b65c6031bca540c14bfa"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-09.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-09.zip",
+      "bytes": 1779913,
+      "sha256": "389290c0c468d168ea3b327d926e273aa9de639249e5101f443360eda4456b4e",
+      "official_sha256": "389290c0c468d168ea3b327d926e273aa9de639249e5101f443360eda4456b4e"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-09.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-09.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "9a2260c16ed30783f92cf69689a2a0a193d7e1d32f5cf39da43528e769733557"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-10.zip",
+      "bytes": 1852486,
+      "sha256": "66542f68d37e6b8b071997ea07fa495abc01d3762acbf6476398c63f79128016",
+      "official_sha256": "66542f68d37e6b8b071997ea07fa495abc01d3762acbf6476398c63f79128016"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "be88d82b9f30ad3ad40292fdce89effc6b8c93953c5c44d1801a8b4d43964223"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-11.zip",
+      "bytes": 1769429,
+      "sha256": "dbadf06d740261c21299abc82f3adeae1b41e4dbbcee8a5adca3e761f1896ce7",
+      "official_sha256": "dbadf06d740261c21299abc82f3adeae1b41e4dbbcee8a5adca3e761f1896ce7"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "6b3193f54e6b1a12076b8c2bd737a64ae2c390bbdb027743d8ff34f5eec88bc6"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-12.zip",
+      "bytes": 1775230,
+      "sha256": "c9375b066069aaa4dbf33fbf7c79ca9db4a534b99d4ebd9f558ba2381e610636",
+      "official_sha256": "c9375b066069aaa4dbf33fbf7c79ca9db4a534b99d4ebd9f558ba2381e610636"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2025-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2025-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "098223f72af4bdf322ee262b58dd09c25d7cee64fabf4f9e4c170278968c70b6"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-01.zip",
+      "bytes": 1763272,
+      "sha256": "ac9cc536ec056e7c4fc4f391da5edbe778f59fb2a059670875d05285ebca3fcf",
+      "official_sha256": "ac9cc536ec056e7c4fc4f391da5edbe778f59fb2a059670875d05285ebca3fcf"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "9cb28322b6f6aa307c1417cd3f0fe4995702f41ddbac389f99060687183c151b"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-02.zip",
+      "bytes": 1608609,
+      "sha256": "ad93c921265eb4a473ba91d21f8d02346d77330475740977cc7541a0ac1ec05a",
+      "official_sha256": "ad93c921265eb4a473ba91d21f8d02346d77330475740977cc7541a0ac1ec05a"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "910b1e0b5931828eb21506d4d015d1225245208598c2d79bfe38dd2b6ea5e13a"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-03.zip",
+      "bytes": 1748963,
+      "sha256": "d705ca5ec2de775733be12c6e3f29bcf3204be15d7b0b273ec87a013fcaa612f",
+      "official_sha256": "d705ca5ec2de775733be12c6e3f29bcf3204be15d7b0b273ec87a013fcaa612f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "a5a5c342c997977d3c488b3440421a849be4f42e83cc95ba9773b6809dca146d"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-04.zip",
+      "bytes": 1651560,
+      "sha256": "8ce6bb0ea598eecdfa2078cc1429c7fc4fc39a32d306d74184f137fa6ae8d3cb",
+      "official_sha256": "8ce6bb0ea598eecdfa2078cc1429c7fc4fc39a32d306d74184f137fa6ae8d3cb"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "5ad7b84ba7fb415dac8c92ccfd0975b2be4811a1d28ead6c699a23e0cc28fba5"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-05.zip",
+      "bytes": 1701050,
+      "sha256": "588bdc611885c6de2bd55df7f8fbc597147ca0eef33f6824e340d2bff1a04066",
+      "official_sha256": "588bdc611885c6de2bd55df7f8fbc597147ca0eef33f6824e340d2bff1a04066"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "3dd44f5744b003c9e16479f9d21bbeaf751dfdf8c4e2a260d7d698d8a4835aab"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "SOLUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-06.zip",
+      "bytes": 1686229,
+      "sha256": "dcd12574ab820047a10c3e6977b69251b7285fe7998fa7aff6d73470c6637ecd",
+      "official_sha256": "dcd12574ab820047a10c3e6977b69251b7285fe7998fa7aff6d73470c6637ecd"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "SOLUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/SOLUSDT/1m/SOLUSDT-1m-2026-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\SOLUSDT\\SOLUSDT-1m-2026-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "b17c20bff396968d00d16b50989caf564b05f67d75f114d79ff4d4089ab2232b"
+    },
+    {
+      "kind": "funding",
+      "symbol": "SOLUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=SOLUSDT&startTime=1727740800000&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_SOLUSDT_001.json",
+      "rows": 1000,
+      "bytes": 103321,
+      "sha256": "38e517ec00b7f0a74a8f1eb907788507b33946cbe9654e6373b2724476dfbd80"
+    },
+    {
+      "kind": "funding",
+      "symbol": "SOLUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=SOLUSDT&startTime=1756512000001&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_SOLUSDT_002.json",
+      "rows": 914,
+      "bytes": 94157,
+      "sha256": "f26bd139c294bf8c76dbc8baf5012addcc1cb88de798305514098b74fad8e4b2"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "SOLUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=SOLUSDT&startTime=1727740800000&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_SOLUSDT_001.json",
+      "rows": 1500,
+      "bytes": 173650,
+      "sha256": "ca245e3f9d06f75a1b2d50f4cd82be5af12c93031b0806af50db6606bfbb3939"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "SOLUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=SOLUSDT&startTime=1770912000001&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_SOLUSDT_002.json",
+      "rows": 414,
+      "bytes": 47557,
+      "sha256": "99d65bcdd0650a8793a2dd6dddf14046711cbba2e1278539eba9d725e489293e"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2024-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2024-10.zip",
+      "bytes": 1636869,
+      "sha256": "5a739dc9a458fef0e5aecfb457e3523686d451e598ead2df86adbb65b4144dd9",
+      "official_sha256": "5a739dc9a458fef0e5aecfb457e3523686d451e598ead2df86adbb65b4144dd9"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2024-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2024-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "6eaefb717eea8760aa8455095cf56f5de61cd7c3f587961d354628e64481cba8"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2024-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2024-11.zip",
+      "bytes": 1764695,
+      "sha256": "f2177e1c6e95f5dff765dc5643abdcd6a151795947e69ea85b7eb7211ab926bd",
+      "official_sha256": "f2177e1c6e95f5dff765dc5643abdcd6a151795947e69ea85b7eb7211ab926bd"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2024-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2024-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "a0daff4c668596f46b48f2d5c4d01938b1a4c476cade9debd218351289203374"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2024-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2024-12.zip",
+      "bytes": 1898405,
+      "sha256": "659add47d41b25189bfed69ae3052253df648443e2aa0376537ccece6a39d6ee",
+      "official_sha256": "659add47d41b25189bfed69ae3052253df648443e2aa0376537ccece6a39d6ee"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2024-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2024-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d68163662400daa5dd47a6c263174e2e5fe6b3347e4391d1f9e2eca753f75dfe"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-01.zip",
+      "bytes": 1866486,
+      "sha256": "79f499a9a556b712ea1c28bc83c5e8294160cc4b87561424db1d108f5e87661b",
+      "official_sha256": "79f499a9a556b712ea1c28bc83c5e8294160cc4b87561424db1d108f5e87661b"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "0fba2ab329d445f8f5239eec7ce14176a1e5a68503e05d6e8a8a131416e97db4"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-02.zip",
+      "bytes": 1680617,
+      "sha256": "6d75a5c0205f1cdee2dea2b616c04e3a7e88176126723237c1a5859843eb0fa0",
+      "official_sha256": "6d75a5c0205f1cdee2dea2b616c04e3a7e88176126723237c1a5859843eb0fa0"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "ee6d22d8e9cde914dd94f9f6f5b0a3b8d474edb66b82e902b66082a7a044a4e4"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-03.zip",
+      "bytes": 1842007,
+      "sha256": "5354c5b2168ba9ebce28fee3c45a65ad4d3722c3cede41c53aef164bd68d119b",
+      "official_sha256": "5354c5b2168ba9ebce28fee3c45a65ad4d3722c3cede41c53aef164bd68d119b"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "ee3106b177e013c4b1c6fdbd696e2a6a1f8d67375aab1336bdbb55b05a680c63"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-04.zip",
+      "bytes": 1760122,
+      "sha256": "5223fbd5576882ca2371fe4ffb0224674967cedf1427b82635cc9d01a6a232ab",
+      "official_sha256": "5223fbd5576882ca2371fe4ffb0224674967cedf1427b82635cc9d01a6a232ab"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "90252196efc36cb44f9005abbe50be319a9c09c830cde8edbbac986153abc145"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-05.zip",
+      "bytes": 1803083,
+      "sha256": "bc4eb9aed40935c8a21485218037f5de9c1919bea5524f9f4eb6e82efbd7bcee",
+      "official_sha256": "bc4eb9aed40935c8a21485218037f5de9c1919bea5524f9f4eb6e82efbd7bcee"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "65b5aab437cc30765ba70671c676a1f4261e457dc184a791b2454948889d01e7"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-06.zip",
+      "bytes": 1719574,
+      "sha256": "1aba24ca083027da84fabf5dce0a624d47fee0c36501ad5641b6a65e040b294e",
+      "official_sha256": "1aba24ca083027da84fabf5dce0a624d47fee0c36501ad5641b6a65e040b294e"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "889adc1661a97584dc52831e3210faa57cf1cb7335e008cab09e1242695f6ade"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-07.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-07.zip",
+      "bytes": 1848830,
+      "sha256": "6f5f7faa96370dacb4792b18ce628d3ff8b0a5fa4cd10063e55065e03ff9f53d",
+      "official_sha256": "6f5f7faa96370dacb4792b18ce628d3ff8b0a5fa4cd10063e55065e03ff9f53d"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-07.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-07.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "6e92cf6540986699fa23b782c6e03c545c8c2d7b811e0a740f823dd72e168584"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-08.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-08.zip",
+      "bytes": 1831399,
+      "sha256": "823e87bba1c53bebffd8074ee190adfae55c489936ff5d539fcdf54e1ea68633",
+      "official_sha256": "823e87bba1c53bebffd8074ee190adfae55c489936ff5d539fcdf54e1ea68633"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-08.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-08.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "153958fcf9373299674de1e7cc35da7e8b54325621ee1f3b69ae78f5a776a111"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-09.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-09.zip",
+      "bytes": 1726698,
+      "sha256": "0f47e24c9e133c09d0df6756e224c2547d5e1ca3c9ba7af77232d1e9368330fb",
+      "official_sha256": "0f47e24c9e133c09d0df6756e224c2547d5e1ca3c9ba7af77232d1e9368330fb"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-09.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-09.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "814a93f0e76b74fbcd3bacc0f69f41888832e54f1c4b967d610f0ef6db746b09"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-10.zip",
+      "bytes": 1818791,
+      "sha256": "9ba37c1fb1bded7e554dbfc9221c126cdb8bf4c569b4b5c639e83bcda38b6b3e",
+      "official_sha256": "9ba37c1fb1bded7e554dbfc9221c126cdb8bf4c569b4b5c639e83bcda38b6b3e"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "7ff1a4d5461f952e825e83a86b2774f409e475ffd697c18cdbe7e3c9304647df"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-11.zip",
+      "bytes": 1761064,
+      "sha256": "dd62352ab1fc3b2e8f5f235c7c775044432a493c8a5ab732f709acfe1c8f62bc",
+      "official_sha256": "dd62352ab1fc3b2e8f5f235c7c775044432a493c8a5ab732f709acfe1c8f62bc"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "5276564ee269a8c1d7521333bee7c39835dfc78791377bd7b26e2c3a98fa9b55"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-12.zip",
+      "bytes": 1748758,
+      "sha256": "821efe300f5a66a68fe468e45fe9094431fac70b62a909c4aa7cc97239c4ce4c",
+      "official_sha256": "821efe300f5a66a68fe468e45fe9094431fac70b62a909c4aa7cc97239c4ce4c"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2025-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2025-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "b897846d52ebb11660e0fde43b81f32ee9b1f591cacff2cff770822461ec14d5"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-01.zip",
+      "bytes": 1764391,
+      "sha256": "8612f9c3796982d55feb1696d4a08407e4910d40cfce25e71b0172dea32b9847",
+      "official_sha256": "8612f9c3796982d55feb1696d4a08407e4910d40cfce25e71b0172dea32b9847"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d5104aaa05adc83c3984f401260c9f79d3d18616c6a4c2983acaf0b0924aba15"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-02.zip",
+      "bytes": 1624991,
+      "sha256": "58bff9b0136a1584414b6d24133279c02a56030da7625942c286e9d11f3d37a3",
+      "official_sha256": "58bff9b0136a1584414b6d24133279c02a56030da7625942c286e9d11f3d37a3"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "f944d80a90d1ec7c6614cc0e75c560cb581b841337e6ff9794a9467d5f8a2858"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-03.zip",
+      "bytes": 1738272,
+      "sha256": "38b4f4f23cd92c23b37c2fea4e827540af06c8a0e2330bff8491acaf3d14e794",
+      "official_sha256": "38b4f4f23cd92c23b37c2fea4e827540af06c8a0e2330bff8491acaf3d14e794"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "730091e36b33e449e49d0bac3ee075dc218eba37f01d5d29123fe98c5167877c"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-04.zip",
+      "bytes": 1642251,
+      "sha256": "e887d411a37786bfd83d3fcbe7561801529d3c9e012d90b420c628226253d63a",
+      "official_sha256": "e887d411a37786bfd83d3fcbe7561801529d3c9e012d90b420c628226253d63a"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "a4f68afd3f1e6594e3d5f8545a51b53b292f00a001a52ffa3c23e114de3f7a68"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-05.zip",
+      "bytes": 1700366,
+      "sha256": "6733b41f25b4a278a67ae6002e5f20c089a61ae864d99c9d1b002e375c932f9b",
+      "official_sha256": "6733b41f25b4a278a67ae6002e5f20c089a61ae864d99c9d1b002e375c932f9b"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "70cae71e7aa5060e84be415a082a02f6d1fb3e378c6986571e0a3a8749a82158"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "XRPUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-06.zip",
+      "bytes": 1670216,
+      "sha256": "b49faed75492e1136f2dc3f8cad1328e55c3179368ba80b85e1f961d536a8a47",
+      "official_sha256": "b49faed75492e1136f2dc3f8cad1328e55c3179368ba80b85e1f961d536a8a47"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "XRPUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/XRPUSDT/1m/XRPUSDT-1m-2026-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\XRPUSDT\\XRPUSDT-1m-2026-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "1bd2198fc98378343729378b3f597c70172c528c11c3b33a23d473fbbeff8a87"
+    },
+    {
+      "kind": "funding",
+      "symbol": "XRPUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XRPUSDT&startTime=1727740800000&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_XRPUSDT_001.json",
+      "rows": 1000,
+      "bytes": 101214,
+      "sha256": "a3fccf72ae4673b452c4153ffeeee13b69388918cf46e04cd37206b2b9d3342e"
+    },
+    {
+      "kind": "funding",
+      "symbol": "XRPUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=XRPUSDT&startTime=1756512000001&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_XRPUSDT_002.json",
+      "rows": 914,
+      "bytes": 92757,
+      "sha256": "fee4105b02a568b9837fa0449eab24d4d24acf9772315aff1b6d2fdb1180d148"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "XRPUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=XRPUSDT&startTime=1727740800000&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_XRPUSDT_001.json",
+      "rows": 1500,
+      "bytes": 162001,
+      "sha256": "babfc500eada7cf3b5e0233c7deebc6fa996b98964f9c8418bfcf6d9246d4393"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "XRPUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=XRPUSDT&startTime=1770912000001&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_XRPUSDT_002.json",
+      "rows": 414,
+      "bytes": 45901,
+      "sha256": "ff3d4e941af33bdc8cb8ef908c07db1a34b3e3b28c07999b8777f00f9883dcfd"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2024-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2024-10.zip",
+      "bytes": 1796269,
+      "sha256": "e37aeacb3b453a0800be4df79aae1b0637bd58441ba03e5fbd6f9b4bf8c7fc2a",
+      "official_sha256": "e37aeacb3b453a0800be4df79aae1b0637bd58441ba03e5fbd6f9b4bf8c7fc2a"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2024-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2024-10.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "4e7302f2dcf8db95ce7d520fc24a1794fe4c7318f80e9a9822055832644f72cd"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2024-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2024-11.zip",
+      "bytes": 1892782,
+      "sha256": "effde135f4c2497d6ccbc4b44d04e583dd3faeb21bb46f589e360aa2710b649b",
+      "official_sha256": "effde135f4c2497d6ccbc4b44d04e583dd3faeb21bb46f589e360aa2710b649b"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2024-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2024-11.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "0e99da4de1cf3be8e6c9241a8452a63b86790c12396b151a765d16c0dc12fa54"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2024-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2024-12.zip",
+      "bytes": 1913496,
+      "sha256": "1f6b940265db6d595f294e5752616c564bbf00ede60c676abdc3093c3e4e9729",
+      "official_sha256": "1f6b940265db6d595f294e5752616c564bbf00ede60c676abdc3093c3e4e9729"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2024-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2024-12.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "286c7f22e8eeb70cb11a81a9819715d75bd32b25e32cf7c9edf35e8e1ded0c62"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-01.zip",
+      "bytes": 1888683,
+      "sha256": "221d5ef5c41fedfefc358790c0d5632b198b17d02187706c4a6de655019e06b5",
+      "official_sha256": "221d5ef5c41fedfefc358790c0d5632b198b17d02187706c4a6de655019e06b5"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-01.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "d2652e909b2732bfbc86dd9cd740fe4b76f4e21ba0485610924bb2f40455e4bf"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-02.zip",
+      "bytes": 1675554,
+      "sha256": "15cdc4c2fd8340f5957f72164ef6af28e01f3396daebdd3d73fbb7faf4e28c4f",
+      "official_sha256": "15cdc4c2fd8340f5957f72164ef6af28e01f3396daebdd3d73fbb7faf4e28c4f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-02.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "eddea69c6d8826996f1b38360ea1f9b6fce62758d0b6c008a60c7276538d093c"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-03.zip",
+      "bytes": 1830184,
+      "sha256": "1a6f146aba835867a47220663d4cb72de99d6e8d166f4cb2bf145ca5ec7140d9",
+      "official_sha256": "1a6f146aba835867a47220663d4cb72de99d6e8d166f4cb2bf145ca5ec7140d9"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-03.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "b7c31acf79f2f9ba59872d3f8d540642637c0cbe7de2745f3437f10b79f06a6f"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-04.zip",
+      "bytes": 1757299,
+      "sha256": "05389c77e27693c6cc89c4f38f0afe1e945414c1c145d93e050b478f95e4a947",
+      "official_sha256": "05389c77e27693c6cc89c4f38f0afe1e945414c1c145d93e050b478f95e4a947"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-04.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "4a209e4cfacac7a694eabc6f4fdaf1c34b7c164a6587d559ef425740712e75e6"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-05.zip",
+      "bytes": 1848516,
+      "sha256": "9e0b44b6ac09e3c09ad1385e39aa690f9624b6b703f2691b1b3e9e7fada508c7",
+      "official_sha256": "9e0b44b6ac09e3c09ad1385e39aa690f9624b6b703f2691b1b3e9e7fada508c7"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-05.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "d33d7a61f9aa20c0c04b57c25defe85362b4667283d3aaa10f77b5750a1d067e"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-06.zip",
+      "bytes": 1746213,
+      "sha256": "d699cec9a9a89cb7b037c49943751806b5bc840335a7330b1d090494e247e6e9",
+      "official_sha256": "d699cec9a9a89cb7b037c49943751806b5bc840335a7330b1d090494e247e6e9"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-06.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "c1a58e5bfdd9cd8d27e44b8f7f6ec2c05221664c04da6683efa8587489bbf732"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-07.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-07.zip",
+      "bytes": 1858636,
+      "sha256": "6c6858a61ec39254b54a40fd864bef0cacd99a3a244bb9b0e5cec0acbe6eb631",
+      "official_sha256": "6c6858a61ec39254b54a40fd864bef0cacd99a3a244bb9b0e5cec0acbe6eb631"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-07.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-07.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "290a78da043cb8a12e0c3c04c193181711e7c561234d81625d7d08d6e05086ae"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-08.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-08.zip",
+      "bytes": 1853649,
+      "sha256": "1a69ffc39419bb27c12e019de4809e086e40bf620e40e8a044762ba62095026e",
+      "official_sha256": "1a69ffc39419bb27c12e019de4809e086e40bf620e40e8a044762ba62095026e"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-08.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-08.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "20ecea2d6b2a55f13f8f77d29857e23bc5a97fd6001543cfd358de75708b5973"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-09.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-09.zip",
+      "bytes": 1790216,
+      "sha256": "34dac0a3873c158dd3e6126719e0e931ee305f6a1ce56e1a68c5c05b00284b3d",
+      "official_sha256": "34dac0a3873c158dd3e6126719e0e931ee305f6a1ce56e1a68c5c05b00284b3d"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-09.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-09.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "d2d7ac8762c4a117babe9b1389af4ea83895f0d7122a53a9f2d25c442f25e07c"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-10.zip",
+      "bytes": 1853116,
+      "sha256": "c2e2ef77ee80bd0d0fef438a5f24dc2f4765de6e3ef0ab36797d1bfb20731bd5",
+      "official_sha256": "c2e2ef77ee80bd0d0fef438a5f24dc2f4765de6e3ef0ab36797d1bfb20731bd5"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-10.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "5ded08cf053025e40480691119bb8ad91fa8ccf520586781ce9aa878c5ff0caf"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-11.zip",
+      "bytes": 1754855,
+      "sha256": "613eba1df328da3b171bd0fe975e2dd1047e0ac535c49a71aad0649ba3da4d6c",
+      "official_sha256": "613eba1df328da3b171bd0fe975e2dd1047e0ac535c49a71aad0649ba3da4d6c"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-11.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "8d43cc8db999854b9173e3b3a8499683147e8793ed3def631d0b1f9122468659"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-12.zip",
+      "bytes": 1744400,
+      "sha256": "c7d230dcded82fe00f47546094318bb67b7477fe202aac48075237f30cda8840",
+      "official_sha256": "c7d230dcded82fe00f47546094318bb67b7477fe202aac48075237f30cda8840"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2025-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2025-12.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "9853313925c03f7e4eec35627838fa5f11bf5f4f66139365ba0d9c2c98ad2d36"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-01.zip",
+      "bytes": 1758666,
+      "sha256": "b1461ec0ea96fe535e72780b698471907136df72c97a360628c6b65ae6dd5cae",
+      "official_sha256": "b1461ec0ea96fe535e72780b698471907136df72c97a360628c6b65ae6dd5cae"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-01.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "dbd6e276be2eabd4410e3ff0b99381d7af928e0d51e5c001cdf24d1e6cc5bca7"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-02.zip",
+      "bytes": 1601407,
+      "sha256": "2fa5c67037194c73e823abb111331334e07e5d4f0eaa6704fd879983971e8755",
+      "official_sha256": "2fa5c67037194c73e823abb111331334e07e5d4f0eaa6704fd879983971e8755"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-02.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "d2de1f2e347c8f1fc128ee7ae7d1a2efbfd60c2fb56df7761b9d842cf392b682"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-03.zip",
+      "bytes": 1749301,
+      "sha256": "ba4758aaa2fb1bd5be4f120d21cf5c94d7e315d38918080ee880b36dc60b7841",
+      "official_sha256": "ba4758aaa2fb1bd5be4f120d21cf5c94d7e315d38918080ee880b36dc60b7841"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-03.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "a0b887f6cd874c0c5b86de94da2b0fbbb0d20c616b4b7823ca0b88952007906c"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-04.zip",
+      "bytes": 1669211,
+      "sha256": "31a8edfd1f029e3ee08d7824b6352e898828cc8d3e2c71b7cd02b3c9b2637bf5",
+      "official_sha256": "31a8edfd1f029e3ee08d7824b6352e898828cc8d3e2c71b7cd02b3c9b2637bf5"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-04.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "20ab2ba3c46a4f20bb5c11cf6a866e7d008a16ee4d525244b4c217614fbf2859"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-05.zip",
+      "bytes": 1736180,
+      "sha256": "109a1d0020c4710c1aa86b8773795b21326d038d795b224e1758bf9091c4e110",
+      "official_sha256": "109a1d0020c4710c1aa86b8773795b21326d038d795b224e1758bf9091c4e110"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-05.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "e1d03b1784585169251fd22e3e4875e09ad255b94dd5fed28cef82f2271b3f8c"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "DOGEUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-06.zip",
+      "bytes": 1662604,
+      "sha256": "90b1a9a55146505876a5b0469b69e8606194b018beec06094be8b4babd37c8b4",
+      "official_sha256": "90b1a9a55146505876a5b0469b69e8606194b018beec06094be8b4babd37c8b4"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "DOGEUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/DOGEUSDT/1m/DOGEUSDT-1m-2026-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\DOGEUSDT\\DOGEUSDT-1m-2026-06.zip.CHECKSUM",
+      "bytes": 90,
+      "sha256": "09a1796c339243205699cab1d9eb0618510ff9d3a54b97124c4727b3e5037aeb"
+    },
+    {
+      "kind": "funding",
+      "symbol": "DOGEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=DOGEUSDT&startTime=1727740800000&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_DOGEUSDT_001.json",
+      "rows": 1000,
+      "bytes": 102187,
+      "sha256": "466d0e393a4323d3dd07c5efa042eb7dddac847c2910e47503898de4f4c958fb"
+    },
+    {
+      "kind": "funding",
+      "symbol": "DOGEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=DOGEUSDT&startTime=1756512000001&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_DOGEUSDT_002.json",
+      "rows": 914,
+      "bytes": 93563,
+      "sha256": "9d787563c77d5562dae0610ba12733008eac1dc614777ae3a56f411724d1ffc7"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "DOGEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=DOGEUSDT&startTime=1727740800000&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_DOGEUSDT_001.json",
+      "rows": 1500,
+      "bytes": 162001,
+      "sha256": "ef6a21fb4200520d0c58b3cf4a4bdc7c2fb795cd1de082cd46c6b9e48e0558ec"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "DOGEUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=DOGEUSDT&startTime=1770912000001&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_DOGEUSDT_002.json",
+      "rows": 414,
+      "bytes": 45901,
+      "sha256": "7e4c41c1ebbabea3766a37a540bd1e2b6f5c7fa5dd79e7ebc317f95c0260cccd"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2024-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2024-10.zip",
+      "bytes": 1510727,
+      "sha256": "55b3b8bb3e8eae40e805b9e3f9bfee63ee104aa72f823426c6b2241a62fbf2fb",
+      "official_sha256": "55b3b8bb3e8eae40e805b9e3f9bfee63ee104aa72f823426c6b2241a62fbf2fb"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2024-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2024-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2024-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "de4c1e1014ceb684dc158590cbef103fccabac0bed181c424f855f12f9b3abfb"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2024-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2024-11.zip",
+      "bytes": 1641259,
+      "sha256": "8f5820e2a0edbad4eec23bda98731db1ae65497d99824150c9952a069620f64f",
+      "official_sha256": "8f5820e2a0edbad4eec23bda98731db1ae65497d99824150c9952a069620f64f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2024-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2024-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2024-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "9662a8e6691d38f2458be91d2499ef9686b6a8f29723cd1dbf226ea7d872f79b"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2024-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2024-12.zip",
+      "bytes": 1708062,
+      "sha256": "a86adac0baec7760c07306886599d5464e549405557e84634dbe355e5187b6c0",
+      "official_sha256": "a86adac0baec7760c07306886599d5464e549405557e84634dbe355e5187b6c0"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2024-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2024-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2024-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "5033b00dd0423bd16bae9f0e1f523fcc0c5d7f745b5dfa371729407c16661a55"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-01.zip",
+      "bytes": 1691242,
+      "sha256": "cc67ac9c2fc7c05a97fed57c90c071e8dcf2c5def6859a946ebbaf6bbf2cac2c",
+      "official_sha256": "cc67ac9c2fc7c05a97fed57c90c071e8dcf2c5def6859a946ebbaf6bbf2cac2c"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "7a22f66c238b66d143d3d56d1716618037f6f37308ff0da5bfbf5bb9e40d8eee"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-02.zip",
+      "bytes": 1512502,
+      "sha256": "15df15731326945897977f6ddf0414a13533d8d7dd167e7a59cdc2fcda3b8d85",
+      "official_sha256": "15df15731326945897977f6ddf0414a13533d8d7dd167e7a59cdc2fcda3b8d85"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "2c825ebe5022710eca8ba5da0e361f08b053af49653c8c1f8a9ecd02a84392d8"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-03.zip",
+      "bytes": 1682691,
+      "sha256": "aa98ac5adb06a3be6ed65340f2223597244d13c282b9600d4d6df1e5dd3feecc",
+      "official_sha256": "aa98ac5adb06a3be6ed65340f2223597244d13c282b9600d4d6df1e5dd3feecc"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "353c2aec167d19ec83bb2c40547a3720d6523d31aa7aeb9b4bdea5a74b8182f8"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-04.zip",
+      "bytes": 1581393,
+      "sha256": "423f30b85f71463002fe00f65310e63196e48555f2a7d3c68c0888d83ace6fee",
+      "official_sha256": "423f30b85f71463002fe00f65310e63196e48555f2a7d3c68c0888d83ace6fee"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "5c5e7163fc1070eec469290fce4f13c3bd03d9d655248103dda543ae3a58959a"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-05.zip",
+      "bytes": 1648295,
+      "sha256": "84a5802110fd625b21754b87a00c462d3af9b6e07bd8d22c90feed6f921cf03d",
+      "official_sha256": "84a5802110fd625b21754b87a00c462d3af9b6e07bd8d22c90feed6f921cf03d"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "24ccc6a2279d8035e9f93deb60b452d81376e6f3266825635a2829671ea43bf4"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-06.zip",
+      "bytes": 1551776,
+      "sha256": "3a178ab37a2e232d3009e270832a50dfbb29d9f2ddfba8695391af74dd3de57d",
+      "official_sha256": "3a178ab37a2e232d3009e270832a50dfbb29d9f2ddfba8695391af74dd3de57d"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "051a0e4709afedc5c324e3430703ec6e83ee26735dbcbf30201f82e46c646d94"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-07.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-07.zip",
+      "bytes": 1656176,
+      "sha256": "e017c9d37daa1f2fe3a254dbe5409f31ae1056037f969476ee6cf9eb7a908b01",
+      "official_sha256": "e017c9d37daa1f2fe3a254dbe5409f31ae1056037f969476ee6cf9eb7a908b01"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-07",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-07.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-07.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "960b938a923642c53d57a6a7a308ba13965587470712b3f20e39c07464954467"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-08.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-08.zip",
+      "bytes": 1673153,
+      "sha256": "86c99b5d9c086b61db1f971b0b996ec35919169f7bf511ed852c4437cafd06f4",
+      "official_sha256": "86c99b5d9c086b61db1f971b0b996ec35919169f7bf511ed852c4437cafd06f4"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-08",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-08.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-08.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "40ff3995c794318e0c733283a1538dd129e2bcba277b092eaeb0edc415f54617"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-09.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-09.zip",
+      "bytes": 1564568,
+      "sha256": "49c661705b3edd784bd377b6d246708621593e441d2f31623f259542c3242b39",
+      "official_sha256": "49c661705b3edd784bd377b6d246708621593e441d2f31623f259542c3242b39"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-09",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-09.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-09.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "749eb83ac8692a00e2db324100d95e3d3fdc2d0a959ba60c48d5b948b7291df8"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-10.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-10.zip",
+      "bytes": 1624418,
+      "sha256": "ed34570f78990bb424befefd3fc4d4b3cabb515419b9b6788c7db908a5a381a1",
+      "official_sha256": "ed34570f78990bb424befefd3fc4d4b3cabb515419b9b6788c7db908a5a381a1"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-10",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-10.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-10.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "f309b2c9bc824308182b44b160a13b7c94fd7c4661159a062afe3f3adbbbab90"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-11.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-11.zip",
+      "bytes": 1554593,
+      "sha256": "70859a6e2bac16816dc57897ed8803950211d7602b1d62e647076fd1dc8d1501",
+      "official_sha256": "70859a6e2bac16816dc57897ed8803950211d7602b1d62e647076fd1dc8d1501"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-11",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-11.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-11.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d15a43e3fe1762553df4ab830f0d50f2b8989567958326fcf24c7a1673b2d732"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-12.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-12.zip",
+      "bytes": 1559353,
+      "sha256": "d00dc838513bf910a0d80ae913e4bedc2b9aa5e116503c6acf0ec4ffd7107dfe",
+      "official_sha256": "d00dc838513bf910a0d80ae913e4bedc2b9aa5e116503c6acf0ec4ffd7107dfe"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2025-12",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2025-12.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2025-12.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "d5fd46f294331e21bd7302f7d60ce8f071cb0ca7f5481c7ca1edfce5b500d120"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-01.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-01.zip",
+      "bytes": 1557962,
+      "sha256": "6ed895f7c4889a7c98198b88366d61d40bb7ce5e90aea97d70ce790b44c45d63",
+      "official_sha256": "6ed895f7c4889a7c98198b88366d61d40bb7ce5e90aea97d70ce790b44c45d63"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2026-01",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-01.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-01.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "ad476c53dd2f753c5734e1b522a7ca42a446f54a7028c4d74ba2186274d29f7b"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-02.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-02.zip",
+      "bytes": 1402267,
+      "sha256": "f9f638e2364572fa21597ec822bd7e0c67942ebed737456f0069672b40eb128f",
+      "official_sha256": "f9f638e2364572fa21597ec822bd7e0c67942ebed737456f0069672b40eb128f"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2026-02",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-02.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-02.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "f2baa7a5b5a3f899cacdcb082e963f2eb16ea3050f2477ccc7edee7050e964eb"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-03.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-03.zip",
+      "bytes": 1522853,
+      "sha256": "10e3ce90b30d31c0fa0a926374ad6891c057eba9e45058d240f7582dbbf29ff2",
+      "official_sha256": "10e3ce90b30d31c0fa0a926374ad6891c057eba9e45058d240f7582dbbf29ff2"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2026-03",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-03.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-03.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "9f31596456939445f7d4985e3e63d206751a0c137879a6c1b06c72ee7191ad3a"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-04.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-04.zip",
+      "bytes": 1450370,
+      "sha256": "fb7d637f6544dc642d325d017c1a9247d62046b5c3b0e8275a04031b29d5b0a7",
+      "official_sha256": "fb7d637f6544dc642d325d017c1a9247d62046b5c3b0e8275a04031b29d5b0a7"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2026-04",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-04.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-04.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "fb7630039862db227bd80d3932e4eb9a12b3fa420192b5fe49019ca25e5fddb4"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-05.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-05.zip",
+      "bytes": 1482313,
+      "sha256": "c57b6888032fa70f474b601ea0e58dd619037853af65240ba1d56f45afc563c1",
+      "official_sha256": "c57b6888032fa70f474b601ea0e58dd619037853af65240ba1d56f45afc563c1"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2026-05",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-05.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-05.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "be6abc420dd6ed1b9e460ae8b394913dfd7a410ef79e2ab2754bf4b2d7b6ed67"
+    },
+    {
+      "kind": "kline_zip",
+      "symbol": "ADAUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-06.zip",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-06.zip",
+      "bytes": 1465953,
+      "sha256": "1d8406368d6cd42f717ce98d2ef138e55144b6ce84f56973cb5628fbc93b026b",
+      "official_sha256": "1d8406368d6cd42f717ce98d2ef138e55144b6ce84f56973cb5628fbc93b026b"
+    },
+    {
+      "kind": "checksum",
+      "symbol": "ADAUSDT",
+      "month": "2026-06",
+      "url": "https://data.binance.vision/data/futures/um/monthly/klines/ADAUSDT/1m/ADAUSDT-1m-2026-06.zip.CHECKSUM",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\klines\\ADAUSDT\\ADAUSDT-1m-2026-06.zip.CHECKSUM",
+      "bytes": 89,
+      "sha256": "3e8a9016511e4b1de238820893f3a8277fada6c57212e8e7e77f38d11b584f23"
+    },
+    {
+      "kind": "funding",
+      "symbol": "ADAUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ADAUSDT&startTime=1727740800000&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_ADAUSDT_001.json",
+      "rows": 1000,
+      "bytes": 101198,
+      "sha256": "f0c08ca6a62665ad90a906e8802a21ca1f3145c7a6fe8558cca2f94ff7a1088a"
+    },
+    {
+      "kind": "funding",
+      "symbol": "ADAUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/fundingRate?symbol=ADAUSDT&startTime=1756512000001&endTime=1782863999999&limit=1000",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\funding_ADAUSDT_002.json",
+      "rows": 914,
+      "bytes": 92645,
+      "sha256": "f30bfe2c895a9ff3a0559e26e483f590a37aa43aaf25dfe7ea447763a4a05d53"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "ADAUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ADAUSDT&startTime=1727740800000&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_ADAUSDT_001.json",
+      "rows": 1500,
+      "bytes": 162001,
+      "sha256": "dd035c07a9bda8979c8b03330a3de7690dd815e1f382b351683b66d14a2d4f0e"
+    },
+    {
+      "kind": "mark8h",
+      "symbol": "ADAUSDT",
+      "url": "https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=ADAUSDT&startTime=1770912000001&endTime=1782863999999&limit=1500&interval=8h",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1\\rest\\mark8h_ADAUSDT_002.json",
+      "rows": 414,
+      "bytes": 45901,
+      "sha256": "36705a78a7eb99e8b87c37ff871a39b405f5697bda12e48e7e361cf59e4a2763"
+    }
+  ],
+  "file_count": 276,
+  "total_bytes": 224723759,
+  "large_data_location": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\quarter-hour-1m-order-imbalance-12h\\2026-07-22-v1",
+  "git_persistence": "RAW_DATA_OUTSIDE_GIT",
+  "content_digest": "534b79ab4c06c3f75ecf1ddd09893116c17848800689df319fbe2b2b61354eff"
+}

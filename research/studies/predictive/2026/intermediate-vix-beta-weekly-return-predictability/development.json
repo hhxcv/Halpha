@@ -1,0 +1,216 @@
+{
+  "generated_at_utc": "2026-07-22T11:45:20.075107+00:00",
+  "stage": "development",
+  "period": {
+    "start": "2023-03-04T00:00:00Z",
+    "end_exclusive": "2024-03-02T00:00:00Z"
+  },
+  "data_quality_digest": "0e30d2ba4a22b18843f9d480c7d682c518c4922a2cb7d7339f25d59eb1b2e691",
+  "summaries": {
+    "primary_36w": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.005968205568616963,
+        "block_bootstrap_95pct": [
+          -0.00861230776770858,
+          0.019741937059158773
+        ],
+        "positive_fraction": 0.4807692307692308,
+        "first_half_mean": 0.00258940848497671,
+        "second_half_mean": 0.00934700265225721
+      },
+      "rank_ic": {
+        "mean": 0.08438099864839613,
+        "hac_t": 3.6568822935960283,
+        "hac_two_sided_p": 0.00025530154140007824,
+        "hac_one_sided_p": 0.00012765077070003912
+      },
+      "controlled_middle_score_slope": {
+        "mean": 0.0004847214531491534,
+        "hac_t": 0.1922051155218288,
+        "hac_two_sided_p": 0.8475815390049027,
+        "hac_one_sided_p": 0.42379076950245137
+      },
+      "quadratic_beta_squared_slope": {
+        "mean": -0.0014832482123034265,
+        "hac_t": -0.612550874481445,
+        "hac_two_sided_p": 0.5401733492361731,
+        "hac_one_sided_p": 0.27008667461808655
+      },
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.00225941264065563,
+        "block_bootstrap_95pct": [
+          -0.004224861581634952,
+          0.009484798809910955
+        ],
+        "positive_fraction": 0.5,
+        "first_half_mean": -0.003219882598200088,
+        "second_half_mean": 0.007738707879511346,
+        "selected_symbols": 9,
+        "positive_symbol_fraction": 0.6666666666666666,
+        "maximum_positive_contribution_share": 0.3471409394570341
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "market_beta": 0.12164788341963281,
+          "mom7": 0.16845381612805208,
+          "mom28": 0.12494559494259944,
+          "vol28": 0.22115696684625008,
+          "max28": 0.16273196843116897,
+          "log_volume30": 0.1542165064388163
+        },
+        "maximum_median_absolute": 0.22115696684625008
+      }
+    },
+    "diagnostic_26w": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.004811015654624649,
+        "block_bootstrap_95pct": [
+          -0.006162675268374115,
+          0.015964227548356275
+        ],
+        "positive_fraction": 0.5192307692307693,
+        "first_half_mean": 0.0042552010590962246,
+        "second_half_mean": 0.005366830250153073
+      },
+      "rank_ic": {
+        "mean": 0.06418828716083139,
+        "hac_t": 3.0147534288615385,
+        "hac_two_sided_p": 0.0025718824613936127,
+        "hac_one_sided_p": 0.0012859412306968064
+      },
+      "controlled_middle_score_slope": {
+        "mean": -0.0023485324402099097,
+        "hac_t": -0.7143798081953656,
+        "hac_two_sided_p": 0.47499235425378017,
+        "hac_one_sided_p": 0.7625038228731099
+      },
+      "quadratic_beta_squared_slope": {
+        "mean": 0.0014356665527257995,
+        "hac_t": 0.4211641455756046,
+        "hac_two_sided_p": 0.6736352239131316,
+        "hac_one_sided_p": 0.6631823880434342
+      },
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.005525489365839938,
+        "block_bootstrap_95pct": [
+          -0.0029829225561611807,
+          0.014935173860262049
+        ],
+        "positive_fraction": 0.5192307692307693,
+        "first_half_mean": -0.0015977202227178005,
+        "second_half_mean": 0.012648698954397677,
+        "selected_symbols": 12,
+        "positive_symbol_fraction": 0.5,
+        "maximum_positive_contribution_share": 0.5318945696464205
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "market_beta": 0.0704149345843119,
+          "mom7": 0.17094973677880407,
+          "mom28": 0.14551118665376517,
+          "vol28": 0.24035873847020225,
+          "max28": 0.20694408542472065,
+          "log_volume30": 0.1540918382644918
+        },
+        "maximum_median_absolute": 0.24035873847020225
+      }
+    },
+    "diagnostic_52w": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.0032988021821871794,
+        "block_bootstrap_95pct": [
+          -0.011243315974449289,
+          0.020028500950665325
+        ],
+        "positive_fraction": 0.4807692307692308,
+        "first_half_mean": 0.004509363937167841,
+        "second_half_mean": 0.002088240427206521
+      },
+      "rank_ic": {
+        "mean": 0.0458011440744521,
+        "hac_t": 2.261550823633313,
+        "hac_two_sided_p": 0.023725169242601006,
+        "hac_one_sided_p": 0.011862584621300503
+      },
+      "controlled_middle_score_slope": {
+        "mean": 0.0009941199597085582,
+        "hac_t": 0.6108292733288232,
+        "hac_two_sided_p": 0.5413126115471338,
+        "hac_one_sided_p": 0.2706563057735669
+      },
+      "quadratic_beta_squared_slope": {
+        "mean": -0.002986740742958325,
+        "hac_t": -1.6780321819458093,
+        "hac_two_sided_p": 0.09334081665719031,
+        "hac_one_sided_p": 0.046670408328595155
+      },
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.006936053333956411,
+        "block_bootstrap_95pct": [
+          -0.002551556827339102,
+          0.016897769925164837
+        ],
+        "positive_fraction": 0.4230769230769231,
+        "first_half_mean": 0.0015513934910921707,
+        "second_half_mean": 0.012320713176820652,
+        "selected_symbols": 7,
+        "positive_symbol_fraction": 0.42857142857142855,
+        "maximum_positive_contribution_share": 0.48283289559395026
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "market_beta": 0.18967798819660933,
+          "mom7": 0.14435645107571538,
+          "mom28": 0.14393675755248783,
+          "vol28": 0.17168913903489763,
+          "max28": 0.1567425173009368,
+          "log_volume30": 0.06141124302117547
+        },
+        "maximum_median_absolute": 0.18967798819660933
+      }
+    }
+  },
+  "csv_sha256": {
+    "development_primary_36w_panel.csv": "5adbd25638517f2051439eee398897e16195ae206526cc10be503e2449354469",
+    "development_primary_36w_weekly.csv": "7e03c9d137399782a44438945932310a161306bcfbda5dd2bf3b27b1d67f399d",
+    "development_primary_36w_selected.csv": "5026a4a426b821e71fb2cacbca7f2e261cafaf99668df08a2b8da011a70221bf",
+    "development_diagnostic_26w_panel.csv": "ce24c235e1cfd816b582585b4ffd9b6f13a83a6b0782e17b0fcea1d7b9522f44",
+    "development_diagnostic_26w_weekly.csv": "d56cbe76c04042c6e7e478c8ddde32bab1978fe44bffe865453d2aae4bb61d47",
+    "development_diagnostic_26w_selected.csv": "51f2232b245f80440a66089c47a40e011094da3b9ba83fffc4f707091666d8dd",
+    "development_diagnostic_52w_panel.csv": "4be47df2d9ddd2b66c7c6e2d8001114836b5cd366718b5e1e8e480892a044c3a",
+    "development_diagnostic_52w_weekly.csv": "9967790c6cb3b2a311e248ff7e0b2a78221b6ed31e83c8b75e299158b92b3d81",
+    "development_diagnostic_52w_selected.csv": "eaac71ec0d88d476a8867534751a31b04b8203d0a095f8d9783f8693a9727174"
+  },
+  "search_disclosure": {
+    "selectable_primary_configurations": 1,
+    "main": "36-week market-controlled VIX innovation beta; middle 20%",
+    "diagnostics_only": [
+      "26-week beta",
+      "52-week beta"
+    ],
+    "all_periods_post_publication": true,
+    "prior_broad_market_path_exposure": true
+  },
+  "content_digest": "9e40a5b750f76d0561986a17ef3d3dd86c6b44b689d4a40da617c421cad45a3c"
+}

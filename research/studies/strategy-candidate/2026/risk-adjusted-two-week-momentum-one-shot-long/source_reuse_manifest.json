@@ -1,0 +1,43 @@
+{
+  "created_at_utc": "2026-07-22T07:00:29.243280Z",
+  "entries": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\study.py",
+      "bytes": 53360,
+      "sha256": "41d1766dda1bf10b338d6fbba704baa8bfdeff9d8e381a65ba63e079796cc201"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\checkpoint.json",
+      "bytes": 16384,
+      "sha256": "594370293434c77da46206fdf183c4dac1763b53ed1faab26bc87f0ba04f2724"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\amendment-001.json",
+      "bytes": 882,
+      "sha256": "d6b446910148fca2f1d6285feb6dadcbf2a7a9fefd4f961f2d278cf6c4d71e0d"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\source_reuse_manifest.json",
+      "bytes": 864841,
+      "sha256": "11e8e0820def6d6dd473bc2a9d8234176dc2fa69a9f07ab13820bd702cf4f730"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\source_supplement_manifest.json",
+      "bytes": 13382,
+      "sha256": "40fcdd99357b213075a462377aaf19b620ad2df4f11834247ad16d6b4f7a73cc"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ctrend-weekly-top-quintile-one-shot-long\\data_quality_development.json",
+      "bytes": 8786,
+      "sha256": "76cacab8cc9826b35917cd5ab7992e96fd4ad401dcc37d2d123b7ecf767328da"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\_sources\\crypto-factor-portfolios-efma2021.pdf",
+      "bytes": 1765118,
+      "sha256": "5caf406d0250c132351fc8e83e7c63da945f6363e70fc3e897d6be0913b9b444",
+      "url": "https://www.efmaefm.org/0EFMAMEETINGS/EFMA%20ANNUAL%20MEETINGS/2021-Leeds/papers/EFMA%202021_stage-2049_question-Full%20Paper_id-225.pdf",
+      "role": "public prior-art formula identity; not a market input"
+    }
+  ],
+  "content_digest": "15f6b622c067e4f5366bb61d79ed387a04b5f94f739aa14f8659a15cef7a4efe"
+}

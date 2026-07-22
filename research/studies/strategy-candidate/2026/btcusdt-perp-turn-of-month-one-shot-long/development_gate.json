@@ -1,0 +1,48 @@
+{
+  "generated_at_utc": "2026-07-22T11:30:58.483734Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "all_plans_present": true,
+    "vectorbt_reconciled": true,
+    "base_total_positive": false,
+    "stress_total_positive": false,
+    "stress_after_4pct_hurdle_positive": false,
+    "base_after_6pct_combined_hurdle_positive": false,
+    "paired_midmonth_improvement_positive": false,
+    "daily_tom_hac_coefficient_positive": false,
+    "tom3_base_nonnegative": false,
+    "tom5_base_nonnegative": false,
+    "base_drawdown_above_minus_15pct": false,
+    "stress_positive_month_fraction_at_least_half": false,
+    "each_calendar_year_base_positive": false,
+    "stress_monthly_bootstrap_lower_positive": false,
+    "daily_tom_one_sided_hac_p_lt_10pct": false
+  },
+  "failed_checks": [
+    "base_total_positive",
+    "stress_total_positive",
+    "stress_after_4pct_hurdle_positive",
+    "base_after_6pct_combined_hurdle_positive",
+    "paired_midmonth_improvement_positive",
+    "daily_tom_hac_coefficient_positive",
+    "tom3_base_nonnegative",
+    "tom5_base_nonnegative",
+    "base_drawdown_above_minus_15pct",
+    "stress_positive_month_fraction_at_least_half",
+    "each_calendar_year_base_positive",
+    "stress_monthly_bootstrap_lower_positive",
+    "daily_tom_one_sided_hac_p_lt_10pct"
+  ],
+  "economic_failed_checks": [
+    "stress_after_4pct_hurdle_positive",
+    "stress_total_positive",
+    "daily_tom_hac_coefficient_positive",
+    "base_total_positive",
+    "base_after_6pct_combined_hurdle_positive",
+    "paired_midmonth_improvement_positive"
+  ],
+  "result_digest": "ed07c44f88b40e6e57f692b447edb08f8dc8790756149a2c9d16a722c04b3a9e",
+  "content_digest": "65607a4ce1872ca6a3fd3eeaa84d9ac9b81d065fb82d9c0cdceeb86270fafe2b"
+}

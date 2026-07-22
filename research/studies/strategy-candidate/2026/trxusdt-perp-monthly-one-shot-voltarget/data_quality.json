@@ -1,0 +1,78 @@
+{
+  "checked_at_utc": "2026-07-22T00:55:46.550102Z",
+  "status": "PASS",
+  "bars": {
+    "rows": 2100,
+    "first": "2020-10-01T00:00:00+00:00",
+    "last": "2026-07-01T00:00:00+00:00",
+    "missing": 0,
+    "duplicates": 0,
+    "invalid_ohlc": 0,
+    "invalid_range": 0,
+    "median_quote_volume": 75358079.215495,
+    "minimum_quote_volume": 7127258.67801
+  },
+  "funding": {
+    "rows": 6298,
+    "first": "2020-10-01T00:00:00+00:00",
+    "last": "2026-07-01T00:00:00+00:00",
+    "missing_mark_price": 0,
+    "mark_price_from_funding_response": 2922,
+    "mark_price_filled_from_official_8h_kline": 3376,
+    "maximum_absolute_mark_match_delta_ms": 48.0,
+    "maximum_gap_hours": 8.000013055555556,
+    "interval_hours_counts": {
+      "7.999989": 2,
+      "7.999991": 6,
+      "7.999992": 4,
+      "7.999993": 4,
+      "7.999994": 25,
+      "7.999995": 64,
+      "7.999996": 153,
+      "7.999997": 187,
+      "7.999998": 427,
+      "7.999999": 668,
+      "8.0": 3214,
+      "8.000001": 682,
+      "8.000002": 417,
+      "8.000003": 195,
+      "8.000004": 153,
+      "8.000005": 41,
+      "8.000006": 27,
+      "8.000007": 20,
+      "8.000008": 3,
+      "8.000009": 2,
+      "8.000012": 1,
+      "8.000013": 2
+    }
+  },
+  "current_exchange_snapshot": {
+    "status": "TRADING",
+    "contract_type": "PERPETUAL",
+    "onboard_date": "2020-01-15T08:05:00+00:00",
+    "price_filter": {
+      "minPrice": "0.00132",
+      "filterType": "PRICE_FILTER",
+      "maxPrice": "20000",
+      "tickSize": "0.00001"
+    },
+    "lot_size": {
+      "maxQty": "20000000",
+      "stepSize": "1",
+      "filterType": "LOT_SIZE",
+      "minQty": "1"
+    },
+    "market_lot_size": {
+      "filterType": "MARKET_LOT_SIZE",
+      "stepSize": "1",
+      "maxQty": "5000000",
+      "minQty": "1"
+    },
+    "min_notional": {
+      "notional": "5",
+      "filterType": "MIN_NOTIONAL"
+    }
+  },
+  "source_manifest_sha256": "e78127585e72f014235a9eb3501406d73b58414c4a527ed8016416b5746721e0",
+  "content_digest": "40b3870e083a2cc35e3384a7c4236f6193b116caebf187f304a322c245031a29"
+}
