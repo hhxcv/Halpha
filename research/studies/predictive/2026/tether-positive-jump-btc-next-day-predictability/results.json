@@ -1,0 +1,38 @@
+{
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "question": "Do positive BNS jumps in Bitfinex USDT/USD predict negative next-24-hour Binance BTCUSDT perpetual returns after a 15-minute action delay?",
+  "stages_run": [
+    "development"
+  ],
+  "first_failure": "development",
+  "stage_summaries": {
+    "development": {
+      "gate": "FAIL",
+      "failed_checks": [
+        "controlled_one_sided_hac",
+        "controlled_halves_negative",
+        "gross_event_short_halves",
+        "gross_event_short_bootstrap_lower",
+        "daily_plan_feasibility_positive",
+        "daily_plan_feasibility_halves",
+        "daily_plan_feasibility_bootstrap_lower",
+        "quarter_concentration",
+        "fixed_threshold_one_sided_hac"
+      ],
+      "eligible_days": 546,
+      "events": 74,
+      "controlled_coefficient": -13.298989918318696,
+      "controlled_one_sided_p": 0.18723621927024897,
+      "event_short_mean": 0.002833792282431779,
+      "event_short_bootstrap_lower": -0.006500937381083529,
+      "daily_plan_feasibility_mean": -0.0001897627458120298,
+      "daily_plan_feasibility_bootstrap_lower": -0.0004787956977546287
+    }
+  },
+  "core_qualification_ready": false,
+  "strategy_candidate_created": false,
+  "reason_not_qualified": "predictive evidence only; actual funding, vectorbt replay, order semantics and framework-neutral handoff are absent",
+  "product_effect": "none",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "content_digest": "44ee66881985364f3c0f0a3a3a8b34e32f4c16db41f79bfd480fcbc67f464eec"
+}

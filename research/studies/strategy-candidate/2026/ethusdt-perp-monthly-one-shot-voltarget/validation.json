@@ -1,0 +1,16 @@
+{
+  "validated_at_utc": "2026-07-22T11:03:58.236473Z",
+  "status": "PASS",
+  "checks": {
+    "study_frozen": true,
+    "engine_frozen": true,
+    "preregistration_frozen": true,
+    "sources_frozen": true,
+    "data_quality_pass": true,
+    "development_plans_identity": true,
+    "development_gate_bound": true
+  },
+  "json_files_checked": 6,
+  "csv_files_checked": 1,
+  "content_digest": "d0314bdd017f6a8b12d6d5d8b818605533680d90436eccd7cc726c3d2752523e"
+}

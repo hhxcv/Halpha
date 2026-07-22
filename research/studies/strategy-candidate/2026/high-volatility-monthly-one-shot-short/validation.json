@@ -1,0 +1,50 @@
+{
+  "validated_at_utc": "2026-07-22T03:58:59.647122Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "checkpoint_digest": "e5cd5bd597c66d52de154eb8d08658c662c9a3772d9bfcc79a44754d02e6e009",
+  "manifest_digest": "58fe1b8aae70c7a552789eca6bfe80fa5ef440f54109d180bda86eee7d7d46af",
+  "data_quality_digest": "cb8b99977d1d5d11ed044ff0982d9f9595e721be0240a19f0d4d019ae5e8bab6",
+  "development_result_digest": "29e3a3cb25814dd79ae2048c8df2694f89727b9dc91bc79afe95b1b6b695230b",
+  "development_gate_digest": "db0ff966520e61f1fb70c5b04072d2bd8f2a98b79d29f5967845386da12ecc05",
+  "final_results_digest": "c8e02efc6bb56e2d73f3e7ac94c86addbaafb80b67960c440507c08d03993d7f",
+  "data_quality": {
+    "status": "PASS",
+    "symbols_passed": 74,
+    "symbols_total": 74,
+    "target_funding_rows": 27450,
+    "missing_funding_marks": 0,
+    "maximum_funding_gap_hours": 8.000003611111111
+  },
+  "cache_manifest": {
+    "unique_referenced_files": 1274,
+    "referenced_bytes": 6077841,
+    "root": "D:/projects/Codex/CodexHome/research-data/halpha/category-momentum-gated-one-shot-long/2026-07-22-v1/"
+  },
+  "trade_csv_sha256": {
+    "development_trades.csv": "6606c5a0efae374bb14fd9244e1832577f15e20e3a6a41e375944e10821fdfff",
+    "development_vol60_trades.csv": "6365343301fd7d1b8a0069cd8eac7f5273526ac397d3c6f20630a4ba1a594fc8",
+    "development_vol120_trades.csv": "227fa199efac76c5b96ddc83b22afeb1537d177b2ab58e2b323b137accacbf49",
+    "development_top5_trades.csv": "9fe28769729f597bd18a463f2c5a8957678c30ed41adad3aabf9bc4acdc1ad34",
+    "development_lowvol90_trades.csv": "4d9a0250ea3359fa597de355d200bdcaaf4c8516fa497ac7816ebd11455a82fb",
+    "development_loser90_trades.csv": "db01a98a9e967779366336043a39118210a8c6f7f6be4534c97e27e2962e4fd4",
+    "development_scheduled_short_trades.csv": "501f0e3724a43c4b6f636546dc9321f0791a8787513e66630ad0b58c62c03dae"
+  },
+  "rerun": {
+    "analyze_trade_csv_hashes_stable": true,
+    "gate_failed_checks_stable": [
+      "stress_bootstrap_lower_positive",
+      "two_of_three_neighborhoods_stress_positive"
+    ]
+  },
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "handoff": "NOT_GENERATED",
+  "product_effects": "NONE"
+}

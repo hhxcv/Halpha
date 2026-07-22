@@ -1,0 +1,37 @@
+{
+  "created_at_utc": "2026-07-22T08:47:46.764951Z",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "failed_stage": "evaluation",
+  "failed_checks": [
+    "vectorbt_reconciled",
+    "base_after_hurdle_positive",
+    "stress_after_hurdle_positive",
+    "long_stress_positive",
+    "short_base_positive",
+    "short_stress_positive",
+    "stress_bootstrap_lower_positive",
+    "both_half_years_base_positive",
+    "beats_reverse",
+    "beats_momentum90",
+    "two_of_three_neighbors_stress_positive",
+    "minimum_positive_categories",
+    "worst_target_drawdown_above_minus_30pct"
+  ],
+  "handoff_generated": false,
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "family_disposition": "CLOSED_UNTIL_NEW_FORWARD_EVIDENCE_OR_INDEPENDENT_MECHANISM",
+  "summary": {
+    "trades": 43,
+    "entry_dates": 10,
+    "targets": 17,
+    "base_after_hurdle": -0.027523663473244697,
+    "stress_after_hurdle": -0.03077872739925141,
+    "stress_bootstrap_95pct": [
+      -0.07220883232891646,
+      0.0006278728721903463
+    ],
+    "long_stress": -0.001490411383464423,
+    "short_stress": -0.0578629140216295
+  },
+  "content_digest": "222bef5c49e3089900acb1f8259c5342c41b89ad458baa9308cddcb51f6c5797"
+}

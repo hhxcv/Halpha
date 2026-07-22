@@ -1,0 +1,253 @@
+{
+  "created_at_utc": "2026-07-22T05:23:07.170744Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "When a liquid current USD-M target has positive top-three five-day momentum but negative prior-day official premium, does next-day 0.25x LONG total return survive actual funding, retail costs, capital hurdle, single-factor baselines, robustness, and four sequential time gates?",
+  "evidence_boundary": "Component premium and momentum outcomes and many price bytes through 2025 are exposed, but their exact conjunction has never been computed. Early stages are sequential screening, not blind evidence. Only 2026H1 is a relatively clean final holdout, opened after three PASS gates. Current-survivor universe.",
+  "universe": {
+    "path": "research\\market-universe\\universe.csv",
+    "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+    "snapshot_time_utc": "2026-07-21T06:42:30Z",
+    "categories": {
+      "AI": [
+        "CHRUSDT",
+        "GRTUSDT",
+        "LPTUSDT",
+        "RLCUSDT",
+        "THETAUSDT"
+      ],
+      "DeFi": [
+        "1INCHUSDT",
+        "AAVEUSDT",
+        "ANKRUSDT",
+        "BANDUSDT",
+        "BELUSDT",
+        "C98USDT",
+        "COMPUSDT",
+        "CRVUSDT",
+        "DYDXUSDT",
+        "KAVAUSDT",
+        "KNCUSDT",
+        "OGNUSDT",
+        "RSRUSDT",
+        "RUNEUSDT",
+        "SNXUSDT",
+        "SUSHIUSDT",
+        "UNIUSDT",
+        "YFIUSDT",
+        "ZRXUSDT"
+      ],
+      "Infrastructure": [
+        "ARPAUSDT",
+        "BATUSDT",
+        "ENSUSDT",
+        "GTCUSDT",
+        "IOTXUSDT",
+        "LINKUSDT",
+        "MASKUSDT",
+        "MTLUSDT",
+        "SFPUSDT",
+        "TRBUSDT"
+      ],
+      "Layer-1": [
+        "ADAUSDT",
+        "ALGOUSDT",
+        "ATOMUSDT",
+        "AVAXUSDT",
+        "BNBUSDT",
+        "CELOUSDT",
+        "DOTUSDT",
+        "EGLDUSDT",
+        "HBARUSDT",
+        "ICPUSDT",
+        "ICXUSDT",
+        "IOSTUSDT",
+        "KSMUSDT",
+        "NEARUSDT",
+        "NEOUSDT",
+        "QTUMUSDT",
+        "ROSEUSDT",
+        "SOLUSDT",
+        "TRXUSDT",
+        "VETUSDT",
+        "XTZUSDT"
+      ],
+      "Layer-2": [
+        "CELRUSDT",
+        "CTSIUSDT",
+        "ONEUSDT",
+        "SKLUSDT",
+        "XLMUSDT"
+      ],
+      "Payment": [
+        "1000XECUSDT",
+        "BCHUSDT",
+        "COTIUSDT",
+        "LTCUSDT",
+        "XRPUSDT"
+      ],
+      "PoW": [
+        "DASHUSDT",
+        "ETCUSDT",
+        "IOTAUSDT",
+        "ONTUSDT",
+        "RVNUSDT",
+        "XMRUSDT",
+        "ZECUSDT",
+        "ZENUSDT",
+        "ZILUSDT"
+      ]
+    },
+    "symbol_count": 74,
+    "target_symbols": [
+      "1000XECUSDT",
+      "AAVEUSDT",
+      "AVAXUSDT",
+      "BCHUSDT",
+      "BNBUSDT",
+      "CRVUSDT",
+      "DASHUSDT",
+      "ENSUSDT",
+      "ETCUSDT",
+      "HBARUSDT",
+      "KAVAUSDT",
+      "LINKUSDT",
+      "LTCUSDT",
+      "NEARUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "UNIUSDT",
+      "VETUSDT",
+      "XLMUSDT",
+      "XMRUSDT",
+      "XRPUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ],
+    "target_symbol_count": 25
+  },
+  "stages": {
+    "development": {
+      "fetch_start": "2021-11-17T00:00:00Z",
+      "start": "2022-01-01T00:00:00Z",
+      "end_exclusive": "2024-01-01T00:00:00Z"
+    },
+    "evaluation": {
+      "fetch_start": "2023-11-17T00:00:00Z",
+      "start": "2024-01-01T00:00:00Z",
+      "end_exclusive": "2025-01-01T00:00:00Z"
+    },
+    "validation": {
+      "fetch_start": "2024-11-17T00:00:00Z",
+      "start": "2025-01-01T00:00:00Z",
+      "end_exclusive": "2026-01-01T00:00:00Z"
+    },
+    "confirmation": {
+      "fetch_start": "2025-11-17T00:00:00Z",
+      "start": "2026-01-01T00:00:00Z",
+      "end_exclusive": "2026-07-01T00:00:00Z"
+    }
+  },
+  "config": {
+    "strategy_id": "RESEARCH_WINNER5_TOP3_NEGATIVE_PREMIUM1_DAILY_LONG_0P25X_V1",
+    "direction": "LONG_ONLY",
+    "top_targets": 3,
+    "notional_fraction": 0.25,
+    "target_min_median_quote_volume_30d": 10000000.0,
+    "min_rankable_targets": 20,
+    "annual_capital_hurdle": 0.04,
+    "max_missing_funding_mark_fraction": 0.005,
+    "max_excluded_trade_fraction": 0.05,
+    "bootstrap_block_days": 14,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "diagnostics": {
+      "winner3_negative_premium": {
+        "kind": "winner_negative_premium",
+        "lookback_days": 3,
+        "top_targets": 3
+      },
+      "winner10_negative_premium": {
+        "kind": "winner_negative_premium",
+        "lookback_days": 10,
+        "top_targets": 3
+      },
+      "winner5_top5_negative_premium": {
+        "kind": "winner_negative_premium",
+        "lookback_days": 5,
+        "top_targets": 5
+      },
+      "winner5": {
+        "kind": "winner",
+        "lookback_days": 5,
+        "top_targets": 3
+      },
+      "premium_bottom3": {
+        "kind": "premium_discount",
+        "lookback_days": 1,
+        "top_targets": 3
+      },
+      "scheduled_long": {
+        "kind": "scheduled_long",
+        "lookback_days": 1,
+        "top_targets": 3
+      }
+    }
+  },
+  "stage_open_rule": "development -> evaluation -> validation -> confirmation; later download requires prior PASS",
+  "allowed_fixes": "retrieval, parsing, identity, completeness, deterministic statistics, or implementation defects only; no economic method changes",
+  "forbidden_after_checkpoint": [
+    "selecting winner or premium window, rank, direction, target, day, cost, baseline, or gate from outcomes",
+    "removing winner>0 or premium<0",
+    "opening a later stage after failure",
+    "describing component-exposed stages as blind",
+    "calling the directional LONG an arbitrage"
+  ],
+  "files": {
+    "study_py_sha256": "561567e107998b49be0eab8083e64a02f855073379f2050e9e241ccb334e4a4b",
+    "parent_study_py_sha256": "5853383d64afb2cd3dd2ec2bc39224ebff285eedd47cd7a87d8ea80044629bdd",
+    "short_parent_study_py_sha256": "3e088519faf368dd7a340b1da37bdfbaf0da4af0b53a46dea8326269aeebe6da",
+    "daily_parent_study_py_sha256": "91184300bea3eef96d61266bdb3bdf6c5b78715686595de453ec315571968b7c",
+    "base_engine_py_sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+    "daily_parent_amendment_001_sha256": "878662eaa65d929dbb0f76aac0cf512f753fcc96aec0fdd469b352e819e9e4c2",
+    "daily_parent_amendment_002_sha256": "0949cb533164289d8fde26b4c2f0a2dc345e5162495edcf34cd5fb77d1d7887d",
+    "daily_parent_amendment_003_sha256": "b77d0668d16b2b8974adb017873e63aed8118eea661fe66c2f67840b5d653317",
+    "preregistration_sha256": "5e87679683c5ec82b58d878fa1cbb1c07b72984894e73c5262a42126e48b9628",
+    "sources_sha256": "32b63df7448b83b60c82e345a89884de6849d3915906c0b1983d1fd313024259"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\category-momentum-gated-one-shot-long\\2026-07-22-v1",
+  "content_digest": "623d9a4b18594b67d8124e0d491ac2bf54501d625844abec1a075a8d8fa76e77"
+}

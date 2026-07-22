@@ -1,0 +1,102 @@
+{
+  "created_at_utc": "2026-07-22T14:58:46.693798+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy_background": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 / BTCUSDT-PERP",
+  "research_kind": "PREDICTIVE",
+  "question": "Does 28 complete UTC days of 15-minute realized total variance negatively predict next-week returns among 25 mature Binance USD-M perpetuals, incrementally versus daily volatility, with enough high-RV single-short gross room for a separate strategy study?",
+  "hypothesis_direction": "negative high-minus-low return, negative rank IC and negative controlled RV slope",
+  "stages": {
+    "development": [
+      "2022-03-26T00:00:00Z",
+      "2023-07-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2023-07-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2026-07-20T00:00:00Z"
+    ]
+  },
+  "config": {
+    "predictor_id": "RESEARCH_RV15M28_HIGH_NEXT_WEEK_V1",
+    "rv_days": 28,
+    "neighbor_days": [
+      21,
+      35
+    ],
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "minimum_rankable": 20,
+    "tail_fraction": 0.3333333333333333,
+    "beta_days": 84,
+    "decision_weekday": "W-SAT",
+    "entry_delay_days": 2,
+    "target_days": 7,
+    "stress_round_trip_underlying": 0.0052,
+    "economic_notional_fraction": 0.25,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 4,
+    "minimum_action_weeks": 52,
+    "minimum_negative_spread_fraction": 0.52,
+    "minimum_selected_symbols": 10,
+    "minimum_positive_symbol_fraction": 0.5,
+    "maximum_positive_contribution_share": 0.35,
+    "download_workers": 8
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "frozen_file_sha256": {
+    "README.md": "fd98386c8e4ef00bb1b5b0887ea94e561e0ef7635753bb770f7acfca1e54f468",
+    "sources.md": "c6ccebcd77d9e431170d1a449a17970bfa23abcd6e17bca4f5c5fa0564e91742",
+    "preregistration.md": "eae0be43c9ad8fcb4b27d81c457b7bb056d235214d117705accef3c7cf272c71",
+    "study.py": "d45cc347299c7fe1f79f1662488c7a009cccb57b5982d98de2c748419ce427f2"
+  },
+  "development_source": {
+    "path": "research/studies/predictive/2026/relative-signed-jump-next-day-predictability/source_manifest_development.json",
+    "sha256": "8f0404a9d1b6e1d03db1b977a534706a5496a24324afc11cf1d9e53183ae8d8c",
+    "content_digest": "ca419060bd58d89a86c8b652446008e005952dbf4b178daebc34dd56105aa4ff",
+    "archive_count": 425,
+    "archive_bytes": 50798433
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "stage_open_rule": "development -> evaluation only on PASS -> confirmation only on PASS",
+  "strategy_conversion_rule": "only after all three predictive stages PASS; funding strategy study remains separate",
+  "content_digest": "bf0041aa1539c1db701f0cfba83941bbc011f4fa3bafae468b2f5c4982477bd1"
+}

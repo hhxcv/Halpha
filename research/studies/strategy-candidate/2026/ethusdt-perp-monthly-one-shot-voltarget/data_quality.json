@@ -1,0 +1,78 @@
+{
+  "checked_at_utc": "2026-07-22T11:02:33.508711Z",
+  "status": "PASS",
+  "bars": {
+    "rows": 2100,
+    "first": "2020-10-01T00:00:00+00:00",
+    "last": "2026-07-01T00:00:00+00:00",
+    "missing": 0,
+    "duplicates": 0,
+    "invalid_ohlc": 0,
+    "invalid_range": 0,
+    "median_quote_volume": 7162411742.440555,
+    "minimum_quote_volume": 260959521.02027
+  },
+  "funding": {
+    "rows": 6298,
+    "first": "2020-10-01T00:00:00+00:00",
+    "last": "2026-07-01T00:00:00+00:00",
+    "missing_mark_price": 0,
+    "mark_price_from_funding_response": 2922,
+    "mark_price_filled_from_official_8h_kline": 3376,
+    "maximum_absolute_mark_match_delta_ms": 48.0,
+    "maximum_gap_hours": 8.000013055555556,
+    "interval_hours_counts": {
+      "7.999989": 2,
+      "7.999991": 6,
+      "7.999992": 4,
+      "7.999993": 4,
+      "7.999994": 25,
+      "7.999995": 64,
+      "7.999996": 153,
+      "7.999997": 187,
+      "7.999998": 427,
+      "7.999999": 668,
+      "8.0": 3214,
+      "8.000001": 682,
+      "8.000002": 417,
+      "8.000003": 195,
+      "8.000004": 153,
+      "8.000005": 41,
+      "8.000006": 27,
+      "8.000007": 20,
+      "8.000008": 3,
+      "8.000009": 2,
+      "8.000012": 1,
+      "8.000013": 2
+    }
+  },
+  "current_exchange_snapshot": {
+    "status": "TRADING",
+    "contract_type": "PERPETUAL",
+    "onboard_date": "2019-11-27T07:45:00+00:00",
+    "price_filter": {
+      "filterType": "PRICE_FILTER",
+      "minPrice": "39.86",
+      "tickSize": "0.01",
+      "maxPrice": "306177"
+    },
+    "lot_size": {
+      "maxQty": "10000",
+      "filterType": "LOT_SIZE",
+      "stepSize": "0.001",
+      "minQty": "0.001"
+    },
+    "market_lot_size": {
+      "maxQty": "2000",
+      "minQty": "0.001",
+      "filterType": "MARKET_LOT_SIZE",
+      "stepSize": "0.001"
+    },
+    "min_notional": {
+      "filterType": "MIN_NOTIONAL",
+      "notional": "20"
+    }
+  },
+  "source_manifest_sha256": "d015c167786002173ed2445e20bdcf3d1112b6f92e9d1bb420096e5b86539f2c",
+  "content_digest": "795152479c92032de2c70d33d09a7229c4b0f0455b1b221720cf44a652a6026f"
+}

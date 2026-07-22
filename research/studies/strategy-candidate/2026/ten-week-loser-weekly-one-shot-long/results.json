@@ -1,0 +1,80 @@
+{
+  "created_at_utc": "2026-07-22T08:03:51.961677Z",
+  "question": "Does a paper-guided ten-week bottom-30% loser rank qualify a fixed-target 0.25x LONG / 7d weekly one-shot plan after retail costs, actual funding, full-capital hurdle, simple long/market baselines, robustness, breadth, risk and sequential 2024/2025 evidence?",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "failed_stage": "development",
+  "stage_gates": {
+    "development": "FAIL"
+  },
+  "failed_checks": [
+    "base_after_hurdle_positive",
+    "stress_after_hurdle_positive",
+    "both_halves_base_positive",
+    "date_portfolio_drawdown_above_minus_15pct",
+    "base_beats_mom7",
+    "base_beats_winner70",
+    "at_least_two_of_three_neighbors_stress_nonnegative",
+    "at_least_half_selected_targets_positive",
+    "at_least_four_categories_positive",
+    "largest_positive_pnl_share_at_most_20pct",
+    "stress_bootstrap_lower_positive",
+    "gross_market_excess_bootstrap_lower_positive"
+  ],
+  "handoff_generated": false,
+  "summary": {
+    "trades": 429,
+    "entry_dates": 96,
+    "symbols": 25,
+    "base_mean_after_hurdle": -0.0005041646508768174,
+    "stress_mean_after_hurdle": -0.0013291809565543443,
+    "stress_bootstrap_95pct": [
+      -0.006036692272139223,
+      0.003532440128720654
+    ],
+    "base_max_drawdown": -0.21840274366281898,
+    "base_vs_mom7": {
+      "main_mean": 0.0002629586367944153,
+      "baseline_mean": 0.0006153817670359951,
+      "difference_mean": -0.0003524231302415803,
+      "difference_bootstrap_95pct": [
+        -0.0029825215377448622,
+        0.0022655886738411255
+      ],
+      "positive_date_fraction": 0.4375,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "base_vs_winner70": {
+      "main_mean": 0.0002629586367944153,
+      "baseline_mean": 0.0003061551880733859,
+      "difference_mean": -4.3196551278971086e-05,
+      "difference_bootstrap_95pct": [
+        -0.003720149364274486,
+        0.0038220789035961988
+      ],
+      "positive_date_fraction": 0.5208333333333334,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "base_vs_scheduled_long": {
+      "main_mean": 0.0002629586367944153,
+      "baseline_mean": -0.0006767372892861342,
+      "difference_mean": 0.0009396959260805498,
+      "difference_bootstrap_95pct": [
+        -0.0014673150452807623,
+        0.0033643123036817533
+      ],
+      "positive_date_fraction": 0.5729166666666666,
+      "baseline_no_action_dates_filled_as_cash": 23
+    },
+    "gross_excess_vs_market": {
+      "main_mean": 0.0011695618764834459,
+      "market_mean": 0.0007938491549703087,
+      "difference_mean": 0.0003757127215131372,
+      "difference_bootstrap_95pct": [
+        -0.0013275482106499866,
+        0.002176312974773277
+      ]
+    },
+    "largest_positive_pnl_share": 0.2537648977851734
+  },
+  "content_digest": "d3eb23f2df93029f23ed652c0bcb12fad9e252167ae28135b73f3655e6101d4e"
+}

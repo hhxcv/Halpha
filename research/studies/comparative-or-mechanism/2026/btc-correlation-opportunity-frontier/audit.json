@@ -1,0 +1,191 @@
+{
+  "audit_date": "2026-07-21",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1"
+  },
+  "validated_inputs": [
+    {
+      "path": "docs/L4/HALPHA-PLAN-001-current-plan.yaml",
+      "sha256": "8f90b80c65cddca91d7742c31dd83132919866c55238e642da4add47139a7c28",
+      "bytes": 7658,
+      "source": "git:0bdfeffa616260cebd2d2188ddc8deb9e85c77f4"
+    },
+    {
+      "path": "research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/result.md",
+      "sha256": "fcd5d14235cc0808af454e447b8368249547dd019ed26a0a9646f59f5a029c09",
+      "bytes": 8096,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/legacy/2026/ethusdt-2h-extreme-reversal/results.json",
+      "sha256": "313d517d7508f688830a857253cc86216fac846ed743a33788c99d8f0a503b61",
+      "bytes": 2146,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/legacy/2026/mature-alt-spot-top2-momentum/results.json",
+      "sha256": "59dc642a4f57e24f143d923911083c38f0e5b0e7a60f468a604c83991b6448a6",
+      "bytes": 1716,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/legacy/2026/btc-eth-spot-dual-momentum/results.json",
+      "sha256": "6ee9de23574e1d677d35e00dd752d84f2c08b592426bbaf0ceca48e3076e6996",
+      "bytes": 971,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/legacy/2026/core-perp-conservative-volscaled-tsmom/results.json",
+      "sha256": "8cd262656e690d48e7d53fe43944c8ce3607c05461293b3f4f6d592aaf2d3dd2",
+      "bytes": 3551,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/legacy/2026/mature-alt-continuous-cash-carry-basket/results.json",
+      "sha256": "5d05b69b53cd0a3898bc1c00db5bbe56624c2e0c9a3aefcb10cf357c8ce6bfaa",
+      "bytes": 5439,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/predictive/2026/btc-shock-beta-gap-predictability/development.json",
+      "sha256": "dfb3eec79b8503df7bdfa99ae6e9aab77aa0cded46cdc1e8386165bda86c8785",
+      "bytes": 37241,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/predictive/2026/btc-neutral-alt-residual-reversal/development.json",
+      "sha256": "cf3eb584e4addcd5b94e8675bef2a9d3725c6dfd774b82b43fba06ce09a46c83",
+      "bytes": 41075,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/predictive/2026/btc-shock-mid-activity-beta-gap/development.json",
+      "sha256": "4553b4ee1ddd6dd0a0d2020589a003ec2fb0c2c9e5f76ad40f4d1596ee974ae4",
+      "bytes": 35596,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/predictive/2026/btc-shock-beta-gap-predictability/source_manifest_development.json",
+      "sha256": "847588d0721c162374b794bc6720dced970c94095bebc1c0d9c965bc59737b81",
+      "bytes": 163975,
+      "source": "research_worktree"
+    },
+    {
+      "path": "research/studies/predictive/2026/btc-shock-mid-activity-beta-gap/source_manifest_development.json",
+      "sha256": "15c5509240d118b7db10bd43f7a1655507c89ab0b47c5cd87392f715537d5528",
+      "bytes": 132126,
+      "source": "research_worktree"
+    }
+  ],
+  "product_input_drift": [
+    {
+      "path": "docs/L4/HALPHA-PLAN-001-current-plan.yaml",
+      "baseline_sha256": "8f90b80c65cddca91d7742c31dd83132919866c55238e642da4add47139a7c28",
+      "working_tree_sha256": "496c0d4d79b6ee4f31eac8fee06b41552353f5b648f5e9ead6cdf9dd60cb1fd3",
+      "working_tree_matches_baseline": false
+    }
+  ],
+  "data_reuse": {
+    "unique_official_monthly_zip_files": 420,
+    "unique_zip_bytes": 144160250,
+    "large_data_root": "D:/projects/Codex/CodexHome/research-data/halpha/btc-shock-beta-gap-predictability"
+  },
+  "evidence": {
+    "descriptive_relationship": {
+      "conclusion": "SUPPORTS_WITHIN_SCOPE",
+      "claim": "BTC is a common daily return reference for many currently observed coins; not causal, predictive or tradable evidence."
+    },
+    "mature_alt_lead_lag": {
+      "conclusion": "DOES_NOT_SUPPORT",
+      "mean_bps": 2.0756129554525,
+      "ci_bps": [
+        0.016658268401731846,
+        4.134567642503269
+      ],
+      "btc_sign_baseline_bps": 2.339004823889983,
+      "own_sign_baseline_bps": 2.373412731472788,
+      "economic_release_floor_bps": 12
+    },
+    "mid_activity_alt_lead_lag": {
+      "conclusion": "DOES_NOT_SUPPORT",
+      "mean_bps": 2.409361592390202,
+      "ci_bps": [
+        -0.39326724827722265,
+        5.211990433057627
+      ],
+      "own_sign_baseline_bps": 2.683132372320188,
+      "extra_5m_latency_bps": 0.2492486873772924,
+      "economic_release_floor_bps": 12
+    },
+    "slow_residual_reversal": {
+      "conclusion": "DOES_NOT_SUPPORT",
+      "mean_bps": -10.610736355557135,
+      "median_bps": 25.77691400142173,
+      "ci_bps": [
+        -34.796873876318124,
+        13.575401165203838
+      ],
+      "favorable_paired_cost_bps": 24.75069919098841,
+      "base_paired_cost_bps": 66.00186450930242
+    },
+    "legacy_strategy_context": {
+      "eth_2h_reversal": "DOES_NOT_SUPPORT",
+      "alt_top2_momentum": "DOES_NOT_SUPPORT",
+      "btc_eth_momentum": "INSUFFICIENT_EVIDENCE",
+      "conservative_perp_tsmom": "INSUFFICIENT_EVIDENCE",
+      "funding_carry_basket": "SUPPORTS_WITHIN_SCOPE"
+    }
+  },
+  "frontier": [
+    {
+      "direction": "direct BTC-to-alt lead-lag on mature/high activity",
+      "disposition": "CLOSED_DOES_NOT_SUPPORT",
+      "reopen_only_with": "new period/venue or materially better verified latency/cost"
+    },
+    {
+      "direction": "direct BTC-to-alt lead-lag on mid activity",
+      "disposition": "CLOSED_DOES_NOT_SUPPORT",
+      "reopen_only_with": "point-in-time historical spread/depth and a new untouched test"
+    },
+    {
+      "direction": "lower-activity/new-coin 1m lead-lag",
+      "disposition": "DO_NOT_START_UNDER_CURRENT_DATA_AND_RISK_BOUNDARY",
+      "reopen_only_with": "L1/L2 execution evidence, delisting/integrity model and owner-approved scope"
+    },
+    {
+      "direction": "BTC-neutral residual mean reversion",
+      "disposition": "CLOSED_DOES_NOT_SUPPORT_FOR_FIXED_SIMPLE_RULE",
+      "reopen_only_with": "independent structural relation rather than selected sign/symbol/window"
+    },
+    {
+      "direction": "correlation/dispersion as sizing or risk state",
+      "disposition": "DEFER_RISK_MODEL_NOT_STANDALONE_ALPHA",
+      "reopen_only_with": "an owner-selected multi-asset strategy requiring the risk model"
+    },
+    {
+      "direction": "causal buyer/order-flow identity",
+      "disposition": "CANNOT_DETERMINE_FROM_OHLCV",
+      "reopen_only_with": "trade/order-flow/cross-venue data and an identification design"
+    },
+    {
+      "direction": "funding/cash-carry",
+      "disposition": "SEPARATE_SUPPORTED_MECHANISM_NOT_BTC_CORRELATION_ALPHA",
+      "reopen_only_with": "its own funding, execution and current-regime review"
+    }
+  ],
+  "decision": {
+    "new_btc_correlation_strategy_candidate": false,
+    "continue_parameter_or_subgroup_search": false,
+    "change_product_or_capital_state": false,
+    "current_scope_substantially_covered": true
+  },
+  "conclusion": "DOES_NOT_SUPPORT",
+  "limitations": [
+    "Does not rule out future regimes, lower-activity one-minute effects, cross-venue effects or order-flow alpha.",
+    "The 2024 fixed-survivor Binance sample is not a historical point-in-time whole-market universe.",
+    "OHLCV cannot identify who bought, causal motives, spread/depth, funding, fills, margin or liquidation.",
+    "Supported carry evidence is a different economic mechanism and must not be counted as correlation alpha."
+  ]
+}

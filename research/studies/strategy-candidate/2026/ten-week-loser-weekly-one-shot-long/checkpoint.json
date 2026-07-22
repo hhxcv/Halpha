@@ -1,0 +1,181 @@
+{
+  "created_at_utc": "2026-07-22T07:59:50.081356Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does a paper-guided ten-week bottom-30% loser rank qualify a fixed-target 0.25x LONG / 7d weekly one-shot plan after retail costs, actual funding, full-capital hurdle, simple long/market baselines, robustness, breadth, risk and sequential 2024/2025 evidence?",
+  "known_exposure": "Underlying 2022-2025 market paths and external papers were previously visible, but this exact MOM70 bottom-30% one-shot output was not inspected. External literature overlaps the time sample, so stages are internal exact-rule holdouts, not post-publication market evidence.",
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "computed_columns": 8
+  },
+  "configuration": {
+    "strategy_id": "RESEARCH_MOM70_BOTTOM30_WEEKLY_ONE_SHOT_LONG_0P25X_V1",
+    "direction": "LONG_ONLY",
+    "hold_days": 7,
+    "notional_fraction": 0.25,
+    "bottom_fraction": 0.3,
+    "bottom_neighbor_fraction": 0.2,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "annual_capital_hurdle": 0.04,
+    "cooldown_full_days": 1,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "main": {
+      "lookback_days": 70,
+      "selection": "bottom_ceil_30pct"
+    },
+    "diagnostics": [
+      "mom56",
+      "mom84",
+      "bottom20",
+      "mom7",
+      "winner70",
+      "scheduled_long",
+      "market_long"
+    ]
+  },
+  "stages": {
+    "development": [
+      "2022-02-14T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2024-12-30T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-06T00:00:00Z",
+      "2025-12-29T00:00:00Z"
+    ]
+  },
+  "stage_minimums": {
+    "development": {
+      "entry_dates": 90,
+      "trades": 300
+    },
+    "evaluation": {
+      "entry_dates": 48,
+      "trades": 150
+    },
+    "confirmation": {
+      "entry_dates": 47,
+      "trades": 145
+    }
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "categories": {
+    "DeFi": [
+      "AAVEUSDT",
+      "CRVUSDT",
+      "KAVAUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "UNIUSDT"
+    ],
+    "Infrastructure": [
+      "ENSUSDT",
+      "LINKUSDT"
+    ],
+    "Layer-1": [
+      "AVAXUSDT",
+      "BNBUSDT",
+      "HBARUSDT",
+      "NEARUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "VETUSDT"
+    ],
+    "Layer-2": [
+      "XLMUSDT"
+    ],
+    "Payment": [
+      "1000XECUSDT",
+      "BCHUSDT",
+      "LTCUSDT",
+      "XRPUSDT"
+    ],
+    "PoW": [
+      "DASHUSDT",
+      "ETCUSDT",
+      "XMRUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ]
+  },
+  "universe": {
+    "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+    "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc"
+  },
+  "stage_open_rule": "development -> evaluation -> confirmation; next stage requires prior PASS",
+  "frozen_file_sha256": {
+    "README.md": "b08fb93bffd3d1fc1876c084e1738c0d7d98882fed62ea8c9b79120a9d03fca2",
+    "preregistration.md": "2e8dc02b8c551ff0623ad0a5ae9a803eddb45db0cfa7fdf6e39a6300560aa3ef",
+    "sources.md": "42fb2f5a50e907c78c0d1b5731a684c8384fa81c1aa17fdd12880c3db859e9e7",
+    "study.py": "3f390ba9f127f16544543cca7bf331aefc786c2c251e69c96403e99168004ee2"
+  },
+  "source_reuse_digest": "ff83e4b52babd825dbca7a43d145c5cecde1c41c073cb42622a2d714ca8fd009",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "vectorbt": "1.1.0"
+  },
+  "allowed_after_checkpoint": "Append attempts and create deterministic data/result artifacts. Implementation-only fixes require a numbered amendment chain; no signal, universe, period, cost, hurdle, gate or baseline change.",
+  "content_digest": "55bf5a197669f6d84f2dbc49c51100a273136ee3acdc9e9d83fab721b5d4ac8a"
+}

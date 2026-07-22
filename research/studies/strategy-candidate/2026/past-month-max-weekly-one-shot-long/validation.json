@@ -1,0 +1,74 @@
+{
+  "validated_at_utc": "2026-07-22T03:17:54.4763325Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "checkpoint_digest": "76958413c3bd9325b44619d101998ce5f42b60dcbba6d8d24677aa6815b065fa",
+  "source_manifest_digest": "5ff0a4f6d589842463b57d2a931fc6e8bfbfc5034c82bd507204d967bf338907",
+  "data_quality_digest": "e78912325546be81566fccc8be26c5a8c6eb5b043db6d374f473270f2e23bbf2",
+  "pre_checkpoint_semantic_test": {
+    "synthetic_trades": 176,
+    "entry_dates": 100,
+    "assertions": [
+      "Monday entries only",
+      "seven-day holds",
+      "same-target entries at least 14 days apart",
+      "25 rankable targets",
+      "rank three triggers and rank four does not"
+    ],
+    "status": "PASS"
+  },
+  "first_complete_run": {
+    "development_result_digest": "02c74c342a6bb05dfe8b240cab118f06ae522b7fe7a959119a636a70401c17b9",
+    "development_gate_digest": "aa81733ce71742188158c23dd889618a80c8b62b661cfa2efabe6a756513eefd",
+    "main_trade_csv_sha256": "35308825fdd1ed16f52a7706bf918683e02e9f7a2091038340a7b6f4da118e61",
+    "diagnostic_csv_sha256": {
+      "max21": "099da1a3259c73b7a6a63d11077f3cdba2235a4169ea467ddd9104f64611a885",
+      "max35": "725a260a9be3d6b903f62dc7fc8dbd96215174a674ea7fb9e0983590571f01da",
+      "top5": "3139137f97d428bbf048962312c315ee521204c5eee49b7ac37cff821bcdb01f",
+      "mom28": "66d003684997769a0e73b4137b009aa890f3c1bf10895c187d2b6c3f73a7b22e",
+      "last1": "048b31c6e3fa68c09355253f06fc24f46e989852683290a4eca758c353d6cd9e",
+      "scheduled_long": "3efb14ea1914937686c9e1cf4138621a843fb742b505147c09137eb24420a09e"
+    }
+  },
+  "cache_only_rerun": {
+    "development_result_digest": "21548a6521e5ef956fa552f1d1782444a96f92c16fc71b6db01173fdf2f7ebea",
+    "development_gate_digest": "31d19ea995cca05569d5b4f8b370b3d73cead2f710fb0f195cf4c2509cfe10cd",
+    "trade_and_all_diagnostic_csv_bytes_identical": true,
+    "economic_summary_identical": true,
+    "gate_failed_checks_identical": true,
+    "json_digest_difference_reason": "generated_at_utc changes on rerun"
+  },
+  "observed_result": {
+    "trades": 176,
+    "entry_dates": 93,
+    "targets": 24,
+    "base_cohort_mean_after_hurdle": 0.001009950937260029,
+    "stress_cohort_mean_after_hurdle": -0.0009708468522782429,
+    "excluded_trade_fraction": 0.03825136612021858,
+    "maximum_vectorbt_manual_reconciliation_error": 1.6653345369377348e-16,
+    "development_gate": "FAIL",
+    "failed_check_count": 9,
+    "conclusion": "DOES_NOT_SUPPORT",
+    "evaluation_opened": false,
+    "confirmation_opened": false,
+    "handoff_generated": false,
+    "product_effects": "NONE"
+  },
+  "referenced_input_inventory": {
+    "daily_kline_pages": 74,
+    "funding_monthly_archives": 600,
+    "mark_8h_monthly_archives": 600,
+    "mark_1m_gap_monthly_archives": 57,
+    "files_including_checksums": 2588,
+    "bytes": 55680248
+  },
+  "external_cache_inventory_including_prior_failed_attempts": {
+    "files": 2761,
+    "bytes": 62063944,
+    "path": "D:/projects/Codex/CodexHome/research-data/halpha/category-momentum-gated-one-shot-long/2026-07-22-v1/"
+  },
+  "environment_identity_note": {
+    "checkpoint_and_runtime": "Python 3.11.9, VectorBT 1.0.0, pandas 2.3.3, numpy 2.4.6, scipy 1.17.1",
+    "preregistration_version_typo": "VectorBT 1.1.0",
+    "impact": "disclosed documentation defect; exact manual reconciliation passed"
+  }
+}

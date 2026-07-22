@@ -1,0 +1,60 @@
+{
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "claim": "Contract-and-one-shot-plan portability of the supported parent TRX spot volatility target; not new independent price-time alpha evidence.",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "strategy_id": "RESEARCH_TRXUSDT_PERP_VOL60_TARGET8_MONTHLY_ONE_SHOT_V1",
+  "development_gate": "FAIL",
+  "evaluation": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "confirmation": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "development": {
+    "plans": 24,
+    "period": "2021-01-01/2023-01-01",
+    "mean_notional_fraction": 0.10637283207699576,
+    "minimum_notional_fraction": 0.040161071794027746,
+    "maximum_notional_fraction": 0.2598459726459307,
+    "funding_events": 2191,
+    "gross_price_only_total_return": 0.09458651209527069,
+    "base_price_cost_without_funding_total_return": 0.08553257366230471,
+    "base_with_actual_funding_total_return": 0.07626385810189684,
+    "base_annualized_return": 0.03743137512892725,
+    "base_return_after_4pct_annual_hurdle": -0.004933563145435693,
+    "base_daily_max_drawdown": -0.09885205305615608,
+    "base_monthly_mean_bootstrap_95pct": [
+      -0.004969674523884002,
+      0.01292892497932561
+    ],
+    "stress_price_cost_without_funding_total_return": 0.07990999482333527,
+    "stress_with_adverse_funding_total_return": 0.039971516254065476,
+    "stress_annualized_return": 0.019789937317517214,
+    "stress_return_after_4pct_annual_hurdle": -0.03848787328581238,
+    "stress_daily_max_drawdown": -0.11406606109297535,
+    "actual_funding_arithmetic_sum": -0.009151839837453067,
+    "adverse_funding_arithmetic_sum": -0.03843082289604344,
+    "by_year_base": {
+      "2021": 0.09466422358934534,
+      "2022": -0.016809141187710597
+    },
+    "neighbor_base_total_return": {
+      "0.06": 0.05787077846723254,
+      "0.10": 0.0941634379842351
+    },
+    "fixed_half_long_base_total_return": 0.5243412933088047,
+    "fixed_half_long_base_daily_max_drawdown": -0.45096673234747653,
+    "maximum_vectorbt_reconciliation_error": 4.163336342344337e-17
+  },
+  "failed_checks": [
+    "stress_after_hurdle_positive"
+  ],
+  "strongest_support": "The fixed 8% version remained positive after actual settled funding and base costs, with materially shallower drawdown than forced-monthly 0.5x long.",
+  "strongest_disconfirmation": "The favorable case only barely cleared the 4% capital hurdle, the base case fell 0.49 percentage points below it, and the adverse-funding stress case fell 3.85 percentage points below it; 2022 was negative and the monthly bootstrap interval crossed zero.",
+  "evidence_limit": "All parent spot price periods were exposed before this study. No result from 2023 onward was opened after the development gate failed.",
+  "handoff": "NOT_GENERATED",
+  "product_effects": "NONE",
+  "evidence_files": {
+    "development_sha256": "bc89fcf27979857f38d0e1e8f7e1781316805909045eec619e1df53e8e1a3c4c",
+    "development_gate_sha256": "45a0b716ad6087f6b9095818c0c15ad5fab85c5d1f99b7347210358566a5c5e8",
+    "development_plan_csv_sha256": "8bc1b7407e51b57d77f1ef1bbbcd52f0fc0f1d6a9af15606c4c33bde5c76a3ec",
+    "source_manifest_sha256": "e78127585e72f014235a9eb3501406d73b58414c4a527ed8016416b5746721e0",
+    "data_quality_sha256": "7b3480f8f51ac59579d95d074a1458d63e1e32d54440ae51f390522f252a8af4"
+  }
+}

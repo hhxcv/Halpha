@@ -1,0 +1,55 @@
+{
+  "validated_at_utc": "2026-07-22T04:33:29.042682Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "checkpoint_digest": "5f4514f10e2136347b4f955a0c2e75f5e6ef50c8332e06d3bb037a6f112f2f18",
+  "checkpoint_amendments": [
+    "5c5f2f3960ce204cc527dd430af2a2768660b2aa7d2eae8d1f36a639724f07c3",
+    "cfc64840dd597bc7def00d46366ad7c9a588ed793389d0500a003cbdf41b445b",
+    "9ffe243164d2d4e1b577782dab0380263ac8c307b1cad7c00cc091db684f2b74"
+  ],
+  "manifest_digest": "cb8ed1abf9602ee9a1ca5331bfb0fdf858b1bb2d94964fc982e8a2a84010f100",
+  "data_quality_digest": "c7d8379f47c74e8ca4412d7ffcf7967d28dbb042276801aebece619c7b917beb",
+  "development_result_digest": "b4d58d832426cfc7c798f1f8a43db8bc96943bf0bb857da8335b235fb8a8c8fa",
+  "development_gate_digest": "21832581c4e4cb830213e2dd6c57e6eca4adf49c9fcaefa66057773dafad9cfd",
+  "final_results_digest": "8fe63289eaf5a4f6b575e82f15cd05ee4c5b9aa7a6ed614c0ace469d3b308ba7",
+  "cache_manifest": {
+    "unique_referenced_files": 2589,
+    "referenced_bytes": 56706660,
+    "root": "D:/projects/Codex/CodexHome/research-data/halpha/category-momentum-gated-one-shot-long/2026-07-22-v1/"
+  },
+  "trade_csv_sha256": {
+    "development_trades.csv": "c90a702e82f92936ef74dd240f6a0886fafc3933e95617d778f1ccb7ff5681dc",
+    "development_premium3_trades.csv": "ba23bbea71158cc1ff4fb9718095b5d01ca70bc055a3beaf532203e712cc5f08",
+    "development_premium5_trades.csv": "6fbd9c7dd58c2e8f8fad156747ac0da60a8bfb6229d73bd433a839d6ee393eff",
+    "development_bottom5_trades.csv": "b1f43d3c56b360f44f66c87a34996756acf5f6b1cf7f34ce6db9491cc2d8bfc2",
+    "development_funding1_trades.csv": "9bea32e6ebede3499b0dbd69a28c354212dc6e07ecd44225f299bbaff4f57af8",
+    "development_momentum5_trades.csv": "c026d13465f62fd874816fdb47b1c9e65caf8f6bb4e8263c3dd1327cd7a74729",
+    "development_scheduled_long_trades.csv": "05c50a8b4e81cf42a9a1fd9c96477b3deed706b47f09db2c0d809ca62c2eab07"
+  },
+  "rerun": {
+    "all_trade_csv_hashes_stable": true,
+    "gate_failed_checks_stable": [
+      "base_after_hurdle_positive",
+      "stress_after_hurdle_positive",
+      "stress_bootstrap_lower_positive",
+      "required_year_slices_positive",
+      "positive_target_fraction_at_least_half",
+      "positive_categories_at_least_minimum",
+      "beats_funding1",
+      "beats_momentum5",
+      "two_of_three_neighborhoods_stress_positive",
+      "largest_positive_target_share_at_most_25pct"
+    ]
+  },
+  "conclusion": "DOES_NOT_SUPPORT",
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "handoff": "NOT_GENERATED",
+  "product_effects": "NONE"
+}

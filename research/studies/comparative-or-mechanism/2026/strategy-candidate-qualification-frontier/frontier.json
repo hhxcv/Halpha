@@ -1,0 +1,102 @@
+{
+  "as_of": "2026-07-22",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "research_kind": "COMPARATIVE_OR_MECHANISM",
+  "question": "Do current research assets contain at least two independent strategy candidates ready for framework-independent trade-core qualification?",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "counts": {
+    "legacy_supports_within_scope": 3,
+    "framework_independent_handoff_json": 0,
+    "current_core_qualification_ready": 0,
+    "minimum_required_for_multiple": 2
+  },
+  "current_product_boundary": {
+    "venue": "Binance USD-M",
+    "demo_instruments": ["BTCUSDT-PERP", "ETHUSDT-PERP"],
+    "first_live_instrument": "BTCUSDT-PERP",
+    "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1",
+    "second_formal_strategy_currently_excluded": true
+  },
+  "legacy_supported_candidates": [
+    {
+      "id": "RESEARCH_DOGE_XRP_ADA_CONTINUOUS_CASH_CARRY_BASKET",
+      "directory": "research/studies/legacy/2026/mature-alt-continuous-cash-carry-basket",
+      "research_conclusion": "SUPPORTS_WITHIN_SCOPE",
+      "independent_mechanism": "STRUCTURAL_FUNDING_CARRY",
+      "qualification_status": "HISTORICAL_RESEARCH_ASSET_NOT_HANDOFF_READY",
+      "blocking_reasons": [
+        "six synchronized spot/perpetual legs",
+        "no framework-independent handoff",
+        "small-capital and execution complexity not qualified",
+        "confirmation ended 2025-08 and later single-pair work documents funding compression"
+      ],
+      "results_sha256": "5d05b69b53cd0a3898bc1c00db5bbe56624c2e0c9a3aefcb10cf357c8ce6bfaa"
+    },
+    {
+      "id": "RESEARCH_TRXUSDT_VOL60_TARGET8_LONG_MAX0P5X",
+      "directory": "research/studies/legacy/2026/trxusdt-voltarget-8pct-long",
+      "research_conclusion": "SUPPORTS_WITHIN_SCOPE",
+      "independent_mechanism": "RISK_MANAGED_TRX_BETA",
+      "qualification_status": "HISTORICAL_SPOT_ASSET_NOT_PERP_HANDOFF_READY",
+      "blocking_reasons": [
+        "spot instrument differs from current core venue",
+        "no framework-independent handoff",
+        "perpetual one-shot transfer is INSUFFICIENT_EVIDENCE",
+        "capital-hurdle margin is thin and this is beta management rather than alpha"
+      ],
+      "results_sha256": "c8d6b5e38444d34c5486b47c056d2072a09990676803c381274d8bc9f2d3aa8d",
+      "perp_transfer_results_sha256": "62dc617973ea461c11bf5d20a8f98b5962f88df92a9d2c6672b27fd3af652020"
+    },
+    {
+      "id": "RESEARCH_TRX_PAXG_MONTHLY_25PCT_EACH",
+      "directory": "research/studies/legacy/2026/trx-paxg-balanced-spot",
+      "research_conclusion": "SUPPORTS_WITHIN_SCOPE",
+      "independent_mechanism": "TWO_ASSET_BETA_DIVERSIFICATION",
+      "qualification_status": "HISTORICAL_ASSET_ALLOCATION_NOT_HANDOFF_READY",
+      "blocking_reasons": [
+        "two spot legs and persistent portfolio state",
+        "no framework-independent handoff",
+        "not an independent alpha and shares TRX beta with the prior candidate",
+        "PAXG issuer tracking and redemption risks not execution-qualified"
+      ],
+      "results_sha256": "bfc522c506f1da5fecd9979a5aa15d27c69143973934bb11d818b601f3a5d243"
+    }
+  ],
+  "closest_current_single_perp_candidates": [
+    {
+      "directory": "research/studies/strategy-candidate/2026/ctrend-weekly-top-quintile-one-shot-long",
+      "conclusion": "INSUFFICIENT_EVIDENCE",
+      "reason_not_ready": "positive mean but statistical, sample, model-failure and concentration gates failed",
+      "results_sha256": "8d8b0a953f0a4a3a6fec36bf647bc5aeb3a5b7c78d2c4f38f5eb35b8a2b04a6b"
+    },
+    {
+      "directory": "research/studies/strategy-candidate/2026/price-path-continuity-weekly-winner-long",
+      "conclusion": "INSUFFICIENT_EVIDENCE",
+      "reason_not_ready": "positive mean but uncertainty, halves, baselines, breadth and concentration failed",
+      "results_sha256": "823ba93c045d307aeb954832ead508333df8712bf32c7492dc95325dba7e89d0"
+    },
+    {
+      "directory": "research/studies/strategy-candidate/2026/high-volatility-monthly-one-shot-short",
+      "conclusion": "INSUFFICIENT_EVIDENCE",
+      "reason_not_ready": "positive mean but statistical lower bound and neighbor robustness failed",
+      "results_sha256": "3f28b3ed2815c8e87c16a911e3500d6e54855bf254b4c81c61f7c3807de10e29"
+    }
+  ],
+  "latest_independent_question": {
+    "directory": "research/studies/predictive/2026/short-horizon-crypto-residual-momentum-predictability",
+    "conclusion": "DOES_NOT_SUPPORT",
+    "reason": "economic floor, uncertainty, raw-momentum increment, rank IC, halves, breadth, neighbor and uniqueness gates failed",
+    "results_sha256": "98c23cd94995c905ed0c5414f0c5cd9708219f82781e40a175d6c2e9f93ae885"
+  },
+  "evidence_identities": [
+    {
+      "path": "docs/L4/HALPHA-PLAN-001-current-plan.yaml",
+      "sha256": "8f90b80c65cddca91d7742c31dd83132919866c55238e642da4add47139a7c28"
+    },
+    {
+      "path": "research/catalog-2026-07-21.json",
+      "sha256": "484aa299a90b532d8472d8d8fb8e3f345d128c1b8432b7e719d8fa91686dd0a1"
+    }
+  ],
+  "next_decision": "Do not manufacture additional candidates by loosening gates or searching adjacent momentum, volatility, reversal, premium or carry parameters. Preserve closest candidates as forward-watch items and start a new strategy question only with an independent mechanism or genuinely new forward evidence."
+}

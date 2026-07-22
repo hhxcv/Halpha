@@ -1,0 +1,215 @@
+{
+  "created_at_utc": "2026-07-22T07:32:36.432294Z",
+  "stage": "development",
+  "status": "PASS",
+  "checkpoint_digest": "7f8290b894b72a1fb94c7df0d1d6c9268490a276d122f358bca5c02c15b0b1df",
+  "reused_parent_data_quality_digest": "1b3c9fb739d2b95f11be44fd4b5fda53e0837204064eec6ff550b9166b647640",
+  "required_daily_range_inclusive": [
+    "2022-12-01T00:00:00+00:00",
+    "2024-01-01T00:00:00+00:00"
+  ],
+  "symbols": {
+    "1000XECUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "AAVEUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "AVAXUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "BCHUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "BNBUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "CRVUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "DASHUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "ENSUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "ETCUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "HBARUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "KAVAUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "LINKUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "LTCUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "NEARUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "RUNEUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "SNXUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "SOLUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "TRXUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "UNIUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "VETUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "XLMUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "XMRUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "XRPUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "ZECUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    },
+    "ZILUSDT": {
+      "daily_rows": 397,
+      "missing_days": 0,
+      "duplicate_days": 0,
+      "invalid_ohlc_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 3
+    }
+  },
+  "rule": "Missing funding marks remain trade exclusions under the preregistered 2% gate; OHLCV and marks are not imputed.",
+  "content_digest": "6d8de7640453579ebc3f3c6fc9b60f80367ff0a2e73ac3d2f518f3759d630bd9"
+}

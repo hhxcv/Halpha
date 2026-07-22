@@ -1,0 +1,42 @@
+{
+  "checked_at_utc": "2026-07-22T10:47:46.096514+00:00",
+  "stage": "development",
+  "status": "FAIL",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "checks": {
+    "data_quality_pass": true,
+    "minimum_21_action_months": true,
+    "minimum_20_rankable_each_action_month": true,
+    "no_future_target_missing": true,
+    "low_minus_high_mean_positive": true,
+    "low_minus_high_bootstrap_lower_positive": false,
+    "rank_ic_mean_negative": true,
+    "rank_ic_bootstrap_upper_negative": true,
+    "uncontrolled_ivol_slope_negative_significant": false,
+    "controlled_ivol_slope_negative_significant": false,
+    "short_proxy_mean_positive": false,
+    "short_proxy_bootstrap_lower_positive": false,
+    "ivol_increment_vs_tvol_mean_positive": false,
+    "ivol_increment_vs_tvol_bootstrap_lower_positive": false,
+    "all_calendar_years_directionally_pass": false,
+    "all_fixed_neighbors_directionally_pass": false,
+    "minimum_8_selected_symbols": true,
+    "minimum_3_selected_categories": true,
+    "half_repeat_symbols_negative_mean": true,
+    "largest_positive_short_contribution_at_most_35pct": true
+  },
+  "failed_gates": [
+    "low_minus_high_bootstrap_lower_positive",
+    "uncontrolled_ivol_slope_negative_significant",
+    "controlled_ivol_slope_negative_significant",
+    "short_proxy_mean_positive",
+    "short_proxy_bootstrap_lower_positive",
+    "ivol_increment_vs_tvol_mean_positive",
+    "ivol_increment_vs_tvol_bootstrap_lower_positive",
+    "all_calendar_years_directionally_pass",
+    "all_fixed_neighbors_directionally_pass"
+  ],
+  "result_digest": "a97e3ad36f2d4960e66f5eff3588f368fb146408d483dde32262a5b1258b750a",
+  "stage_open_decision": "STOP_AND_SEAL",
+  "content_digest": "41bc1e5954daa5d05feb1fb979505656f303b33d103ac4bc3c5cc8d0fd151cb9"
+}

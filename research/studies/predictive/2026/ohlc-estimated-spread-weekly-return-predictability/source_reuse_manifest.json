@@ -1,0 +1,444 @@
+{
+  "bound_at_utc": "2026-07-22T14:37:40.338871+00:00",
+  "parent_manifest_path": "research/studies/predictive/2026/intermediate-vix-beta-weekly-return-predictability/source_manifest.json",
+  "parent_manifest_sha256": "07d0c80a4ea858e767960c53bc9ef5345cecc1a07fb482d9d2d87b862fb50693",
+  "parent_manifest_content_digest": "d8cab91fb7ccdc39204aa2b783d13376b92ba0137fb3cb8e6a164cb432ed3514",
+  "data_start": "2022-01-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-22T00:00:00Z",
+  "exchange_info": {
+    "url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\exchangeInfo.json",
+    "bytes": 1042623,
+    "sha256": "b5d1cf91d209188bec6dd2a7d7bb64fe6d9360fb09cc27b7179c0e5d5be5b60f"
+  },
+  "kline_pages": [
+    {
+      "symbol": "1000XECUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=1000XECUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\1000XECUSDT\\page-000.json",
+      "bytes": 204152,
+      "sha256": "6042d23b40b14bc5a5fa7953451669b763733c3f1054f724a8110ee31e64f6e3"
+    },
+    {
+      "symbol": "1000XECUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=1000XECUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\1000XECUSDT\\page-001.json",
+      "bytes": 22379,
+      "sha256": "33542fccacb0bbcd8d784be6e061e05ab23a88bdbf5219dc846ff5b34fb2edfb"
+    },
+    {
+      "symbol": "AAVEUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AAVEUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\AAVEUSDT\\page-000.json",
+      "bytes": 201398,
+      "sha256": "64fbaa34c6a7a1bf4f43189af0d8bb329e663d9d82e56c39f8b7061a84810b56"
+    },
+    {
+      "symbol": "AAVEUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AAVEUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\AAVEUSDT\\page-001.json",
+      "bytes": 21680,
+      "sha256": "963f0cf5b9f2521d35c28c78d831ef4d93fc8c20bed7c39890fdae4d21e64bf5"
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AVAXUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\AVAXUSDT\\page-000.json",
+      "bytes": 203153,
+      "sha256": "4ea348a8a1e763fbcd59f6bd4ef24bf7f7282d319fd5789f775f2335a8ea2e06"
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=AVAXUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\AVAXUSDT\\page-001.json",
+      "bytes": 21315,
+      "sha256": "fc60eb289d9b42530881a9f083517abb6874d772ea97a88ccee815ffe87e58fe"
+    },
+    {
+      "symbol": "BCHUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BCHUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\BCHUSDT\\page-000.json",
+      "bytes": 207367,
+      "sha256": "fab49db5970e6eb5ff38f18489486ccada7bde429c95d4259f45d4fb21676a24"
+    },
+    {
+      "symbol": "BCHUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BCHUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\BCHUSDT\\page-001.json",
+      "bytes": 22358,
+      "sha256": "933ed3a3f38b271011aa5ddcd996e64ab1ca7a7f0d1189494bf6b7d9dffadc61"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BNBUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\BNBUSDT\\page-000.json",
+      "bytes": 213040,
+      "sha256": "09c1f9d17043d261e6a192e21c2bd939444f8b6d4ce66e9b9dfebb6ea07d47ce"
+    },
+    {
+      "symbol": "BNBUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BNBUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\BNBUSDT\\page-001.json",
+      "bytes": 23036,
+      "sha256": "943f3080826bb0944e98eeb20c2de4a8d789c7f40aade4f314fafac16832e7d3"
+    },
+    {
+      "symbol": "CRVUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=CRVUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\CRVUSDT\\page-000.json",
+      "bytes": 199047,
+      "sha256": "249198f89a8eba11d99a7a1042dfc0bd71b5071b4546982b5de92ddb9dab8180"
+    },
+    {
+      "symbol": "CRVUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=CRVUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\CRVUSDT\\page-001.json",
+      "bytes": 22834,
+      "sha256": "dd9c4b937c2585163350964427ab817231ddcb27bb655fd02e30dec11d2fcf95"
+    },
+    {
+      "symbol": "DASHUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=DASHUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\DASHUSDT\\page-000.json",
+      "bytes": 197702,
+      "sha256": "dda84934363c71b64ebf0b44d957839d617a49862ece8e3ce471a38c755c6fb6"
+    },
+    {
+      "symbol": "DASHUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=DASHUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\DASHUSDT\\page-001.json",
+      "bytes": 21716,
+      "sha256": "7c668427b276cb997906022414d3768c5a772a1041f35f70b501ec48c7c8d1a9"
+    },
+    {
+      "symbol": "ENSUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ENSUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ENSUSDT\\page-000.json",
+      "bytes": 197175,
+      "sha256": "c2a9c5c70fee1ea59aae9051e69ce2785032a171477a591a51583431bfcbed04"
+    },
+    {
+      "symbol": "ENSUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ENSUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ENSUSDT\\page-001.json",
+      "bytes": 20404,
+      "sha256": "b8020a304e09efff53009e3dcafd9e24e4bb9340d5060893fe62c40dd589ae69"
+    },
+    {
+      "symbol": "ETCUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETCUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ETCUSDT\\page-000.json",
+      "bytes": 207557,
+      "sha256": "269814324afb7086ac2136d1701ebc5673f38788cb0b32d066d7f1231d28efba"
+    },
+    {
+      "symbol": "ETCUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ETCUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ETCUSDT\\page-001.json",
+      "bytes": 21583,
+      "sha256": "51e5b5fe757849c8d1d5f4cf5c189a4c19a8d475e367ec5b7a205ff1120fc04d"
+    },
+    {
+      "symbol": "HBARUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=HBARUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\HBARUSDT\\page-000.json",
+      "bytes": 208291,
+      "sha256": "8a304ba8f8cd5c8924c0a6e893064d821d83d71ea17743984b49adbfdbe229ba"
+    },
+    {
+      "symbol": "HBARUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=HBARUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\HBARUSDT\\page-001.json",
+      "bytes": 22607,
+      "sha256": "98fc930062a74c874eab43dedd9a3dba03b14a507f97c07f62c6f6804d5bfe50"
+    },
+    {
+      "symbol": "KAVAUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=KAVAUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\KAVAUSDT\\page-000.json",
+      "bytes": 203798,
+      "sha256": "8335312fa1d6f7301d15e7aeb92d7de2655f8a46c2add69038f55b8ee6e5f538"
+    },
+    {
+      "symbol": "KAVAUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=KAVAUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\KAVAUSDT\\page-001.json",
+      "bytes": 22290,
+      "sha256": "bec540c0ca669b3de780873bbadad6ad36ace1083cde42de286d2e5ac1707b45"
+    },
+    {
+      "symbol": "LINKUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LINKUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\LINKUSDT\\page-000.json",
+      "bytes": 208278,
+      "sha256": "08d121b41f835b2f3c120a9cc98ce2c149f7c9fe18922f9df6774f828a50c04c"
+    },
+    {
+      "symbol": "LINKUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LINKUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\LINKUSDT\\page-001.json",
+      "bytes": 21948,
+      "sha256": "3766af84ceffdf31f44bcaca2bd3b56fe44005210e8a0db9ffd8384a022e94a7"
+    },
+    {
+      "symbol": "LTCUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LTCUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\LTCUSDT\\page-000.json",
+      "bytes": 205656,
+      "sha256": "42954b3d1f6ce9239cc700cacaef0baba954736cc56e8f310d457a623611e624"
+    },
+    {
+      "symbol": "LTCUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=LTCUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\LTCUSDT\\page-001.json",
+      "bytes": 21822,
+      "sha256": "c167e537fda075a658d793f49555214766a832e970436da0f426a4785f646f9f"
+    },
+    {
+      "symbol": "NEARUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=NEARUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\NEARUSDT\\page-000.json",
+      "bytes": 198952,
+      "sha256": "8f1d22e27bea6246d59f7644d85f7008e87f2afeb3cb024534829053b2ca7cbd"
+    },
+    {
+      "symbol": "NEARUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=NEARUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\NEARUSDT\\page-001.json",
+      "bytes": 21572,
+      "sha256": "48a479bba2460d99b082cd40e1b9ac115ce260da9d2b95bfb49af745915f6923"
+    },
+    {
+      "symbol": "RUNEUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=RUNEUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\RUNEUSDT\\page-000.json",
+      "bytes": 195289,
+      "sha256": "e7e69d804aee0b28fdda3327a83c9794da2e6df914a73caefbad05e47d90d776"
+    },
+    {
+      "symbol": "RUNEUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=RUNEUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\RUNEUSDT\\page-001.json",
+      "bytes": 20688,
+      "sha256": "f02fc368c55bbc805267e52ce345568864a00db7a62720d64a1be51681e8137e"
+    },
+    {
+      "symbol": "SNXUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SNXUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\SNXUSDT\\page-000.json",
+      "bytes": 193935,
+      "sha256": "f3b13bfc51b7de4f1841e23a6ab97b698b17598fee9f7071da875837c85d5630"
+    },
+    {
+      "symbol": "SNXUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SNXUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\SNXUSDT\\page-001.json",
+      "bytes": 22452,
+      "sha256": "d2fc2983789d381bd6b195cea8bbc86b10977fd6782f532fbb998addd7688591"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SOLUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\SOLUSDT\\page-000.json",
+      "bytes": 213650,
+      "sha256": "768dd1eec8531df6eef49e5d357db7f8267c8ada60528543c7433dd17f971091"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=SOLUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\SOLUSDT\\page-001.json",
+      "bytes": 24241,
+      "sha256": "73780cac3f9a4904113793c24907a6493c85c3fdca7de8ef18a8fee16776b20a"
+    },
+    {
+      "symbol": "TRXUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=TRXUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\TRXUSDT\\page-000.json",
+      "bytes": 209613,
+      "sha256": "ced8f086018e36afb1a6290618a68f58238dd0527d5c2b37e19bf2b7c6768ef8"
+    },
+    {
+      "symbol": "TRXUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=TRXUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\TRXUSDT\\page-001.json",
+      "bytes": 22517,
+      "sha256": "7723a8e8c953df7d2fec23f1fb12443b65143081977e7bc14ee37780b1fc3539"
+    },
+    {
+      "symbol": "UNIUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=UNIUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\UNIUSDT\\page-000.json",
+      "bytes": 196599,
+      "sha256": "706eab2a868369bec8c34e65f1c283e8a2b8fec74aafbe72740bd08e4b7fcb3f"
+    },
+    {
+      "symbol": "UNIUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=UNIUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\UNIUSDT\\page-001.json",
+      "bytes": 21262,
+      "sha256": "25ba7208b320ade6d5cfdb135168542443a58fc98cf909a6b86abfa1a333457b"
+    },
+    {
+      "symbol": "VETUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=VETUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\VETUSDT\\page-000.json",
+      "bytes": 217498,
+      "sha256": "cc5b994f4e54b0c74ac4a2e9806c8a77b2d53e1ebe717d7693559edca95958fe"
+    },
+    {
+      "symbol": "VETUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=VETUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\VETUSDT\\page-001.json",
+      "bytes": 23296,
+      "sha256": "43aa9e897b2f213638d1c2ba6eced3d211980b4fe9871fc9a2f6a084de05c161"
+    },
+    {
+      "symbol": "XLMUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XLMUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\XLMUSDT\\page-000.json",
+      "bytes": 208620,
+      "sha256": "1996d8a3cba783ff87955c91db7723d5e578bc97197ea9cc20ba01be46ab6932"
+    },
+    {
+      "symbol": "XLMUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XLMUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\XLMUSDT\\page-001.json",
+      "bytes": 22693,
+      "sha256": "82424a2bb7d9ced2f7b17468ddfac5b77dda25c956b092d439d52a991d72d7a1"
+    },
+    {
+      "symbol": "XMRUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XMRUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\XMRUSDT\\page-000.json",
+      "bytes": 203625,
+      "sha256": "9393da3e292afbe283bfef1719ee1f4321cc0df7b22b1a47618c165b110e209e"
+    },
+    {
+      "symbol": "XMRUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XMRUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\XMRUSDT\\page-001.json",
+      "bytes": 22078,
+      "sha256": "4da17c20235ce462d9295536640d00f193c84c4456fa41e3e1ada37b4c6e2a47"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XRPUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\XRPUSDT\\page-000.json",
+      "bytes": 213725,
+      "sha256": "ee36ebd6f53f212f34a6792c9f96f52938712e7b2a059dbffb9bddcc0a1d02af"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=XRPUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\XRPUSDT\\page-001.json",
+      "bytes": 23110,
+      "sha256": "bc1e0cebe10ae57b808daf069ef24e5f4eef6d7939d5eb638370b3dc6f4037da"
+    },
+    {
+      "symbol": "ZECUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZECUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ZECUSDT\\page-000.json",
+      "bytes": 200223,
+      "sha256": "41df8fb42308200dba989eb21c53bbe27960ec9fb614f9637ca44dc8043e1ec2"
+    },
+    {
+      "symbol": "ZECUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZECUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ZECUSDT\\page-001.json",
+      "bytes": 23051,
+      "sha256": "be805d8efa0dd774cef665815cf03eaa8cb76387c077ae2e6b583614d54f9ca5"
+    },
+    {
+      "symbol": "ZILUSDT",
+      "page": 0,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZILUSDT&interval=1d&startTime=1640995200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ZILUSDT\\page-000.json",
+      "bytes": 207277,
+      "sha256": "4d9bd63d75bb245243cd0f69501bbd92f6c89e18d4fd11e18fbdd043e39bb125"
+    },
+    {
+      "symbol": "ZILUSDT",
+      "page": 1,
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=ZILUSDT&interval=1d&startTime=1770595200000&endTime=1784678399999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\intermediate-vix-beta-weekly-return-predictability\\2026-07-22-v1\\binance\\klines\\ZILUSDT\\page-001.json",
+      "bytes": 22763,
+      "sha256": "595f51e5774fe1f51483ffa8d9de6d9e90bc32076fee2e6dfb1aafef3bc7189a"
+    }
+  ],
+  "files_verified": 51,
+  "bytes_verified": 6713938,
+  "raw_item_identity_digest": "2655ec992db56c8f5bdd18ea46d171dda7492190ebf0f60e8b9bf9fde3a17d70",
+  "copy_performed": false,
+  "reference_dataset": {
+    "persistent_id": "doi:10.18150/IIVQQE",
+    "version": "1.0",
+    "license": "CC0-1.0",
+    "files": {
+      "tabular": {
+        "bytes": 566934,
+        "sha256": "8d7683c6fed20afac76f73cf728b7e77392b21655377631310ec76a452b4e0af",
+        "url": "https://repod.icm.edu.pl/api/access/datafile/105344",
+        "format": "Dataverse tabular export",
+        "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ohlc-estimated-spread-weekly-return-predictability\\2026-07-22-v1\\Dataset_returns_crypto_factor_zoo_2.tab"
+      },
+      "original": {
+        "bytes": 361178,
+        "sha256": "4a103a42af056be25a9a82d3de93ab2b657920e1eaf0614b95f4c8859ba81683",
+        "url": "https://repod.icm.edu.pl/api/access/datafile/105344?format=original",
+        "format": "original XLSX",
+        "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ohlc-estimated-spread-weekly-return-predictability\\2026-07-22-v1\\Dataset_returns_crypto_factor_zoo_2.xlsx"
+      }
+    },
+    "copy_performed": false,
+    "gate_role": "external benchmark only"
+  },
+  "content_digest": "22f6f5f3e1b31f1e8111161657c5454c24165cbbcfa8d7d02a638ce153297584"
+}

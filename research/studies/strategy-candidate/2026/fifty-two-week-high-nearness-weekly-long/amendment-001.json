@@ -1,0 +1,14 @@
+{
+  "created_at_utc": "2026-07-22T10:00:00Z",
+  "checkpoint_digest": "d976e5dfd243e938d2a07a2732eaae2e83b7136375742cbe3195642235dfcf1f",
+  "original_study_sha256": "0020f20dfac619a0b504d8b2171d90a54854e129d852a886a62a91afa2e32174",
+  "amended_study_sha256": "3b4c40c1023f54604c06ce3438133803d831227df59d4fb2ab352b0bd83d785b",
+  "reason": "Development analysis calculated all trades but stopped before evidence output because the cooldown-matched MOM52 baseline naturally has NO_ACTION weeks while the inherited comparison helper incorrectly required a trade on every main entry date. A realized strategy-plan comparison must preserve those baseline weeks as cash rather than delete dates or invent trades.",
+  "changes": [
+    "Treat only MOM52 baseline NO_ACTION dates as zero cash return in base and stress comparisons.",
+    "Retain the comparison helper's recorded count of cash-filled dates.",
+    "Do not change signals, target selection, trades, costs, gates, stages or any primary economic rule."
+  ],
+  "economic_rule_changed": false,
+  "content_digest": "242b9a095bf977467f85cf61dae236a5e95425c6addeb8d45a57f798b563af88"
+}

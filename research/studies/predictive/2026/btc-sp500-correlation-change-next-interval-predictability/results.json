@@ -1,0 +1,35 @@
+{
+  "generated_at_utc": "2026-07-22T14:08:36.686550+00:00",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "scope": "post-publication BTC-SP500 conditional-correlation-change prediction; not a qualified strategy",
+  "stages": {
+    "development": {
+      "status": "FAIL",
+      "analysis_content_digest": "6c0bac9cd5d9d0d0e9fc3415acf46b998948067224bfd069b7beae53867fe7d4",
+      "gate_content_digest": "68a4e8215cb419bde1d3f5cab8112dc9f7b614bf1f541f84096bf51c15cb221a",
+      "controlled_delta_rho": 0.08988946884096996,
+      "tail_spread": 0.000415846931295285,
+      "net_daily": -0.00036518523994952945,
+      "failed_checks": [
+        "source_near_negative_hac",
+        "controlled_negative_hac",
+        "controlled_halves_negative",
+        "frozen_oos_r2_zero",
+        "frozen_oos_r2_historical",
+        "tail_spread_bootstrap_lower",
+        "both_tail_directions_positive",
+        "net_daily_positive",
+        "net_daily_halves_positive",
+        "net_daily_bootstrap_lower",
+        "beats_scheduled_long",
+        "quarter_concentration"
+      ]
+    }
+  },
+  "strategy_conversion": "PROHIBITED",
+  "evaluation_status": "SEALED",
+  "confirmation_status": "SEALED",
+  "long_term_profitability_claim": "NOT_AUTHORIZED",
+  "product_effects": "NONE",
+  "content_digest": "66ea2e5f67b24af134ce1117264ffe2654d18c18152cd03acad54beffbb89378"
+}

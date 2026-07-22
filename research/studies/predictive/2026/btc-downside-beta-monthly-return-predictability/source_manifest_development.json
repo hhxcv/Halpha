@@ -1,0 +1,22 @@
+{
+  "accessed_at_utc": "2026-07-22T11:14:06.788758+00:00",
+  "stage": "development",
+  "checkpoint_digest": "88cf807b2fde3c6911ad66f3ec2d619317f5a5f1f08e40c583a411a65f409e32",
+  "source": "Binance public USD-M REST klines; no credentials",
+  "symbol": "BTCUSDT",
+  "interval": "1d",
+  "requested_start": "2021-08-24T00:00:00+00:00",
+  "requested_end_exclusive": "2024-01-03T00:00:00+00:00",
+  "pages": [
+    {
+      "url": "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1d&startTime=1629763200000&endTime=1704239999999&limit=1500",
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btc-downside-beta-monthly-return-predictability\\2026-07-22-v1\\development\\BTCUSDT\\raw\\openTime-000.json",
+      "bytes": 129447,
+      "sha256": "c5a2dde82664d22eebde8501e18b16fada2d4d98201faefab6a3c94bcf4cb92a",
+      "rows": 862,
+      "first_time_ms": 1629763200000,
+      "last_time_ms": 1704153600000
+    }
+  ],
+  "content_digest": "bc60ad03343f7833f9809383befb98c73f16b5a26ed2b2f7cf15b77e5bc9e85c"
+}

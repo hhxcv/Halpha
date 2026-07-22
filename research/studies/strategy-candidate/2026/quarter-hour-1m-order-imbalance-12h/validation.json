@@ -1,0 +1,74 @@
+{
+  "validated_at_utc": "2026-07-22T01:39:00Z",
+  "status": "PASS",
+  "scope": "development evidence, replay stability, data identity, and sequential-stop integrity",
+  "checks": {
+    "checkpoint_source_hashes_match": true,
+    "all_json_parses": true,
+    "source_manifest_hashes_verified_by_inspect": true,
+    "data_quality_pass": true,
+    "six_symbols_have_918720_continuous_minutes_each": true,
+    "development_replay_matches": true,
+    "development_gate_fail_is_reproduced": true,
+    "stable_trade_csvs_reproduced": true,
+    "vectorbt_max_error_below_1e_minus_12": true,
+    "evaluation_outputs_absent": true,
+    "confirmation_outputs_absent": true,
+    "handoff_absent": true,
+    "study_py_compiles": true,
+    "git_diff_check_research_passes": true
+  },
+  "replay": {
+    "analyze_command": "research\\.venv\\Scripts\\python.exe research/studies/strategy-candidate/2026/quarter-hour-1m-order-imbalance-12h/study.py analyze --stage development",
+    "analyze_result": {
+      "trades": 1464,
+      "base_total": -0.18599588714903825,
+      "gross_slot_mean": -0.00001613087058091174
+    },
+    "gate_command": "research\\.venv\\Scripts\\python.exe research/studies/strategy-candidate/2026/quarter-hour-1m-order-imbalance-12h/study.py gate --stage development",
+    "gate_status": "FAIL",
+    "failed_checks": [
+      "favorable_total_positive",
+      "base_total_positive",
+      "stress_total_positive",
+      "stress_after_hurdle_positive",
+      "gross_mean_positive",
+      "gross_bootstrap_lower_positive",
+      "main_minus_placebo_bootstrap_lower_positive",
+      "main_minus_momentum_bootstrap_lower_positive",
+      "delayed5_stress_positive",
+      "at_least_four_symbols_positive",
+      "positive_months_over_half",
+      "slot_drawdown_within_limit",
+      "largest_positive_symbol_share_at_most_half"
+    ]
+  },
+  "sha256": {
+    "checkpoint.json": "21533072a93a6aeb56fd5d2da6bb741ae5a07117930a34e94750553254817c5a",
+    "source_manifest.json": "76fa4188e418c63166ff5d356770d68315a8f4358d70903736e81fd87da06a7c",
+    "data_quality.json": "78f0dabc2616fbed1c836853053ef21a7f5228b610a462d575f81b87c979e737",
+    "development.json": "a4b7850aafa7d0340dca1c54397320fd92f2001250f2488c62d80f81d64c2e9f",
+    "development_gate.json": "27a583f05d3b35e2092333f0e2d16a542a215d5e8ff0da1337b2033edd2f5230",
+    "results.json": "d8814c0d9128a4df6076b7d563c23f99ec567be6f8d7833dfb3c594547ea20ef",
+    "development_trades.csv": "9ca41f0ca33b2671d4529eab9c2c1134a6610199ad41e28c79f981f77c9da989",
+    "development_delayed5_trades.csv": "dee19643d84dc03a8f87a86a0c500ce205384c77a568f5cd1bfd1c4c663680ea",
+    "development_placebo_trades.csv": "8105274f29c70deba8756b5a1090beca87c9b9e725dcafad01ab9a563c812389",
+    "development_momentum_trades.csv": "6fd74ea40e09b69e97bbc893fd56f01f94b7fed25416f7ac9b4eb23a0f6d9ace"
+  },
+  "checkpoint_bound_sha256": {
+    "study.py": "5e959bc8ec7a603f9a9a514b1f8e7cf482a746adf3e23c259e9d73e69337a908",
+    "preregistration.md": "a903c9f8a86226b07f3621f766eb2db3ae7270f3b9af23646ad23404ef65eded",
+    "sources.md": "23ffc2a132cab5d3bb9df131eb40b8d92b5ae657d8c4ab4ef1d332638f916262"
+  },
+  "data_cache": {
+    "root": "D:/projects/Codex/CodexHome/research-data/halpha/quarter-hour-1m-order-imbalance-12h/2026-07-22-v1/",
+    "files": 276,
+    "bytes": 224723759
+  },
+  "notes": [
+    "Generated JSON byte hashes include replay timestamps; all four trade CSVs and economic outputs reproduced exactly.",
+    "A failing development gate is the expected validated research outcome, not a validation failure.",
+    "A post-result full-repository audit found a prior related PREDICTIVE study. This strategy-layer study is retained as dependent evidence and is not counted as an independent mechanism discovery.",
+    "No later-stage economic output was opened or generated."
+  ]
+}

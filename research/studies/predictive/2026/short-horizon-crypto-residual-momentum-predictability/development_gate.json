@@ -1,0 +1,23 @@
+{
+  "checked_at_utc": "2026-07-22T10:12:12.250121+00:00",
+  "stage": "development",
+  "status": "FAIL",
+  "checkpoint_digest": "ecc04cfc894b39aad830f40b5f4271c02cbcd47172a7918412e68522d248f77e",
+  "result_digest": "f7c63eacd536cadc1dad6b9f3f748fdda516fbab241382bbb8a0760627a59ecd",
+  "question_result": "DOES_NOT_SUPPORT",
+  "failed_hard_gates": [
+    "top_asset_mean_above_economic_floor",
+    "top_asset_bootstrap_lower_positive",
+    "top_excess_bootstrap_lower_positive",
+    "spread_bootstrap_lower_positive",
+    "increment_vs_raw_bootstrap_lower_positive",
+    "rank_ic_mean_positive",
+    "rank_ic_bootstrap_lower_positive",
+    "both_halves_pass",
+    "positive_symbol_breadth",
+    "all_fixed_neighbors_positive",
+    "signal_not_raw_clone"
+  ],
+  "next_stage_released": false,
+  "content_digest": "46c7454c88836b299208fd548635cd8e16709a19dd05a570247b263fefb121ec"
+}

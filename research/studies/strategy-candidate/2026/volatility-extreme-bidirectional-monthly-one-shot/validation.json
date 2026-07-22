@@ -1,0 +1,14 @@
+{
+  "validated_at_utc": "2026-07-22T08:50:31.873234Z",
+  "status": "PASS",
+  "checkpoint_digest": "b07ead78a7aab58fd0805814ca59136395d0060b8917ab49c268eb491fdfa242",
+  "opened_stages": [
+    "development",
+    "evaluation"
+  ],
+  "json_digest_files_checked": 11,
+  "trade_csv_files_checked": 16,
+  "conclusion": "DOES_NOT_SUPPORT",
+  "handoff_generated": false,
+  "content_digest": "ebee7e83947ce253935e2b5286ad39d800584a4494fc4f6403d1510d853faa61"
+}

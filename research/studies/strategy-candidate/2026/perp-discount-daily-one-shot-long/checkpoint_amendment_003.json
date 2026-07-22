@@ -1,0 +1,23 @@
+{
+  "created_at_utc": "2026-07-22T04:23:31.122140Z",
+  "checkpoint_digest": "5f4514f10e2136347b4f955a0c2e75f5e6ef50c8332e06d3bb037a6f112f2f18",
+  "classification": "ALLOWED_DETERMINISTIC_PERFORMANCE_FIX",
+  "reason": "Make the checkpoint command validate and report the already locked amendment chain when a checkpoint exists, rather than requiring the original pre-amendment study hash. This changes only reproducibility control flow and no research calculation.",
+  "previous_files": {
+    "study_py_sha256": "46317858620bc63873ea8af58767b1025b6a9dbec333e19f8ca944563d9156e8",
+    "engine_py_sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+    "preregistration_sha256": "2cee5f1e789bcfec612fad4e8b012b3cb94fc74d085cb25eda44a9e4b8911120",
+    "sources_sha256": "779c3bfbb955dbbcf61765d722eaf9588432770394ae32709b91f62d51a3fd5b"
+  },
+  "current_files": {
+    "study_py_sha256": "91184300bea3eef96d61266bdb3bdf6c5b78715686595de453ec315571968b7c",
+    "engine_py_sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+    "preregistration_sha256": "2cee5f1e789bcfec612fad4e8b012b3cb94fc74d085cb25eda44a9e4b8911120",
+    "sources_sha256": "779c3bfbb955dbbcf61765d722eaf9588432770394ae32709b91f62d51a3fd5b"
+  },
+  "economic_method_changed": false,
+  "outputs_viewed_before_fix": [
+    "no performance outputs viewed; reproducibility control-only change"
+  ],
+  "content_digest": "9ffe243164d2d4e1b577782dab0380263ac8c307b1cad7c00cc091db684f2b74"
+}

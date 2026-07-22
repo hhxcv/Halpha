@@ -1,0 +1,111 @@
+{
+  "created_at_utc": "2026-07-22T07:25:21.842167Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does paper-defined one-week high-distance bottom-quintile selection qualify a fixed-target weekly one-shot perpetual SHORT after retail costs, funding, ordinary-momentum/market baselines, robustness, breadth and sequential time evidence?",
+  "development_period": [
+    "2023-01-02T00:00:00Z",
+    "2024-01-01T00:00:00Z"
+  ],
+  "known_exposure": "The same 2023 market paths were viewed by other questions; HMOM7 bottom-quintile SHORT rankings and plan outcomes were not viewed before this checkpoint.",
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "computed_columns": 7
+  },
+  "configuration": {
+    "strategy_id": "RESEARCH_HMOM7_BOTTOM_QUINTILE_WEEKLY_ONE_SHOT_SHORT_0P5X_V1",
+    "direction": "SHORT_ONLY",
+    "hold_days": 7,
+    "notional_fraction": 0.5,
+    "bottom_fraction": 0.2,
+    "top_fraction": 0.2,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "annual_capital_hurdle": 0.04,
+    "cooldown_full_days": 1,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "short_funding_stress": {
+      "positive_benefit_multiplier": 0.5,
+      "negative_cost_multiplier": 1.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "main": {
+      "lookback_days": 7,
+      "score": "log_close_over_rolling_intraday_high"
+    },
+    "diagnostics": [
+      "hmom14",
+      "hmom28",
+      "bottom3",
+      "mom7",
+      "scheduled_short",
+      "market_short"
+    ]
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "frozen_file_sha256": {
+    "README.md": "6679a034031bac48b84e35d3b90b0c8320154d9552acb4491012f7dbe5679442",
+    "preregistration.md": "a17c3e036954ce29ffc2b2457e37841c5c9ecf8edc815a5e3fc591cae797ad94",
+    "sources.md": "1ef964856f9c0b5942b9d02c63d72a214bb6a8abd65bbba6f0ebdd95dd5ba837",
+    "study.py": "dda1a8dce0ff5c86fc1248a8f395603b459e5023768f065ecd179812039e262b"
+  },
+  "source_reuse_digest": "72f16af5bc422c4a3e31d68db36afb16cf6fb19600d2e2eb61749dc18bde6518",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3"
+  },
+  "allowed_after_checkpoint": "Append attempts and create data/result artifacts. Economic rules may not change; implementation-only fixes require a numbered amendment before rerun.",
+  "content_digest": "7f8290b894b72a1fb94c7df0d1d6c9268490a276d122f358bca5c02c15b0b1df"
+}

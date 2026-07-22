@@ -1,0 +1,277 @@
+{
+  "checked_at_utc": "2026-07-22T09:38:22.744010Z",
+  "stage": "development",
+  "status": "PASS",
+  "checkpoint_digest": "d976e5dfd243e938d2a07a2732eaae2e83b7136375742cbe3195642235dfcf1f",
+  "required_daily_range_inclusive": [
+    "2022-01-29T00:00:00+00:00",
+    "2024-12-30T00:00:00+00:00"
+  ],
+  "source_overlap": {
+    "overlap_rows": 0,
+    "overlap_mismatch_rows": 0
+  },
+  "decision_input_availability": {
+    "minimum_rankable": 19,
+    "maximum_rankable": 25,
+    "global_no_action_dates_below_minimum": {
+      "2024-11-04T00:00:00+00:00": 19
+    }
+  },
+  "symbols": {
+    "1000XECUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "AAVEUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "AVAXUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "BCHUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "BNBUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "CRVUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "DASHUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "ENSUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "ETCUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "HBARUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "KAVAUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "LINKUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "LTCUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "NEARUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "RUNEUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "SNXUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "SOLUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "TRXUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "UNIUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "VETUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "XLMUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "XMRUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "XRPUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "ZECUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    },
+    "ZILUSDT": {
+      "daily_rows": 1067,
+      "missing_days": 0,
+      "invalid_ohlc_rows": 0,
+      "invalid_volume_rows": 0,
+      "funding_rows": 1092,
+      "missing_mark_rows": 0,
+      "max_funding_gap_hours": 8.000003611111111,
+      "source_integrity": "PASS"
+    }
+  },
+  "parent_data_quality_sha256": "8b2445e48b6469d935cba7db0190cedba637e87e7a8d4487581c721523f72855",
+  "source_manifest_sha256": null,
+  "rule": "Calendar gaps are never imputed. All feature inputs end with the Saturday bar, Sunday is a full-day gap, and Monday open is the first action. A target without 701 contiguous daily bars, exact weekly features or 10m median quote volume is NO_ACTION; fewer than 20 targets makes the week global NO_ACTION without invalidating otherwise intact source data.",
+  "content_digest": "f53d8827a1e79957fa8f7ee3b3065df1fcc5f9c5a929e8202abf9117a45c0929"
+}

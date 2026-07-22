@@ -1,0 +1,78 @@
+{
+  "created_at_utc": "2026-07-22T08:40:30.311332Z",
+  "entries": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\high-volatility-ten-week-loser-weekly-one-shot-long\\study.py",
+      "bytes": 49224,
+      "sha256": "b0bb45b04ac0ef420f61a251149912b7569441c310c7a8d8dd4a0708d3ccaae2",
+      "role": "reused frozen public data adapter and source stitching"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ten-week-loser-weekly-one-shot-long\\study.py",
+      "bytes": 58664,
+      "sha256": "325d93903f110be175a556850871c2ad49c54cf469491feecafd28bfd6c42865",
+      "role": "reused funding/cost/statistics reference"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-low-volatility-monthly-one-shot-long\\study.py",
+      "bytes": 55057,
+      "sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+      "role": "official Binance public archive loader/fetcher"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+      "bytes": 3383646,
+      "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+      "role": "frozen current target universe"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-low-volatility-monthly-one-shot-long\\results.json",
+      "bytes": 43844,
+      "sha256": "10805e2359b6138785a894204b54dda75e95db0520e18d89d26c276406724306",
+      "role": "known 2022-2023 low-volatility LONG selection evidence"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\high-volatility-monthly-one-shot-short\\results.json",
+      "bytes": 41551,
+      "sha256": "3f28b3ed2815c8e87c16a911e3500d6e54855bf254b4c81c61f7c3807de10e29",
+      "role": "known 2024 high-volatility SHORT selection evidence"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\high-volatility-monthly-one-shot-short\\source_manifest_development.json",
+      "bytes": 706405,
+      "sha256": "11e0f6cda8c61d8bed12c42cd5422a9d13bf33dba8099c3471d30821758ac4f6",
+      "role": "2024 public data manifest"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\high-volatility-monthly-one-shot-short\\data_quality_development.json",
+      "bytes": 32191,
+      "sha256": "6fb53187147193fa6039ae32b3efaaa8be1d81f62f08ea5c59a319f17c5acfd9",
+      "role": "2024 source quality"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-premium-momentum-daily-one-shot-long\\source_manifest_evaluation.json",
+      "bytes": 686849,
+      "sha256": "6b1d278190241070c748890337f2c2211f8603672b73b710b366a4e84449c661",
+      "role": "2025 public data manifest"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-premium-momentum-daily-one-shot-long\\data_quality_evaluation.json",
+      "bytes": 10641,
+      "sha256": "59949fe0490db3b3d7c60953a8915edd733206c813ecb7907222f13d378818f0",
+      "role": "2025 source quality"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\_sources\\low-volatility-strategies-liquid-cryptocurrencies-kaya-mostowf.pdf",
+      "bytes": 467632,
+      "sha256": "f0dc7ab0def876c5b86962e3f382f35a977d91fecb184381f5f42d896d665dfd",
+      "role": "external primary paper"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\_sources\\seasonality-cross-section-crypto-long-et-al-2020.pdf",
+      "bytes": 747337,
+      "sha256": "1ddbdf7ef7329079a734e907a30f4b2d78a683afad6334823f76c78b75ae37fa",
+      "role": "external primary paper"
+    }
+  ],
+  "content_digest": "cd7b791922ddda5eba0bff778fc9653617fe6959bd24a84d9bbbacffcbf822dc"
+}

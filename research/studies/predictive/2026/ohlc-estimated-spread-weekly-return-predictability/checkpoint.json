@@ -1,0 +1,146 @@
+{
+  "created_at_utc": "2026-07-22T14:37:38.223875+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "PREDICTIVE",
+  "predictor_id": "RESEARCH_CHL28_HIGH_NEXT_WEEK_V1",
+  "question": "Does high trailing 28-pair two-day-corrected CHL spread incrementally predict higher next-week mature-perpetual returns?",
+  "replication_status": "Independent narrow perpetual adaptation plus approximate public-factor benchmark check; not a numerical replication of the broad spot panel.",
+  "evidence_boundary": "Development/evaluation overlap the source calendar; confirmation extends later, but broad crypto paths were exposed in prior Halpha work.",
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "data_start": "2022-01-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-22T00:00:00Z",
+  "stages": {
+    "development": [
+      "2023-03-04T00:00:00Z",
+      "2024-03-02T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-03-02T00:00:00Z",
+      "2025-03-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-03-01T00:00:00Z",
+      "2026-07-18T00:00:00Z"
+    ]
+  },
+  "expected_weeks": {
+    "development": 52,
+    "evaluation": 52,
+    "confirmation": 72
+  },
+  "windows": {
+    "primary_28p": 28,
+    "diagnostic_14p": 14,
+    "diagnostic_56p": 56
+  },
+  "controls": [
+    "log_amihud",
+    "market_beta",
+    "mom7",
+    "mom28",
+    "vol28",
+    "max28",
+    "log_volume30"
+  ],
+  "config": {
+    "predictor_id": "RESEARCH_CHL28_HIGH_NEXT_WEEK_V1",
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "minimum_rankable": 20,
+    "tail_fraction": 0.2,
+    "market_beta_days": 56,
+    "action_gap_days": 2,
+    "target_days": 7,
+    "stress_round_trip_underlying": 0.0052,
+    "economic_notional_fraction": 0.25,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 4,
+    "minimum_positive_spread_fraction": 0.55,
+    "minimum_selected_symbols": 10,
+    "minimum_positive_symbol_fraction": 0.5,
+    "maximum_positive_contribution_share": 0.4,
+    "maximum_abs_score_control_correlation": 0.9
+  },
+  "parent_manifest": {
+    "path": "research/studies/predictive/2026/intermediate-vix-beta-weekly-return-predictability/source_manifest.json",
+    "sha256": "07d0c80a4ea858e767960c53bc9ef5345cecc1a07fb482d9d2d87b862fb50693",
+    "content_digest": "d8cab91fb7ccdc39204aa2b783d13376b92ba0137fb3cb8e6a164cb432ed3514"
+  },
+  "reference_dataset": {
+    "persistent_id": "doi:10.18150/IIVQQE",
+    "version": "1.0",
+    "license": "CC0-1.0",
+    "files": {
+      "tabular": {
+        "bytes": 566934,
+        "sha256": "8d7683c6fed20afac76f73cf728b7e77392b21655377631310ec76a452b4e0af",
+        "url": "https://repod.icm.edu.pl/api/access/datafile/105344",
+        "format": "Dataverse tabular export",
+        "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ohlc-estimated-spread-weekly-return-predictability\\2026-07-22-v1\\Dataset_returns_crypto_factor_zoo_2.tab"
+      },
+      "original": {
+        "bytes": 361178,
+        "sha256": "4a103a42af056be25a9a82d3de93ab2b657920e1eaf0614b95f4c8859ba81683",
+        "url": "https://repod.icm.edu.pl/api/access/datafile/105344?format=original",
+        "format": "original XLSX",
+        "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ohlc-estimated-spread-weekly-return-predictability\\2026-07-22-v1\\Dataset_returns_crypto_factor_zoo_2.xlsx"
+      }
+    },
+    "gate_role": "external benchmark only; excluded from stage gates"
+  },
+  "pinned_research_dependency": {
+    "path": "research/studies/predictive/2026/amihud-illiquidity-weekly-return-predictability/study.py",
+    "sha256": "40ce902407de51979f59a5f1fd6734ad571cc5a085d7082c664ea6e54f5660c7",
+    "role": "data binding, quality, and shared statistical primitives"
+  },
+  "frozen_file_sha256": {
+    "README.md": "e1d9da0018aa8bb65a7a0793da08488391cac94ea5e6fb9911c93a35474ac34b",
+    "sources.md": "b1d088e0464747de0eaccf85e7ae93c6b71999aa07176576e261cea009c00366",
+    "preregistration.md": "b0c844aa034864a0487372b0fcf625949fb4f710448faf0d511b309809c1aa9d",
+    "study.py": "95025266b5cfb915e933336f3506ad33815b6fcc07eb422ef5c8d14a3e663b2e"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS",
+  "content_digest": "3c5bacc3f7b7cf635bea21d9ddd3edf16eb6331e8619900b386c27f9b6ca7144"
+}

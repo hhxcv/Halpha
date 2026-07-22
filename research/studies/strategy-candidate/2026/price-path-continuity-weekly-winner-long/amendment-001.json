@@ -1,0 +1,14 @@
+{
+  "created_at_utc": "2026-07-22T09:25:00Z",
+  "checkpoint_digest": "d1173deb1f62dca2e90a37a9031d0232c524e29263d0190ae87a652911cbabce",
+  "original_study_sha256": "c6d091dc5be0f26bafbd18b58152e382b45e655122b56b9c39a8c8651bf89cb3",
+  "amended_study_sha256": "b47c515f1b86cc6a9498fb81b29eea6434ba7b05badcc47d44a5a58204e5c27b",
+  "reason": "Development preparation found that 2024-11-04 had 19 rather than 20 liquidity-qualified targets while all source-integrity checks passed. The frozen unknown-input rule makes a below-minimum decision global NO_ACTION; build_panel already skipped that week, but prepare incorrectly escalated it to a whole-stage source-quality failure before any return output was computed.",
+  "changes": [
+    "Keep the below-minimum week and count in data_quality_development.json as a global NO_ACTION decision.",
+    "Do not fail otherwise intact stage source quality solely because one decision has fewer than 20 rankable targets.",
+    "Allow the frozen study.py identity to advance only through this checkpoint-bound amendment chain."
+  ],
+  "economic_rule_changed": false,
+  "content_digest": "72e321d0bc52eb233555d3895ad3ce408074d47f795a6ea4c7cb32dc0b0ee0a4"
+}

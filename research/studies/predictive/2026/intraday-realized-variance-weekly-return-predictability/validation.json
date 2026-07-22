@@ -1,0 +1,20 @@
+{
+  "validated_at_utc": "2026-07-22T15:02:57.353761+00:00",
+  "status": "PASS",
+  "checks": {
+    "parent_source_file_identity": true,
+    "parent_source_content_identity": true,
+    "development_checkpoint_identity": true,
+    "development_data_quality_identity": true,
+    "development_development_panel.csv_identity": true,
+    "development_development_weekly.csv_identity": true,
+    "development_development_selected.csv_identity": true,
+    "development_development_fmb_weekly.csv_identity": true,
+    "development_gate_result_identity": true,
+    "development_gate_consistency": true,
+    "final_conclusion_consistency": true
+  },
+  "results_sha256": "b77042fd93111af37fbc66d0cb1639677cfb9d2851348b62d2464d19894c541e",
+  "result_md_sha256": "9257683bb5fb39e465ba7308d61f8e1021fdb1cd3e21a6fab831350404dfb1d0",
+  "content_digest": "350ff7288ffab9d7f3a580b8fbcc84b02a8cdc9d8b898fe3a4e9cf8ff6bd1272"
+}

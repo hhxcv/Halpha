@@ -1,0 +1,104 @@
+{
+  "as_of": "2026-07-22",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "research_kind": "COMPARATIVE_OR_MECHANISM",
+  "question": "Which fixed positive-but-insufficient candidates merit genuinely forward incubation?",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "core_qualification_ready": 0,
+  "active_forward_incubations": 1,
+  "candidates": [
+    {
+      "id": "RESEARCH_PPC14_TOP_TERCILE_MOM14_TOP_TERCILE_WEEKLY_LONG_0P25X_V1",
+      "status": "FORWARD_INCUBATE",
+      "historical_conclusion": "INSUFFICIENT_EVIDENCE",
+      "rule_change_allowed": false,
+      "first_eligible_entry_utc": "2026-07-27T00:00:00Z",
+      "minimum_eligible_weeks": 26,
+      "twenty_sixth_entry_utc": "2027-01-18T00:00:00Z",
+      "first_checkpoint_complete_utc": "2027-01-25T00:00:00Z",
+      "earliest_complete_decision_utc": null,
+      "positive_gate_decision_possible_at_first_checkpoint": true,
+      "power_calibration_conclusion": "DOES_NOT_SUPPORT",
+      "power_if_true_net_edge_is_50bp_per_eligible_week": 0.0592,
+      "null_joint_false_positive": 0.0178,
+      "maturity_caveat": "No-action or ineligible weeks delay the first checkpoint; at least two market states are also required. Exact power calibration shows a non-pass at 26 weeks is usually inconclusive rather than evidence of no edge.",
+      "reason": "simple weekly mapping and positive-but-uncertain economics justify retaining unchanged observations, but 26-week exact joint power is only 5.92% for a true 50 bp weekly net edge; this is a first checkpoint, not a promised complete decision"
+    },
+    {
+      "id": "RESEARCH_CTREND_TOP_QUINTILE_WEEKLY_LONG",
+      "status": "RETAIN_NOT_ACTIVE",
+      "historical_conclusion": "INSUFFICIENT_EVIDENCE",
+      "reason": "19.2% model-failure rate and concentration make complexity, not elapsed time, the primary defect"
+    },
+    {
+      "id": "RESEARCH_PERP_VOL90_TOP3_MONTHLY_ONE_SHOT_SHORT_0P25X_V1",
+      "status": "RETAIN_NOT_ACTIVE",
+      "historical_conclusion": "INSUFFICIENT_EVIDENCE",
+      "reason": "all three frozen neighbors negative; monthly sample is slow and exact-slice short risk is high"
+    }
+  ],
+  "observation_policy": {
+    "store_rows_before_maturity": true,
+    "peek_or_change_rule": false,
+    "raw_data": "official public Binance responses outside Git with manifest identities",
+    "derived_data": "all eligible/no-action decisions and costs retained in Git at replay time",
+    "scheduler_or_platform": false,
+    "product_data_or_runtime": false
+  },
+  "next_decision": "Collect the frozen PPC observations without peeking. Do not interpret them before the 26th eligible-week exit. At the first checkpoint a full positive gate may provide useful evidence, but a non-pass normally remains insufficient because exact 50 bp joint power is only 5.92%; no later decision date is currently justified by an exact power calculation. Continue historical work only for an independent mechanism.",
+  "product_effects": "NONE",
+  "evidence_identities": [
+    {
+      "name": "ppc_checkpoint",
+      "path": "research/studies/strategy-candidate/2026/price-path-continuity-weekly-winner-long/checkpoint.json",
+      "sha256": "bb92d5cf079117805d433fe93ddce38a6f1102bd25dfcb2c13949f0de44ec0f6"
+    },
+    {
+      "name": "ppc_results",
+      "path": "research/studies/strategy-candidate/2026/price-path-continuity-weekly-winner-long/results.json",
+      "sha256": "823ba93c045d307aeb954832ead508333df8712bf32c7492dc95325dba7e89d0"
+    },
+    {
+      "name": "ppc_gate",
+      "path": "research/studies/strategy-candidate/2026/price-path-continuity-weekly-winner-long/development_gate.json",
+      "sha256": "e7b85bd13fc524c3fe5610feae25e36c8b2a1c9aa3736ca0c502d9cc9d401616"
+    },
+    {
+      "name": "ctrend_checkpoint",
+      "path": "research/studies/strategy-candidate/2026/ctrend-weekly-top-quintile-one-shot-long/checkpoint.json",
+      "sha256": "594370293434c77da46206fdf183c4dac1763b53ed1faab26bc87f0ba04f2724"
+    },
+    {
+      "name": "ctrend_results",
+      "path": "research/studies/strategy-candidate/2026/ctrend-weekly-top-quintile-one-shot-long/results.json",
+      "sha256": "8d8b0a953f0a4a3a6fec36bf647bc5aeb3a5b7c78d2c4f38f5eb35b8a2b04a6b"
+    },
+    {
+      "name": "highvol_checkpoint",
+      "path": "research/studies/strategy-candidate/2026/high-volatility-monthly-one-shot-short/checkpoint.json",
+      "sha256": "25753a41577b4ee5a2de48526a54d19b00d036ae0ed019076f1c5e87ad044730"
+    },
+    {
+      "name": "highvol_results",
+      "path": "research/studies/strategy-candidate/2026/high-volatility-monthly-one-shot-short/results.json",
+      "sha256": "3f28b3ed2815c8e87c16a911e3500d6e54855bf254b4c81c61f7c3807de10e29"
+    },
+    {
+      "name": "ppc_power_checkpoint",
+      "path": "research/studies/comparative-or-mechanism/2026/ppc-forward-gate-power/checkpoint.json",
+      "sha256": "2cabc1c65d44fc1b71c8a63130e9766796adef9c34f72af4bab577f59d72723e"
+    },
+    {
+      "name": "ppc_power_results",
+      "path": "research/studies/comparative-or-mechanism/2026/ppc-forward-gate-power/results.json",
+      "sha256": "e4bb2fadde5e1011ce264bb5de0b119ce4bce98a72eda19a41fe10318792813b"
+    },
+    {
+      "name": "ppc_power_validation",
+      "path": "research/studies/comparative-or-mechanism/2026/ppc-forward-gate-power/validation.json",
+      "sha256": "528f8c9760dd845895403478a770e7d1dad0c3b28309ac0ca1f00c29d2fdc05c"
+    }
+  ],
+  "audit_py_sha256": "e9ee8a0ca8f0601434033bdd31df0cf9b0016e7919d5ef8d529d59a043bd48b4",
+  "content_digest": "31fd59ac8ba839aaf526024109b7131112dd3dceaced828e7cad66f9c7e44015"
+}

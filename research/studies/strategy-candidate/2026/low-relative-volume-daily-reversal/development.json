@@ -1,0 +1,392 @@
+{
+  "generated_at_utc": "2026-07-22T00:29:43.788258Z",
+  "stage": "development",
+  "stage_interval": [
+    "2021-01-01T00:00:00Z",
+    "2023-01-01T00:00:00Z"
+  ],
+  "checkpoint_digest": "f27a624392bf391ac6f7cb2f927d4fe41b329524125ee815a0c09975a0e342cd",
+  "source_manifest_sha256": "57f63438fef28c70fe4c7ed9f345b700e0c70058e3f9cf1798c71054107c82b3",
+  "config_results": {
+    "main_30d_low_volume_reversal": {
+      "label": "main_30d_low_volume_reversal",
+      "trades": 152,
+      "long_trades": 90,
+      "short_trades": 62,
+      "funding_return_sum": 0.02059597,
+      "funding_events": 399,
+      "by_symbol": {
+        "ALGOUSDT": {
+          "favorable": 0.9746321690033828,
+          "base": 0.8771262179529349,
+          "stress": 0.7843130955847757
+        },
+        "COMPUSDT": {
+          "favorable": 0.09401703717080911,
+          "base": 0.036754167778033864,
+          "stress": -0.01762939537389341
+        },
+        "THETAUSDT": {
+          "favorable": 0.19926120967252325,
+          "base": 0.14929401866148928,
+          "stress": 0.10135176268776824
+        },
+        "VETUSDT": {
+          "favorable": 0.14862316773398465,
+          "base": 0.09416043885719683,
+          "stress": 0.04218369163548008
+        },
+        "XTZUSDT": {
+          "favorable": -0.18953507705819894,
+          "base": -0.23556345580996108,
+          "stress": -0.279064950565436
+        },
+        "ZECUSDT": {
+          "favorable": 0.19948562295540184,
+          "base": 0.13571692547341097,
+          "stress": 0.07525615988939927
+        }
+      },
+      "by_year": {
+        "2021": {
+          "favorable": 0.2658188225213103,
+          "base": 0.17087804216694824,
+          "stress": 0.08287749388124221
+        },
+        "2022": {
+          "favorable": -0.28553874513330735,
+          "base": -0.3476038267213609,
+          "stress": -0.40436699640839735
+        }
+      },
+      "favorable": {
+        "mean_trade_return": 0.009349165759069257,
+        "median_trade_return": 0.009876356187077495,
+        "win_rate": 0.5657894736842105,
+        "total_return": -0.09562149562754518,
+        "max_drawdown": -0.5347805328119555,
+        "annualized_sharpe": 0.1333341246503273,
+        "daily_mean": 0.00017571009702433543,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0017434664249679401,
+          0.001985330531035355
+        ]
+      },
+      "base": {
+        "mean_trade_return": 0.007308123154069662,
+        "median_trade_return": 0.007876380382199177,
+        "win_rate": 0.5460526315789473,
+        "total_return": -0.2361236459142977,
+        "max_drawdown": -0.573170950629738,
+        "annualized_sharpe": -0.04157153791739251,
+        "daily_mean": -5.474361746975016e-05,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.001970262324642721,
+          0.0017344495453212106
+        ]
+      },
+      "stress": {
+        "mean_trade_return": 0.005267843959357632,
+        "median_trade_return": 0.005876434481571102,
+        "win_rate": 0.5328947368421053,
+        "total_return": -0.3550024257977684,
+        "max_drawdown": -0.6091656046688562,
+        "annualized_sharpe": -0.21655086398981976,
+        "daily_mean": -0.0002851485315919015,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.002209276279432093,
+          0.001495109693406374
+        ]
+      },
+      "base_positive_symbols": 5,
+      "signal_return_z_abs_median": 1.8178460436949802,
+      "signal_volume_shock_median": -0.4645754853305287
+    },
+    "unconditional_extreme_reversal": {
+      "label": "unconditional_extreme_reversal",
+      "trades": 584,
+      "long_trades": 287,
+      "short_trades": 297,
+      "funding_return_sum": 0.25939900000000005,
+      "funding_events": 1565,
+      "by_symbol": {
+        "ALGOUSDT": {
+          "favorable": 1.5809825683079302,
+          "base": 1.1029565701726884,
+          "stress": 0.712690119911026
+        },
+        "COMPUSDT": {
+          "favorable": 0.9342527858731793,
+          "base": 0.5728842352414103,
+          "stress": 0.2784286140904515
+        },
+        "THETAUSDT": {
+          "favorable": 1.9678020829911396,
+          "base": 1.4727526833836264,
+          "stress": 1.0595136972347556
+        },
+        "VETUSDT": {
+          "favorable": 0.7090911432965654,
+          "base": 0.414645269075268,
+          "stress": 0.17044250093164393
+        },
+        "XTZUSDT": {
+          "favorable": 0.5971330628287297,
+          "base": 0.3153021893594352,
+          "stress": 0.0828284814089486
+        },
+        "ZECUSDT": {
+          "favorable": 0.12057855658240291,
+          "base": -0.08287234561457446,
+          "stress": -0.24970512865497096
+        }
+      },
+      "by_year": {
+        "2021": {
+          "favorable": 0.9561786944617603,
+          "base": 0.4218753531113686,
+          "stress": 0.032486381479183146
+        },
+        "2022": {
+          "favorable": 0.04657005638573808,
+          "base": -0.16477304183271502,
+          "stress": -0.3337755367881733
+        }
+      },
+      "favorable": {
+        "mean_trade_return": 0.009807527414102101,
+        "median_trade_return": 0.012135328442171134,
+        "win_rate": 0.5804794520547946,
+        "total_return": 1.0472780465634255,
+        "max_drawdown": -0.6243871765308022,
+        "annualized_sharpe": 0.8561403444877251,
+        "daily_mean": 0.002123482365368432,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.000678275157982254,
+          0.005220720691104821
+        ]
+      },
+      "base": {
+        "mean_trade_return": 0.007787150811651089,
+        "median_trade_return": 0.010135945866541263,
+        "win_rate": 0.565068493150685,
+        "total_return": 0.18758862607224258,
+        "max_drawdown": -0.6861307422402385,
+        "annualized_sharpe": 0.556732418281939,
+        "daily_mean": 0.0013805276156295056,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0014009765983911781,
+          0.004427470213168404
+        ]
+      },
+      "stress": {
+        "mean_trade_return": 0.005766733486662941,
+        "median_trade_return": 0.008136602234646073,
+        "win_rate": 0.559931506849315,
+        "total_return": -0.31213231472551006,
+        "max_drawdown": -0.7509087399184743,
+        "annualized_sharpe": 0.2568697322654094,
+        "daily_mean": 0.0006370795980590598,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0021306516861991495,
+          0.0036862935852656716
+        ]
+      },
+      "base_positive_symbols": 5,
+      "signal_return_z_abs_median": 1.9963139797771534,
+      "signal_volume_shock_median": 0.6838649005037042
+    },
+    "low_volume_extreme_momentum": {
+      "label": "low_volume_extreme_momentum",
+      "trades": 152,
+      "long_trades": 62,
+      "short_trades": 90,
+      "funding_return_sum": -0.02059597,
+      "funding_events": 399,
+      "by_symbol": {
+        "ALGOUSDT": {
+          "favorable": -0.5739820143773298,
+          "base": -0.5964495399250467,
+          "stress": -0.617794820283408
+        },
+        "COMPUSDT": {
+          "favorable": -0.26673910505151865,
+          "base": -0.3057004396157357,
+          "stress": -0.34265820988343865
+        },
+        "THETAUSDT": {
+          "favorable": -0.27925833719950954,
+          "base": -0.3102778965144596,
+          "stress": -0.34005104633184413
+        },
+        "VETUSDT": {
+          "favorable": -0.23507639541710146,
+          "base": -0.27195638914558784,
+          "stress": -0.30713697604854895
+        },
+        "XTZUSDT": {
+          "favorable": -0.018327830974491532,
+          "base": -0.07379287550197156,
+          "stress": -0.12624227160458357
+        },
+        "ZECUSDT": {
+          "favorable": -0.33617945660090753,
+          "base": -0.37262186422279764,
+          "stress": -0.4071604364850647
+        }
+      },
+      "by_year": {
+        "2021": {
+          "favorable": -0.47765448310103664,
+          "base": -0.5178491490431287,
+          "stress": -0.555031608699728
+        },
+        "2022": {
+          "favorable": 0.08282414434488894,
+          "base": -0.010759575392369825,
+          "stress": -0.09645482582837084
+        }
+      },
+      "favorable": {
+        "mean_trade_return": -0.01177344328385844,
+        "median_trade_return": -0.012275641447674679,
+        "win_rate": 0.39473684210526316,
+        "total_return": -0.43439166261149165,
+        "max_drawdown": -0.5712934135981989,
+        "annualized_sharpe": -0.34127037846346386,
+        "daily_mean": -0.00045036286726578083,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0022625169964734762,
+          0.0014568446375709883
+        ]
+      },
+      "base": {
+        "mean_trade_return": -0.01381573085567738,
+        "median_trade_return": -0.014275688139016252,
+        "win_rate": 0.3815789473684211,
+        "total_return": -0.5230368874744944,
+        "max_drawdown": -0.5946181837359819,
+        "annualized_sharpe": -0.5148366970787757,
+        "daily_mean": -0.0006808973170270072,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0024902774466749457,
+          0.0012274325481603753
+        ]
+      },
+      "stress": {
+        "mean_trade_return": -0.015858811237871355,
+        "median_trade_return": -0.016275793534878014,
+        "win_rate": 0.3618421052631579,
+        "total_return": -0.5979509573817261,
+        "max_drawdown": -0.6167215763352014,
+        "annualized_sharpe": -0.6872333217408453,
+        "daily_mean": -0.0009114838862873908,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.002738569945502911,
+          0.0009965867707544067
+        ]
+      },
+      "base_positive_symbols": 0,
+      "signal_return_z_abs_median": 1.8178460436949802,
+      "signal_volume_shock_median": -0.4645754853305287
+    },
+    "sensitivity_60d_low_volume_reversal": {
+      "label": "sensitivity_60d_low_volume_reversal",
+      "trades": 197,
+      "long_trades": 113,
+      "short_trades": 84,
+      "funding_return_sum": 0.03984203000000001,
+      "funding_events": 531,
+      "by_symbol": {
+        "ALGOUSDT": {
+          "favorable": 1.184416602386996,
+          "base": 1.0315333569226404,
+          "stress": 0.8891151961111838
+        },
+        "COMPUSDT": {
+          "favorable": 0.22074994990744745,
+          "base": 0.1166269323774145,
+          "stress": 0.021195472718763098
+        },
+        "THETAUSDT": {
+          "favorable": 0.28899919812158426,
+          "base": 0.21744778401301246,
+          "stress": 0.14977694637214145
+        },
+        "VETUSDT": {
+          "favorable": -0.17758125767949062,
+          "base": -0.21856538770509015,
+          "stress": -0.2575901028803348
+        },
+        "XTZUSDT": {
+          "favorable": -0.08860534239068363,
+          "base": -0.15538541991063548,
+          "stress": -0.21737134120765667
+        },
+        "ZECUSDT": {
+          "favorable": -0.20678995959073587,
+          "base": -0.24908147622864862,
+          "stress": -0.2891846159359107
+        }
+      },
+      "by_year": {
+        "2021": {
+          "favorable": 0.16136469243535245,
+          "base": 0.04677562550884007,
+          "stress": -0.056752314213265986
+        },
+        "2022": {
+          "favorable": -0.09574920281576926,
+          "base": -0.19349144217987424,
+          "stress": -0.28079190721930036
+        }
+      },
+      "favorable": {
+        "mean_trade_return": 0.005517766108545524,
+        "median_trade_return": 0.01213266513393777,
+        "win_rate": 0.5736040609137056,
+        "total_return": 0.05016494895628609,
+        "max_drawdown": -0.5147168060122267,
+        "annualized_sharpe": 0.2958739623907169,
+        "daily_mean": 0.00039270201763231285,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0014198118759480923,
+          0.0021660166015278538
+        ]
+      },
+      "base": {
+        "mean_trade_return": 0.0034798583319875045,
+        "median_trade_return": 0.010115138620034181,
+        "win_rate": 0.5634517766497462,
+        "total_return": -0.15576649990960567,
+        "max_drawdown": -0.5692417260304691,
+        "annualized_sharpe": 0.07119545983975735,
+        "daily_mean": 9.440073922626616e-05,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0017326873179192722,
+          0.0018749556270218485
+        ]
+      },
+      "stress": {
+        "mean_trade_return": 0.0014425504704320183,
+        "median_trade_return": 0.008096323120662297,
+        "win_rate": 0.5482233502538071,
+        "total_return": -0.3216086308855144,
+        "max_drawdown": -0.617719199578092,
+        "annualized_sharpe": -0.15377508999552691,
+        "daily_mean": -0.000203862238242639,
+        "daily_block_bootstrap_mean_ci95": [
+          -0.0020541604737864144,
+          0.0015752820739265404
+        ]
+      },
+      "base_positive_symbols": 3,
+      "signal_return_z_abs_median": 1.835814524371121,
+      "signal_volume_shock_median": -0.5723510479212551
+    }
+  },
+  "full_configuration_count": 4,
+  "selection_rule": "main configuration only; diagnostics cannot replace it",
+  "main_vs_unconditional_base_daily_mean_delta": -0.0014352712330992557,
+  "content_digest": "eb1744f11a3933b99699bbff30606f5624ba56b394232d7d8fdf947b8de31f09"
+}

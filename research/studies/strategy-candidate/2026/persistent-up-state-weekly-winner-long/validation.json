@@ -1,0 +1,37 @@
+{
+  "validated_at_utc": "2026-07-22T06:03:35.6450761Z",
+  "checkpoint_content_digest": "344dedd90b2d9baf04ea924989f8fce85fe44538f1c0e331d5819c04981706a0",
+  "study_py_sha256": "8f93f95a56f0157be5d1f624c9d780fe9d6f6ea41e718e0ecfa2c1f8d55b6247",
+  "preregistration_sha256": "93932b0c8c0948ca74eaf5f36a42ce60603b5d28cba1b13dfd0275a2d9550bd4",
+  "sources_sha256": "545494040d468eb06aaf3238cf5c73a200f9b7112ba6d5623a1ceb83b5dc82f0",
+  "source_reuse_manifest_sha256": "385c95500bbc6182a0c97c87d99d8f5b85ab20c0b2111cd73a44de0eb0334049",
+  "source_reuse_content_digest": "c225770a10f3014ff8753412722fb78d4823026597a7e4b073d68858c1b56858",
+  "parent_source_manifest_sha256": "23566d464f3b57eca11288160d8331610862210e20ec0b04c08306ee21e33fe0",
+  "source_files": 66,
+  "source_bytes": 7669925,
+  "data_quality_content_digest": "62e61f344015affad1144e9a952c02c95296e1cdfc0899cf3f9111aba984d9b3",
+  "data_quality_status": "PASS",
+  "development_content_digest": "ec5ebdd818b66dc1728d3da4aa9e86b7455f1156510356ed3c9359efda9ac498",
+  "development_gate_content_digest": "31ece0a86ca38534b9d42ff804a90a00bc81dce1753f1f254445f1d3bd628e7f",
+  "results_content_digest": "6d08be5a107b8bbdf3219c0d992a7b52a4e1555ac817bf14088596849ebd1185",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "trade_csv_sha256": {
+    "main": "786a0988724d29cebfce20790541f22c5d53c980954356c1c25e32069c54c34f",
+    "state_market": "a2bd6621a7d20655f8e3473e158282d53fa932fffba951d38d215f6a82f2b000",
+    "state_btc": "b10155dc3e7abbac659004758b5b418e260e66468128e69cd3a0482454d96547",
+    "unconditional_winner": "2ff0b786aa5af67a5f48ab4ced2959717ec37eb8b82c393f4bebf722ca2a973e",
+    "up_only_winner": "709ce7e6f132f0b9cd5380198b7adb21eb13033b4f3d56746bcc16d965d19444",
+    "formation14": "e4c4858e3412b37a672909ba83dbcaae3e225a7438d6703f219a8b211d644407",
+    "state3": "b8d61189c21723fc4580be634027e90baa822519413401610fe6fbcca5b4fbf8",
+    "state6": "24fdaf19a102ba7e46778ddf7aaaccb9265a9d01db77ab41fbd0e29e068ef33c"
+  },
+  "deterministic_rerun": {
+    "all_eight_trade_csv_hashes_stable": true,
+    "gate_status_stable": true,
+    "failed_check_set_stable": true
+  },
+  "maximum_vectorbt_manual_reconciliation_error": 6.418476861114186e-17,
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "handoff": "NOT_GENERATED",
+  "product_effects": "NONE"
+}

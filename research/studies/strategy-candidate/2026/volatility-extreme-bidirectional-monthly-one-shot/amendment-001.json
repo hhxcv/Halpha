@@ -1,0 +1,14 @@
+{
+  "created_at_utc": "2026-07-22T08:48:00Z",
+  "checkpoint_digest": "b07ead78a7aab58fd0805814ca59136395d0060b8917ab49c268eb491fdfa242",
+  "original_study_sha256": "d800a8ee404de95b93cd17dddd6da91a2be147252fd29b63a3ec9c6d7705420e",
+  "amended_study_sha256": "e53a9474dc3cc2417b29283e55d14670f03261c600309b46ec36990b46a477cf",
+  "reason": "Evaluation preparation found that 2025-07-01 had 19 rather than 20 liquidity-qualified targets. The frozen rule explicitly says fewer than 20 makes that decision an all-target NO_ACTION month; the implementation incorrectly escalated it to a whole-stage data-quality failure even though build_panel already skipped that month.",
+  "changes": [
+    "Keep the below-minimum decision and its count in data_quality_evaluation.json.",
+    "Do not fail source quality solely because a decision is an all-target NO_ACTION month.",
+    "Allow the frozen study.py identity to advance only through this checkpoint-bound amendment chain."
+  ],
+  "economic_rule_changed": false,
+  "content_digest": "6fca05879379a360afc7e5d9ce1a3a0be05abaa680a1afcaad3912488c16d67d"
+}

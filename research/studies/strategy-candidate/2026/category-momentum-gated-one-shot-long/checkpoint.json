@@ -1,0 +1,243 @@
+{
+  "created_at_utc": "2026-07-22T02:37:06.585511Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does leave-one-out seven-day category momentum improve a user-fixed single-perpetual LONG one-shot plan after retail costs, actual funding, capital hurdle, simple baselines, and sequential time evidence?",
+  "evidence_boundary": "Many own-coin momentum and cross-sectional rules and most constituent price periods are exposed. This exact current-category, leave-one-out, fixed-instrument conversion and its outcomes are unviewed. The current-survivor category map is not point-in-time history.",
+  "universe": {
+    "path": "research\\market-universe\\universe.csv",
+    "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+    "snapshot_time_utc": "2026-07-21T06:42:30Z",
+    "categories": {
+      "AI": [
+        "CHRUSDT",
+        "GRTUSDT",
+        "LPTUSDT",
+        "RLCUSDT",
+        "THETAUSDT"
+      ],
+      "DeFi": [
+        "1INCHUSDT",
+        "AAVEUSDT",
+        "ANKRUSDT",
+        "BANDUSDT",
+        "BELUSDT",
+        "C98USDT",
+        "COMPUSDT",
+        "CRVUSDT",
+        "DYDXUSDT",
+        "KAVAUSDT",
+        "KNCUSDT",
+        "OGNUSDT",
+        "RSRUSDT",
+        "RUNEUSDT",
+        "SNXUSDT",
+        "SUSHIUSDT",
+        "UNIUSDT",
+        "YFIUSDT",
+        "ZRXUSDT"
+      ],
+      "Infrastructure": [
+        "ARPAUSDT",
+        "BATUSDT",
+        "ENSUSDT",
+        "GTCUSDT",
+        "IOTXUSDT",
+        "LINKUSDT",
+        "MASKUSDT",
+        "MTLUSDT",
+        "SFPUSDT",
+        "TRBUSDT"
+      ],
+      "Layer-1": [
+        "ADAUSDT",
+        "ALGOUSDT",
+        "ATOMUSDT",
+        "AVAXUSDT",
+        "BNBUSDT",
+        "CELOUSDT",
+        "DOTUSDT",
+        "EGLDUSDT",
+        "HBARUSDT",
+        "ICPUSDT",
+        "ICXUSDT",
+        "IOSTUSDT",
+        "KSMUSDT",
+        "NEARUSDT",
+        "NEOUSDT",
+        "QTUMUSDT",
+        "ROSEUSDT",
+        "SOLUSDT",
+        "TRXUSDT",
+        "VETUSDT",
+        "XTZUSDT"
+      ],
+      "Layer-2": [
+        "CELRUSDT",
+        "CTSIUSDT",
+        "ONEUSDT",
+        "SKLUSDT",
+        "XLMUSDT"
+      ],
+      "Payment": [
+        "1000XECUSDT",
+        "BCHUSDT",
+        "COTIUSDT",
+        "LTCUSDT",
+        "XRPUSDT"
+      ],
+      "PoW": [
+        "DASHUSDT",
+        "ETCUSDT",
+        "IOTAUSDT",
+        "ONTUSDT",
+        "RVNUSDT",
+        "XMRUSDT",
+        "ZECUSDT",
+        "ZENUSDT",
+        "ZILUSDT"
+      ]
+    },
+    "symbol_count": 74,
+    "target_symbols": [
+      "1000XECUSDT",
+      "AAVEUSDT",
+      "AVAXUSDT",
+      "BCHUSDT",
+      "BNBUSDT",
+      "CRVUSDT",
+      "DASHUSDT",
+      "ENSUSDT",
+      "ETCUSDT",
+      "HBARUSDT",
+      "KAVAUSDT",
+      "LINKUSDT",
+      "LTCUSDT",
+      "NEARUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "UNIUSDT",
+      "VETUSDT",
+      "XLMUSDT",
+      "XMRUSDT",
+      "XRPUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ],
+    "target_symbol_count": 25
+  },
+  "stages": {
+    "development": {
+      "fetch_start": "2021-11-17T00:00:00Z",
+      "start": "2022-01-01T00:00:00Z",
+      "end_exclusive": "2024-01-01T00:00:00Z"
+    },
+    "evaluation": {
+      "fetch_start": "2023-11-17T00:00:00Z",
+      "start": "2024-01-01T00:00:00Z",
+      "end_exclusive": "2025-01-01T00:00:00Z"
+    },
+    "confirmation": {
+      "fetch_start": "2024-11-17T00:00:00Z",
+      "start": "2025-01-01T00:00:00Z",
+      "end_exclusive": "2026-07-01T00:00:00Z"
+    }
+  },
+  "config": {
+    "strategy_id": "RESEARCH_CATEGORY_MOMENTUM_GATED_ONE_SHOT_LONG_7D_0P5X_V1",
+    "direction": "LONG_ONLY",
+    "formation_days": 7,
+    "hold_days": 7,
+    "top_categories": 2,
+    "notional_fraction": 0.5,
+    "peer_min_median_quote_volume_30d": 1000000.0,
+    "target_min_median_quote_volume_30d": 10000000.0,
+    "peer_max_count": 5,
+    "own_category_min_peers_after_exclusion": 4,
+    "other_category_min_peers": 5,
+    "min_rankable_categories": 5,
+    "annual_capital_hurdle": 0.04,
+    "max_missing_funding_mark_fraction": 0.005,
+    "max_excluded_trade_fraction": 0.02,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "diagnostics": {
+      "formation_14d": {
+        "kind": "category",
+        "formation_days": 14,
+        "hold_days": 7,
+        "top_categories": 2
+      },
+      "hold_3d": {
+        "kind": "category",
+        "formation_days": 7,
+        "hold_days": 3,
+        "top_categories": 2
+      },
+      "top_1": {
+        "kind": "category",
+        "formation_days": 7,
+        "hold_days": 7,
+        "top_categories": 1
+      },
+      "own_momentum": {
+        "kind": "own_momentum",
+        "formation_days": 7,
+        "hold_days": 7
+      },
+      "scheduled_long": {
+        "kind": "scheduled_long",
+        "formation_days": 7,
+        "hold_days": 7
+      }
+    }
+  },
+  "stage_open_rule": "development -> evaluation -> confirmation; next-stage download forbidden unless prior gate PASS",
+  "allowed_fixes": "retrieval, parsing, identity, completeness, deterministic statistics, or implementation defects only; no signal, universe, cost, gate, period, baseline, or parameter changes after checkpoint",
+  "forbidden_after_checkpoint": [
+    "selecting a favorable category, target, direction, window, holding period or rank cutoff",
+    "lowering costs or capital hurdle",
+    "opening a later stage after gate failure",
+    "treating current classifications as historical point-in-time facts"
+  ],
+  "files": {
+    "study_py_sha256": "212a3c1c65dcb9a4559dde04f9a2a54840371c4b99dd0145ee91aea9ece7b23b",
+    "preregistration_sha256": "375eda0a31551e45910089efe6dfcf8e58a5c3d5e6f817227c1700223d3017f0",
+    "sources_sha256": "59839435f2bbec0b6d4d18d70df7b76631b6dce20669e5eebeee887b177ff47d"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\category-momentum-gated-one-shot-long\\2026-07-22-v1",
+  "content_digest": "5daae3b3faf810b2246f1a9296660d64b17076bf491d73768eb3567332ba3a38"
+}

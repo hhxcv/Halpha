@@ -1,0 +1,12 @@
+{
+  "created_at_utc": "2026-07-22T07:15:00Z",
+  "amendment_id": "001",
+  "checkpoint_digest": "71e39b8cf161f5f92040209b344c5f13751a4473ad47f402cc02f8061df821e1",
+  "original_study_sha256": "745ec29ff51cf966172a50582052339f543496d69321dd50f5614669f7b4bb49",
+  "amended_study_sha256": "3ef98bc9eecd7526cfc544d0ad8e6b5d9e553435d031c73e3c972243fb2638ed",
+  "economic_rule_changed": false,
+  "reason": "The integrity-only required end was one week later than the final possible development exit, falsely creating seven missing tail days for every symbol.",
+  "change": "Set the DQ required end from 2024-01-08 to the actual last exit 2024-01-01 and recognize this numbered implementation-only amendment.",
+  "outcome_exposure_before_fix": "No RMOM2 score, trade, return, comparison or gate output existed; only row counts and missing-day diagnostics were viewed.",
+  "content_digest": "2e8b6c84ecc706dc4f570a1aea74a065f3239fcff7f53c4e06cac083a47d5be5"
+}

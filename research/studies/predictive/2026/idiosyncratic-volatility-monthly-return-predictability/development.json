@@ -1,0 +1,538 @@
+{
+  "analyzed_at_utc": "2026-07-22T10:47:28.570792+00:00",
+  "stage": "development",
+  "checkpoint_digest": "5ad3356fd2f0724d6e91f2ca8b80c15f77c54adcc1c4ea8e19521ba21777b4e1",
+  "period": {
+    "start": "2022-01-01T00:00:00Z",
+    "end_exclusive": "2024-01-01T00:00:00Z"
+  },
+  "main": {
+    "action_months": 24,
+    "low_asset_return": {
+      "observations": 24,
+      "mean": 0.011585867883592909,
+      "median": 0.01488649865855275,
+      "bootstrap_95pct": [
+        -0.03844875462779008,
+        0.05775163908070715
+      ],
+      "positive_fraction": 0.625,
+      "minimum": -0.2572742236751024,
+      "maximum": 0.3389817679856404
+    },
+    "high_asset_return": {
+      "observations": 24,
+      "mean": 0.002088198941346977,
+      "median": -0.03368607036799945,
+      "bootstrap_95pct": [
+        -0.09172185849080118,
+        0.10074679904560127
+      ],
+      "positive_fraction": 0.4166666666666667,
+      "minimum": -0.4037940829137634,
+      "maximum": 0.7523349292464112
+    },
+    "low_minus_high_return": {
+      "observations": 24,
+      "mean": 0.009497668942245935,
+      "median": 0.040436338033141624,
+      "bootstrap_95pct": [
+        -0.05389804712649945,
+        0.06695841733152305
+      ],
+      "positive_fraction": 0.625,
+      "minimum": -0.4133531612607708,
+      "maximum": 0.24483589645796983
+    },
+    "rank_ic": {
+      "observations": 24,
+      "mean": -0.11537734005125307,
+      "median": -0.11130434782608695,
+      "bootstrap_95pct": [
+        -0.19886910191258012,
+        -0.02363264860139868
+      ],
+      "positive_fraction": 0.375,
+      "minimum": -0.6634782608695651,
+      "maximum": 0.3506493506493507
+    },
+    "high_ivol_short_proxy": {
+      "observations": 24,
+      "mean": -0.005155383068670072,
+      "median": 0.003943435400219042,
+      "bootstrap_95pct": [
+        -0.029828594738569292,
+        0.01828056316960388
+      ],
+      "positive_fraction": 0.5416666666666666,
+      "minimum": -0.1927809925855754,
+      "maximum": 0.09636084949556414
+    },
+    "tvol_high_minus_ivol_high": {
+      "observations": 24,
+      "mean": -0.0009241376454901355,
+      "median": -0.007552938564029982,
+      "bootstrap_95pct": [
+        -0.026718530569315314,
+        0.02721208398315973
+      ],
+      "positive_fraction": 0.4583333333333333,
+      "minimum": -0.15500225365786013,
+      "maximum": 0.24614267274358959
+    },
+    "ivol_tvol_spearman": {
+      "observations": 24,
+      "mean": 0.8163569401612879,
+      "median": 0.833919124353907,
+      "bootstrap_95pct": [
+        0.7573184288537549,
+        0.8681755911660802
+      ],
+      "positive_fraction": 1.0,
+      "minimum": 0.6026086956521738,
+      "maximum": 0.9688311688311689,
+      "median_absolute": 0.833919124353907
+    },
+    "ivol_max_spearman": {
+      "observations": 24,
+      "mean": 0.5677774761470413,
+      "median": 0.5835770750988143,
+      "bootstrap_95pct": [
+        0.49836985342556,
+        0.6297768286966655
+      ],
+      "positive_fraction": 1.0,
+      "minimum": 0.2618577075098814,
+      "maximum": 0.7730434782608695,
+      "median_absolute": 0.5835770750988143
+    }
+  },
+  "neighbors": {
+    "ivol60": {
+      "action_months": 24,
+      "low_asset_return": {
+        "observations": 24,
+        "mean": 0.04353515189775764,
+        "median": 0.04773147340347976,
+        "bootstrap_95pct": [
+          -0.024827553038172648,
+          0.11056267732461009
+        ],
+        "positive_fraction": 0.625,
+        "minimum": -0.26278887402117546,
+        "maximum": 0.8303273199059387
+      },
+      "high_asset_return": {
+        "observations": 24,
+        "mean": -0.0002884097714444163,
+        "median": -0.05791546387475212,
+        "bootstrap_95pct": [
+          -0.10077156331928665,
+          0.10517403236464926
+        ],
+        "positive_fraction": 0.3333333333333333,
+        "minimum": -0.44085152260672544,
+        "maximum": 0.789588555722545
+      },
+      "low_minus_high_return": {
+        "observations": 24,
+        "mean": 0.04382356166920206,
+        "median": 0.08360755930737386,
+        "bootstrap_95pct": [
+          -0.0502771077782984,
+          0.13907762322906456
+        ],
+        "positive_fraction": 0.7083333333333334,
+        "minimum": -0.45060678773690466,
+        "maximum": 0.5239921971331298
+      },
+      "rank_ic": {
+        "observations": 24,
+        "mean": -0.15374431727692595,
+        "median": -0.18999999999999995,
+        "bootstrap_95pct": [
+          -0.25519687785041045,
+          -0.043338791643139626
+        ],
+        "positive_fraction": 0.25,
+        "minimum": -0.6486956521739129,
+        "maximum": 0.3946922642574817
+      },
+      "high_ivol_short_proxy": {
+        "observations": 24,
+        "mean": -0.0045612308904722275,
+        "median": 0.010000783776907208,
+        "bootstrap_95pct": [
+          -0.03092227521445006,
+          0.020550539231648145
+        ],
+        "positive_fraction": 0.625,
+        "minimum": -0.20209439920460887,
+        "maximum": 0.10562520941880466
+      },
+      "tvol_high_minus_ivol_high": {
+        "observations": 24,
+        "mean": 0.0014524710673012558,
+        "median": 4.163336342344337e-17,
+        "bootstrap_95pct": [
+          -0.03079374551833702,
+          0.039225383217338025
+        ],
+        "positive_fraction": 0.5416666666666666,
+        "minimum": -0.15500225365786013,
+        "maximum": 0.2528822447977683
+      },
+      "ivol_tvol_spearman": {
+        "observations": 24,
+        "mean": 0.7312171886084929,
+        "median": 0.7650790513833992,
+        "bootstrap_95pct": [
+          0.6576438204006139,
+          0.792628870676425
+        ],
+        "positive_fraction": 1.0,
+        "minimum": 0.3304347826086956,
+        "maximum": 0.9234782608695651,
+        "median_absolute": 0.7650790513833992
+      },
+      "ivol_max_spearman": {
+        "observations": 24,
+        "mean": 0.6218569112047373,
+        "median": 0.6292292490118578,
+        "bootstrap_95pct": [
+          0.5443803099074838,
+          0.6921821905449621
+        ],
+        "positive_fraction": 1.0,
+        "minimum": 0.27478260869565213,
+        "maximum": 0.8815384615384615,
+        "median_absolute": 0.6292292490118578
+      }
+    },
+    "ivol120": {
+      "action_months": 24,
+      "low_asset_return": {
+        "observations": 24,
+        "mean": 0.008691287335732463,
+        "median": 0.021062717949303866,
+        "bootstrap_95pct": [
+          -0.04222239537516153,
+          0.05753461961064189
+        ],
+        "positive_fraction": 0.5833333333333334,
+        "minimum": -0.2809170452537148,
+        "maximum": 0.48420435825975117
+      },
+      "high_asset_return": {
+        "observations": 24,
+        "mean": 0.000834614600859244,
+        "median": -0.0265856167955133,
+        "bootstrap_95pct": [
+          -0.08910516862707085,
+          0.09214212904566693
+        ],
+        "positive_fraction": 0.4166666666666667,
+        "minimum": -0.4037940829137634,
+        "maximum": 0.7604489845189796
+      },
+      "low_minus_high_return": {
+        "observations": 24,
+        "mean": 0.007856672734873222,
+        "median": 0.029558214902980415,
+        "bootstrap_95pct": [
+          -0.05305052059290543,
+          0.061451931956684115
+        ],
+        "positive_fraction": 0.6666666666666666,
+        "minimum": -0.2834375436435114,
+        "maximum": 0.24483589645796985
+      },
+      "rank_ic": {
+        "observations": 24,
+        "mean": -0.11826709522361696,
+        "median": -0.11388481084133256,
+        "bootstrap_95pct": [
+          -0.18999990724854854,
+          -0.045284855543007735
+        ],
+        "positive_fraction": 0.2916666666666667,
+        "minimum": -0.6147826086956522,
+        "maximum": 0.2965217391304348
+      },
+      "high_ivol_short_proxy": {
+        "observations": 24,
+        "mean": -0.004841986983548141,
+        "median": 0.0019491439249057219,
+        "bootstrap_95pct": [
+          -0.02766464185045784,
+          0.017624308118452916
+        ],
+        "positive_fraction": 0.5416666666666666,
+        "minimum": -0.1948095064037175,
+        "maximum": 0.09636084949556414
+      },
+      "tvol_high_minus_ivol_high": {
+        "observations": 24,
+        "mean": 0.0003294466949976006,
+        "median": -0.0003986186986661602,
+        "bootstrap_95pct": [
+          -0.025800987286660346,
+          0.027738145713199474
+        ],
+        "positive_fraction": 0.4166666666666667,
+        "minimum": -0.13530017219877177,
+        "maximum": 0.21007741611725994
+      },
+      "ivol_tvol_spearman": {
+        "observations": 24,
+        "mean": 0.7895514449318797,
+        "median": 0.8243478260869566,
+        "bootstrap_95pct": [
+          0.742855582822974,
+          0.8332000110396849
+        ],
+        "positive_fraction": 1.0,
+        "minimum": 0.45739130434782604,
+        "maximum": 0.9191304347826086,
+        "median_absolute": 0.8243478260869566
+      },
+      "ivol_max_spearman": {
+        "observations": 24,
+        "mean": 0.537089178937005,
+        "median": 0.5478260869565217,
+        "bootstrap_95pct": [
+          0.47665417462971815,
+          0.5969039891268151
+        ],
+        "positive_fraction": 1.0,
+        "minimum": 0.28782608695652173,
+        "maximum": 0.763076923076923,
+        "median_absolute": 0.5478260869565217
+      }
+    }
+  },
+  "regressions": {
+    "uncontrolled": {
+      "controlled": false,
+      "months": 24,
+      "predictors": [
+        "ivol90"
+      ],
+      "ivol90_coefficient_mean": -0.004624685688623377,
+      "hac_standard_error": 0.013865590010839838,
+      "hac_t_statistic": -0.33353688411440774,
+      "hac_two_sided_p": 0.7387290522749774,
+      "hac_one_sided_negative_p": 0.3693645261374887,
+      "coefficient_bootstrap_95pct": [
+        -0.029422904416306444,
+        0.02256782034670723
+      ]
+    },
+    "controlled": {
+      "controlled": true,
+      "months": 24,
+      "predictors": [
+        "ivol90",
+        "tvol90",
+        "max28",
+        "mom90",
+        "beta90",
+        "log_volume30"
+      ],
+      "ivol90_coefficient_mean": -0.0033686518740966287,
+      "hac_standard_error": 0.11212509751744465,
+      "hac_t_statistic": -0.030043691811037464,
+      "hac_two_sided_p": 0.9760322078570929,
+      "hac_one_sided_negative_p": 0.48801610392854644,
+      "coefficient_bootstrap_95pct": [
+        -0.20739127812252428,
+        0.18351781526287675
+      ]
+    }
+  },
+  "calendar_years": {
+    "2022": {
+      "months": 12,
+      "low_minus_high_return_mean": 0.07301777239792748,
+      "rank_ic_mean": -0.21615181919529744,
+      "high_ivol_short_proxy_mean": 0.02361056696253908
+    },
+    "2023": {
+      "months": 12,
+      "low_minus_high_return_mean": -0.054022434513435615,
+      "rank_ic_mean": -0.014602860907208701,
+      "high_ivol_short_proxy_mean": -0.033921333099879235
+    }
+  },
+  "breadth": {
+    "selected_symbols": 22,
+    "selected_categories": 6,
+    "symbols_with_at_least_two_selections": 19,
+    "negative_mean_fraction_among_repeat_symbols": 0.5263157894736842,
+    "maximum_positive_short_contribution_share": 0.223039184391117,
+    "by_symbol": [
+      {
+        "symbol": "1000XECUSDT",
+        "category": "Payment",
+        "selections": 2,
+        "mean_asset_return": -0.23995409485996688,
+        "total_short_gross": 0.47990818971993376
+      },
+      {
+        "symbol": "AAVEUSDT",
+        "category": "DeFi",
+        "selections": 1,
+        "mean_asset_return": -0.0733437367002411,
+        "total_short_gross": 0.0733437367002411
+      },
+      {
+        "symbol": "AVAXUSDT",
+        "category": "Layer-1",
+        "selections": 5,
+        "mean_asset_return": 0.13329908350770736,
+        "total_short_gross": -0.6664954175385368
+      },
+      {
+        "symbol": "BCHUSDT",
+        "category": "Payment",
+        "selections": 5,
+        "mean_asset_return": -0.0538613915070123,
+        "total_short_gross": 0.2693069575350615
+      },
+      {
+        "symbol": "CRVUSDT",
+        "category": "DeFi",
+        "selections": 13,
+        "mean_asset_return": -0.030107139648021926,
+        "total_short_gross": 0.39139281542428517
+      },
+      {
+        "symbol": "DASHUSDT",
+        "category": "PoW",
+        "selections": 1,
+        "mean_asset_return": -0.1565462981642121,
+        "total_short_gross": 0.1565462981642121
+      },
+      {
+        "symbol": "ENSUSDT",
+        "category": "Infrastructure",
+        "selections": 9,
+        "mean_asset_return": 0.028710730822961897,
+        "total_short_gross": -0.25839657740665706
+      },
+      {
+        "symbol": "ETCUSDT",
+        "category": "PoW",
+        "selections": 5,
+        "mean_asset_return": -0.15382703974050912,
+        "total_short_gross": 0.7691351987025457
+      },
+      {
+        "symbol": "HBARUSDT",
+        "category": "Layer-1",
+        "selections": 5,
+        "mean_asset_return": -0.026508319556153254,
+        "total_short_gross": 0.1325415977807663
+      },
+      {
+        "symbol": "KAVAUSDT",
+        "category": "DeFi",
+        "selections": 9,
+        "mean_asset_return": 0.04601932628037239,
+        "total_short_gross": -0.41417393652335155
+      },
+      {
+        "symbol": "LINKUSDT",
+        "category": "Infrastructure",
+        "selections": 2,
+        "mean_asset_return": 0.15310228564837586,
+        "total_short_gross": -0.3062045712967517
+      },
+      {
+        "symbol": "LTCUSDT",
+        "category": "Payment",
+        "selections": 1,
+        "mean_asset_return": 0.3418876532648989,
+        "total_short_gross": -0.3418876532648989
+      },
+      {
+        "symbol": "NEARUSDT",
+        "category": "Layer-1",
+        "selections": 5,
+        "mean_asset_return": 0.14435107040267153,
+        "total_short_gross": -0.7217553520133577
+      },
+      {
+        "symbol": "RUNEUSDT",
+        "category": "DeFi",
+        "selections": 8,
+        "mean_asset_return": 0.006771233837446881,
+        "total_short_gross": -0.05416987069957502
+      },
+      {
+        "symbol": "SNXUSDT",
+        "category": "DeFi",
+        "selections": 18,
+        "mean_asset_return": 0.03313958265682948,
+        "total_short_gross": -0.5965124878229306
+      },
+      {
+        "symbol": "SOLUSDT",
+        "category": "Layer-1",
+        "selections": 6,
+        "mean_asset_return": 0.2958198435990777,
+        "total_short_gross": -1.7749190615944659
+      },
+      {
+        "symbol": "TRXUSDT",
+        "category": "Layer-1",
+        "selections": 2,
+        "mean_asset_return": -0.008500338419258,
+        "total_short_gross": 0.017000676838516
+      },
+      {
+        "symbol": "UNIUSDT",
+        "category": "DeFi",
+        "selections": 2,
+        "mean_asset_return": 0.0646365515272191,
+        "total_short_gross": -0.1292731030544382
+      },
+      {
+        "symbol": "XLMUSDT",
+        "category": "Layer-2",
+        "selections": 3,
+        "mean_asset_return": -0.05897479451402973,
+        "total_short_gross": 0.17692438354208917
+      },
+      {
+        "symbol": "XRPUSDT",
+        "category": "Payment",
+        "selections": 7,
+        "mean_asset_return": -0.053009407890761015,
+        "total_short_gross": 0.37106585523532704
+      },
+      {
+        "symbol": "ZECUSDT",
+        "category": "PoW",
+        "selections": 5,
+        "mean_asset_return": -0.21157949639347415,
+        "total_short_gross": 1.0578974819673708
+      },
+      {
+        "symbol": "ZILUSDT",
+        "category": "PoW",
+        "selections": 6,
+        "mean_asset_return": -0.1863568277738297,
+        "total_short_gross": 1.1181409666429785
+      }
+    ]
+  },
+  "cost_proxy_scope": "0.25x high-IVOL short gross price proxy after 52bp underlying round-trip and 4% full-capital annual hurdle; funding, intramonth margin path and execution are intentionally absent.",
+  "limitations": [
+    "fixed current-survivor universe rather than a point-in-time full market",
+    "no market-cap control, delisted coins, micro-caps or newly listed coins",
+    "daily OHLCV cannot model intramonth squeeze, book depth, queue, partial fills or manual activation delay",
+    "predictive result cannot authorize a strategy, capital use or live-account action"
+  ],
+  "content_digest": "a97e3ad36f2d4960e66f5eff3588f368fb146408d483dde32262a5b1258b750a"
+}

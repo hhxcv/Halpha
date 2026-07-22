@@ -1,0 +1,261 @@
+{
+  "generated_at_utc": "2026-07-22T00:57:38.320066Z",
+  "stage": "development",
+  "period": {
+    "start": "2021-01-01T00:00:00Z",
+    "end_exclusive": "2023-01-01T00:00:00Z"
+  },
+  "data_quality_digest": "40b3870e083a2cc35e3384a7c4236f6193b116caebf187f304a322c245031a29",
+  "matrix": {
+    "0.06": {
+      "plans": 24,
+      "mean_weight": 0.07977962405774681,
+      "minimum_weight": 0.030120803845520808,
+      "maximum_weight": 0.194884479484448,
+      "funding_events": 2191,
+      "actual_funding_return_arithmetic_sum": -0.0068638798780898,
+      "stress_funding_return_arithmetic_sum": -0.028823117172032578,
+      "maximum_vectorbt_reconciliation_error": 3.5561831257524545e-17,
+      "by_year": {
+        "2021": {
+          "favorable": 0.07235260061692395,
+          "base": 0.0708781378495087,
+          "stress": 0.056958778565456836
+        },
+        "2022": {
+          "favorable": -0.00965502573635546,
+          "base": -0.012146442179123085,
+          "stress": -0.024588044660675434
+        }
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": 0.06199900865951968,
+          "annualized_return": 0.03053336125499584,
+          "annualized_volatility": 0.07617716308468654,
+          "sharpe_zero_rf": 0.43336847588653943,
+          "daily_max_drawdown": -0.07218097828883874,
+          "monthly_mean_bootstrap_95pct": [
+            -0.0035351584272402953,
+            0.009830220198249777
+          ],
+          "return_after_4pct_annual_hurdle": -0.018122218325148376
+        },
+        "base": {
+          "total_return": 0.05787077846723254,
+          "annualized_return": 0.028528452920594916,
+          "annualized_volatility": 0.076166782746004,
+          "sharpe_zero_rf": 0.4086411171085346,
+          "daily_max_drawdown": -0.07456065998770922,
+          "monthly_mean_bootstrap_95pct": [
+            -0.003727255892913001,
+            0.009696693734494208
+          ],
+          "return_after_4pct_annual_hurdle": -0.021938999198194864
+        },
+        "stress": {
+          "total_return": 0.030970228913596243,
+          "annualized_return": 0.015367041474951604,
+          "annualized_volatility": 0.07621433327642854,
+          "sharpe_zero_rf": 0.24028501624990617,
+          "daily_max_drawdown": -0.08628747674187676,
+          "monthly_mean_bootstrap_95pct": [
+            -0.0046590214932245326,
+            0.00829646405822523
+          ],
+          "return_after_4pct_annual_hurdle": -0.046810069421601264
+        }
+      }
+    },
+    "0.08": {
+      "plans": 24,
+      "mean_weight": 0.10637283207699576,
+      "minimum_weight": 0.040161071794027746,
+      "maximum_weight": 0.2598459726459307,
+      "funding_events": 2191,
+      "actual_funding_return_arithmetic_sum": -0.009151839837453067,
+      "stress_funding_return_arithmetic_sum": -0.03843082289604344,
+      "maximum_vectorbt_reconciliation_error": 4.163336342344337e-17,
+      "by_year": {
+        "2021": {
+          "favorable": 0.09666937282694898,
+          "base": 0.09466422358934534,
+          "stress": 0.07579076811389873
+        },
+        "2022": {
+          "favorable": -0.013499657237191709,
+          "base": -0.016809141187710597,
+          "stress": -0.03329574199882046
+        }
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": 0.08186471219125901,
+          "annualized_return": 0.04012725769073988,
+          "annualized_volatility": 0.10123814930876776,
+          "sharpe_zero_rf": 0.4396566779366134,
+          "daily_max_drawdown": -0.09575743189837749,
+          "monthly_mean_bootstrap_95pct": [
+            -0.004713544569653729,
+            0.01310696026433304
+          ],
+          "return_after_4pct_annual_hurdle": 0.00024474130108997905
+        },
+        "base": {
+          "total_return": 0.07626385810189684,
+          "annualized_return": 0.03743137512892725,
+          "annualized_volatility": 0.10122700168773166,
+          "sharpe_zero_rf": 0.4148494622082352,
+          "daily_max_drawdown": -0.09885205305615608,
+          "monthly_mean_bootstrap_95pct": [
+            -0.004969674523884002,
+            0.01292892497932561
+          ],
+          "return_after_4pct_annual_hurdle": -0.004933563145435693
+        },
+        "stress": {
+          "total_return": 0.039971516254065476,
+          "annualized_return": 0.019789937317517214,
+          "annualized_volatility": 0.10131422052343039,
+          "sharpe_zero_rf": 0.24612955402264527,
+          "daily_max_drawdown": -0.11406606109297535,
+          "monthly_mean_bootstrap_95pct": [
+            -0.006212028657632701,
+            0.011061952077633648
+          ],
+          "return_after_4pct_annual_hurdle": -0.03848787328581238
+        }
+      }
+    },
+    "0.10": {
+      "plans": 24,
+      "mean_weight": 0.1329660400962447,
+      "minimum_weight": 0.050201339742534684,
+      "maximum_weight": 0.3248074658074134,
+      "funding_events": 2191,
+      "actual_funding_return_arithmetic_sum": -0.011439799796816336,
+      "stress_funding_return_arithmetic_sum": -0.04803852862005428,
+      "maximum_vectorbt_reconciliation_error": 7.45931094670027e-17,
+      "by_year": {
+        "2021": {
+          "favorable": 0.1210685314351363,
+          "base": 0.11851300172128032,
+          "stress": 0.09453008920751649
+        },
+        "2022": {
+          "favorable": -0.017649272858289877,
+          "base": -0.021769584885981574,
+          "stress": -0.042245585491403115
+        }
+      },
+      "scenarios": {
+        "favorable": {
+          "total_return": 0.10128248703099496,
+          "annualized_return": 0.04942007176868635,
+          "annualized_volatility": 0.1261488218287737,
+          "sharpe_zero_rf": 0.44583490301133444,
+          "daily_max_drawdown": -0.11907976867415926,
+          "monthly_mean_bootstrap_95pct": [
+            -0.005891930712067162,
+            0.016383700330416293
+          ],
+          "return_after_4pct_annual_hurdle": 0.018197565672147586
+        },
+        "base": {
+          "total_return": 0.0941634379842351,
+          "annualized_return": 0.04602267565489959,
+          "annualized_volatility": 0.12613824765900997,
+          "sharpe_zero_rf": 0.4209496978215098,
+          "daily_max_drawdown": -0.12285137160223181,
+          "monthly_mean_bootstrap_95pct": [
+            -0.006212093154854998,
+            0.01616115622415702
+          ],
+          "return_after_4pct_annual_hurdle": 0.011615604645187627
+        },
+        "stress": {
+          "total_return": 0.048291024750987344,
+          "annualized_return": 0.023860842473715893,
+          "annualized_volatility": 0.12627645108115265,
+          "sharpe_zero_rf": 0.2518836432846489,
+          "daily_max_drawdown": -0.1413498618919341,
+          "monthly_mean_bootstrap_95pct": [
+            -0.007765035822040889,
+            0.013827440097042058
+          ],
+          "return_after_4pct_annual_hurdle": -0.03079602001572923
+        }
+      }
+    }
+  },
+  "fixed_half_long_benchmark": {
+    "plans": 24,
+    "mean_weight": 0.5,
+    "minimum_weight": 0.5,
+    "maximum_weight": 0.5,
+    "funding_events": 2191,
+    "actual_funding_return_arithmetic_sum": -0.11705907226394241,
+    "stress_funding_return_arithmetic_sum": -0.28331915490226983,
+    "maximum_vectorbt_reconciliation_error": 1.249000902703301e-16,
+    "by_year": {
+      "2021": {
+        "favorable": 0.6534997580593873,
+        "base": 0.6334757458262088,
+        "stress": 0.45113794785447725
+      },
+      "2022": {
+        "favorable": -0.05560100630658649,
+        "base": -0.06681118638967243,
+        "stress": -0.12582087423540078
+      }
+    },
+    "scenarios": {
+      "favorable": {
+        "total_return": 0.5615635075835876,
+        "annualized_return": 0.2496253468874532,
+        "annualized_volatility": 0.5370897192726246,
+        "sharpe_zero_rf": 0.6796562307541342,
+        "daily_max_drawdown": -0.4491697168618709,
+        "monthly_mean_bootstrap_95pct": [
+          -0.026249381202446014,
+          0.09610996185470316
+        ],
+        "return_after_4pct_annual_hurdle": 0.4437532429581985
+      },
+      "base": {
+        "total_return": 0.5243412933088047,
+        "annualized_return": 0.23464217217330008,
+        "annualized_volatility": 0.5372838950032063,
+        "sharpe_zero_rf": 0.6576000480408204,
+        "daily_max_drawdown": -0.45096673234747653,
+        "monthly_mean_bootstrap_95pct": [
+          -0.027228033818758157,
+          0.09499808078372488
+        ],
+        "return_after_4pct_annual_hurdle": 0.40933921348816993
+      },
+      "stress": {
+        "total_return": 0.2685545026192615,
+        "annualized_return": 0.12630124860947456,
+        "annualized_volatility": 0.5403651521800062,
+        "sharpe_zero_rf": 0.48756140134839915,
+        "daily_max_drawdown": -0.488864224469827,
+        "monthly_mean_bootstrap_95pct": [
+          -0.03345464191703873,
+          0.08373729163013872
+        ],
+        "return_after_4pct_annual_hurdle": 0.1728499469482816
+      }
+    }
+  },
+  "primary_plan_csv_sha256": "8bc1b7407e51b57d77f1ef1bbbcd52f0fc0f1d6a9af15606c4c33bde5c76a3ec",
+  "search_disclosure": {
+    "selectable_primary_configurations": 1,
+    "diagnostic_neighbor_targets": [
+      0.06,
+      0.1
+    ],
+    "simple_benchmark": "forced-monthly 0.5x long"
+  },
+  "content_digest": "86c76d6f9694531a617ae74a0349b6ad33b431730bf87522e966014af8307573"
+}

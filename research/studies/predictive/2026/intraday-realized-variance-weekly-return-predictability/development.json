@@ -1,0 +1,358 @@
+{
+  "stage": "development",
+  "period": {
+    "start": "2022-03-26T00:00:00Z",
+    "end_exclusive": "2023-07-01T00:00:00Z"
+  },
+  "checkpoint_digest": "bf0041aa1539c1db701f0cfba83941bbc011f4fa3bafae468b2f5c4982477bd1",
+  "source": {
+    "kind": "verified_reuse",
+    "path": "research/studies/predictive/2026/relative-signed-jump-next-day-predictability/source_manifest_development.json",
+    "sha256": "8f0404a9d1b6e1d03db1b977a534706a5496a24324afc11cf1d9e53183ae8d8c",
+    "content_digest": "ca419060bd58d89a86c8b652446008e005952dbf4b178daebc34dd56105aa4ff",
+    "archive_count": 425,
+    "archive_bytes": 50798433
+  },
+  "data_quality_digest": "a715324529ce0b3eb8e65e78dee389c21ec7d83dfb9a87b084217275aac47886",
+  "question_result": "DOES_NOT_SUPPORT",
+  "release_next_stage": false,
+  "panel_rows": 1398,
+  "action_weeks": 58,
+  "rankable_range": [
+    22,
+    25
+  ],
+  "main": {
+    "high_minus_low": {
+      "observations": 58,
+      "mean": -0.0010393712510904961,
+      "median": -0.004834179877922888,
+      "bootstrap_95pct": [
+        -0.01547734583205156,
+        0.015523437409806646
+      ],
+      "positive_fraction": 0.4827586206896552,
+      "negative_fraction": 0.5172413793103449,
+      "minimum": -0.10555844369796574,
+      "maximum": 0.1447825726066763
+    },
+    "rank_ic": {
+      "mean": -0.09927123101785768,
+      "hac_standard_error": 0.0432687675466033,
+      "two_sided_p": 0.021773673705669197,
+      "one_sided_p": 0.010886836852834599
+    },
+    "controlled_rv28": {
+      "mean": 0.006005633886795768,
+      "hac_standard_error": 0.00555106808428938,
+      "two_sided_p": 0.2793023024993474,
+      "one_sided_p": 0.8603488487503264
+    },
+    "top_short_proxy": {
+      "observations": 58,
+      "mean": -0.004084504378574665,
+      "median": 0.00048136524805333773,
+      "bootstrap_95pct": [
+        -0.01571756101221649,
+        0.005099444034270234
+      ],
+      "positive_fraction": 0.5,
+      "negative_fraction": 0.5,
+      "minimum": -0.1479313712559564,
+      "maximum": 0.061114058792853164
+    },
+    "dvol_top_short_proxy": {
+      "observations": 58,
+      "mean": -0.0003473467699260553,
+      "median": 0.0025990869958007878,
+      "bootstrap_95pct": [
+        -0.007256238257722695,
+        0.006074524641827501
+      ],
+      "positive_fraction": 0.5172413793103449,
+      "negative_fraction": 0.4827586206896552,
+      "minimum": -0.07400896711574678,
+      "maximum": 0.061114058792853164
+    },
+    "increment_vs_dvol": {
+      "observations": 58,
+      "mean": -0.00373715760864861,
+      "median": 0.0,
+      "bootstrap_95pct": [
+        -0.011420104376871472,
+        0.0021450499761825823
+      ],
+      "positive_fraction": 0.1206896551724138,
+      "negative_fraction": 0.15517241379310345,
+      "minimum": -0.12112447254517417,
+      "maximum": 0.04362568931416221
+    }
+  },
+  "halves": {
+    "first": {
+      "observations": 29,
+      "mean": -0.0013866535217908684,
+      "median": -0.00022297363596454774,
+      "bootstrap_95pct": [
+        -0.012504043746367086,
+        0.008248244772783655
+      ],
+      "positive_fraction": 0.4827586206896552,
+      "negative_fraction": 0.5172413793103449,
+      "minimum": -0.07400896711574678,
+      "maximum": 0.061114058792853164
+    },
+    "second": {
+      "observations": 29,
+      "mean": -0.00678235523535846,
+      "median": 0.0011857041320712232,
+      "bootstrap_95pct": [
+        -0.02649403239274051,
+        0.006613718284768546
+      ],
+      "positive_fraction": 0.5172413793103449,
+      "negative_fraction": 0.4827586206896552,
+      "minimum": -0.1479313712559564,
+      "maximum": 0.043407980759641245
+    }
+  },
+  "calendar_years": {
+    "2022": {
+      "observations": 33,
+      "mean": -5.629050209308547e-05,
+      "median": 0.0019206894323652009,
+      "bootstrap_95pct": [
+        -0.010405297628277082,
+        0.008607494403316571
+      ],
+      "positive_fraction": 0.5151515151515151,
+      "negative_fraction": 0.48484848484848486,
+      "minimum": -0.07400896711574678,
+      "maximum": 0.061114058792853164
+    },
+    "2023": {
+      "observations": 25,
+      "mean": -0.00940174669553035,
+      "median": -0.005278807452089919,
+      "bootstrap_95pct": [
+        -0.034919301630800044,
+        0.006811713754285274
+      ],
+      "positive_fraction": 0.48,
+      "negative_fraction": 0.52,
+      "minimum": -0.1479313712559564,
+      "maximum": 0.043407980759641245
+    }
+  },
+  "neighbors": {
+    "rv21": {
+      "high_minus_low": {
+        "observations": 58,
+        "mean": -0.002284204571211507,
+        "median": -0.009091542652069042,
+        "bootstrap_95pct": [
+          -0.01759893209938503,
+          0.015366138085527984
+        ],
+        "positive_fraction": 0.39655172413793105,
+        "negative_fraction": 0.603448275862069,
+        "minimum": -0.09506528627034588,
+        "maximum": 0.17701245813544944
+      },
+      "top_short_proxy": {
+        "observations": 58,
+        "mean": -0.0036694086936599583,
+        "median": 0.001624957853831181,
+        "bootstrap_95pct": [
+          -0.015258141075832383,
+          0.005302121593063258
+        ],
+        "positive_fraction": 0.5,
+        "negative_fraction": 0.5,
+        "minimum": -0.1479313712559564,
+        "maximum": 0.061114058792853164
+      }
+    },
+    "rv35": {
+      "high_minus_low": {
+        "observations": 58,
+        "mean": -0.00250038107060364,
+        "median": -0.0019118303568879391,
+        "bootstrap_95pct": [
+          -0.01588096565037161,
+          0.013620690228428529
+        ],
+        "positive_fraction": 0.43103448275862066,
+        "negative_fraction": 0.5689655172413793,
+        "minimum": -0.0962393139839687,
+        "maximum": 0.13548750211755756
+      },
+      "top_short_proxy": {
+        "observations": 58,
+        "mean": -0.0009755130877591791,
+        "median": 0.004903206432886871,
+        "bootstrap_95pct": [
+          -0.013105116747225889,
+          0.008563696151670137
+        ],
+        "positive_fraction": 0.5689655172413793,
+        "negative_fraction": 0.43103448275862066,
+        "minimum": -0.1479313712559564,
+        "maximum": 0.061114058792853164
+      }
+    }
+  },
+  "fama_macbeth": {
+    "summaries": {
+      "rv28": {
+        "mean": 0.006005633886795768,
+        "hac_standard_error": 0.00555106808428938,
+        "two_sided_p": 0.2793023024993474,
+        "one_sided_p": 0.8603488487503264
+      },
+      "dvol28": {
+        "mean": -0.0056388178603920015,
+        "hac_standard_error": 0.009403004548790913,
+        "two_sided_p": 0.5487178118005359,
+        "one_sided_p": 0.725641094099732
+      },
+      "mom28": {
+        "mean": 7.374151969351348e-05,
+        "hac_standard_error": 0.0040018858859292095,
+        "two_sided_p": 0.9852984587085675,
+        "one_sided_p": 0.49264922935428374
+      },
+      "max28": {
+        "mean": 0.003245693781743237,
+        "hac_standard_error": 0.005784890744237956,
+        "two_sided_p": 0.5747539272785431,
+        "one_sided_p": 0.28737696363927157
+      },
+      "beta84": {
+        "mean": -0.0018319700038533283,
+        "hac_standard_error": 0.00560517897295751,
+        "two_sided_p": 0.7437925056836687,
+        "one_sided_p": 0.6281037471581656
+      },
+      "log_volume30": {
+        "mean": -0.001348931233709506,
+        "hac_standard_error": 0.0021261097172978445,
+        "two_sided_p": 0.5257807670025525,
+        "one_sided_p": 0.7371096164987238
+      }
+    }
+  },
+  "breadth": {
+    "selected_symbols": 10,
+    "repeated_symbols": 8,
+    "positive_mean_symbol_fraction": 0.75,
+    "maximum_positive_contribution_share": 0.34616424787805694,
+    "by_symbol": [
+      {
+        "symbol": "1000XECUSDT",
+        "selections": 1,
+        "mean_short_proxy": -0.007881698832593044,
+        "total_short_proxy": -0.007881698832593044
+      },
+      {
+        "symbol": "CRVUSDT",
+        "selections": 4,
+        "mean_short_proxy": 0.017795731023329354,
+        "total_short_proxy": 0.07118292409331742
+      },
+      {
+        "symbol": "DASHUSDT",
+        "selections": 1,
+        "mean_short_proxy": -0.04478446255731023,
+        "total_short_proxy": -0.04478446255731023
+      },
+      {
+        "symbol": "ENSUSDT",
+        "selections": 10,
+        "mean_short_proxy": 0.0007177077263740693,
+        "total_short_proxy": 0.007177077263740693
+      },
+      {
+        "symbol": "ETCUSDT",
+        "selections": 5,
+        "mean_short_proxy": 0.008914537243142421,
+        "total_short_proxy": 0.04457268621571211
+      },
+      {
+        "symbol": "KAVAUSDT",
+        "selections": 4,
+        "mean_short_proxy": 0.011359196288688119,
+        "total_short_proxy": 0.045436785154752475
+      },
+      {
+        "symbol": "SNXUSDT",
+        "selections": 19,
+        "mean_short_proxy": -0.005041506728731042,
+        "total_short_proxy": -0.09578862784588979
+      },
+      {
+        "symbol": "SOLUSDT",
+        "selections": 9,
+        "mean_short_proxy": -0.032675538227603496,
+        "total_short_proxy": -0.29407984404843146
+      },
+      {
+        "symbol": "XRPUSDT",
+        "selections": 2,
+        "mean_short_proxy": 0.01314169177288177,
+        "total_short_proxy": 0.02628338354576354
+      },
+      {
+        "symbol": "ZILUSDT",
+        "selections": 3,
+        "mean_short_proxy": 0.0036601743512025635,
+        "total_short_proxy": 0.01098052305360769
+      }
+    ]
+  },
+  "hard_gates": {
+    "data_quality_pass": true,
+    "minimum_action_weeks": true,
+    "minimum_rankable_each_week": true,
+    "spread_mean_negative": true,
+    "spread_bootstrap_upper_negative": false,
+    "spread_negative_fraction": false,
+    "rank_ic_negative": true,
+    "rank_ic_negative_significant": true,
+    "controlled_rv_negative": false,
+    "controlled_rv_negative_significant": false,
+    "proxy_mean_positive": false,
+    "proxy_bootstrap_lower_positive": false,
+    "increment_vs_dvol_positive": false,
+    "increment_vs_dvol_bootstrap_lower_positive": false,
+    "both_halves_positive": false,
+    "all_calendar_years_positive": false,
+    "all_neighbors_directional": false,
+    "minimum_selected_symbols": true,
+    "positive_symbol_breadth": true,
+    "positive_contribution_not_concentrated": true
+  },
+  "failed_hard_gates": [
+    "spread_bootstrap_upper_negative",
+    "spread_negative_fraction",
+    "controlled_rv_negative",
+    "controlled_rv_negative_significant",
+    "proxy_mean_positive",
+    "proxy_bootstrap_lower_positive",
+    "increment_vs_dvol_positive",
+    "increment_vs_dvol_bootstrap_lower_positive",
+    "both_halves_positive",
+    "all_calendar_years_positive",
+    "all_neighbors_directional"
+  ],
+  "economic_proxy_limit": "0.25x one-leg high-RV short after 52bp underlying round-trip and 4% full-plan hurdle; funding and execution path absent",
+  "strategy_conversion": "PROHIBITED_UNLESS_ALL_THREE_PREDICTIVE_STAGES_PASS",
+  "generated_at_utc": "2026-07-22T15:02:39.766419+00:00",
+  "csv_sha256": {
+    "development_panel.csv": "7fffbbc7e571978bafafb58bd6d1f90d814c21217e36a55cc081b7f1facade94",
+    "development_weekly.csv": "30d32a8a120046faa238fcedfa00f2c94427a58bfc6a7d30e2e82e8ee1ae8654",
+    "development_selected.csv": "d07cd02fbf16876c909094a15675d64aaa5cde93c8dd52d53e260aeaa548e5ff",
+    "development_fmb_weekly.csv": "518edd0a47d4aa70df0db865e6469a520808e7998dfb9ac1f01624d634b68ba7"
+  },
+  "content_digest": "428ea7ea2a46200563986df8b6ee472a5f4d89c7f170fa696f10021ed2871794"
+}

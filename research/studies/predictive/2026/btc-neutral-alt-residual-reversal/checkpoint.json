@@ -1,0 +1,55 @@
+{
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 / BTCUSDT-PERP",
+  "created_at": "2026-07-21T00:00:00+08:00",
+  "research_kind": "PREDICTIVE",
+  "candidate_id": "BTC_NEUTRAL_ALT_RESIDUAL_REVERSAL_V1",
+  "parent_question": "btc-shock-beta-gap-predictability",
+  "parent_conclusion": "DOES_NOT_SUPPORT",
+  "parent_code_sha256": "3c2d83c79881c81fdc08e9ea0e55a568ecd677c3809b0a86a1f8905fdfff1ea6",
+  "development_source_manifest_path": "../btc-shock-beta-gap-predictability/source_manifest_development.json",
+  "development_source_manifest_sha256": "847588d0721c162374b794bc6720dced970c94095bebc1c0d9c965bc59737b81",
+  "anchor": "BTCUSDT",
+  "symbols": [
+    "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT",
+    "ADAUSDT", "LINKUSDT", "AVAXUSDT", "LTCUSDT", "BCHUSDT",
+    "TRXUSDT", "DOTUSDT", "NEARUSDT", "SUIUSDT", "AAVEUSDT"
+  ],
+  "primary": {
+    "bar_interval": "1h_from_official_5m",
+    "beta_days": 30,
+    "formation_hours": 6,
+    "residual_scale_days": 30,
+    "absolute_z_threshold": 2.5,
+    "per_asset_cooldown_hours": 12,
+    "entry_delay_hours": 1,
+    "target_hours": 12,
+    "cluster_unit": "UTC_ISO_WEEK"
+  },
+  "fixed_sensitivities": {
+    "beta_days": [7, 90],
+    "formation_hours": [1, 12],
+    "absolute_z_threshold": [2.0, 3.0],
+    "target_hours": [4, 24],
+    "entry_delay_hours": [2]
+  },
+  "periods": {
+    "development_warmup_start": "2023-10-01T00:00:00Z",
+    "development": ["2024-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "evaluation": ["2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "per_leg_round_trip_bps": {"favorable": 12, "base": 32, "stress": 52},
+  "development_gate": "data PASS; >=200 event hours; >=500 asset-events; each half >=75 event hours; primary mean and weekly-cluster CI low >0; both halves >0; beat same-event raw-own-return reversal; neither residual direction significantly negative; mean >= average favorable paired cost floor",
+  "holdout_rule": "Download 2025 only after the fixed development gate passes; download 2026H1 only after unchanged evaluation passes; never select a configuration, symbol, sign or window from exposed results.",
+  "known_exposure": "The 2024 raw price path and the parent question's short-horizon beta-gap results are exposed. No 1h 6h-formation/12h-target residual-reversal output was viewed before this checkpoint.",
+  "search_disclosure": "15 fixed alts; one primary; nine one-at-a-time sensitivities; two residual signs; two half-years; same-event raw-return reversal baseline; per-asset BY-FDR.",
+  "study_code_sha256": "40234191169a3d8b9a1d5411f885ee2acb3eb4892cd09669e39a2c3a94f502fb",
+  "development_outcome": {
+    "conclusion": "DOES_NOT_SUPPORT",
+    "release_next_phase": false,
+    "development_json_sha256": "cf3eb584e4addcd5b94e8675bef2a9d3725c6dfd774b82b43fba06ce09a46c83",
+    "source_reuse_manifest_development_sha256": "452e949107f9d4cc8d0b92d6df6bc2caaf7336472b173c87f5303865d775f663",
+    "evaluation_and_confirmation": "NOT_DOWNLOADED_NOT_VIEWED"
+  }
+}

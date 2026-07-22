@@ -1,0 +1,75 @@
+{
+  "created_at_utc": "2026-07-22T14:07:06.106920+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP",
+    "role": "fixed comparison context only"
+  },
+  "research_kind": "PREDICTIVE",
+  "predictor_id": "RESEARCH_BTC_SP500_DCC_CHANGE_NEXT_INTERVAL_V1",
+  "question": "Does a decrease in recursively filtered BTC-SP500 conditional correlation predict a higher next actionable BTCUSDT perpetual interval return?",
+  "source_sample_end": "2020-12-31",
+  "source_publication": "2022-07-15",
+  "replication_status": "fully post-publication operational transfer with corrected asynchronous close timing; not a numerical replication",
+  "calibration_end_exclusive": "2022-08-01T00:00:00",
+  "stages": {
+    "development": [
+      "2022-08-01T00:00:00",
+      "2023-11-01T00:00:00"
+    ],
+    "evaluation": [
+      "2023-11-01T00:00:00",
+      "2025-02-01T00:00:00"
+    ],
+    "confirmation": [
+      "2025-02-01T00:00:00",
+      "2026-07-18T00:00:00"
+    ]
+  },
+  "config": {
+    "predictor_id": "RESEARCH_BTC_SP500_DCC_CHANGE_NEXT_INTERVAL_V1",
+    "binance_symbol": "BTCUSDT",
+    "fred_series": "SP500",
+    "entry_delay_minutes": 15,
+    "garch_persistence_limit": 0.999,
+    "dcc_persistence_limit": 0.999,
+    "hac_maxlags": 5,
+    "event_low_quantile": 0.2,
+    "event_high_quantile": 0.8,
+    "economic_notional_fraction": 0.25,
+    "stress_round_trip_underlying": 0.0052,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_observations": 10,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "minimum_calibration_rows": 650,
+    "minimum_stage_rows": 300,
+    "minimum_action_coverage": 0.99,
+    "minimum_events_per_tail": 20,
+    "minimum_event_quarters": 5,
+    "download_workers": 4
+  },
+  "data_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btc-sp500-correlation-change-next-interval-predictability\\2026-07-22-v1",
+  "frozen_file_sha256": {
+    "README.md": "0501d86b9362c1e9be9617c1e611bf37785f91c7b163840aa1a1ce3a0aca077e",
+    "sources.md": "f0221906bc087961d14076ec22085a2495cd0b430ddbf08f6f79636d22829fb0",
+    "preregistration.md": "2b3a5e36fb9d6e3197e49e0d6c6ebdb86a22ec9bb4cde9b2c8ccc7fb0292202b",
+    "study.py": "deff0f6037ceb4fc057bda042edb183d7b10da5a74071206a7ed15be216db1ee"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6",
+    "vectorbt": "1.1.0"
+  },
+  "framework_decision": "SciPy/statsmodels implement the predictive econometrics; vectorbt 1.1.0 independently summarizes the frozen feasibility return series.",
+  "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS",
+  "product_effects": "NONE",
+  "content_digest": "16a4e16b2c13aa1a98adcfa5bcda7956249909b7a8a2993f7932cc889b1ec57d"
+}

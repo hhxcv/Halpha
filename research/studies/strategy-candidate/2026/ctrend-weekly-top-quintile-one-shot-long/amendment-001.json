@@ -1,0 +1,11 @@
+{
+  "created_at_utc": "2026-07-22T08:10:00Z",
+  "checkpoint_digest": "9ba29fb9c5dc01a6b3cca8a33f4d75c665d1d8637ac5de2b3625a367df17e095",
+  "original_study_py_sha256": "a8af46cdd0672f7b5ab96af1388c7a4ba6af25ea93b0746b45d388010303c581",
+  "amended_study_py_sha256": "41d1766dda1bf10b338d6fbba704baa8bfdeff9d8e381a65ba63e079796cc201",
+  "trigger": "First development prepare failed data quality solely because every symbol had the same three unmatched official funding marks on 2023-02-24; no CTREND score, trade, or return artifact existed.",
+  "change": "Remove missing_mark_price == 0 from the OHLCV data-quality PASS condition. Preserve each missing mark, exclude every spanning trade, and retain the preregistered at-most-2-percent excluded-opportunity gate.",
+  "economic_rule_changed": false,
+  "signal_cost_universe_period_gate_changed": false,
+  "imputation_allowed": false
+}

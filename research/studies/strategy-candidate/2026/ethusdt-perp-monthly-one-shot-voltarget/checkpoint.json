@@ -1,0 +1,78 @@
+{
+  "created_at_utc": "2026-07-22T11:02:09.801677Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Can fixed capped monthly ETH volatility targeting survive realistic one-shot perpetual economics?",
+  "evidence_boundary": "ETH market paths through 2026-06 were exposed by earlier Halpha research; the exact rule outputs are uncomputed and opened sequentially.",
+  "symbol": "ETHUSDT",
+  "data_start": "2020-10-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-02T00:00:00Z",
+  "research_cutoff": "2026-07-01T00:00:00Z",
+  "stages": {
+    "development": [
+      "2021-01-01T00:00:00Z",
+      "2023-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2023-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ]
+  },
+  "config": {
+    "strategy_id": "RESEARCH_ETHUSDT_PERP_VOL60_TARGET8_CAP25_MONTHLY_ONE_SHOT_V1",
+    "volatility_lookback_days": 60,
+    "target_volatilities": [
+      0.06,
+      0.08,
+      0.1
+    ],
+    "primary_target_volatility": 0.08,
+    "maximum_notional_fraction": 0.25,
+    "annual_capital_hurdle": 0.04,
+    "annual_research_program_haircut": 0.02,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "funding_stress": {
+      "positive_rate_multiplier": 1.5,
+      "negative_rate_multiplier": 0.5
+    },
+    "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS"
+  },
+  "study_py_sha256": "de095b17fb536ebff71dbcfe2325142247db39987c118986043012d7e0afc1fd",
+  "engine_path": "research\\studies\\strategy-candidate\\2026\\trxusdt-perp-monthly-one-shot-voltarget\\study.py",
+  "engine_sha256": "083f152198a9ac488c65da1b9e7801983409397bdf82707fad13273f3d0e7e6a",
+  "preregistration_sha256": "57292034c8de72f86fcd885ed3fce19a63e9c896cc161f179ce524264ebd0fb8",
+  "sources_sha256": "8b3af029ab7d21ac3e5bb0611065882b4aef854acf38839452684f1dd499c0b6",
+  "environment": {
+    "python": "3.11.9",
+    "vectorbt": "1.0.0",
+    "pandas": "2.3.3",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\ethusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1",
+  "content_digest": "472823c9b055e624222dc755e9af98bcce27ff7b6760fef9983a0ff432894e11"
+}

@@ -1,0 +1,42 @@
+{
+  "generated_at_utc": "2026-07-22T02:51:05.131740Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "excluded_trade_fraction_at_most_limit": false,
+    "vectorbt_reconciled": true,
+    "trades_at_least_minimum": true,
+    "targets_at_least_minimum": true,
+    "categories_at_least_four": true,
+    "base_after_hurdle_positive": false,
+    "stress_after_hurdle_positive": false,
+    "stress_bootstrap_lower_positive": false,
+    "required_year_slices_positive": false,
+    "positive_target_fraction_at_least_half": false,
+    "positive_categories_at_least_four": false,
+    "beats_own_momentum": false,
+    "beats_scheduled_long": false,
+    "two_of_three_neighborhoods_stress_positive": false,
+    "largest_positive_target_share_at_most_20pct": false,
+    "median_target_drawdown_above_minus_20pct": false,
+    "worst_target_drawdown_above_minus_40pct": false
+  },
+  "failed_checks": [
+    "excluded_trade_fraction_at_most_limit",
+    "base_after_hurdle_positive",
+    "stress_after_hurdle_positive",
+    "stress_bootstrap_lower_positive",
+    "required_year_slices_positive",
+    "positive_target_fraction_at_least_half",
+    "positive_categories_at_least_four",
+    "beats_own_momentum",
+    "beats_scheduled_long",
+    "two_of_three_neighborhoods_stress_positive",
+    "largest_positive_target_share_at_most_20pct",
+    "median_target_drawdown_above_minus_20pct",
+    "worst_target_drawdown_above_minus_40pct"
+  ],
+  "result_digest": "6472eb2cbb78bbc30d0e4195d9f54bba853c2ac8f4dfd23eeb54c53a624fe498",
+  "content_digest": "0e5f36665a0c3ce8f1f93b1678d88c4f6b61b68c4ac55548cae36420591f7b70"
+}

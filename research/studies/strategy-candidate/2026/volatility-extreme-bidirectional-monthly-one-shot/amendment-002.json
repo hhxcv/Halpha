@@ -1,0 +1,14 @@
+{
+  "created_at_utc": "2026-07-22T08:52:00Z",
+  "checkpoint_digest": "b07ead78a7aab58fd0805814ca59136395d0060b8917ab49c268eb491fdfa242",
+  "original_study_sha256": "e53a9474dc3cc2417b29283e55d14670f03261c600309b46ec36990b46a477cf",
+  "amended_study_sha256": "34937583909cb140a0d04409275f8812f85869ec39e6c9722c5cd1e1d9455f25",
+  "reason": "Evaluation exposed a ZECUSDT SHORT loss beyond one unit of plan capital in a target with only two trades. The reused monthly summary computed median/worst target drawdown only for targets with at least three trades, contradicting the frozen gate's unqualified 'worst target' wording and hiding the most important tail-risk observation.",
+  "changes": [
+    "Compute median and worst target drawdown across every actually traded target.",
+    "Retain the existing per-target calculations and record the drawdown target scope explicitly.",
+    "Do not add a stop, change a signal, exclude ZECUSDT, or alter any return."
+  ],
+  "economic_rule_changed": false,
+  "content_digest": "e2c53116b4f4f6f27cee940c3a14eae456bf34eea0b076cdc5031cfb099ff7a7"
+}

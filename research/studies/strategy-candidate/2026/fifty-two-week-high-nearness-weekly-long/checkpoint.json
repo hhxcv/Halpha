@@ -1,0 +1,160 @@
+{
+  "created_at_utc": "2026-07-22T09:38:05.728679Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does 52-week-high nearness identify a fixed configured liquid Binance USD-M target whose weekly 0.25x LONG plan clears retail costs, funding, a 4% full-plan-capital hurdle, plain 52-week momentum, market beta, robustness, breadth, risk and sequential 2024-2025 evidence?",
+  "known_exposure": "Jia et al. 2026 selected and tested the broad-market spot effect on a sample overlapping both stages; Halpha has also viewed these historical market paths in earlier questions. Sequencing prevents local adaptation but cannot make this post-publication or independent forward evidence.",
+  "support_limit": "Even if both historical stages pass, the conclusion is capped at INSUFFICIENT_EVIDENCE. At least 26 eligible unchanged-rule weeks spanning two market states must accrue after this checkpoint in a separate question before product qualification can be considered.",
+  "family_stop_rule": "On failure, close this fixed nearness52 long conversion; do not search nearby windows, top counts, holds, gaps, symbols, categories, costs, states or directions without new forward evidence or an independent economic mechanism.",
+  "configuration": {
+    "strategy_id": "RESEARCH_NEARNESS52_TOP_DECILE_WEEKLY_LONG_0P25X_V1",
+    "direction": "LONG_ONLY",
+    "formation_weeks": 52,
+    "hold_days": 7,
+    "gap_full_days": 1,
+    "top_fraction": 0.1,
+    "top5_count": 5,
+    "notional_fraction": 0.25,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "cooldown_full_days": 1,
+    "annual_capital_hurdle": 0.04,
+    "max_excluded_trade_fraction": 0.02,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "diagnostics": [
+      "nearness26",
+      "nearness100",
+      "top5",
+      "mom52",
+      "scheduled_long",
+      "market_long"
+    ]
+  },
+  "stages": {
+    "development": [
+      "2024-01-01T00:00:00Z",
+      "2024-12-30T00:00:00Z"
+    ],
+    "evaluation": [
+      "2025-01-06T00:00:00Z",
+      "2025-12-29T00:00:00Z"
+    ]
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "categories": {
+    "DeFi": [
+      "AAVEUSDT",
+      "CRVUSDT",
+      "KAVAUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "UNIUSDT"
+    ],
+    "Infrastructure": [
+      "ENSUSDT",
+      "LINKUSDT"
+    ],
+    "Layer-1": [
+      "AVAXUSDT",
+      "BNBUSDT",
+      "HBARUSDT",
+      "NEARUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "VETUSDT"
+    ],
+    "Layer-2": [
+      "XLMUSDT"
+    ],
+    "Payment": [
+      "1000XECUSDT",
+      "BCHUSDT",
+      "LTCUSDT",
+      "XRPUSDT"
+    ],
+    "PoW": [
+      "DASHUSDT",
+      "ETCUSDT",
+      "XMRUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ]
+  },
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "computed_columns": 7
+  },
+  "stage_open_rule": "development -> evaluation; evaluation sealed until development PASS",
+  "frozen_file_sha256": {
+    "README.md": "8a23ba585665536b0461fe3a8061c870f8400160a975fdfe9e17b0b757f86dd3",
+    "preregistration.md": "3393b9a0378f87190e8971bc883e4c4171fe1294a1b69368e5062ef139bfed68",
+    "sources.md": "20499160cc869ef1af66a81d44b7e6053deb5d9244c416c3e71bc3ce08f2dfc9",
+    "study.py": "0020f20dfac619a0b504d8b2171d90a54854e129d852a886a62a91afa2e32174"
+  },
+  "source_reuse_digest": "70407b25a98047775bd71f27de298aab652eefe200f4653106989e542e8eddce",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "vectorbt": "1.1.0"
+  },
+  "allowed_after_checkpoint": "Only deterministic stage artifacts and documented implementation-only amendments preserving the economic rule; no credentialed market endpoint and no product/runtime change.",
+  "content_digest": "d976e5dfd243e938d2a07a2732eaae2e83b7136375742cbe3195642235dfcf1f"
+}

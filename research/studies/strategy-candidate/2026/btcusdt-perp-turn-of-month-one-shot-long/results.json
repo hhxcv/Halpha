@@ -1,0 +1,35 @@
+{
+  "generated_at_utc": "2026-07-22T11:31:22.484236Z",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "claim": "BTC turn-of-month monthly timing candidate; not Alpha proof or a profitability guarantee",
+  "available_stages": [
+    "development"
+  ],
+  "stage_gate_status": {
+    "development": "FAIL"
+  },
+  "stage_failed_checks": {
+    "development": [
+      "base_total_positive",
+      "stress_total_positive",
+      "stress_after_4pct_hurdle_positive",
+      "base_after_6pct_combined_hurdle_positive",
+      "paired_midmonth_improvement_positive",
+      "daily_tom_hac_coefficient_positive",
+      "tom3_base_nonnegative",
+      "tom5_base_nonnegative",
+      "base_drawdown_above_minus_15pct",
+      "stress_positive_month_fraction_at_least_half",
+      "each_calendar_year_base_positive",
+      "stress_monthly_bootstrap_lower_positive",
+      "daily_tom_one_sided_hac_p_lt_10pct"
+    ]
+  },
+  "pooled": {
+    "status": "NOT_OPENED"
+  },
+  "evidence_limit": "Stages are post-publication but broad BTC paths were already visible to the research program; daily-bar execution and funding stress cannot reproduce live fills or all perpetual risks.",
+  "handoff_status": "NO_HANDOFF; later stages remain sealed after FAIL",
+  "product_effects": "NONE",
+  "content_digest": "96e42cdc5005cd831891e29d59631e214d6cce2517580b965cfeebd86ec0c5ab"
+}

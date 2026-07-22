@@ -1,0 +1,1925 @@
+{
+  "generated_at_utc": "2026-07-22T09:17:28.221909Z",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "stopped_after": "development",
+  "gate_status": "FAIL",
+  "failed_checks": [
+    "stress_bootstrap_lower_positive",
+    "both_halves_base_after_hurdle_positive",
+    "base_increment_vs_mom14_bootstrap_lower_positive",
+    "gross_excess_vs_market_bootstrap_lower_positive",
+    "four_positive_categories",
+    "half_targets_positive",
+    "largest_positive_pnl_share_at_most_25pct"
+  ],
+  "main": {
+    "trades": 88,
+    "entry_dates": 40,
+    "symbols": 24,
+    "funding_events": 1843,
+    "maximum_vectorbt_reconciliation_error": 6.245004513516506e-17,
+    "scenarios": {
+      "favorable": {
+        "date_mean": 0.007272727617233106,
+        "date_mean_after_hurdle": 0.006505604329561873,
+        "date_mean_after_hurdle_bootstrap_95pct": [
+          -0.008496639635579424,
+          0.028203865556759928
+        ],
+        "compound_return": 0.2804688293041826,
+        "annualized_return": 0.2813388102905945,
+        "date_portfolio_max_drawdown": -0.12772127849583303
+      },
+      "base": {
+        "date_mean": 0.006764616632121301,
+        "date_mean_after_hurdle": 0.005997493344450067,
+        "date_mean_after_hurdle_bootstrap_95pct": [
+          -0.00898983131598976,
+          0.027674038933783788
+        ],
+        "compound_return": 0.254936360643067,
+        "annualized_return": 0.25571950889141326,
+        "date_portfolio_max_drawdown": -0.1346274907766044
+      },
+      "stress": {
+        "date_mean": 0.005823736449657739,
+        "date_mean_after_hurdle": 0.005056613161986506,
+        "date_mean_after_hurdle_bootstrap_95pct": [
+          -0.009884405449129422,
+          0.026664501592600035
+        ],
+        "compound_return": 0.20905560170230508,
+        "annualized_return": 0.2096863337013961,
+        "date_portfolio_max_drawdown": -0.14933842358257432
+      }
+    },
+    "by_half": {
+      "H1": {
+        "dates": 21,
+        "mean_after_hurdle": -0.006767848430873182
+      },
+      "H2": {
+        "dates": 19,
+        "mean_after_hurdle": 0.020106555306649444
+      }
+    },
+    "by_symbol": {
+      "1000XECUSDT": {
+        "trades": 1,
+        "base_mean_after_hurdle": -0.0421210742930543,
+        "base_max_drawdown": -0.04135395100538308
+      },
+      "AAVEUSDT": {
+        "trades": 4,
+        "base_mean_after_hurdle": -0.0005633160408121691,
+        "base_max_drawdown": -0.07903769781960712
+      },
+      "AVAXUSDT": {
+        "trades": 3,
+        "base_mean_after_hurdle": -0.012193299610074905,
+        "base_max_drawdown": -0.051728995569418346
+      },
+      "BCHUSDT": {
+        "trades": 3,
+        "base_mean_after_hurdle": -0.013885149317292955,
+        "base_max_drawdown": -0.03902384172257478
+      },
+      "BNBUSDT": {
+        "trades": 3,
+        "base_mean_after_hurdle": -0.01000542614155059,
+        "base_max_drawdown": -0.027493960151200758
+      },
+      "CRVUSDT": {
+        "trades": 1,
+        "base_mean_after_hurdle": 0.07782529752667064,
+        "base_max_drawdown": 0.0
+      },
+      "DASHUSDT": {
+        "trades": 3,
+        "base_mean_after_hurdle": -0.030052462905111616,
+        "base_max_drawdown": -0.0855843810940411
+      },
+      "ETCUSDT": {
+        "trades": 5,
+        "base_mean_after_hurdle": -0.003202400495431191,
+        "base_max_drawdown": -0.08279848196114514
+      },
+      "HBARUSDT": {
+        "trades": 4,
+        "base_mean_after_hurdle": 0.08083597189108628,
+        "base_max_drawdown": -0.026465000346861722
+      },
+      "KAVAUSDT": {
+        "trades": 1,
+        "base_mean_after_hurdle": -0.028047913989448683,
+        "base_max_drawdown": -0.02728079070177747
+      },
+      "LINKUSDT": {
+        "trades": 3,
+        "base_mean_after_hurdle": -0.0018998303024311141,
+        "base_max_drawdown": -0.018059054574927735
+      },
+      "LTCUSDT": {
+        "trades": 4,
+        "base_mean_after_hurdle": -0.0114977441240195,
+        "base_max_drawdown": -0.042248082260433084
+      },
+      "NEARUSDT": {
+        "trades": 4,
+        "base_mean_after_hurdle": 0.0261351983876305,
+        "base_max_drawdown": -0.03203725858765949
+      },
+      "RUNEUSDT": {
+        "trades": 3,
+        "base_mean_after_hurdle": -0.016174151106165605,
+        "base_max_drawdown": -0.04555578140445926
+      },
+      "SNXUSDT": {
+        "trades": 2,
+        "base_mean_after_hurdle": 0.00039233756742134557,
+        "base_max_drawdown": -0.027391629290440256
+      },
+      "SOLUSDT": {
+        "trades": 6,
+        "base_mean_after_hurdle": -0.008822801460371475,
+        "base_max_drawdown": -0.06412916901076726
+      },
+      "TRXUSDT": {
+        "trades": 8,
+        "base_mean_after_hurdle": 0.0034456596649334228,
+        "base_max_drawdown": -0.014333581214058477
+      },
+      "UNIUSDT": {
+        "trades": 4,
+        "base_mean_after_hurdle": -0.0034261455260461756,
+        "base_max_drawdown": -0.06470756845786485
+      },
+      "VETUSDT": {
+        "trades": 6,
+        "base_mean_after_hurdle": 0.0018073999375898795,
+        "base_max_drawdown": -0.0560565796842768
+      },
+      "XLMUSDT": {
+        "trades": 4,
+        "base_mean_after_hurdle": 0.10133022436411827,
+        "base_max_drawdown": -0.02267263366243455
+      },
+      "XMRUSDT": {
+        "trades": 9,
+        "base_mean_after_hurdle": -0.009280535042850122,
+        "base_max_drawdown": -0.08028592808585466
+      },
+      "XRPUSDT": {
+        "trades": 4,
+        "base_mean_after_hurdle": 0.02328275826293179,
+        "base_max_drawdown": -0.03360475082974279
+      },
+      "ZECUSDT": {
+        "trades": 2,
+        "base_mean_after_hurdle": 0.019035739914026822,
+        "base_max_drawdown": 0.0
+      },
+      "ZILUSDT": {
+        "trades": 1,
+        "base_mean_after_hurdle": 0.0429019550590857,
+        "base_max_drawdown": 0.0
+      }
+    },
+    "by_category": {
+      "DeFi": {
+        "trades": 15,
+        "base_mean_after_hurdle": -0.0009278827275910376
+      },
+      "Infrastructure": {
+        "trades": 3,
+        "base_mean_after_hurdle": -0.0018998303024311141
+      },
+      "Layer-1": {
+        "trades": 34,
+        "base_mean_after_hurdle": 0.010198863883610835
+      },
+      "Layer-2": {
+        "trades": 4,
+        "base_mean_after_hurdle": 0.10133022436411827
+      },
+      "Payment": {
+        "trades": 12,
+        "base_mean_after_hurdle": -0.0030530388074403343
+      },
+      "PoW": {
+        "trades": 20,
+        "base_mean_after_hurdle": -0.005436038584550128
+      }
+    },
+    "positive_target_fraction_at_least_two_trades": 0.4,
+    "worst_symbol_base_max_drawdown": -0.0855843810940411,
+    "largest_positive_pnl_share": 0.35427053989844526
+  },
+  "comparisons": {
+    "base_vs_mom14": {
+      "main_mean": 0.006764616632121301,
+      "baseline_mean": 0.00414119376113411,
+      "difference_mean": 0.0026234228709871884,
+      "difference_bootstrap_95pct": [
+        -0.004078751246194773,
+        0.011145326500194975
+      ],
+      "positive_date_fraction": 0.425,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "stress_vs_mom14": {
+      "main_mean": 0.005823736449657739,
+      "baseline_mean": 0.003222839404202435,
+      "difference_mean": 0.002600897045455305,
+      "difference_bootstrap_95pct": [
+        -0.004071579375490292,
+        0.011096256821788438
+      ],
+      "positive_date_fraction": 0.425,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "gross_vs_market_long": {
+      "main_mean": 0.008115854624579385,
+      "baseline_mean": 0.003397655858007298,
+      "difference_mean": 0.004718198766572088,
+      "difference_bootstrap_95pct": [
+        -0.0043749685937716064,
+        0.017109924694704355
+      ],
+      "positive_date_fraction": 0.525,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "base_vs_scheduled_long": {
+      "main_mean": 0.006764616632121301,
+      "baseline_mean": 0.0004423592771612493,
+      "difference_mean": 0.00632225735496005,
+      "difference_bootstrap_95pct": [
+        -0.005536177562851996,
+        0.022727484307403626
+      ],
+      "positive_date_fraction": 0.525,
+      "baseline_no_action_dates_filled_as_cash": 6
+    },
+    "past14_vs_ppc14_weekly_spearman": {
+      "median": -0.023791945042499762,
+      "minimum": -0.7492785547024224,
+      "maximum": 0.6415342665650413,
+      "weeks": 51
+    }
+  },
+  "diagnostics": {
+    "mom14": {
+      "trades": 203,
+      "entry_dates": 47,
+      "symbols": 25,
+      "funding_events": 4274,
+      "maximum_vectorbt_reconciliation_error": 8.066464163292153e-17,
+      "scenarios": {
+        "favorable": {
+          "date_mean": 0.004865289825687716,
+          "date_mean_after_hurdle": 0.004098166538016483,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.0046564530903996865,
+            0.016135017602046782
+          ],
+          "compound_return": 0.22168189248476278,
+          "annualized_return": 0.22235409807791529,
+          "date_portfolio_max_drawdown": -0.09734373904036608
+        },
+        "base": {
+          "date_mean": 0.004359539926936927,
+          "date_mean_after_hurdle": 0.003592416639265695,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.005153470259075755,
+            0.015617338053158519
+          ],
+          "compound_return": 0.193147793482495,
+          "annualized_return": 0.1937267909483169,
+          "date_portfolio_max_drawdown": -0.1107523550703059
+        },
+        "stress": {
+          "date_mean": 0.0034470205167980886,
+          "date_mean_after_hurdle": 0.0026798972291268556,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.006049233755867798,
+            0.014723690653659246
+          ],
+          "compound_return": 0.14344622570948573,
+          "annualized_return": 0.14386738897212004,
+          "date_portfolio_max_drawdown": -0.13047759832829142
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 23,
+          "mean_after_hurdle": 0.0017265043557889745
+        },
+        "H2": {
+          "dates": 24,
+          "mean_after_hurdle": 0.005380582577597551
+        }
+      },
+      "by_symbol": {
+        "1000XECUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.015481075890270889,
+          "base_max_drawdown": -0.07481408317009752
+        },
+        "AAVEUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": 0.0017759262561188895,
+          "base_max_drawdown": -0.08686228320629108
+        },
+        "AVAXUSDT": {
+          "trades": 10,
+          "base_mean_after_hurdle": -0.0064337266256420805,
+          "base_max_drawdown": -0.12332074267979243
+        },
+        "BCHUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.0015940775731856486,
+          "base_max_drawdown": -0.07063217114413656
+        },
+        "BNBUSDT": {
+          "trades": 11,
+          "base_mean_after_hurdle": -0.003877562630088027,
+          "base_max_drawdown": -0.06346935606587467
+        },
+        "CRVUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.00655653796290085,
+          "base_max_drawdown": -0.05745638140107734
+        },
+        "DASHUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.030052462905111616,
+          "base_max_drawdown": -0.0855843810940411
+        },
+        "ENSUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": 0.00917541648972612,
+          "base_max_drawdown": -0.056567728824806984
+        },
+        "ETCUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": -0.0023302427590862857,
+          "base_max_drawdown": -0.05644178437824365
+        },
+        "HBARUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": 0.03349562714236929,
+          "base_max_drawdown": -0.0327704108368595
+        },
+        "KAVAUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.010431670582050613,
+          "base_max_drawdown": -0.06339237064826042
+        },
+        "LINKUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": -0.012674298771094852,
+          "base_max_drawdown": -0.09689409394597548
+        },
+        "LTCUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": -0.011839937702453743,
+          "base_max_drawdown": -0.05416403772489953
+        },
+        "NEARUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": -0.0032050753719563316,
+          "base_max_drawdown": -0.13945717223442855
+        },
+        "RUNEUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": 0.010498165808765902,
+          "base_max_drawdown": -0.019651345238485884
+        },
+        "SNXUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": -0.0005366563736423338,
+          "base_max_drawdown": -0.08784728021844301
+        },
+        "SOLUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": 0.017054202903862132,
+          "base_max_drawdown": -0.04127457728577055
+        },
+        "TRXUSDT": {
+          "trades": 12,
+          "base_mean_after_hurdle": 0.0037502043033712297,
+          "base_max_drawdown": -0.03707875511417824
+        },
+        "UNIUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": 0.008064334080236314,
+          "base_max_drawdown": -0.06169506538844205
+        },
+        "VETUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": 0.014330258553616236,
+          "base_max_drawdown": -0.08370230399714895
+        },
+        "XLMUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.04668919836311054,
+          "base_max_drawdown": -0.0328613593111835
+        },
+        "XMRUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": -0.009280535042850122,
+          "base_max_drawdown": -0.08028592808585466
+        },
+        "XRPUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.011493243700735099,
+          "base_max_drawdown": -0.03360475082974279
+        },
+        "ZECUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": 0.004002398605910069,
+          "base_max_drawdown": -0.014004624543049515
+        },
+        "ZILUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": 0.0055811532185616455,
+          "base_max_drawdown": -0.037632187391103744
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 52,
+          "base_mean_after_hurdle": 0.00448559684673401
+        },
+        "Infrastructure": {
+          "trades": 16,
+          "base_mean_after_hurdle": -0.000383833936883053
+        },
+        "Layer-1": {
+          "trades": 73,
+          "base_mean_after_hurdle": 0.006578997452277566
+        },
+        "Layer-2": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.04668919836311054
+        },
+        "Payment": {
+          "trades": 21,
+          "base_mean_after_hurdle": -0.0007440830875629426
+        },
+        "PoW": {
+          "trades": 33,
+          "base_mean_after_hurdle": -0.004059937752916335
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.56,
+      "worst_symbol_base_max_drawdown": -0.13945717223442855,
+      "largest_positive_pnl_share": 0.2375164296908936
+    },
+    "ppc14": {
+      "trades": 291,
+      "entry_dates": 51,
+      "symbols": 25,
+      "funding_events": 6116,
+      "maximum_vectorbt_reconciliation_error": 8.586881206085195e-17,
+      "scenarios": {
+        "favorable": {
+          "date_mean": 0.00606738559266817,
+          "date_mean_after_hurdle": 0.0053002623049969375,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.0025448928822873786,
+            0.016025328970281354
+          ],
+          "compound_return": 0.32820732920018014,
+          "annualized_return": 0.3292434069887835,
+          "date_portfolio_max_drawdown": -0.10791270438436573
+        },
+        "base": {
+          "date_mean": 0.005560462094484604,
+          "date_mean_after_hurdle": 0.004793338806813371,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.003043793887152578,
+            0.01550737088051853
+          ],
+          "compound_return": 0.2945343859945615,
+          "annualized_return": 0.2954528035356605,
+          "date_portfolio_max_drawdown": -0.11409326427543998
+        },
+        "stress": {
+          "date_mean": 0.004657199646451116,
+          "date_mean_after_hurdle": 0.0038900763587798853,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.0039038133258598694,
+            0.014528501857511682
+          ],
+          "compound_return": 0.23678185569206311,
+          "annualized_return": 0.23750413213591637,
+          "date_portfolio_max_drawdown": -0.12479290274806276
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 26,
+          "mean_after_hurdle": -0.0011026309882475969
+        },
+        "H2": {
+          "dates": 25,
+          "mean_after_hurdle": 0.010925147393676775
+        }
+      },
+      "by_symbol": {
+        "1000XECUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": -0.014260850000988149,
+          "base_max_drawdown": -0.09100417789078752
+        },
+        "AAVEUSDT": {
+          "trades": 11,
+          "base_mean_after_hurdle": 0.009084652511283054,
+          "base_max_drawdown": -0.07198582549915922
+        },
+        "AVAXUSDT": {
+          "trades": 14,
+          "base_mean_after_hurdle": -0.00040616049790080866,
+          "base_max_drawdown": -0.11548995285924424
+        },
+        "BCHUSDT": {
+          "trades": 16,
+          "base_mean_after_hurdle": -0.00634067249889698,
+          "base_max_drawdown": -0.08996991941795662
+        },
+        "BNBUSDT": {
+          "trades": 14,
+          "base_mean_after_hurdle": 0.002837804788176006,
+          "base_max_drawdown": -0.05146414738040905
+        },
+        "CRVUSDT": {
+          "trades": 12,
+          "base_mean_after_hurdle": 0.021299401047530166,
+          "base_max_drawdown": -0.0752249092344055
+        },
+        "DASHUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.005123962334116102,
+          "base_max_drawdown": -0.0660520704312525
+        },
+        "ENSUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.000255477720726093,
+          "base_max_drawdown": -0.0369281742907448
+        },
+        "ETCUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": 0.0008104526645375283,
+          "base_max_drawdown": -0.07996570864132102
+        },
+        "HBARUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": 0.019746638860544723,
+          "base_max_drawdown": -0.09769375520562606
+        },
+        "KAVAUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.0007120726534160807,
+          "base_max_drawdown": -0.02728079070177747
+        },
+        "LINKUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": -0.00048564217872046,
+          "base_max_drawdown": -0.0969784385840523
+        },
+        "LTCUSDT": {
+          "trades": 14,
+          "base_mean_after_hurdle": -0.004129628383400239,
+          "base_max_drawdown": -0.1002195804991256
+        },
+        "NEARUSDT": {
+          "trades": 12,
+          "base_mean_after_hurdle": 0.017679138427569515,
+          "base_max_drawdown": -0.03708310651167335
+        },
+        "RUNEUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": -0.021653940307414098,
+          "base_max_drawdown": -0.15572458888292517
+        },
+        "SNXUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": 0.01002139929760915,
+          "base_max_drawdown": -0.0467275181145177
+        },
+        "SOLUSDT": {
+          "trades": 19,
+          "base_mean_after_hurdle": 0.0023882284014525106,
+          "base_max_drawdown": -0.0609142883990631
+        },
+        "TRXUSDT": {
+          "trades": 16,
+          "base_mean_after_hurdle": 0.004377999127566814,
+          "base_max_drawdown": -0.046583193163816206
+        },
+        "UNIUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.004670547920028813,
+          "base_max_drawdown": -0.04770340518744298
+        },
+        "VETUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": -0.004533062214090735,
+          "base_max_drawdown": -0.12194635959958822
+        },
+        "XLMUSDT": {
+          "trades": 14,
+          "base_mean_after_hurdle": 0.00879120500600728,
+          "base_max_drawdown": -0.05236488067361866
+        },
+        "XMRUSDT": {
+          "trades": 18,
+          "base_mean_after_hurdle": 0.00018894284160815317,
+          "base_max_drawdown": -0.04134066171977502
+        },
+        "XRPUSDT": {
+          "trades": 12,
+          "base_mean_after_hurdle": 0.012308072485650282,
+          "base_max_drawdown": -0.04389188354135798
+        },
+        "ZECUSDT": {
+          "trades": 11,
+          "base_mean_after_hurdle": 0.016735415505989053,
+          "base_max_drawdown": -0.052647743075173836
+        },
+        "ZILUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": -0.012639612499289866,
+          "base_max_drawdown": -0.13292139841433592
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 55,
+          "base_mean_after_hurdle": 0.006257351079842453
+        },
+        "Infrastructure": {
+          "trades": 16,
+          "base_mean_after_hurdle": -0.00011508222899718392
+        },
+        "Layer-1": {
+          "trades": 101,
+          "base_mean_after_hurdle": 0.00553854953729956
+        },
+        "Layer-2": {
+          "trades": 14,
+          "base_mean_after_hurdle": 0.00879120500600728
+        },
+        "Payment": {
+          "trades": 47,
+          "base_mean_after_hurdle": -0.0017632539899381352
+        },
+        "PoW": {
+          "trades": 58,
+          "base_mean_after_hurdle": 0.0023776073281452426
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.68,
+      "worst_symbol_base_max_drawdown": -0.15572458888292517,
+      "largest_positive_pnl_share": 0.14670447522410066
+    },
+    "formation7": {
+      "trades": 103,
+      "entry_dates": 40,
+      "symbols": 25,
+      "funding_events": 2155,
+      "maximum_vectorbt_reconciliation_error": 7.979727989493313e-17,
+      "scenarios": {
+        "favorable": {
+          "date_mean": 0.0024187257016599862,
+          "date_mean_after_hurdle": 0.0016516024139887533,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.00962350029761669,
+            0.017486382870916053
+          ],
+          "compound_return": 0.07210451122953532,
+          "annualized_return": 0.07230959601215936,
+          "date_portfolio_max_drawdown": -0.19582485024939011
+        },
+        "base": {
+          "date_mean": 0.0019154071812797955,
+          "date_mean_after_hurdle": 0.0011482838936085627,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.010115565059781378,
+            0.016967261786417054
+          ],
+          "compound_return": 0.05080956376962975,
+          "annualized_return": 0.05095264781499753,
+          "date_portfolio_max_drawdown": -0.2045528674560232
+        },
+        "stress": {
+          "date_mean": 0.0009568960750556393,
+          "date_mean_after_hurdle": 0.00018977278738440624,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.010987791186879028,
+            0.015995937304621382
+          ],
+          "compound_return": 0.011450066181340368,
+          "annualized_return": 0.011481702306362251,
+          "date_portfolio_max_drawdown": -0.2222491165821543
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 21,
+          "mean_after_hurdle": -0.009581932072875846
+        },
+        "H2": {
+          "dates": 19,
+          "mean_after_hurdle": 0.013007996277617643
+        }
+      },
+      "by_symbol": {
+        "1000XECUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.05468442946578953,
+          "base_max_drawdown": -0.10508537434392795
+        },
+        "AAVEUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.0016594173056282532,
+          "base_max_drawdown": -0.10417726739779487
+        },
+        "AVAXUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": -0.015406122004266627,
+          "base_max_drawdown": -0.10524236371025053
+        },
+        "BCHUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.010798315791548314,
+          "base_max_drawdown": -0.030006365729864037
+        },
+        "BNBUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": -0.001585528473387094,
+          "base_max_drawdown": -0.026521625329577136
+        },
+        "CRVUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": 0.07782529752667064,
+          "base_max_drawdown": 0.0
+        },
+        "DASHUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.01826122365125001,
+          "base_max_drawdown": -0.017333912433828425
+        },
+        "ENSUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.012304902545894461,
+          "base_max_drawdown": -0.03344751500387644
+        },
+        "ETCUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.01958763504385025,
+          "base_max_drawdown": -0.052566046904969466
+        },
+        "HBARUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.06263635802543988,
+          "base_max_drawdown": -0.029258885315910144
+        },
+        "KAVAUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.033255023654490824,
+          "base_max_drawdown": 0.0
+        },
+        "LINKUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": -0.01281015331070342,
+          "base_max_drawdown": -0.05903331029106973
+        },
+        "LTCUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": 0.008358839713095822,
+          "base_max_drawdown": -0.01890468139642365
+        },
+        "NEARUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": 0.010582917085615057,
+          "base_max_drawdown": -0.04510886640496059
+        },
+        "RUNEUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": -0.005093837150322543,
+          "base_max_drawdown": -0.038084585786642755
+        },
+        "SNXUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.014010573180104907,
+          "base_max_drawdown": -0.020050505251411277
+        },
+        "SOLUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": -0.00637078989366127,
+          "base_max_drawdown": -0.08863765871694029
+        },
+        "TRXUSDT": {
+          "trades": 9,
+          "base_mean_after_hurdle": -0.000282792756922839,
+          "base_max_drawdown": -0.0255612577663904
+        },
+        "UNIUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.02973824220064662,
+          "base_max_drawdown": -0.08466927043510564
+        },
+        "VETUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": -0.007752219298615936,
+          "base_max_drawdown": -0.030363051200842595
+        },
+        "XLMUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.07668683422551621,
+          "base_max_drawdown": -0.024977273940879563
+        },
+        "XMRUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": -0.014079506907080463,
+          "base_max_drawdown": -0.08254762088202638
+        },
+        "XRPUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.025042881740910895,
+          "base_max_drawdown": -0.00441423675688557
+        },
+        "ZECUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": 0.010687857992829515,
+          "base_max_drawdown": -0.00396193012685131
+        },
+        "ZILUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.015998383544981665,
+          "base_max_drawdown": -0.08743615765283119
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 20,
+          "base_mean_after_hurdle": 0.004419645515606736
+        },
+        "Infrastructure": {
+          "trades": 7,
+          "base_mean_after_hurdle": -0.012665795949329433
+        },
+        "Layer-1": {
+          "trades": 38,
+          "base_mean_after_hurdle": -0.00021697339591182375
+        },
+        "Layer-2": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.07668683422551621
+        },
+        "Payment": {
+          "trades": 14,
+          "base_mean_after_hurdle": 0.001206140089336696
+        },
+        "PoW": {
+          "trades": 18,
+          "base_mean_after_hurdle": -0.0041173532911144535
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.4166666666666667,
+      "worst_symbol_base_max_drawdown": -0.10524236371025053,
+      "largest_positive_pnl_share": 0.4157841705921059
+    },
+    "formation21": {
+      "trades": 85,
+      "entry_dates": 33,
+      "symbols": 24,
+      "funding_events": 1790,
+      "maximum_vectorbt_reconciliation_error": 6.938893903907228e-17,
+      "scenarios": {
+        "favorable": {
+          "date_mean": -0.00026363101433566456,
+          "date_mean_after_hurdle": -0.0010307543020068991,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.014213181524503633,
+            0.01640731986522318
+          ],
+          "compound_return": -0.035428718187689334,
+          "annualized_return": -0.03552430019709485,
+          "date_portfolio_max_drawdown": -0.21231905838613319
+        },
+        "base": {
+          "date_mean": -0.0007642907525670842,
+          "date_mean_after_hurdle": -0.001531414040238318,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.014700431144694544,
+            0.015889113086819326
+          ],
+          "compound_return": -0.051216745977857525,
+          "annualized_return": -0.051353775051969364,
+          "date_portfolio_max_drawdown": -0.2204645210834516
+        },
+        "stress": {
+          "date_mean": -0.0017023287808436932,
+          "date_mean_after_hurdle": -0.002469452068514926,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.015595530577777768,
+            0.014887201605612818
+          ],
+          "compound_return": -0.08004522731409014,
+          "annualized_return": -0.08025606176443034,
+          "date_portfolio_max_drawdown": -0.23418383677089205
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 17,
+          "mean_after_hurdle": -0.0068060490277050195
+        },
+        "H2": {
+          "dates": 16,
+          "mean_after_hurdle": 0.004072885633945053
+        }
+      },
+      "by_symbol": {
+        "1000XECUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.05468442946578953,
+          "base_max_drawdown": -0.10508537434392795
+        },
+        "AAVEUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": -0.0058748311188049065,
+          "base_max_drawdown": -0.03575028152965476
+        },
+        "AVAXUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.024475052595352,
+          "base_max_drawdown": -0.08406430913452645
+        },
+        "BCHUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.010792916527450503,
+          "base_max_drawdown": -0.026919314755440182
+        },
+        "BNBUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.00016756825343007702,
+          "base_max_drawdown": -0.010503361955733204
+        },
+        "CRVUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.0895945061553497,
+          "base_max_drawdown": -0.06975972465790448
+        },
+        "DASHUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": 0.010824713754526285,
+          "base_max_drawdown": 0.0
+        },
+        "ETCUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.0011465677897801764,
+          "base_max_drawdown": -0.052566046904969466
+        },
+        "HBARUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.05198005301247024,
+          "base_max_drawdown": -0.026465000346861722
+        },
+        "KAVAUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": -0.07580203520459136,
+          "base_max_drawdown": -0.07503491191692013
+        },
+        "LINKUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": -0.012362318725477424,
+          "base_max_drawdown": -0.049997564031107666
+        },
+        "LTCUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.01052558079068513,
+          "base_max_drawdown": -0.02899935579410373
+        },
+        "NEARUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": -0.019681048253583987,
+          "base_max_drawdown": -0.10384927558306711
+        },
+        "RUNEUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.01754453704131798,
+          "base_max_drawdown": -0.04956770332789828
+        },
+        "SNXUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.033236721600318625,
+          "base_max_drawdown": -0.06391070758010065
+        },
+        "SOLUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": -0.003019715601357634,
+          "base_max_drawdown": -0.0640101421147985
+        },
+        "TRXUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.002734087098003067,
+          "base_max_drawdown": -0.01671319537294491
+        },
+        "UNIUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": -0.018534481062827925,
+          "base_max_drawdown": -0.0692128610367635
+        },
+        "VETUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": 0.06263859486537707,
+          "base_max_drawdown": -0.0046315839999357955
+        },
+        "XLMUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.12666994309450683,
+          "base_max_drawdown": -0.03286135931118361
+        },
+        "XMRUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.001817272087753369,
+          "base_max_drawdown": -0.025466054665679416
+        },
+        "XRPUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.029263328789123296,
+          "base_max_drawdown": -0.03360475082974279
+        },
+        "ZECUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": -0.009731654833103277,
+          "base_max_drawdown": -0.008964531545432086
+        },
+        "ZILUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.020392325133575206,
+          "base_max_drawdown": -0.0013501815042639143
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 17,
+          "base_mean_after_hurdle": -0.001397812928803808
+        },
+        "Infrastructure": {
+          "trades": 4,
+          "base_mean_after_hurdle": -0.012362318725477424
+        },
+        "Layer-1": {
+          "trades": 34,
+          "base_mean_after_hurdle": 0.009716715837845606
+        },
+        "Layer-2": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.12666994309450683
+        },
+        "Payment": {
+          "trades": 10,
+          "base_mean_after_hurdle": -0.003156978188136356
+        },
+        "PoW": {
+          "trades": 17,
+          "base_mean_after_hurdle": 0.003616354149501651
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.47619047619047616,
+      "worst_symbol_base_max_drawdown": -0.10508537434392795,
+      "largest_positive_pnl_share": 0.2749934110075171
+    },
+    "inverse_max_share": {
+      "trades": 80,
+      "entry_dates": 37,
+      "symbols": 23,
+      "funding_events": 1680,
+      "maximum_vectorbt_reconciliation_error": 7.632783294297951e-17,
+      "scenarios": {
+        "favorable": {
+          "date_mean": 0.006063604984365312,
+          "date_mean_after_hurdle": 0.005296481696694079,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.004632216317646429,
+            0.01694964781699416
+          ],
+          "compound_return": 0.22512105512364577,
+          "annualized_return": 0.22580461982405864,
+          "date_portfolio_max_drawdown": -0.08525833378152092
+        },
+        "base": {
+          "date_mean": 0.0055566221393539,
+          "date_mean_after_hurdle": 0.004789498851682667,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.0051289655157986825,
+            0.016430675317315128
+          ],
+          "compound_return": 0.20250942692432128,
+          "annualized_return": 0.20311879951317624,
+          "date_portfolio_max_drawdown": -0.09490218116240312
+        },
+        "stress": {
+          "date_mean": 0.004617936489827244,
+          "date_mean_after_hurdle": 0.0038508132021560105,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.0059450298448289075,
+            0.015317509746159074
+          ],
+          "compound_return": 0.16194164351457752,
+          "annualized_return": 0.1624208594847758,
+          "date_portfolio_max_drawdown": -0.11050804312604767
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 17,
+          "mean_after_hurdle": 0.0063226393825077274
+        },
+        "H2": {
+          "dates": 20,
+          "mean_after_hurdle": 0.0034863294004813666
+        }
+      },
+      "by_symbol": {
+        "AAVEUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.009182812848726464,
+          "base_max_drawdown": -0.06711650909708544
+        },
+        "AVAXUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.013957919132776057,
+          "base_max_drawdown": -0.051728995569418346
+        },
+        "BCHUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.02155241258928858,
+          "base_max_drawdown": 0.0
+        },
+        "BNBUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.007307571297370849,
+          "base_max_drawdown": -0.01956136780866269
+        },
+        "CRVUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.012810129545443838,
+          "base_max_drawdown": -0.02060227184050767
+        },
+        "DASHUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.03369069735714844,
+          "base_max_drawdown": -0.06500622395936007
+        },
+        "ENSUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.022997661993532998,
+          "base_max_drawdown": -0.053356609097724994
+        },
+        "ETCUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": 0.02790342186004553,
+          "base_max_drawdown": 0.0
+        },
+        "HBARUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": -0.011457320709729192,
+          "base_max_drawdown": -0.010690197422058012
+        },
+        "KAVAUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.0016235488783515814,
+          "base_max_drawdown": -0.03712436189322921
+        },
+        "LINKUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.013947381501801607,
+          "base_max_drawdown": -0.02619595487724813
+        },
+        "NEARUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.009056287327283623,
+          "base_max_drawdown": -0.04510886640496059
+        },
+        "RUNEUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.007998175047610651,
+          "base_max_drawdown": -0.019651345238485773
+        },
+        "SNXUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.0040670263271025174,
+          "base_max_drawdown": -0.0621582671388049
+        },
+        "SOLUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.01515276927375128,
+          "base_max_drawdown": -0.041274577285770664
+        },
+        "TRXUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.0138555391920742,
+          "base_max_drawdown": -0.013212521202029093
+        },
+        "UNIUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.03429849259280598,
+          "base_max_drawdown": -0.09770476909877523
+        },
+        "VETUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.00015999943223262564,
+          "base_max_drawdown": -0.017172185178140897
+        },
+        "XLMUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": -0.0116013242452933,
+          "base_max_drawdown": -0.010834200957622109
+        },
+        "XMRUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.018984345802061844,
+          "base_max_drawdown": -0.06228544873840314
+        },
+        "XRPUSDT": {
+          "trades": 1,
+          "base_mean_after_hurdle": -0.016887467465561752,
+          "base_max_drawdown": -0.016120344177890544
+        },
+        "ZECUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.0009827509279904717,
+          "base_max_drawdown": -0.0018252314415887483
+        },
+        "ZILUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.00814730588872729,
+          "base_max_drawdown": -0.036331059411287225
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 26,
+          "base_mean_after_hurdle": 0.0023446360093447704
+        },
+        "Infrastructure": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.012441935280580251
+        },
+        "Layer-1": {
+          "trades": 32,
+          "base_mean_after_hurdle": 0.009386935141552631
+        },
+        "Layer-2": {
+          "trades": 1,
+          "base_mean_after_hurdle": -0.0116013242452933
+        },
+        "Payment": {
+          "trades": 3,
+          "base_mean_after_hurdle": 0.008739119237671802
+        },
+        "PoW": {
+          "trades": 11,
+          "base_mean_after_hurdle": -0.0063657809762067315
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.6842105263157895,
+      "worst_symbol_base_max_drawdown": -0.09770476909877523,
+      "largest_positive_pnl_share": 0.16739485138036816
+    },
+    "directional_smoothness": {
+      "trades": 132,
+      "entry_dates": 36,
+      "symbols": 25,
+      "funding_events": 2777,
+      "maximum_vectorbt_reconciliation_error": 7.979727989493313e-17,
+      "scenarios": {
+        "favorable": {
+          "date_mean": 0.005737762810493732,
+          "date_mean_after_hurdle": 0.004970639522822499,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.007479014000942076,
+            0.021180564502181323
+          ],
+          "compound_return": 0.20000879508392977,
+          "annualized_return": 0.2006100342978432,
+          "date_portfolio_max_drawdown": -0.11562982964882196
+        },
+        "base": {
+          "date_mean": 0.00523110928796711,
+          "date_mean_after_hurdle": 0.0044639860002958776,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.007973062976435217,
+            0.020657568128927703
+          ],
+          "compound_return": 0.1784643236398631,
+          "annualized_return": 0.17899608694169644,
+          "date_portfolio_max_drawdown": -0.12526238158256275
+        },
+        "stress": {
+          "date_mean": 0.004279056086941146,
+          "date_mean_after_hurdle": 0.0035119327992699126,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.008803558376118471,
+            0.0197107904287329
+          ],
+          "compound_return": 0.13911613165856185,
+          "annualized_return": 0.13952382240475258,
+          "date_portfolio_max_drawdown": -0.14028166829461408
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 17,
+          "mean_after_hurdle": -0.000564440247279043
+        },
+        "H2": {
+          "dates": 19,
+          "mean_after_hurdle": 0.00896310422181028
+        }
+      },
+      "by_symbol": {
+        "1000XECUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.005386286652138372,
+          "base_max_drawdown": -0.04135395100538308
+        },
+        "AAVEUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": -0.0025840998044256206,
+          "base_max_drawdown": -0.08249958078551978
+        },
+        "AVAXUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": -0.00663615278845459,
+          "base_max_drawdown": -0.06448762930181728
+        },
+        "BCHUSDT": {
+          "trades": 3,
+          "base_mean_after_hurdle": -0.014026896697684926,
+          "base_max_drawdown": -0.039443794112301034
+        },
+        "BNBUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": -0.005573172583585578,
+          "base_max_drawdown": -0.04805476387142993
+        },
+        "CRVUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": 0.02574511519665759,
+          "base_max_drawdown": -0.01725839047448907
+        },
+        "DASHUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": -0.03369069735714844,
+          "base_max_drawdown": -0.06500622395936007
+        },
+        "ENSUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": -0.002734858255676021,
+          "base_max_drawdown": -0.06534647046706743
+        },
+        "ETCUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": -0.0034274904274415163,
+          "base_max_drawdown": -0.05752618313982949
+        },
+        "HBARUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": 0.0353269101708535,
+          "base_max_drawdown": -0.0406598917640304
+        },
+        "KAVAUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.0032982367173742914,
+          "base_max_drawdown": -0.02728079070177747
+        },
+        "LINKUSDT": {
+          "trades": 7,
+          "base_mean_after_hurdle": -0.012674298771094852,
+          "base_max_drawdown": -0.09689409394597548
+        },
+        "LTCUSDT": {
+          "trades": 4,
+          "base_mean_after_hurdle": -0.012900870380157397,
+          "base_max_drawdown": -0.04766043109424145
+        },
+        "NEARUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.01808584219362224,
+          "base_max_drawdown": -0.036282718722682517
+        },
+        "RUNEUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.01220676188190096,
+          "base_max_drawdown": -0.019651345238485884
+        },
+        "SNXUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.0049255237151485595,
+          "base_max_drawdown": -0.08728198271079979
+        },
+        "SOLUSDT": {
+          "trades": 6,
+          "base_mean_after_hurdle": 0.0010018231521436837,
+          "base_max_drawdown": -0.07398139896106048
+        },
+        "TRXUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.0038194509450156346,
+          "base_max_drawdown": -0.020253367786565057
+        },
+        "UNIUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.002907143045640036,
+          "base_max_drawdown": -0.048828545086804676
+        },
+        "VETUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.0131984600608653,
+          "base_max_drawdown": -0.07201060806344894
+        },
+        "XLMUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.07812726254829601,
+          "base_max_drawdown": -0.0328613593111835
+        },
+        "XMRUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 5.484060750117342e-05,
+          "base_max_drawdown": -0.046296218803119515
+        },
+        "XRPUSDT": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.024723156987416266,
+          "base_max_drawdown": -0.03360475082974279
+        },
+        "ZECUSDT": {
+          "trades": 8,
+          "base_mean_after_hurdle": 0.006230120424397657,
+          "base_max_drawdown": -0.009998791585730915
+        },
+        "ZILUSDT": {
+          "trades": 2,
+          "base_mean_after_hurdle": 0.0029018861800636404,
+          "base_max_drawdown": -0.036331059411287225
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 31,
+          "base_mean_after_hurdle": 0.006941860310551421
+        },
+        "Infrastructure": {
+          "trades": 12,
+          "base_mean_after_hurdle": -0.008532865223003672
+        },
+        "Layer-1": {
+          "trades": 47,
+          "base_mean_after_hurdle": 0.008844783632051906
+        },
+        "Layer-2": {
+          "trades": 5,
+          "base_mean_after_hurdle": 0.07812726254829601
+        },
+        "Payment": {
+          "trades": 14,
+          "base_mean_after_hurdle": 0.001368502858508587
+        },
+        "PoW": {
+          "trades": 23,
+          "base_mean_after_hurdle": -0.0013924955863535468
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.6,
+      "worst_symbol_base_max_drawdown": -0.09689409394597548,
+      "largest_positive_pnl_share": 0.2900858188319508
+    },
+    "scheduled_long": {
+      "trades": 600,
+      "entry_dates": 44,
+      "symbols": 25,
+      "funding_events": 12577,
+      "maximum_vectorbt_reconciliation_error": 1.1102230246251565e-16,
+      "scenarios": {
+        "favorable": {
+          "date_mean": 0.0030465440033539235,
+          "date_mean_after_hurdle": 0.0022794207156826896,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.006413257876349606,
+            0.011556819345320957
+          ],
+          "compound_return": 0.11464677840236437,
+          "annualized_return": 0.11497919347096741,
+          "date_portfolio_max_drawdown": -0.11939680208792824
+        },
+        "base": {
+          "date_mean": 0.0025425441136022343,
+          "date_mean_after_hurdle": 0.001775420825931002,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.006908515738959474,
+            0.011043761069288683
+          ],
+          "compound_return": 0.0902951739971447,
+          "annualized_return": 0.09055414524348526,
+          "date_portfolio_max_drawdown": -0.12461618549799347
+        },
+        "stress": {
+          "date_mean": 0.00163766941266673,
+          "date_mean_after_hurdle": 0.0008705461249954967,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.007736076778217239,
+            0.01005350888448998
+          ],
+          "compound_return": 0.04800888221735011,
+          "annualized_return": 0.04814389997083812,
+          "date_portfolio_max_drawdown": -0.13282264527342236
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 20,
+          "mean_after_hurdle": -0.0037191692785036533
+        },
+        "H2": {
+          "dates": 24,
+          "mean_after_hurdle": 0.006354245912959879
+        }
+      },
+      "by_symbol": {
+        "1000XECUSDT": {
+          "trades": 13,
+          "base_mean_after_hurdle": -0.019937225454857002,
+          "base_max_drawdown": -0.22523216727969764
+        },
+        "AAVEUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.0011340679797625492,
+          "base_max_drawdown": -0.1503215970828351
+        },
+        "AVAXUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.006818032722024676,
+          "base_max_drawdown": -0.2292154453604146
+        },
+        "BCHUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.0025606726352890297,
+          "base_max_drawdown": -0.23856588163754522
+        },
+        "BNBUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": 0.0014928460056381225,
+          "base_max_drawdown": -0.08077778546617953
+        },
+        "CRVUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.003590997422097599,
+          "base_max_drawdown": -0.19177836402389703
+        },
+        "DASHUSDT": {
+          "trades": 10,
+          "base_mean_after_hurdle": -0.006150337948635446,
+          "base_max_drawdown": -0.06463145307543872
+        },
+        "ENSUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": 0.0015480834920504774,
+          "base_max_drawdown": -0.2656149707291636
+        },
+        "ETCUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.006040710385624876,
+          "base_max_drawdown": -0.18156403386777398
+        },
+        "HBARUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.0007523336049809505,
+          "base_max_drawdown": -0.22353268270820204
+        },
+        "KAVAUSDT": {
+          "trades": 18,
+          "base_mean_after_hurdle": -0.011524179354939355,
+          "base_max_drawdown": -0.2025447628243029
+        },
+        "LINKUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.008135122404777852,
+          "base_max_drawdown": -0.24656955382838486
+        },
+        "LTCUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.0013190874730002423,
+          "base_max_drawdown": -0.1379911796411586
+        },
+        "NEARUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.0032231048218017487,
+          "base_max_drawdown": -0.19106034445545794
+        },
+        "RUNEUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.006717306045931378,
+          "base_max_drawdown": -0.17616390056958953
+        },
+        "SNXUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.010949334698388193,
+          "base_max_drawdown": -0.2545428246650766
+        },
+        "SOLUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.0008865455332163827,
+          "base_max_drawdown": -0.18333615208343468
+        },
+        "TRXUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": 0.0006556039453723995,
+          "base_max_drawdown": -0.04806233318988695
+        },
+        "UNIUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.005083848642985451,
+          "base_max_drawdown": -0.1738952666523934
+        },
+        "VETUSDT": {
+          "trades": 24,
+          "base_mean_after_hurdle": -0.005933465097338979,
+          "base_max_drawdown": -0.19217793852937626
+        },
+        "XLMUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.001245225637698441,
+          "base_max_drawdown": -0.1751136547654033
+        },
+        "XMRUSDT": {
+          "trades": 25,
+          "base_mean_after_hurdle": -0.004611582008264544,
+          "base_max_drawdown": -0.11729282977916355
+        },
+        "XRPUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": 0.007289704649380683,
+          "base_max_drawdown": -0.12291044113231386
+        },
+        "ZECUSDT": {
+          "trades": 26,
+          "base_mean_after_hurdle": 0.005375890536083581,
+          "base_max_drawdown": -0.09785456047989138
+        },
+        "ZILUSDT": {
+          "trades": 16,
+          "base_mean_after_hurdle": -0.009276214002299731,
+          "base_max_drawdown": -0.16487039926751734
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 148,
+          "base_mean_after_hurdle": -0.006228376033156776
+        },
+        "Infrastructure": {
+          "trades": 52,
+          "base_mean_after_hurdle": -0.0032935194563636855
+        },
+        "Layer-1": {
+          "trades": 180,
+          "base_mean_after_hurdle": -0.002167910540791553
+        },
+        "Layer-2": {
+          "trades": 26,
+          "base_mean_after_hurdle": -0.001245225637698441
+        },
+        "Payment": {
+          "trades": 91,
+          "base_mean_after_hurdle": -0.001873905196096311
+        },
+        "PoW": {
+          "trades": 103,
+          "base_mean_after_hurdle": -0.00332522009531881
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.2,
+      "worst_symbol_base_max_drawdown": -0.2656149707291636,
+      "largest_positive_pnl_share": 0.3986055206273739
+    },
+    "market_long": {
+      "trades": 1169,
+      "entry_dates": 51,
+      "symbols": 25,
+      "funding_events": 24571,
+      "maximum_vectorbt_reconciliation_error": 1.1102230246251565e-16,
+      "scenarios": {
+        "favorable": {
+          "date_mean": 0.0027006782103735547,
+          "date_mean_after_hurdle": 0.001933554922702322,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.0049726595293527395,
+            0.010405348927297916
+          ],
+          "compound_return": 0.12831110519944589,
+          "annualized_return": 0.1286853757221662,
+          "date_portfolio_max_drawdown": -0.12078438329372743
+        },
+        "base": {
+          "date_mean": 0.0021970983248227236,
+          "date_mean_after_hurdle": 0.0014299750371514902,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.005469163891646571,
+            0.009893218666482637
+          ],
+          "compound_return": 0.09978993207774511,
+          "annualized_return": 0.10007736284094881,
+          "date_portfolio_max_drawdown": -0.12686924235591668
+        },
+        "stress": {
+          "date_mean": 0.0012969571421346398,
+          "date_mean_after_hurdle": 0.0005298338544634075,
+          "date_mean_after_hurdle_bootstrap_95pct": [
+            -0.006281461617043247,
+            0.008898998938558611
+          ],
+          "compound_return": 0.0506969925087819,
+          "annualized_return": 0.050839751938621225,
+          "date_portfolio_max_drawdown": -0.13619257365505888
+        }
+      },
+      "by_half": {
+        "H1": {
+          "dates": 26,
+          "mean_after_hurdle": -0.0010446503530067203
+        },
+        "H2": {
+          "dates": 25,
+          "mean_after_hurdle": 0.004003585442916028
+        }
+      },
+      "by_symbol": {
+        "1000XECUSDT": {
+          "trades": 23,
+          "base_mean_after_hurdle": -0.009110126468142679,
+          "base_max_drawdown": -0.18340864467657936
+        },
+        "AAVEUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0037493809663512343,
+          "base_max_drawdown": -0.11009946651715741
+        },
+        "AVAXUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": -0.0017245905844896097,
+          "base_max_drawdown": -0.224498052135098
+        },
+        "BCHUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0022906732478683045,
+          "base_max_drawdown": -0.16787177780242202
+        },
+        "BNBUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0026695668505299732,
+          "base_max_drawdown": -0.07540138353858084
+        },
+        "CRVUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.002524336224736211,
+          "base_max_drawdown": -0.2732648171856975
+        },
+        "DASHUSDT": {
+          "trades": 19,
+          "base_mean_after_hurdle": -0.00882145163439643,
+          "base_max_drawdown": -0.1744020102779662
+        },
+        "ENSUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.009377442130763863,
+          "base_max_drawdown": -0.15822449580341813
+        },
+        "ETCUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": -0.0013537816492550446,
+          "base_max_drawdown": -0.17789416430173066
+        },
+        "HBARUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.006053616055501029,
+          "base_max_drawdown": -0.23939583972359635
+        },
+        "KAVAUSDT": {
+          "trades": 35,
+          "base_mean_after_hurdle": -0.007198468667569714,
+          "base_max_drawdown": -0.25461595781229085
+        },
+        "LINKUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": -3.755319655749817e-05,
+          "base_max_drawdown": -0.17804364883981905
+        },
+        "LTCUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": -0.0003534761562765819,
+          "base_max_drawdown": -0.14033150294347874
+        },
+        "NEARUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0008512808231552219,
+          "base_max_drawdown": -0.16935122216247367
+        },
+        "RUNEUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": -0.0010277872058627492,
+          "base_max_drawdown": -0.22146548468250227
+        },
+        "SNXUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": -0.004144365960322594,
+          "base_max_drawdown": -0.27455733565437435
+        },
+        "SOLUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0013063002983847787,
+          "base_max_drawdown": -0.11320870040394493
+        },
+        "TRXUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.003579695246767004,
+          "base_max_drawdown": -0.06349638942529579
+        },
+        "UNIUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0022484449903841333,
+          "base_max_drawdown": -0.18807575580844738
+        },
+        "VETUSDT": {
+          "trades": 47,
+          "base_mean_after_hurdle": 0.0010607937511271134,
+          "base_max_drawdown": -0.20313545674213274
+        },
+        "XLMUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0070247546042136386,
+          "base_max_drawdown": -0.13491340163598498
+        },
+        "XMRUSDT": {
+          "trades": 49,
+          "base_mean_after_hurdle": -0.0013039218571238816,
+          "base_max_drawdown": -0.08994407389208103
+        },
+        "XRPUSDT": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.005581644167190399,
+          "base_max_drawdown": -0.12365137437935025
+        },
+        "ZECUSDT": {
+          "trades": 48,
+          "base_mean_after_hurdle": 0.005094265757633678,
+          "base_max_drawdown": -0.10427360204199576
+        },
+        "ZILUSDT": {
+          "trades": 30,
+          "base_mean_after_hurdle": -0.005369648537612583,
+          "base_max_drawdown": -0.20544212066636258
+        }
+      },
+      "by_category": {
+        "DeFi": {
+          "trades": 290,
+          "base_mean_after_hurdle": -0.00027964118477704156
+        },
+        "Infrastructure": {
+          "trades": 102,
+          "base_mean_after_hurdle": 0.004669944467103181
+        },
+        "Layer-1": {
+          "trades": 353,
+          "base_mean_after_hurdle": 0.001981265182677741
+        },
+        "Layer-2": {
+          "trades": 51,
+          "base_mean_after_hurdle": 0.0070247546042136386
+        },
+        "Payment": {
+          "trades": 176,
+          "base_mean_after_hurdle": 0.00098822724676481
+        },
+        "PoW": {
+          "trades": 197,
+          "base_mean_after_hurdle": -0.001102067593535892
+        }
+      },
+      "positive_target_fraction_at_least_two_trades": 0.56,
+      "worst_symbol_base_max_drawdown": -0.27455733565437435,
+      "largest_positive_pnl_share": 0.15653506270177098
+    }
+  },
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "handoff": "NOT_GENERATED",
+  "product_effects": "NONE",
+  "content_digest": "7d27db268cbf66b95c2f609586907f23767170bda3248eaaa95ea9ed642734c1"
+}

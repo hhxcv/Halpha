@@ -1,0 +1,225 @@
+{
+  "generated_at_utc": "2026-07-22T12:18:35.790302+00:00",
+  "stage": "development",
+  "period": {
+    "start": "2023-03-04T00:00:00Z",
+    "end_exclusive": "2024-03-02T00:00:00Z"
+  },
+  "data_quality_digest": "a844176c654810f3620b37f944098beaed87e0332d2913899784cd9a11ac983f",
+  "summaries": {
+    "diagnostic_7d": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.008754733812228715,
+        "block_bootstrap_95pct": [
+          -0.012233785052703549,
+          0.02863746224502201
+        ],
+        "positive_fraction": 0.4807692307692308,
+        "first_half_mean": 0.006678947392294391,
+        "second_half_mean": 0.010830520232163039
+      },
+      "rank_ic": {
+        "mean": -0.019405489335519256,
+        "hac_t": -0.8864432738406062,
+        "hac_two_sided_p": 0.37537870915127713,
+        "hac_one_sided_p": 0.8123106454243614
+      },
+      "controlled_rmom_slope": {
+        "mean": -0.004018503394776172,
+        "hac_t": -1.4010657516612908,
+        "hac_two_sided_p": 0.16119441190924977,
+        "hac_one_sided_p": 0.9194027940453751
+      },
+      "ordinary_momentum_baseline": {
+        "spread_mean": 0.01224653094925991,
+        "rmom_minus_raw_mean": -0.0034917971370312
+      },
+      "market_exposure_mechanism": {
+        "rmom_tail_beta_spread_median_abs": 0.14138009976869825,
+        "raw_mom_tail_beta_spread_median_abs": 0.26175322016875663
+      },
+      "equal_weight_market_return_mean": 0.01636217996525012,
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.008638000058659109,
+        "block_bootstrap_95pct": [
+          0.0012109365377789701,
+          0.01659277586732912
+        ],
+        "positive_fraction": 0.5192307692307693,
+        "first_half_mean": 0.0018422356648967347,
+        "second_half_mean": 0.015433764452421481,
+        "selected_symbols": 9,
+        "positive_symbol_fraction": 0.8888888888888888,
+        "maximum_positive_contribution_share": 0.606192424214157
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "raw_mom14": 0.5783286278938453,
+          "beta84": 0.16575381140598533,
+          "idio_vol84": 0.1407622811970638,
+          "total_vol28": 0.20302371541501973,
+          "max28": 0.23234113712374582,
+          "log_volume30": 0.14470638057594581
+        },
+        "maximum_median_absolute": 0.5783286278938453
+      }
+    },
+    "primary_14d": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.018096211411232552,
+        "block_bootstrap_95pct": [
+          -0.007774074589276117,
+          0.045643648214650986
+        ],
+        "positive_fraction": 0.5,
+        "first_half_mean": -0.0025565415252863824,
+        "second_half_mean": 0.0387489643477515
+      },
+      "rank_ic": {
+        "mean": -0.0321492022323742,
+        "hac_t": -0.778456172872839,
+        "hac_two_sided_p": 0.43630013433600334,
+        "hac_one_sided_p": 0.7818499328319983
+      },
+      "controlled_rmom_slope": {
+        "mean": -0.0023724878839092734,
+        "hac_t": -0.3164232831914762,
+        "hac_two_sided_p": 0.7516812467154319,
+        "hac_one_sided_p": 0.624159376642284
+      },
+      "ordinary_momentum_baseline": {
+        "spread_mean": 0.01224653094925991,
+        "rmom_minus_raw_mean": 0.00584968046197264
+      },
+      "market_exposure_mechanism": {
+        "rmom_tail_beta_spread_median_abs": 0.1518749762364861,
+        "raw_mom_tail_beta_spread_median_abs": 0.26175322016875663
+      },
+      "equal_weight_market_return_mean": 0.016362179965250117,
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.006188555334673767,
+        "block_bootstrap_95pct": [
+          -0.003283300026022645,
+          0.016884330080978085
+        ],
+        "positive_fraction": 0.46153846153846156,
+        "first_half_mean": -0.006145854786923865,
+        "second_half_mean": 0.018522965456271398,
+        "selected_symbols": 10,
+        "positive_symbol_fraction": 0.7,
+        "maximum_positive_contribution_share": 0.6831490297595841
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "raw_mom14": 0.9103146853146853,
+          "beta84": 0.18464144551101075,
+          "idio_vol84": 0.21491010134030725,
+          "total_vol28": 0.1825691699604743,
+          "max28": 0.24173913043478257,
+          "log_volume30": 0.16938127090301003
+        },
+        "maximum_median_absolute": 0.9103146853146853
+      }
+    },
+    "diagnostic_28d": {
+      "weeks": 52,
+      "panel_rows": 1214,
+      "rankable": {
+        "minimum": 20,
+        "median": 24.0,
+        "maximum": 25
+      },
+      "spread": {
+        "mean": 0.006197529767582132,
+        "block_bootstrap_95pct": [
+          -0.016641817538770223,
+          0.02771856877019088
+        ],
+        "positive_fraction": 0.38461538461538464,
+        "first_half_mean": -0.011516110858752652,
+        "second_half_mean": 0.023911170393916922
+      },
+      "rank_ic": {
+        "mean": -0.017457505968771596,
+        "hac_t": -0.38821519296813184,
+        "hac_two_sided_p": 0.6978567908090691,
+        "hac_one_sided_p": 0.6510716045954654
+      },
+      "controlled_rmom_slope": {
+        "mean": -0.0016576149424563469,
+        "hac_t": -0.368677552598281,
+        "hac_two_sided_p": 0.7123680823336684,
+        "hac_one_sided_p": 0.6438159588331658
+      },
+      "ordinary_momentum_baseline": {
+        "spread_mean": 0.01224653094925991,
+        "rmom_minus_raw_mean": -0.0060490011816777805
+      },
+      "market_exposure_mechanism": {
+        "rmom_tail_beta_spread_median_abs": 0.12625934860735044,
+        "raw_mom_tail_beta_spread_median_abs": 0.26175322016875663
+      },
+      "equal_weight_market_return_mean": 0.01636217996525012,
+      "single_leg_proxy": {
+        "mean_after_cost_and_hurdle": 0.004401078764169611,
+        "block_bootstrap_95pct": [
+          -0.0042661819400759615,
+          0.014852388311182185
+        ],
+        "positive_fraction": 0.40384615384615385,
+        "first_half_mean": -0.006979547117562822,
+        "second_half_mean": 0.01578170464590204,
+        "selected_symbols": 10,
+        "positive_symbol_fraction": 0.5,
+        "maximum_positive_contribution_share": 0.5650564613233112
+      },
+      "score_control_correlation": {
+        "median_absolute_by_control": {
+          "raw_mom14": 0.5915584415584416,
+          "beta84": 0.15606893106893105,
+          "idio_vol84": 0.25236552920763444,
+          "total_vol28": 0.3189130434782609,
+          "max28": 0.42669499836547886,
+          "log_volume30": 0.26391304347826083
+        },
+        "maximum_median_absolute": 0.5915584415584416
+      }
+    }
+  },
+  "csv_sha256": {
+    "development_diagnostic_7d_panel.csv": "4927a03ae0bb893b470a117f5b12524dce15d349c71dd8c2c73f70fc6cdd5bbb",
+    "development_diagnostic_7d_weekly.csv": "c3cc9afed95dd0a7c1ba631f7af0a8042ffc45d9de16c0694e6f3d9b3cadb914",
+    "development_diagnostic_7d_selected.csv": "9d9d2c17ece73dfac20c7bfc4ac14bb2febfd72c965700df910abb1bffdb3362",
+    "development_primary_14d_panel.csv": "5ea9062e3290c77ff5446e5991fce74eac6206b477dd860d95559ae91e75f573",
+    "development_primary_14d_weekly.csv": "8413aef1ae35467ac13d30e630a17fe7bfc25b9cc53fabfd4e073bacfb766432",
+    "development_primary_14d_selected.csv": "1b8a1e452d6ee719703aca05e3381df682c22df729c4b9383ef64fddc0ebc3c4",
+    "development_diagnostic_28d_panel.csv": "e3fe2d253d4c9532b2648cd33cf0e838f838ccc7d85aa186a79e704848e964ac",
+    "development_diagnostic_28d_weekly.csv": "5b721419464025a41455bf383f2c822aaed9cda1e388c239bec7c59e1f61b807",
+    "development_diagnostic_28d_selected.csv": "709fa01ff4e2a70cb5cf441964f9f5421986037b22beeb39806dceebb89ff95b"
+  },
+  "search_disclosure": {
+    "selectable_primary_configurations": 1,
+    "main": "standardized RMOM14; high-minus-low quintile",
+    "diagnostics_only": [
+      "RMOM7",
+      "RMOM28"
+    ],
+    "source_sample_partly_overlaps_development": true,
+    "prior_broad_market_path_exposure": true
+  },
+  "content_digest": "cedc2f5d99d45c3b9597f21e4ea330e626fbd145b1d533efa761c6f1a54f9bf2"
+}

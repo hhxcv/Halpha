@@ -1,0 +1,21 @@
+{
+  "generated_at_utc": "2026-07-22T00:57:42.111004Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "all_plans_present": true,
+    "vectorbt_reconciled": true,
+    "base_total_positive": true,
+    "stress_after_hurdle_positive": false,
+    "base_drawdown_better_than_half_long": true,
+    "neighbor_6pct_base_nonnegative": true,
+    "neighbor_10pct_base_nonnegative": true,
+    "daily_drawdown_above_minus_14pct": true
+  },
+  "failed_checks": [
+    "stress_after_hurdle_positive"
+  ],
+  "result_digest": "86c76d6f9694531a617ae74a0349b6ad33b431730bf87522e966014af8307573",
+  "content_digest": "010fce5fb7acc1c7a3000fcd3782898381a2aee5ce03184031062348f3101185"
+}

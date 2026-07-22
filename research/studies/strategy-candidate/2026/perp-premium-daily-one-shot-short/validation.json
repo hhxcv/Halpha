@@ -1,0 +1,64 @@
+{
+  "validated_at_utc": "2026-07-22T04:55:08.5367250Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "checkpoint_digest": "443f96aa3a1fe728bab14526e5ca3b1cb99b03fa4185b828243a00ec0b20dad3",
+  "manifest_digest": "7739284323f85c78dc08105502e94bb1cfad025d584d08dda38c699440c90fa9",
+  "data_quality_digest": "a680b1878541c88b8738005bbca3b398db0feaf640317e9fa1102f9a934490ad",
+  "development_result_digest": "3acb9592c6c8c8fd698054c18da3cfa58542b7df698da8064124aad8d361ef52",
+  "development_gate_digest": "4b5c3573ba2669fe8a0485c80472d3d4b343b210288d2f304f9cd5b41470eeff",
+  "final_results_digest": "2a557ba497355a4ce688ab4038f756cf9906fc59173aaef18a2ae63927f972e7",
+  "bound_file_sha256": {
+    "study.py": "3e088519faf368dd7a340b1da37bdfbaf0da4af0b53a46dea8326269aeebe6da",
+    "checkpoint.json": "d64dc8f45c1100ff0c46d047fa16487987e87a4ef0bd8176731b6996e7946251",
+    "source_manifest_development.json": "56017e12502d10ba29c98dffac076026102b8a669f94614dc4d9a5fa0f9ecf34",
+    "data_quality_development.json": "fc054b56cb0b8b3e58f4e8ea26947ad54afe3c56345896cb46010373c66b9a2b",
+    "development.json": "7d21ed40e6fcd4aad0c03a26a2d6726b227dc46faa799857b58f929f5509e37c",
+    "development_gate.json": "fa5a5bce64d099378e0b825dbdf4f945b0234b80d8b8162183d4862c49c988a5",
+    "results.json": "407c372f77e5b611a07d7034fd48db52707a611b9828bba878db2f18ba98ad03"
+  },
+  "cache_manifest": {
+    "path_entries": 650,
+    "unique_referenced_files": 650,
+    "existing_referenced_files": 650,
+    "referenced_bytes": 5637853,
+    "root": "D:/projects/Codex/CodexHome/research-data/halpha/category-momentum-gated-one-shot-long/2026-07-22-v1/"
+  },
+  "trade_csv_sha256": {
+    "development_trades.csv": "0651a40261796ef9fbef6910d8d3b6d8d3c27a02b30b0dc141331188e88bca12",
+    "development_premium3_trades.csv": "9e2853271413cece27460cd43e48a014080e32efcf9bc1304784e6a47e18b74b",
+    "development_premium5_trades.csv": "8a2e9c4f4988eff34257e67b31fe1fcfbf763f9908167e6ca35fc46c5df4e295",
+    "development_top5_trades.csv": "9b70bfe6d5c23960c73601e59bb1e37bb15d2f3ede3f4d9498c15360f780c271",
+    "development_funding1_trades.csv": "1bf4d51dd4e50976677e60004783e8c5292af3501431d1f864ab6db1ae68f10f",
+    "development_winner5_trades.csv": "c1d3047f5d9bf83e801b320fa698e24e431b64ff6dd304b6dc4660aae22d52cc",
+    "development_scheduled_short_trades.csv": "a3e66709c5a31933cd652974b29168e49e4a2cea1429b52da72e622895806312"
+  },
+  "rerun": {
+    "all_trade_csv_hashes_stable": true,
+    "key_statistics_stable": true,
+    "gate_failed_checks_stable": [
+      "base_after_hurdle_positive",
+      "stress_after_hurdle_positive",
+      "stress_bootstrap_lower_positive",
+      "required_year_slices_positive",
+      "positive_target_fraction_at_least_half",
+      "positive_categories_at_least_minimum",
+      "beats_funding1",
+      "beats_winner5",
+      "beats_scheduled_short",
+      "two_of_three_neighborhoods_stress_positive",
+      "largest_positive_target_share_at_most_25pct",
+      "worst_target_drawdown_above_minus_25pct"
+    ]
+  },
+  "conclusion": "DOES_NOT_SUPPORT",
+  "later_stages": "NOT_OPENED_BY_SEQUENTIAL_GATE",
+  "handoff": "NOT_GENERATED",
+  "product_effects": "NONE"
+}

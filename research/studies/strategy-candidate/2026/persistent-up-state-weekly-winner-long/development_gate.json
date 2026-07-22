@@ -1,0 +1,37 @@
+{
+  "generated_at_utc": "2026-07-22T05:58:14.258792Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "vectorbt_reconciled": true,
+    "base_total_positive": true,
+    "stress_total_positive": true,
+    "stress_after_hurdle_positive": false,
+    "gross_excess_vs_state_market_positive": false,
+    "base_beats_state_market": false,
+    "base_beats_state_btc": true,
+    "at_least_two_of_three_neighbors_stress_nonnegative": false,
+    "eligible_weeks_at_least_30": true,
+    "each_full_year_at_least_8_weeks": true,
+    "each_full_year_base_positive": false,
+    "stress_weekly_bootstrap_lower_positive": false,
+    "gross_excess_bootstrap_lower_positive": false,
+    "daily_drawdown_above_minus_15pct": false,
+    "four_symbols_selected_at_least_twice": true,
+    "largest_positive_pnl_share_at_most_half": false
+  },
+  "failed_checks": [
+    "stress_after_hurdle_positive",
+    "gross_excess_vs_state_market_positive",
+    "base_beats_state_market",
+    "at_least_two_of_three_neighbors_stress_nonnegative",
+    "each_full_year_base_positive",
+    "stress_weekly_bootstrap_lower_positive",
+    "gross_excess_bootstrap_lower_positive",
+    "daily_drawdown_above_minus_15pct",
+    "largest_positive_pnl_share_at_most_half"
+  ],
+  "result_digest": "ec5ebdd818b66dc1728d3da4aa9e86b7455f1156510356ed3c9359efda9ac498",
+  "content_digest": "31ece0a86ca38534b9d42ff804a90a00bc81dce1753f1f254445f1d3bd628e7f"
+}

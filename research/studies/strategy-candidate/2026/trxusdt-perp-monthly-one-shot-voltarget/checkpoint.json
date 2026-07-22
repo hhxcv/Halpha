@@ -1,0 +1,78 @@
+{
+  "created_at_utc": "2026-07-22T00:55:31.351805Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does the fresh-confirmed TRX spot 8% volatility target remain economically portable to one-shot monthly Binance USD-M plans after actual funding and forced round trips?",
+  "evidence_boundary": "All parent spot price periods are exposed. Perpetual funding and forced one-shot closure results are unviewed. This audits portability, not new independent price-time evidence.",
+  "symbol": "TRXUSDT",
+  "data_start": "2020-10-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-02T00:00:00Z",
+  "research_cutoff": "2026-07-01T00:00:00Z",
+  "stages": {
+    "development": [
+      "2021-01-01T00:00:00Z",
+      "2023-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2023-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ]
+  },
+  "config": {
+    "strategy_id": "RESEARCH_TRXUSDT_PERP_VOL60_TARGET8_MONTHLY_ONE_SHOT_V1",
+    "volatility_lookback_days": 60,
+    "target_volatilities": [
+      0.06,
+      0.08,
+      0.1
+    ],
+    "primary_target_volatility": 0.08,
+    "maximum_notional_fraction": 0.5,
+    "annual_capital_hurdle": 0.04,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "funding_stress": {
+      "positive_rate_multiplier": 1.5,
+      "negative_rate_multiplier": 0.5
+    },
+    "stage_open_rule": "development first; evaluation only after development gate PASS; confirmation only after evaluation gate PASS"
+  },
+  "parent_result_path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\legacy\\2026\\trxusdt-voltarget-8pct-long\\results.json",
+  "parent_result_sha256": "c8d6b5e38444d34c5486b47c056d2072a09990676803c381274d8bc9f2d3aa8d",
+  "parent_conclusion": "SUPPORTS_WITHIN_SCOPE",
+  "study_py_sha256": "083f152198a9ac488c65da1b9e7801983409397bdf82707fad13273f3d0e7e6a",
+  "preregistration_sha256": "2b7c4ae46c0790aed14ad22ae9dd4259b462293bb2e6f9a665095dbbe9f51670",
+  "sources_sha256": "824ffbc58de1de61f92bcad9a2f626aaaf57e543e8f0ec747092f9f0417c3a88",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\trxusdt-perp-monthly-one-shot-voltarget\\2026-07-22-v1",
+  "content_digest": "f7707dcdf41f6e9449a5c5f4bf32637ae29b8433e2105910bb422b5496cc5060"
+}

@@ -1,0 +1,48 @@
+{
+  "created_at_utc": "2026-07-22T07:25:21.834381Z",
+  "entries": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\risk-adjusted-two-week-momentum-one-shot-long\\study.py",
+      "bytes": 30074,
+      "sha256": "22ddcbe23065a351421dc6234c75311188ddedd5b25fc7833ad7e9772ed98225"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\risk-adjusted-two-week-momentum-one-shot-long\\checkpoint.json",
+      "bytes": 3445,
+      "sha256": "870bbce3260187c7d8d4e0c2b4df62bb5f2e0befdf46a8baccb85c2861db801e"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\risk-adjusted-two-week-momentum-one-shot-long\\amendment-001.json",
+      "bytes": 949,
+      "sha256": "2ac4fe359deea73771f60b31c6d250eda8d8197955da513fdfecdfbabbc1a7b2"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\risk-adjusted-two-week-momentum-one-shot-long\\amendment-002.json",
+      "bytes": 1130,
+      "sha256": "b93f804072660b056d68579a45df2d893b92504041feeb5b7ed1497dcf3cce52"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\risk-adjusted-two-week-momentum-one-shot-long\\source_reuse_manifest.json",
+      "bytes": 2473,
+      "sha256": "9d21f51eab4686ffabab9f0dee47bb9409a610e23a73b72665ab22cf81a42855"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\risk-adjusted-two-week-momentum-one-shot-long\\data_quality_development.json",
+      "bytes": 5565,
+      "sha256": "e35c3114dc5f6728f124a7d34705604a10ea270fa0198b2168747722a5347048"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\risk-adjusted-two-week-momentum-one-shot-long\\validation.json",
+      "bytes": 451,
+      "sha256": "f061f1d23e0ad1f5eddf8d8ce55ccfed33b2c5e3da5b04d6c3b2161db499beba"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\_sources\\impact-size-volume-crypto-momentum-reversal-ffa-2023.pdf",
+      "bytes": 1119244,
+      "sha256": "9ab18a94116097711fd68c243784df4b70d048421bb03bd433589c19ae232417",
+      "url": "https://wp.ffu.vse.cz/pdfs/wps/2023/01/03.pdf",
+      "role": "public prior-art formula and result identity; not a market input"
+    }
+  ],
+  "content_digest": "72f16af5bc422c4a3e31d68db36afb16cf6fb19600d2e2eb61749dc18bde6518"
+}

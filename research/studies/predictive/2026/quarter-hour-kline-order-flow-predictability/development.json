@@ -1,0 +1,1181 @@
+{
+  "phase": "development",
+  "generated_at_utc": "2026-07-21T23:53:09.688543+00:00",
+  "study_code_sha256": "db13443403c90d51a2bc812b34e596ed230eb3a57f05dcf48466d663dfe09ec3",
+  "environment": {
+    "python": "3.13.14",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "statsmodels": "0.14.6",
+    "vectorbt": "1.1.0"
+  },
+  "data_quality": {
+    "status": "PASS",
+    "symbols": {
+      "BNBUSDT": {
+        "rows": 1051200,
+        "first": "2021-01-01T00:00:00+00:00",
+        "last": "2022-12-31T23:59:00+00:00",
+        "missing": 0,
+        "duplicates": 0,
+        "zero_volume_rows": 123,
+        "order_imbalance_out_of_bounds_rows": 0
+      },
+      "LINKUSDT": {
+        "rows": 1051200,
+        "first": "2021-01-01T00:00:00+00:00",
+        "last": "2022-12-31T23:59:00+00:00",
+        "missing": 0,
+        "duplicates": 0,
+        "zero_volume_rows": 123,
+        "order_imbalance_out_of_bounds_rows": 0
+      },
+      "UNIUSDT": {
+        "rows": 1051200,
+        "first": "2021-01-01T00:00:00+00:00",
+        "last": "2022-12-31T23:59:00+00:00",
+        "missing": 0,
+        "duplicates": 0,
+        "zero_volume_rows": 170,
+        "order_imbalance_out_of_bounds_rows": 0
+      },
+      "FILUSDT": {
+        "rows": 1051200,
+        "first": "2021-01-01T00:00:00+00:00",
+        "last": "2022-12-31T23:59:00+00:00",
+        "missing": 0,
+        "duplicates": 0,
+        "zero_volume_rows": 235,
+        "order_imbalance_out_of_bounds_rows": 0
+      }
+    },
+    "aligned_rows": 1051200
+  },
+  "primary": {
+    "equal_weight_mean_iqr_effect_bps": -3.108229125496691,
+    "total_events": 280091,
+    "assets": [
+      {
+        "symbol": "BNBUSDT",
+        "config": {
+          "name": "primary",
+          "horizon_minutes": 720,
+          "entry_delay_minutes": 1,
+          "boundary_offset_minutes": 0,
+          "exclude_top_of_hour": false,
+          "exclude_funding_openings": false,
+          "sign_only_order_imbalance": false
+        },
+        "n": 70024,
+        "days": 730,
+        "order_imbalance_coefficient": 6.390021134528061e-05,
+        "hac_standard_error": 0.0005360365982795118,
+        "hac_two_sided_p_value": 0.9051100359066785,
+        "order_imbalance_q25": -0.26072068048829844,
+        "order_imbalance_q75": 0.2425065537655422,
+        "iqr_effect_bps": 0.32156326623521453,
+        "r_squared": 0.0004658044169995046
+      },
+      {
+        "symbol": "LINKUSDT",
+        "config": {
+          "name": "primary",
+          "horizon_minutes": 720,
+          "entry_delay_minutes": 1,
+          "boundary_offset_minutes": 0,
+          "exclude_top_of_hour": false,
+          "exclude_funding_openings": false,
+          "sign_only_order_imbalance": false
+        },
+        "n": 70024,
+        "days": 730,
+        "order_imbalance_coefficient": -0.001350701331453402,
+        "hac_standard_error": 0.000635581612868552,
+        "hac_two_sided_p_value": 0.033574746038586664,
+        "order_imbalance_q25": -0.25782587842472626,
+        "order_imbalance_q75": 0.24180312817723165,
+        "iqr_effect_bps": -6.748495644500051,
+        "r_squared": 0.00028953033417133955
+      },
+      {
+        "symbol": "UNIUSDT",
+        "config": {
+          "name": "primary",
+          "horizon_minutes": 720,
+          "entry_delay_minutes": 1,
+          "boundary_offset_minutes": 0,
+          "exclude_top_of_hour": false,
+          "exclude_funding_openings": false,
+          "sign_only_order_imbalance": false
+        },
+        "n": 70024,
+        "days": 730,
+        "order_imbalance_coefficient": -0.00103310743479145,
+        "hac_standard_error": 0.0006271646519676952,
+        "hac_two_sided_p_value": 0.09950324319529903,
+        "order_imbalance_q25": -0.28418682340010837,
+        "order_imbalance_q75": 0.2723401744802118,
+        "iqr_effect_bps": -5.749521791723243,
+        "r_squared": 0.0002981025294135353
+      },
+      {
+        "symbol": "FILUSDT",
+        "config": {
+          "name": "primary",
+          "horizon_minutes": 720,
+          "entry_delay_minutes": 1,
+          "boundary_offset_minutes": 0,
+          "exclude_top_of_hour": false,
+          "exclude_funding_openings": false,
+          "sign_only_order_imbalance": false
+        },
+        "n": 70019,
+        "days": 730,
+        "order_imbalance_coefficient": -4.430319212892597e-05,
+        "hac_standard_error": 0.0004961110065344908,
+        "hac_two_sided_p_value": 0.9288427263782071,
+        "order_imbalance_q25": -0.3027732159639472,
+        "order_imbalance_q75": 0.2761068142884042,
+        "iqr_effect_bps": -0.256462331998684,
+        "r_squared": 0.00020034635891907904
+      }
+    ]
+  },
+  "placebo": {
+    "offsets": {
+      "2": {
+        "equal_weight_mean_iqr_effect_bps": -1.538695630851776,
+        "total_events": 280081,
+        "assets": [
+          {
+            "symbol": "BNBUSDT",
+            "config": {
+              "name": "placebo_shift_2m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 2,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70023,
+            "days": 730,
+            "order_imbalance_coefficient": 8.330482105175588e-05,
+            "hac_standard_error": 0.0005006332187594984,
+            "hac_two_sided_p_value": 0.8678430330419453,
+            "order_imbalance_q25": -0.2634872190737916,
+            "order_imbalance_q75": 0.21740602551840382,
+            "iqr_effect_bps": 0.4006072568575111,
+            "r_squared": 8.101145344641125e-05
+          },
+          {
+            "symbol": "LINKUSDT",
+            "config": {
+              "name": "placebo_shift_2m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 2,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70023,
+            "days": 730,
+            "order_imbalance_coefficient": -0.00021669620806823796,
+            "hac_standard_error": 0.0006385872879120008,
+            "hac_two_sided_p_value": 0.7343559744187789,
+            "order_imbalance_q25": -0.2812304109645763,
+            "order_imbalance_q75": 0.22562335406001055,
+            "iqr_effect_bps": -1.0983328892593764,
+            "r_squared": 8.255178714211553e-05
+          },
+          {
+            "symbol": "UNIUSDT",
+            "config": {
+              "name": "placebo_shift_2m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 2,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70019,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0007480136421576762,
+            "hac_standard_error": 0.0005302273745472,
+            "hac_two_sided_p_value": 0.15832091594958297,
+            "order_imbalance_q25": -0.32179157012232545,
+            "order_imbalance_q75": 0.2739971282552577,
+            "iqr_effect_bps": -4.456580742297971,
+            "r_squared": 0.0002223261723387493
+          },
+          {
+            "symbol": "FILUSDT",
+            "config": {
+              "name": "placebo_shift_2m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 2,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70016,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0001642952581565669,
+            "hac_standard_error": 0.0004294753890839823,
+            "hac_two_sided_p_value": 0.7020544022685743,
+            "order_imbalance_q25": -0.3434698759289193,
+            "order_imbalance_q75": 0.26548023007709426,
+            "iqr_effect_bps": -1.000476148707268,
+            "r_squared": 8.819226838652217e-05
+          }
+        ]
+      },
+      "4": {
+        "equal_weight_mean_iqr_effect_bps": -1.6984981704565059,
+        "total_events": 280080,
+        "assets": [
+          {
+            "symbol": "BNBUSDT",
+            "config": {
+              "name": "placebo_shift_4m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 4,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70023,
+            "days": 730,
+            "order_imbalance_coefficient": 0.0004888784257034994,
+            "hac_standard_error": 0.00041520634256604806,
+            "hac_two_sided_p_value": 0.2390219791503715,
+            "order_imbalance_q25": -0.2673568235378248,
+            "order_imbalance_q75": 0.22090284421507267,
+            "iqr_effect_bps": 2.3869961770555017,
+            "r_squared": 0.00010400879168337429
+          },
+          {
+            "symbol": "LINKUSDT",
+            "config": {
+              "name": "placebo_shift_4m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 4,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70023,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0004117195850169393,
+            "hac_standard_error": 0.0005977859774955127,
+            "hac_two_sided_p_value": 0.4909864036699899,
+            "order_imbalance_q25": -0.2760300709627864,
+            "order_imbalance_q75": 0.23118491560705667,
+            "iqr_effect_bps": -2.0883034378490826,
+            "r_squared": 0.00012739757052693257
+          },
+          {
+            "symbol": "UNIUSDT",
+            "config": {
+              "name": "placebo_shift_4m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 4,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70017,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0008182967968669578,
+            "hac_standard_error": 0.0005341391924299156,
+            "hac_two_sided_p_value": 0.12552448876174502,
+            "order_imbalance_q25": -0.31892963330029733,
+            "order_imbalance_q75": 0.274000724550175,
+            "iqr_effect_bps": -4.851930125942205,
+            "r_squared": 0.00024337765723114746
+          },
+          {
+            "symbol": "FILUSDT",
+            "config": {
+              "name": "placebo_shift_4m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 4,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70017,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0003637787871785859,
+            "hac_standard_error": 0.0004239694766715883,
+            "hac_two_sided_p_value": 0.39087556325474626,
+            "order_imbalance_q25": -0.3439049016446718,
+            "order_imbalance_q75": 0.2720615521634795,
+            "iqr_effect_bps": -2.2407552950902376,
+            "r_squared": 0.0001685775295180436
+          }
+        ]
+      },
+      "7": {
+        "equal_weight_mean_iqr_effect_bps": 0.6596273363920379,
+        "total_events": 280080,
+        "assets": [
+          {
+            "symbol": "BNBUSDT",
+            "config": {
+              "name": "placebo_shift_7m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 7,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70023,
+            "days": 730,
+            "order_imbalance_coefficient": 0.0005350282648050446,
+            "hac_standard_error": 0.00046874443961288044,
+            "hac_two_sided_p_value": 0.2537005218710522,
+            "order_imbalance_q25": -0.2666837159663177,
+            "order_imbalance_q75": 0.22178469085074715,
+            "iqr_effect_bps": 2.6134440411141884,
+            "r_squared": 0.00020640115324421782
+          },
+          {
+            "symbol": "LINKUSDT",
+            "config": {
+              "name": "placebo_shift_7m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 7,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70023,
+            "days": 730,
+            "order_imbalance_coefficient": 7.264848500490606e-05,
+            "hac_standard_error": 0.0005837956232616203,
+            "hac_two_sided_p_value": 0.9009656053047457,
+            "order_imbalance_q25": -0.27786771401656046,
+            "order_imbalance_q75": 0.2372603657312934,
+            "iqr_effect_bps": 0.37423274577168014,
+            "r_squared": 0.0002020834312499442
+          },
+          {
+            "symbol": "UNIUSDT",
+            "config": {
+              "name": "placebo_shift_7m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 7,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70017,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0004434324191192511,
+            "hac_standard_error": 0.0005306804188240751,
+            "hac_two_sided_p_value": 0.4033843578034594,
+            "order_imbalance_q25": -0.32546374367622255,
+            "order_imbalance_q75": 0.2832722832722834,
+            "iqr_effect_bps": -2.699332890348176,
+            "r_squared": 0.00023974085499900433
+          },
+          {
+            "symbol": "FILUSDT",
+            "config": {
+              "name": "placebo_shift_7m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 7,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70017,
+            "days": 730,
+            "order_imbalance_coefficient": 0.00037289445482693693,
+            "hac_standard_error": 0.00042075682743744473,
+            "hac_two_sided_p_value": 0.3754844691702528,
+            "order_imbalance_q25": -0.3457385711003905,
+            "order_imbalance_q75": 0.28451093210586875,
+            "iqr_effect_bps": 2.350165449030459,
+            "r_squared": 0.00031036688094532305
+          }
+        ]
+      },
+      "11": {
+        "equal_weight_mean_iqr_effect_bps": -1.2138421684190621,
+        "total_events": 280073,
+        "assets": [
+          {
+            "symbol": "BNBUSDT",
+            "config": {
+              "name": "placebo_shift_11m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 11,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70022,
+            "days": 730,
+            "order_imbalance_coefficient": 0.0002714515310212665,
+            "hac_standard_error": 0.0005031416200138392,
+            "hac_two_sided_p_value": 0.5895328111583983,
+            "order_imbalance_q25": -0.26452081647820314,
+            "order_imbalance_q75": 0.22548048076871274,
+            "iqr_effect_bps": 1.3301160234008198,
+            "r_squared": 0.000336341378181948
+          },
+          {
+            "symbol": "LINKUSDT",
+            "config": {
+              "name": "placebo_shift_11m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 11,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70022,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0002306790248184037,
+            "hac_standard_error": 0.0006471306550309429,
+            "hac_two_sided_p_value": 0.7214928264357381,
+            "order_imbalance_q25": -0.27513760762632666,
+            "order_imbalance_q75": 0.24071544547287915,
+            "iqr_effect_bps": -1.1899647923852101,
+            "r_squared": 8.70790480299588e-05
+          },
+          {
+            "symbol": "UNIUSDT",
+            "config": {
+              "name": "placebo_shift_11m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 11,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70017,
+            "days": 730,
+            "order_imbalance_coefficient": -0.0006588772428678705,
+            "hac_standard_error": 0.0005983317571893809,
+            "hac_two_sided_p_value": 0.2708137583762684,
+            "order_imbalance_q25": -0.325187969924812,
+            "order_imbalance_q75": 0.28271405492730217,
+            "iqr_effect_bps": -4.005328100683568,
+            "r_squared": 0.0002767630429454382
+          },
+          {
+            "symbol": "FILUSDT",
+            "config": {
+              "name": "placebo_shift_11m",
+              "horizon_minutes": 720,
+              "entry_delay_minutes": 1,
+              "boundary_offset_minutes": 11,
+              "exclude_top_of_hour": false,
+              "exclude_funding_openings": false,
+              "sign_only_order_imbalance": false
+            },
+            "n": 70012,
+            "days": 730,
+            "order_imbalance_coefficient": -0.00015858247647786318,
+            "hac_standard_error": 0.0004482156629796308,
+            "hac_two_sided_p_value": 0.7234824613277772,
+            "order_imbalance_q25": -0.33853522034057904,
+            "order_imbalance_q75": 0.28586655846914544,
+            "iqr_effect_bps": -0.9901918040082907,
+            "r_squared": 0.00020721043694382768
+          }
+        ]
+      }
+    },
+    "mean_across_offsets_and_assets_iqr_effect_bps": -0.9478521583338266
+  },
+  "robustness": {
+    "horizon_8h": {
+      "equal_weight_mean_iqr_effect_bps": -1.7331365057667643,
+      "total_events": 280155,
+      "assets": [
+        {
+          "symbol": "BNBUSDT",
+          "config": {
+            "name": "horizon_8h",
+            "horizon_minutes": 480,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70040,
+          "days": 730,
+          "order_imbalance_coefficient": 0.0002235694277174091,
+          "hac_standard_error": 0.00046156674894463266,
+          "hac_two_sided_p_value": 0.6281227802866047,
+          "order_imbalance_q25": -0.26073668577935716,
+          "order_imbalance_q75": 0.24246784135594773,
+          "iqr_effect_bps": 1.1250114815644958,
+          "r_squared": 0.00021025885868697358
+        },
+        {
+          "symbol": "LINKUSDT",
+          "config": {
+            "name": "horizon_8h",
+            "horizon_minutes": 480,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70040,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0009759324706083247,
+          "hac_standard_error": 0.0005039127289027832,
+          "hac_two_sided_p_value": 0.0527808877724962,
+          "order_imbalance_q25": -0.2577924868004354,
+          "order_imbalance_q75": 0.24181443074957198,
+          "iqr_effect_bps": -4.875826133775883,
+          "r_squared": 0.00047853415820275913
+        },
+        {
+          "symbol": "UNIUSDT",
+          "config": {
+            "name": "horizon_8h",
+            "horizon_minutes": 480,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70040,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0004456109024426435,
+          "hac_standard_error": 0.0005829966176280013,
+          "hac_two_sided_p_value": 0.4446613148741244,
+          "order_imbalance_q25": -0.28418682340010837,
+          "order_imbalance_q75": 0.27236120221837923,
+          "iqr_effect_bps": -2.4800386794852574,
+          "r_squared": 0.00023792194031391212
+        },
+        {
+          "symbol": "FILUSDT",
+          "config": {
+            "name": "horizon_8h",
+            "horizon_minutes": 480,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70035,
+          "days": 730,
+          "order_imbalance_coefficient": -0.00012121556362283273,
+          "hac_standard_error": 0.0003900727121928495,
+          "hac_two_sided_p_value": 0.7559897704114343,
+          "order_imbalance_q25": -0.3027732159639472,
+          "order_imbalance_q75": 0.2761068142884042,
+          "iqr_effect_bps": -0.7016926913704122,
+          "r_squared": 0.0001717267929398636
+        }
+      ]
+    },
+    "entry_delay_5m": {
+      "equal_weight_mean_iqr_effect_bps": -2.604964990017407,
+      "total_events": 280091,
+      "assets": [
+        {
+          "symbol": "BNBUSDT",
+          "config": {
+            "name": "entry_delay_5m",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 5,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70024,
+          "days": 730,
+          "order_imbalance_coefficient": 0.0002643665746727681,
+          "hac_standard_error": 0.0005323395532879735,
+          "hac_two_sided_p_value": 0.619462206420069,
+          "order_imbalance_q25": -0.26072068048829844,
+          "order_imbalance_q75": 0.2425065537655422,
+          "iqr_effect_bps": 1.3303646020173854,
+          "r_squared": 0.0006282984332701691
+        },
+        {
+          "symbol": "LINKUSDT",
+          "config": {
+            "name": "entry_delay_5m",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 5,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70024,
+          "days": 730,
+          "order_imbalance_coefficient": -0.001366234524711777,
+          "hac_standard_error": 0.0006388151501639229,
+          "hac_two_sided_p_value": 0.032459901199129455,
+          "order_imbalance_q25": -0.25782587842472626,
+          "order_imbalance_q75": 0.24180312817723165,
+          "iqr_effect_bps": -6.826103983670433,
+          "r_squared": 0.0005476415314101812
+        },
+        {
+          "symbol": "UNIUSDT",
+          "config": {
+            "name": "entry_delay_5m",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 5,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70024,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0009080383530266804,
+          "hac_standard_error": 0.0006220139027128124,
+          "hac_two_sided_p_value": 0.14433512307334084,
+          "order_imbalance_q25": -0.28418682340010837,
+          "order_imbalance_q75": 0.2723401744802118,
+          "iqr_effect_bps": -5.053478585701288,
+          "r_squared": 0.0004456139123184544
+        },
+        {
+          "symbol": "FILUSDT",
+          "config": {
+            "name": "entry_delay_5m",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 5,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 70019,
+          "days": 730,
+          "order_imbalance_coefficient": 2.2346254927521874e-05,
+          "hac_standard_error": 0.0004977928131534156,
+          "hac_two_sided_p_value": 0.9641944503698218,
+          "order_imbalance_q25": -0.3027732159639472,
+          "order_imbalance_q75": 0.2761068142884042,
+          "iqr_effect_bps": 0.12935800728470617,
+          "r_squared": 0.00030467910143905375
+        }
+      ]
+    },
+    "exclude_top_of_hour": {
+      "equal_weight_mean_iqr_effect_bps": -2.4242225744894776,
+      "total_events": 210067,
+      "assets": [
+        {
+          "symbol": "BNBUSDT",
+          "config": {
+            "name": "exclude_top_of_hour",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": true,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 52518,
+          "days": 730,
+          "order_imbalance_coefficient": 0.0003081755998978568,
+          "hac_standard_error": 0.0005416227651511892,
+          "hac_two_sided_p_value": 0.5693658548226674,
+          "order_imbalance_q25": -0.2651216676014572,
+          "order_imbalance_q75": 0.24315192264960261,
+          "iqr_effect_bps": 1.5663751858785782,
+          "r_squared": 0.0002709773105180613
+        },
+        {
+          "symbol": "LINKUSDT",
+          "config": {
+            "name": "exclude_top_of_hour",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": true,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 52518,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0011009265494526777,
+          "hac_standard_error": 0.0006769950620623903,
+          "hac_two_sided_p_value": 0.10390800217081836,
+          "order_imbalance_q25": -0.26356467196409633,
+          "order_imbalance_q75": 0.24653341349719848,
+          "iqr_effect_bps": -5.615805251093205,
+          "r_squared": 0.00043025629548532063
+        },
+        {
+          "symbol": "UNIUSDT",
+          "config": {
+            "name": "exclude_top_of_hour",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": true,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 52518,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0008345722102746584,
+          "hac_standard_error": 0.0006469538215016515,
+          "hac_two_sided_p_value": 0.19704970252969523,
+          "order_imbalance_q25": -0.288968428025547,
+          "order_imbalance_q75": 0.2796381218132002,
+          "iqr_effect_bps": -4.745432250755709,
+          "r_squared": 0.00037003041651462176
+        },
+        {
+          "symbol": "FILUSDT",
+          "config": {
+            "name": "exclude_top_of_hour",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": true,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 52513,
+          "days": 730,
+          "order_imbalance_coefficient": -0.00015150794932549042,
+          "hac_standard_error": 0.0005269745327865261,
+          "hac_two_sided_p_value": 0.773725476051538,
+          "order_imbalance_q25": -0.31288376748086233,
+          "order_imbalance_q75": 0.2824830010638788,
+          "iqr_effect_bps": -0.9020279819875762,
+          "r_squared": 0.0001089188754227477
+        }
+      ]
+    },
+    "exclude_funding_openings": {
+      "equal_weight_mean_iqr_effect_bps": -2.966918429873002,
+      "total_events": 271339,
+      "assets": [
+        {
+          "symbol": "BNBUSDT",
+          "config": {
+            "name": "exclude_funding_openings",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": true,
+            "sign_only_order_imbalance": false
+          },
+          "n": 67836,
+          "days": 730,
+          "order_imbalance_coefficient": 0.00011985430336020979,
+          "hac_standard_error": 0.0005321840093482718,
+          "hac_two_sided_p_value": 0.821814240207941,
+          "order_imbalance_q25": -0.2622122336351289,
+          "order_imbalance_q75": 0.24307152241399244,
+          "iqr_effect_bps": 0.6056043258049763,
+          "r_squared": 0.0004270379391185797
+        },
+        {
+          "symbol": "LINKUSDT",
+          "config": {
+            "name": "exclude_funding_openings",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": true,
+            "sign_only_order_imbalance": false
+          },
+          "n": 67836,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0013679288496922504,
+          "hac_standard_error": 0.0006355247259623699,
+          "hac_two_sided_p_value": 0.03136271507832264,
+          "order_imbalance_q25": -0.2599976325921531,
+          "order_imbalance_q75": 0.24221106749489824,
+          "iqr_effect_bps": -6.869857694155204,
+          "r_squared": 0.00030899388941207917
+        },
+        {
+          "symbol": "UNIUSDT",
+          "config": {
+            "name": "exclude_funding_openings",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": true,
+            "sign_only_order_imbalance": false
+          },
+          "n": 67836,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0009950752329773256,
+          "hac_standard_error": 0.0006292385504131989,
+          "hac_two_sided_p_value": 0.11378755551660286,
+          "order_imbalance_q25": -0.28601280493243897,
+          "order_imbalance_q75": 0.27423403866815954,
+          "iqr_effect_bps": -5.574877584206768,
+          "r_squared": 0.0002724740723127894
+        },
+        {
+          "symbol": "FILUSDT",
+          "config": {
+            "name": "exclude_funding_openings",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": true,
+            "sign_only_order_imbalance": false
+          },
+          "n": 67831,
+          "days": 730,
+          "order_imbalance_coefficient": -4.900310476807769e-06,
+          "hac_standard_error": 0.0004942961505992859,
+          "hac_two_sided_p_value": 0.9920901305344949,
+          "order_imbalance_q25": -0.305160568263794,
+          "order_imbalance_q75": 0.27730797266027096,
+          "iqr_effect_bps": -0.028542766935011305,
+          "r_squared": 0.0001873679922682614
+        }
+      ]
+    },
+    "sign_only_order_imbalance": {
+      "equal_weight_mean_iqr_effect_bps": -3.1499971390607735,
+      "total_events": 280091,
+      "assets": [
+        {
+          "symbol": "BNBUSDT",
+          "config": {
+            "name": "sign_only_order_imbalance",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": true
+          },
+          "n": 70024,
+          "days": 730,
+          "order_imbalance_coefficient": 9.101245253765298e-05,
+          "hac_standard_error": 0.0001800955887762777,
+          "hac_two_sided_p_value": 0.6133085589275988,
+          "order_imbalance_q25": -1.0,
+          "order_imbalance_q75": 1.0,
+          "iqr_effect_bps": 1.8202490507530598,
+          "r_squared": 0.00047009257554875283
+        },
+        {
+          "symbol": "LINKUSDT",
+          "config": {
+            "name": "sign_only_order_imbalance",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": true
+          },
+          "n": 70024,
+          "days": 730,
+          "order_imbalance_coefficient": -7.591871470471674e-05,
+          "hac_standard_error": 0.000219694600174565,
+          "hac_two_sided_p_value": 0.729669823575692,
+          "order_imbalance_q25": -1.0,
+          "order_imbalance_q75": 1.0,
+          "iqr_effect_bps": -1.5183742940943348,
+          "r_squared": 0.00021042157063966282
+        },
+        {
+          "symbol": "UNIUSDT",
+          "config": {
+            "name": "sign_only_order_imbalance",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": true
+          },
+          "n": 70024,
+          "days": 730,
+          "order_imbalance_coefficient": -0.0003553962178036939,
+          "hac_standard_error": 0.00023447372458496464,
+          "hac_two_sided_p_value": 0.12959048760357078,
+          "order_imbalance_q25": -1.0,
+          "order_imbalance_q75": 1.0,
+          "iqr_effect_bps": -7.107924356073878,
+          "r_squared": 0.00028863146635460524
+        },
+        {
+          "symbol": "FILUSDT",
+          "config": {
+            "name": "sign_only_order_imbalance",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": true
+          },
+          "n": 70019,
+          "days": 730,
+          "order_imbalance_coefficient": -0.00028969694784139704,
+          "hac_standard_error": 0.00020147250927545686,
+          "hac_two_sided_p_value": 0.15046295543979485,
+          "order_imbalance_q25": -1.0,
+          "order_imbalance_q75": 1.0,
+          "iqr_effect_bps": -5.793938956827941,
+          "r_squared": 0.0002351445647178485
+        }
+      ]
+    }
+  },
+  "calendar_years": {
+    "2021": {
+      "equal_weight_mean_iqr_effect_bps": -7.172058286091417,
+      "total_events": 139947,
+      "assets": [
+        {
+          "symbol": "BNBUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34988,
+          "days": 365,
+          "order_imbalance_coefficient": -0.0004152467155274986,
+          "hac_standard_error": 0.0009197884373616175,
+          "hac_two_sided_p_value": 0.6516588097678302,
+          "order_imbalance_q25": -0.246401598329897,
+          "order_imbalance_q75": 0.22037268717308767,
+          "iqr_effect_bps": -1.938264889478093,
+          "r_squared": 0.0011698923477448941
+        },
+        {
+          "symbol": "LINKUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34988,
+          "days": 365,
+          "order_imbalance_coefficient": -0.0026172271143321555,
+          "hac_standard_error": 0.0010887840319837277,
+          "hac_two_sided_p_value": 0.016225319100984303,
+          "order_imbalance_q25": -0.26108600185348185,
+          "order_imbalance_q75": 0.23489201120059972,
+          "iqr_effect_bps": -12.9808710387773,
+          "r_squared": 0.0003703181735619232
+        },
+        {
+          "symbol": "UNIUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34988,
+          "days": 365,
+          "order_imbalance_coefficient": -0.0025814912163729608,
+          "hac_standard_error": 0.0010935084772676841,
+          "hac_two_sided_p_value": 0.01823842203844803,
+          "order_imbalance_q25": -0.2837534246407062,
+          "order_imbalance_q75": 0.264153661201158,
+          "iqr_effect_bps": -14.144173294892784,
+          "r_squared": 0.0004850975416189618
+        },
+        {
+          "symbol": "FILUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34983,
+          "days": 365,
+          "order_imbalance_coefficient": 6.173714208343396e-05,
+          "hac_standard_error": 0.0006995564465594825,
+          "hac_two_sided_p_value": 0.929676517363092,
+          "order_imbalance_q25": -0.32436595406372715,
+          "order_imbalance_q75": 0.2831712044843899,
+          "iqr_effect_bps": 0.3750760787825085,
+          "r_squared": 0.00022979492655206268
+        }
+      ]
+    },
+    "2022": {
+      "equal_weight_mean_iqr_effect_bps": 1.8391082170375004,
+      "total_events": 139948,
+      "assets": [
+        {
+          "symbol": "BNBUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34987,
+          "days": 365,
+          "order_imbalance_coefficient": 0.0009565750914731779,
+          "hac_standard_error": 0.0006628155303994837,
+          "hac_two_sided_p_value": 0.14896425935902677,
+          "order_imbalance_q25": -0.2773063645039921,
+          "order_imbalance_q75": 0.2708486391339704,
+          "iqr_effect_bps": 5.243514227464642,
+          "r_squared": 0.0003933480851483484
+        },
+        {
+          "symbol": "LINKUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34987,
+          "days": 365,
+          "order_imbalance_coefficient": -0.00019747406161814142,
+          "hac_standard_error": 0.0007024391673970046,
+          "hac_two_sided_p_value": 0.7786135980056456,
+          "order_imbalance_q25": -0.2540779949240082,
+          "order_imbalance_q75": 0.24990927577768052,
+          "iqr_effect_bps": -0.995244133493042,
+          "r_squared": 0.000642912049872546
+        },
+        {
+          "symbol": "UNIUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34987,
+          "days": 365,
+          "order_imbalance_coefficient": 0.00044696611099161415,
+          "hac_standard_error": 0.0006602625689968256,
+          "hac_two_sided_p_value": 0.49843636705623073,
+          "order_imbalance_q25": -0.284378330377133,
+          "order_imbalance_q75": 0.28054426869936355,
+          "iqr_effect_bps": 2.5250125712049654,
+          "r_squared": 0.00046928751396135837
+        },
+        {
+          "symbol": "FILUSDT",
+          "config": {
+            "name": "primary",
+            "horizon_minutes": 720,
+            "entry_delay_minutes": 1,
+            "boundary_offset_minutes": 0,
+            "exclude_top_of_hour": false,
+            "exclude_funding_openings": false,
+            "sign_only_order_imbalance": false
+          },
+          "n": 34987,
+          "days": 365,
+          "order_imbalance_coefficient": 0.00010586124810776106,
+          "hac_standard_error": 0.0007027834767872231,
+          "hac_two_sided_p_value": 0.8802665026152812,
+          "order_imbalance_q25": -0.2821274031045529,
+          "order_imbalance_q75": 0.2687353662251841,
+          "iqr_effect_bps": 0.5831502029734363,
+          "r_squared": 0.0008420740415598926
+        }
+      ]
+    }
+  },
+  "bootstrap": {
+    "method": "joint moving-block bootstrap with OLS refit and fixed full-sample IQR",
+    "replications": 999,
+    "seed": 20260722,
+    "block_days": 4,
+    "primary_mean_draw_bps": -2.9995160745435694,
+    "primary_ci_95_bps": [
+      -6.630696182910682,
+      0.4128691870123522
+    ],
+    "true_minus_mean_placebo_draw_bps": -2.112450781310404,
+    "true_minus_mean_placebo_ci_95_bps": [
+      -5.867538942191695,
+      1.6158370737736716
+    ]
+  },
+  "gate": {
+    "checks": {
+      "data_quality_pass": true,
+      "minimum_total_primary_events": true,
+      "primary_mean_positive": false,
+      "primary_bootstrap_ci_low_positive": false,
+      "true_minus_mean_placebo_positive": false,
+      "placebo_difference_ci_low_positive": false,
+      "all_asset_effects_positive": false,
+      "all_calendar_year_effects_positive": false,
+      "delayed_5m_effect_positive": false,
+      "exclude_top_of_hour_effect_positive": false,
+      "exclude_funding_effect_positive": false,
+      "minimum_12bp_economic_relevance": false
+    },
+    "pass": false,
+    "primary_minus_mean_placebo_bps": -2.1603769671628643,
+    "economic_reference_warning": "12 bp is only a favorable round-trip relevance floor. This predictive study does not simulate fees, spread/slippage, funding, fills, margin, or an equity curve."
+  },
+  "release_next_phase": false,
+  "conclusion": "DOES_NOT_SUPPORT",
+  "scope_warning": "A predictive result is not a net-cost strategy. No overlapping-signal position path, fees, funding, spread/slippage, fills, margin, or liquidation is modeled."
+}

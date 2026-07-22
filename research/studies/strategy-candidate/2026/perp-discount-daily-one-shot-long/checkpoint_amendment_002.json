@@ -1,0 +1,24 @@
+{
+  "created_at_utc": "2026-07-22T04:22:07.644994Z",
+  "checkpoint_digest": "5f4514f10e2136347b4f955a0c2e75f5e6ef50c8332e06d3bb037a6f112f2f18",
+  "classification": "ALLOWED_DETERMINISTIC_PERFORMANCE_FIX",
+  "reason": "The first analyze call exceeded the 304-second command limit after writing intermediate trade CSVs but before any result JSON or gate. The fix memoizes identical in-memory input matrices within one process and suppresses the reusable monthly engine's unused 3-period bootstrap before calculating the pre-registered 14-day bootstrap exactly once. Signal, trades, return formulas, RNG seed, bootstrap definition/repetitions, outputs, costs, diagnostics, stages, and gates are unchanged.",
+  "previous_files": {
+    "study_py_sha256": "298d7cb1df86952b379a833e23e059801f28ecc106dbd825b5cde2621d6399b8",
+    "engine_py_sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+    "preregistration_sha256": "2cee5f1e789bcfec612fad4e8b012b3cb94fc74d085cb25eda44a9e4b8911120",
+    "sources_sha256": "779c3bfbb955dbbcf61765d722eaf9588432770394ae32709b91f62d51a3fd5b"
+  },
+  "current_files": {
+    "study_py_sha256": "46317858620bc63873ea8af58767b1025b6a9dbec333e19f8ca944563d9156e8",
+    "engine_py_sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+    "preregistration_sha256": "2cee5f1e789bcfec612fad4e8b012b3cb94fc74d085cb25eda44a9e4b8911120",
+    "sources_sha256": "779c3bfbb955dbbcf61765d722eaf9588432770394ae32709b91f62d51a3fd5b"
+  },
+  "economic_method_changed": false,
+  "outputs_viewed_before_fix": [
+    "file names, sizes, and timestamps of partial trade CSVs only; no CSV contents or performance values",
+    "no development.json, gate, or results.json existed"
+  ],
+  "content_digest": "cfc64840dd597bc7def00d46366ad7c9a588ed793389d0500a003cbdf41b445b"
+}

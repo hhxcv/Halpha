@@ -1,0 +1,120 @@
+{
+  "created_at_utc": "2026-07-22T12:17:50.662468+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP",
+    "role": "fixed comparison context only"
+  },
+  "research_kind": "PREDICTIVE",
+  "predictor_id": "RESEARCH_RESIDUAL_MOM14_NEXT_WEEK_V1",
+  "question": "Does standardized 14-day residual momentum incrementally predict next-week mature-perpetual returns?",
+  "replication_status": "Operational weekly perpetual adaptation; not a numerical replication.",
+  "evidence_boundary": "Exact rule is new; broad crypto paths and part of the source-paper period were previously exposed.",
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "data_start": "2022-01-01T00:00:00Z",
+  "data_end_exclusive": "2026-07-22T00:00:00Z",
+  "stages": {
+    "development": [
+      "2023-03-04T00:00:00Z",
+      "2024-03-02T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-03-02T00:00:00Z",
+      "2025-03-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-03-01T00:00:00Z",
+      "2026-07-18T00:00:00Z"
+    ]
+  },
+  "expected_weeks": {
+    "development": 52,
+    "evaluation": 52,
+    "confirmation": 72
+  },
+  "windows": {
+    "diagnostic_7d": 7,
+    "primary_14d": 14,
+    "diagnostic_28d": 28
+  },
+  "controls": [
+    "raw_mom14",
+    "beta84",
+    "idio_vol84",
+    "total_vol28",
+    "max28",
+    "log_volume30"
+  ],
+  "config": {
+    "predictor_id": "RESEARCH_RESIDUAL_MOM14_NEXT_WEEK_V1",
+    "beta_days": 84,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "minimum_rankable": 20,
+    "tail_fraction": 0.2,
+    "action_gap_days": 2,
+    "target_days": 7,
+    "stress_round_trip_underlying": 0.0052,
+    "economic_notional_fraction": 0.25,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 4,
+    "minimum_positive_spread_fraction": 0.55,
+    "minimum_selected_symbols": 10,
+    "minimum_positive_symbol_fraction": 0.5,
+    "maximum_positive_contribution_share": 0.4,
+    "maximum_abs_score_control_correlation": 0.9
+  },
+  "parent_manifest": {
+    "path": "research/studies/predictive/2026/intermediate-vix-beta-weekly-return-predictability/source_manifest.json",
+    "sha256": "07d0c80a4ea858e767960c53bc9ef5345cecc1a07fb482d9d2d87b862fb50693",
+    "content_digest": "d8cab91fb7ccdc39204aa2b783d13376b92ba0137fb3cb8e6a164cb432ed3514"
+  },
+  "frozen_file_sha256": {
+    "README.md": "8290f8f8a12b154a8fec5ad2598df57f3a26831e72b0cf2bb2610f4fe3a31886",
+    "sources.md": "fdd812f31c0b4744e1e6237e00c9fc26c43146b9b97fc3265bc1698efaa15742",
+    "preregistration.md": "e20683c6ae037e63a30d5f74c49916ffcd787ba02708d08155e80972d1e75e90",
+    "study.py": "cc1acd66ba6743e11109bdfd157de6a6189ff21240f79da095493b36e4343b4d"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "framework_decision": "Predictive statistics use pandas/statsmodels; vectorbt is deferred until a strategy conversion is authorized by three passing stages.",
+  "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS",
+  "content_digest": "37ccd36d92b0321a45f4fc40051f6ac5feb554e87ae0b2e1517bde39a031ce20"
+}

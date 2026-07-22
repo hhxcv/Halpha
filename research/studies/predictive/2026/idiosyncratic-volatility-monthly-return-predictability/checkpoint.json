@@ -1,0 +1,121 @@
+{
+  "created_at_utc": "2026-07-22T10:46:36.669827+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy_background": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.1 / BTCUSDT-PERP",
+  "research_kind": "PREDICTIVE",
+  "question": "Does trailing leave-one-out market-model idiosyncratic volatility negatively predict next-month returns among 25 mature Binance USD-M perpetuals after total-volatility, MAX, momentum, beta and volume controls, with enough gross room to justify a separate one-shot strategy study?",
+  "hypothesis_direction": "negative IVOL90 coefficient; positive low-minus-high return spread",
+  "stages": {
+    "development": [
+      "2022-01-01T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ]
+  },
+  "config": {
+    "predictor_id": "RESEARCH_MATURE_PERP_IVOL90_MONTHLY_RETURN_V1",
+    "main_variant": "ivol90",
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "history_returns": 120,
+    "tail_fraction": 0.2,
+    "gap_full_days": 1,
+    "notional_fraction": 0.25,
+    "stress_round_trip_underlying": 0.0052,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {
+      "block_months": 3,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "hac_maxlags": 3
+  },
+  "universe": {
+    "symbols": [
+      "1000XECUSDT",
+      "AAVEUSDT",
+      "AVAXUSDT",
+      "BCHUSDT",
+      "BNBUSDT",
+      "CRVUSDT",
+      "DASHUSDT",
+      "ENSUSDT",
+      "ETCUSDT",
+      "HBARUSDT",
+      "KAVAUSDT",
+      "LINKUSDT",
+      "LTCUSDT",
+      "NEARUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "UNIUSDT",
+      "VETUSDT",
+      "XLMUSDT",
+      "XMRUSDT",
+      "XRPUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ],
+    "categories": {
+      "DeFi": [
+        "AAVEUSDT",
+        "CRVUSDT",
+        "KAVAUSDT",
+        "RUNEUSDT",
+        "SNXUSDT",
+        "UNIUSDT"
+      ],
+      "Infrastructure": [
+        "ENSUSDT",
+        "LINKUSDT"
+      ],
+      "Layer-1": [
+        "AVAXUSDT",
+        "BNBUSDT",
+        "HBARUSDT",
+        "NEARUSDT",
+        "SOLUSDT",
+        "TRXUSDT",
+        "VETUSDT"
+      ],
+      "Layer-2": [
+        "XLMUSDT"
+      ],
+      "Payment": [
+        "1000XECUSDT",
+        "BCHUSDT",
+        "LTCUSDT",
+        "XRPUSDT"
+      ],
+      "PoW": [
+        "DASHUSDT",
+        "ETCUSDT",
+        "XMRUSDT",
+        "ZECUSDT",
+        "ZILUSDT"
+      ]
+    }
+  },
+  "stage_open_rule": "development must pass every frozen gate before evaluation may be opened",
+  "family_stop_rule": "Any development failure seals evaluation and prohibits changing direction, universe, factor model, formation window, tail, controls, cost proxy, stage or threshold without a new independent mechanism.",
+  "frozen_file_sha256": {
+    "README.md": "9d750b78bda483f651691e3220e6b0a1bcc51463c1dbf795fd8b1eef56b2291d",
+    "sources.md": "a52f5b14a6729407a9e0d973d305edb20bac52d707add496c303a27d1c16c6d0",
+    "preregistration.md": "268682631acddce94f625f67715b85a28e9908044f83c4a80d72b57d058c2a34",
+    "study.py": "5945ddd1ba9db6a70df1af3f8212164f68a2f527109f41be43b140bb34685d42"
+  },
+  "source_reuse_digest": "01dc696f7060353eacb02494869ef71313ec8c53fbeb1ab0982450745f691123",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "content_digest": "5ad3356fd2f0724d6e91f2ca8b80c15f77c54adcc1c4ea8e19521ba21777b4e1"
+}

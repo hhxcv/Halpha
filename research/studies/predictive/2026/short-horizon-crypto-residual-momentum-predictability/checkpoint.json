@@ -1,0 +1,159 @@
+{
+  "created_at_utc": "2026-07-22T10:09:29.179732+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "PREDICTIVE",
+  "question": "Does a fixed 90-day leave-one-out crypto-market beta residual, standardized over the latest 14 days, incrementally predict next-week cross-sectional returns beyond plain 14-day momentum at a magnitude worth a separate retail-cost strategy study?",
+  "replication_status": "Transparent Halpha time-scale adaptation of Blitz-Huij-Martens residual momentum; not a replication of Li-Zhu 2026 because the auditable public RMOM formula was unavailable at checkpoint time.",
+  "known_exposure": "The same public 2022-2023 price paths were viewed in prior Halpha questions, but this RMOM ranking and its conditional targets had not been computed before the checkpoint. Sequencing prevents local tuning but does not create genuinely unseen historical evidence.",
+  "support_limit": "A pass supports only a predictive relationship and releases a separate costed strategy question. It does not qualify a strategy, authorize product changes, or establish long-term profitability.",
+  "family_stop_rule": "On any development failure, do not search adjacent directions, windows, thresholds, states, symbols, market definitions or holding periods without new independent mechanism evidence.",
+  "configuration": {
+    "predictor_id": "RESEARCH_SHORT_HORIZON_CRYPTO_RMOM_90_14_V1",
+    "main_variant": "rmom_90_14",
+    "raw_baseline": "raw_mom14",
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "tail_fraction": 0.2,
+    "tail_count_rounding": "ceil",
+    "cooldown_full_days": 1,
+    "target_days": 7,
+    "stress_round_trip_underlying": 0.0052,
+    "notional_fraction_for_economic_screen": 0.25,
+    "annual_full_plan_hurdle": 0.04,
+    "economic_floor_underlying_week": 0.008276923076923078,
+    "minimum_action_weeks": 80,
+    "minimum_half_weeks": 35,
+    "minimum_selected_symbols": 15,
+    "minimum_positive_symbol_fraction": 0.5,
+    "maximum_positive_contribution_share": 0.4,
+    "maximum_abs_median_signal_raw_spearman": 0.9,
+    "bootstrap": {
+      "block_weeks": 4,
+      "repetitions": 5000,
+      "seed": 20260722
+    },
+    "variants": {
+      "rmom_90_14": {
+        "beta_days": 90,
+        "signal_days": 14
+      },
+      "rmom_60_14": {
+        "beta_days": 60,
+        "signal_days": 14
+      },
+      "rmom_120_14": {
+        "beta_days": 120,
+        "signal_days": 14
+      },
+      "rmom_90_7": {
+        "beta_days": 90,
+        "signal_days": 7
+      },
+      "rmom_90_21": {
+        "beta_days": 90,
+        "signal_days": 21
+      }
+    }
+  },
+  "stages": {
+    "development": [
+      "2022-01-03T00:00:00Z",
+      "2024-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2024-01-01T00:00:00Z",
+      "2024-12-30T00:00:00Z"
+    ]
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "categories": {
+    "DeFi": [
+      "AAVEUSDT",
+      "CRVUSDT",
+      "KAVAUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "UNIUSDT"
+    ],
+    "Infrastructure": [
+      "ENSUSDT",
+      "LINKUSDT"
+    ],
+    "Layer-1": [
+      "AVAXUSDT",
+      "BNBUSDT",
+      "HBARUSDT",
+      "NEARUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "VETUSDT"
+    ],
+    "Layer-2": [
+      "XLMUSDT"
+    ],
+    "Payment": [
+      "1000XECUSDT",
+      "BCHUSDT",
+      "LTCUSDT",
+      "XRPUSDT"
+    ],
+    "PoW": [
+      "DASHUSDT",
+      "ETCUSDT",
+      "XMRUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ]
+  },
+  "selection_scope": {
+    "selectable_primary_configurations": 1,
+    "fixed_neighbor_diagnostics": 4
+  },
+  "stage_open_rule": "development -> evaluation; evaluation sealed until every development hard gate passes",
+  "frozen_file_sha256": {
+    "README.md": "35a9ca7e3d7afb47dcaba59e87ace0617dc7e049e2d447ed41b57fedd32b7f41",
+    "sources.md": "c737ad60d8722e5a5b1e8282871386ebb3a9eb8db657280c12f86fe9b12e3650",
+    "preregistration.md": "ea4bb05bc78f564ae39727e659aab65c2ba520a7f1a8876501346f60de183c84",
+    "study.py": "c4bf35623362bc2603fca6009006322aeabc5ef50c9a11192ab7880572b19fe2"
+  },
+  "source_reuse_digest": "77a4a6ec14101359f62d3acc245047833cd9fffd155e5ac098101ca5dd75411e",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "content_digest": "ecc04cfc894b39aad830f40b5f4271c02cbcd47172a7918412e68522d248f77e"
+}

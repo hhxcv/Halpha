@@ -1,0 +1,62 @@
+{
+  "created_at_utc": "2026-07-22T13:37:27.601424+00:00",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP",
+    "role": "fixed comparison context only"
+  },
+  "research_kind": "PREDICTIVE",
+  "predictor_id": "RESEARCH_TETHER_POSITIVE_BNS_JUMP_BTC_NEXT_DAY_V1",
+  "question": "Do positive BNS jumps in Bitfinex USDT/USD predict negative next-24-hour Binance BTCUSDT perpetual returns after a 15-minute action delay?",
+  "source_sample_end": "2021-06-30",
+  "replication_status": "post-source cross-venue operational transfer; not a numerical replication",
+  "stages": {
+    "development": ["2021-07-01T00:00:00Z", "2023-01-01T00:00:00Z"],
+    "evaluation": ["2023-01-01T00:00:00Z", "2024-07-01T00:00:00Z"],
+    "confirmation": ["2024-07-01T00:00:00Z", "2026-07-20T00:00:00Z"]
+  },
+  "expected_days": {"development": 549, "evaluation": 547, "confirmation": 749},
+  "config": {
+    "predictor_id": "RESEARCH_TETHER_POSITIVE_BNS_JUMP_BTC_NEXT_DAY_V1",
+    "bitfinex_symbol": "tUSTUSD",
+    "binance_symbol": "BTCUSDT",
+    "bns_returns_per_day": 24,
+    "bns_critical_value": 1.959963984540054,
+    "fixed_positive_return_threshold": 0.00003,
+    "entry_delay_minutes": 15,
+    "target_hours": 24,
+    "hac_maxlags": 7,
+    "stress_round_trip_underlying": 0.0052,
+    "economic_notional_fraction": 0.25,
+    "annual_full_plan_hurdle": 0.04,
+    "bootstrap": {"block_days": 14, "repetitions": 5000, "seed": 20260722},
+    "minimum_eligible_fraction": 0.95,
+    "minimum_bitfinex_hour_fraction": 0.98,
+    "minimum_median_nonzero_hourly_returns": 4,
+    "minimum_median_unique_hourly_closes": 4,
+    "minimum_positive_bns_events": 20,
+    "minimum_event_quarters": 5,
+    "minimum_positive_event_fraction": 0.52,
+    "maximum_positive_quarter_contribution": 0.5,
+    "download_workers": 6
+  },
+  "data_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\tether-positive-jump-btc-next-day-predictability\\2026-07-22-v1",
+  "frozen_file_sha256": {
+    "README.md": "d91e00d1846d5859c058c077b86dbc60bf2886eb4aefb7335207d22e2ff47ab2",
+    "sources.md": "18678ad8fcf1c3c201a12aadf2a053596146f67f697d3b1bfcff610cf0df92ac",
+    "preregistration.md": "01e00c5ef5e2a38fd36c82ddb12973c8a187b28b6d356ca658b134ad98d5bb59",
+    "study.py": "cdd63470ac6b5ce95bbebcb16a2dd821ff3e3eef6f214b680cf8916e79d8c55f"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.18.0",
+    "statsmodels": "0.14.6"
+  },
+  "framework_decision": "pandas/statsmodels for a predictive question; vectorbt and exact funding are mandatory only in a separately frozen strategy-candidate study after three passes",
+  "stage_open_rule": "development -> evaluation on PASS -> confirmation on PASS",
+  "content_digest": "e5dafcbb14d0903307bb26fce0e6f7d46c6391464289476cb8bbc803216c45b7"
+}

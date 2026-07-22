@@ -1,0 +1,36 @@
+{
+  "created_at_utc": "2026-07-22T10:30:25.612908+00:00",
+  "entries": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\short-horizon-crypto-residual-momentum-predictability\\study.py",
+      "bytes": 37614,
+      "sha256": "c4bf35623362bc2603fca6009006322aeabc5ef50c9a11192ab7880572b19fe2",
+      "role": "reused public daily OHLCV adapter"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\short-horizon-crypto-residual-momentum-predictability\\checkpoint.json",
+      "bytes": 5090,
+      "sha256": "efe49983e439481a02b0397de45327f22cb8c21bb5547b5565c8c8a3b4e42ccf",
+      "role": "frozen parent identity"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\short-horizon-crypto-residual-momentum-predictability\\source_reuse_manifest.json",
+      "bytes": 1903,
+      "sha256": "9a133b992ae18dccbe53a78189820fcfb023908d4171308f0ba3c5d38172b692",
+      "role": "public source reuse chain"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\predictive\\2026\\short-horizon-crypto-residual-momentum-predictability\\data_quality_development.json",
+      "bytes": 23915,
+      "sha256": "0893ee6de1971cd57213b6ce49113bf40d0ec907e1425980f07b2aec9bb4b7fb",
+      "role": "parent public-data quality evidence"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+      "bytes": 3383646,
+      "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+      "role": "frozen current research universe"
+    }
+  ],
+  "content_digest": "13384ebcf9ad50e23009e5e7f28fe99c48fbf09801042717bdb4d6e3e5beb02f"
+}

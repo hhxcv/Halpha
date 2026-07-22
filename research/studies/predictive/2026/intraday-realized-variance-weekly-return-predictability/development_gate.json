@@ -1,0 +1,43 @@
+{
+  "created_at_utc": "2026-07-22T15:02:53.302430+00:00",
+  "stage": "development",
+  "status": "FAIL",
+  "result_digest": "428ea7ea2a46200563986df8b6ee472a5f4d89c7f170fa696f10021ed2871794",
+  "checks": {
+    "data_quality_pass": true,
+    "minimum_action_weeks": true,
+    "minimum_rankable_each_week": true,
+    "spread_mean_negative": true,
+    "spread_bootstrap_upper_negative": false,
+    "spread_negative_fraction": false,
+    "rank_ic_negative": true,
+    "rank_ic_negative_significant": true,
+    "controlled_rv_negative": false,
+    "controlled_rv_negative_significant": false,
+    "proxy_mean_positive": false,
+    "proxy_bootstrap_lower_positive": false,
+    "increment_vs_dvol_positive": false,
+    "increment_vs_dvol_bootstrap_lower_positive": false,
+    "both_halves_positive": false,
+    "all_calendar_years_positive": false,
+    "all_neighbors_directional": false,
+    "minimum_selected_symbols": true,
+    "positive_symbol_breadth": true,
+    "positive_contribution_not_concentrated": true
+  },
+  "failed_checks": [
+    "spread_bootstrap_upper_negative",
+    "spread_negative_fraction",
+    "controlled_rv_negative",
+    "controlled_rv_negative_significant",
+    "proxy_mean_positive",
+    "proxy_bootstrap_lower_positive",
+    "increment_vs_dvol_positive",
+    "increment_vs_dvol_bootstrap_lower_positive",
+    "both_halves_positive",
+    "all_calendar_years_positive",
+    "all_neighbors_directional"
+  ],
+  "next_stage": "SEALED",
+  "content_digest": "1863f128f83efb6a7562cd9c95f2850e3077c5d53e5197b507c47cb94492937d"
+}

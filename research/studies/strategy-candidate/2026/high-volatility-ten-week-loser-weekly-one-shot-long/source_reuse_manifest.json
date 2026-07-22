@@ -1,0 +1,84 @@
+{
+  "created_at_utc": "2026-07-22T08:19:11.860307Z",
+  "entries": [
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ten-week-loser-weekly-one-shot-long\\study.py",
+      "bytes": 58664,
+      "sha256": "325d93903f110be175a556850871c2ad49c54cf469491feecafd28bfd6c42865",
+      "role": "reused cost/statistics and public-cache adapter"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ten-week-loser-weekly-one-shot-long\\amendment-001.json",
+      "bytes": 1217,
+      "sha256": "2bc1072e28862af6033937e3dff2e2d85cde0de0b41422ccef681a3ac0cba232",
+      "role": "parent implementation identity chain"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ten-week-loser-weekly-one-shot-long\\checkpoint.json",
+      "bytes": 5147,
+      "sha256": "aa007c351426757f81ccaf9ec6af5627680eca1530237f9f42afe6aa9d72b360",
+      "role": "closed Q17 identity and exposure"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\ten-week-loser-weekly-one-shot-long\\sources.md",
+      "bytes": 4801,
+      "sha256": "42fb2f5a50e907c78c0d1b5731a684c8384fa81c1aa17fdd12880c3db859e9e7",
+      "role": "prior-art and counterevidence identity"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-low-volatility-monthly-one-shot-long\\study.py",
+      "bytes": 55057,
+      "sha256": "18290dbd04570e5199a5d60d7f9ef2dd9d1537e189bb82df6ddba0149c56246f",
+      "role": "official public archive loader/fetcher"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\market-universe\\universe.csv",
+      "bytes": 3383646,
+      "sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+      "role": "frozen current target universe"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\high-volatility-monthly-one-shot-short\\source_manifest_development.json",
+      "bytes": 706405,
+      "sha256": "11e0f6cda8c61d8bed12c42cd5422a9d13bf33dba8099c3471d30821758ac4f6",
+      "role": "2024 public input manifest"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\high-volatility-monthly-one-shot-short\\data_quality_development.json",
+      "bytes": 32191,
+      "sha256": "6fb53187147193fa6039ae32b3efaaa8be1d81f62f08ea5c59a319f17c5acfd9",
+      "role": "2024 parent data quality"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\high-volatility-monthly-one-shot-short\\checkpoint.json",
+      "bytes": 7250,
+      "sha256": "25753a41577b4ee5a2de48526a54d19b00d036ae0ed019076f1c5e87ad044730",
+      "role": "2024 parent source identity"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-premium-momentum-daily-one-shot-long\\source_manifest_evaluation.json",
+      "bytes": 686849,
+      "sha256": "6b1d278190241070c748890337f2c2211f8603672b73b710b366a4e84449c661",
+      "role": "2025 public input manifest"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-premium-momentum-daily-one-shot-long\\data_quality_evaluation.json",
+      "bytes": 10641,
+      "sha256": "59949fe0490db3b3d7c60953a8915edd733206c813ecb7907222f13d378818f0",
+      "role": "2025 parent data quality"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\worktrees\\a25c\\Halpha\\research\\studies\\strategy-candidate\\2026\\perp-premium-momentum-daily-one-shot-long\\checkpoint.json",
+      "bytes": 7640,
+      "sha256": "95266544c29486c5f9ec9347cd776ef840f3454b1a407bbf886fb8fcaf2283d9",
+      "role": "2025 parent source identity"
+    },
+    {
+      "path": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\_sources\\cryptocurrency-momentum-reversal-dobrynskaya-hse.pdf",
+      "bytes": 547976,
+      "sha256": "a97eeda242f1ba863ed4006a7f0854d5356cf80d84adda697ae1eeb183d839b6",
+      "role": "peer-reviewed reversal prior; not a market input"
+    }
+  ],
+  "content_digest": "704aa9c4c656eb349c9e6d4cdad6fc234c7099b2e502261a6811ff0b7a2ad92e"
+}

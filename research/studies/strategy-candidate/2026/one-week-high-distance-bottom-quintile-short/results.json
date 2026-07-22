@@ -1,0 +1,76 @@
+{
+  "created_at_utc": "2026-07-22T07:33:01.459214Z",
+  "question": "Does paper-defined one-week high-distance bottom-quintile selection qualify a fixed-target weekly one-shot perpetual SHORT after retail costs, funding, ordinary-momentum/market baselines, robustness, breadth and sequential time evidence?",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "development_gate": "FAIL",
+  "development_digest": "657eb4dc17cd1a214c13b2bdf7d56ffb8cc0052f6affc9fc7ff21e5f2b10b624",
+  "gate_digest": "27fad77be1d366101a97e4274beec1811fb026de48aba89b4c6e920b47b019e2",
+  "later_stage_outputs": 0,
+  "handoff_generated": false,
+  "summary": {
+    "trades": 193,
+    "entry_dates": 51,
+    "symbols": 25,
+    "base_mean_after_hurdle": -0.009465326078445536,
+    "stress_mean_after_hurdle": -0.0112343021816801,
+    "stress_bootstrap_95pct": [
+      -0.022739216702414838,
+      -0.0006915973853631656
+    ],
+    "base_max_drawdown": -0.39081653697429286,
+    "base_vs_mom7": {
+      "main_mean": -0.008698202790774304,
+      "baseline_mean": -0.008176005754607647,
+      "difference_mean": -0.0005221970361666562,
+      "difference_bootstrap_95pct": [
+        -0.005765199581147399,
+        0.004642718066210493
+      ],
+      "positive_date_fraction": 0.5294117647058824,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "base_vs_scheduled_short": {
+      "main_mean": -0.008698202790774304,
+      "baseline_mean": -0.006593085455980616,
+      "difference_mean": -0.0021051173347936885,
+      "difference_bootstrap_95pct": [
+        -0.008389186038517746,
+        0.0048148864746149845
+      ],
+      "positive_date_fraction": 0.47058823529411764,
+      "baseline_no_action_dates_filled_as_cash": 0
+    },
+    "gross_excess_vs_market_short": {
+      "main_mean": -0.007302733751299515,
+      "market_mean": -0.00950377449939269,
+      "difference_mean": 0.0022010407480931747,
+      "difference_bootstrap_95pct": [
+        -0.0024091657469287485,
+        0.006629417391016981
+      ]
+    },
+    "rank_correlation_with_mom7": {
+      "median": 0.41938244821540016,
+      "minimum": -0.5826086956521739,
+      "maximum": 0.9883116883116884,
+      "weeks": 52
+    },
+    "largest_positive_pnl_share": 0.2723377948084209,
+    "failed_checks": [
+      "base_after_hurdle_positive",
+      "stress_after_hurdle_positive",
+      "stress_bootstrap_lower_positive",
+      "both_halves_base_positive",
+      "date_portfolio_drawdown_above_minus_20pct",
+      "worst_symbol_drawdown_above_minus_40pct",
+      "base_beats_mom7",
+      "base_beats_scheduled_short",
+      "gross_excess_bootstrap_lower_positive",
+      "at_least_two_of_three_neighbors_stress_nonnegative",
+      "at_least_half_selected_targets_positive",
+      "at_least_four_categories_positive",
+      "largest_positive_pnl_share_at_most_20pct"
+    ]
+  },
+  "content_digest": "dda5426841c1a9021acc6d19429966808cbacd5fc2a76a84c661d8355e8829dd"
+}

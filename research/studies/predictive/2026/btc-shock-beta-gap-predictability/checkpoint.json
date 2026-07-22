@@ -1,0 +1,80 @@
+{
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+  "formal_strategy_version": "1.0.1",
+  "formal_strategy_instrument": "BTCUSDT-PERP",
+  "created_at": "2026-07-21T00:00:00+08:00",
+  "research_kind": "PREDICTIVE",
+  "candidate_id": "BTC_SHOCK_BETA_GAP_PREDICTABILITY_V1",
+  "question": "After a closed 5-minute BTC shock, does an altcoin's contemporaneous underreaction relative to its ex-ante BTC beta predict same-direction BTC-neutral residual from the next bar open through the following 15 minutes?",
+  "anchor": "BTCUSDT",
+  "symbols": [
+    "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT",
+    "ADAUSDT", "LINKUSDT", "AVAXUSDT", "LTCUSDT", "BCHUSDT",
+    "TRXUSDT", "DOTUSDT", "NEARUSDT", "SUIUSDT", "AAVEUSDT"
+  ],
+  "venue": "BINANCE_USD_M",
+  "bar_interval": "5m",
+  "primary": {
+    "beta_window_days": 30,
+    "shock_quantile": 0.975,
+    "shock_window_days": 30,
+    "cooldown_bars": 6,
+    "target_horizon_bars": 3,
+    "entry_delay_bars": 1
+  },
+  "fixed_sensitivities": {
+    "beta_window_days": [7, 90],
+    "shock_quantile": [0.95, 0.99],
+    "target_horizon_bars": [1, 6],
+    "entry_delay_bars": [2]
+  },
+  "periods": {
+    "development_warmup_start": "2023-10-01T00:00:00Z",
+    "development": ["2024-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "evaluation": ["2025-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "development_gate": {
+    "data_quality": "PASS",
+    "minimum_events": 300,
+    "minimum_mean_assets_per_event": 8,
+    "primary_mean_gt_bps": 0,
+    "primary_cluster_ci_low_gt_bps": 0,
+    "both_half_year_means_gt_bps": 0,
+    "must_beat_btc_sign_baseline": true,
+    "must_beat_own_sign_baseline": true,
+    "no_shock_direction_may_be_significantly_negative": true,
+    "minimum_mean_bps_to_release_evaluation": 12
+  },
+  "economic_reference_round_trip_bps": {
+    "favorable": 12,
+    "base": 32,
+    "stress": 52
+  },
+  "holdout_release_rule": "Download evaluation only if every predictive development gate passes and primary mean is at least 12 bps; download confirmation only if the unchanged evaluation gate passes. Never revise economic rules after release.",
+  "known_exposure": "Prior Halpha studies viewed some daily or 2-hour history for these instruments, but no result from this question's 5-minute beta-gap event definition was viewed before this checkpoint.",
+  "market_universe_snapshot": {
+    "snapshot_id": "2026-07-21T064230Z",
+    "universe_csv_sha256": "1f24adfb64b7a52a170b730ee7517916b2da8ab45785779dee6be991762186cc",
+    "source_manifest_sha256": "56a359cce180850f7b4cba894ac6bf5b5ed8ed99764254036fac1cde93806493"
+  },
+  "search_disclosure": "15 fixed alts; one primary configuration; seven one-at-a-time sensitivities; two shock signs; half-year splits; two directional baselines; per-asset exploratory BY-FDR.",
+  "large_data_root": "D:/projects/Codex/CodexHome/research-data/halpha/btc-shock-beta-gap-predictability",
+  "allowed_fixes_after_result_release": [
+    "download retries and checksum verification",
+    "official CSV header or timestamp parsing",
+    "data-quality reporting",
+    "implementation defects that do not change symbols, periods, signal, target, baselines, sensitivities, costs or gates"
+  ],
+  "study_code_sha256": "3c2d83c79881c81fdc08e9ea0e55a568ecd677c3809b0a86a1f8905fdfff1ea6",
+  "study_code_sha256_initial": "53e868f1cb08e9fbab93da1b2c09a521b0e0944fac218c4275420f970392f898",
+  "study_code_revision_reason": "Before any analysis or 5-minute result was viewed, the first source preparation exposed two transient HTTP IncompleteRead failures after 238 of 240 files passed checksum. The only change adds IncompleteRead to the existing three-attempt download retry list; symbols, periods, signal, target, baselines, sensitivities, costs and gates are unchanged.",
+  "development_outcome": {
+    "conclusion": "DOES_NOT_SUPPORT",
+    "release_next_phase": false,
+    "development_json_sha256": "dfb3eec79b8503df7bdfa99ae6e9aab77aa0cded46cdc1e8386165bda86c8785",
+    "source_manifest_development_sha256": "847588d0721c162374b794bc6720dced970c94095bebc1c0d9c965bc59737b81",
+    "evaluation_and_confirmation": "NOT_DOWNLOADED_NOT_VIEWED"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "validated_at_utc": "2026-07-22T00:58:00Z",
+  "python_compile": "PASS",
+  "data_quality": "PASS",
+  "daily_bars": 2100,
+  "daily_bar_gaps": 0,
+  "funding_rows": 6298,
+  "funding_missing_mark_after_official_kline_fill": 0,
+  "funding_mark_from_response": 2922,
+  "funding_mark_from_official_8h_kline": 3376,
+  "maximum_mark_time_match_delta_ms": 48.0,
+  "vectorbt_manual_maximum_error": 4.163336342344337e-17,
+  "development_reruns": 2,
+  "stable_primary_plan_csv": true,
+  "primary_plan_csv_sha256": "8bc1b7407e51b57d77f1ef1bbbcd52f0fc0f1d6a9af15606c4c33bde5c76a3ec",
+  "stable_key_metrics": {
+    "plans": 24,
+    "base_total_return": 0.07626385810189684,
+    "base_daily_max_drawdown": -0.09885205305615608,
+    "failed_gate_check": "stress_after_hurdle_positive"
+  },
+  "external_cache": {
+    "path": "D:/projects/Codex/CodexHome/research-data/halpha/trxusdt-perp-monthly-one-shot-voltarget/2026-07-22-v1/",
+    "all_attempt_files": 22,
+    "all_attempt_bytes": 5390133,
+    "current_manifest_referenced_files": 15,
+    "current_manifest_referenced_bytes": 2623255
+  },
+  "evaluation_opened": false,
+  "confirmation_opened": false,
+  "handoff_generated": false
+}

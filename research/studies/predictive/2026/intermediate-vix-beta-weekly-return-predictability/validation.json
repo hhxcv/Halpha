@@ -1,0 +1,24 @@
+{
+  "validated_at_utc": "2026-07-22T11:46:04.045253+00:00",
+  "status": "PASS",
+  "checks": {
+    "data_quality_pass": true,
+    "source_manifest_present": true,
+    "development_economics_recomputed": true,
+    "development_gate_bound": true,
+    "development_primary_36w_panel.csv_identity": true,
+    "development_primary_36w_weekly.csv_identity": true,
+    "development_primary_36w_selected.csv_identity": true,
+    "development_diagnostic_26w_panel.csv_identity": true,
+    "development_diagnostic_26w_weekly.csv_identity": true,
+    "development_diagnostic_26w_selected.csv_identity": true,
+    "development_diagnostic_52w_panel.csv_identity": true,
+    "development_diagnostic_52w_weekly.csv_identity": true,
+    "development_diagnostic_52w_selected.csv_identity": true,
+    "valid_conclusion": true,
+    "no_strategy_handoff_claim": true
+  },
+  "json_files_checked": 6,
+  "csv_files_checked": 9,
+  "content_digest": "62616654fc97a84d3206a5da644cca632ac55485cc1b30232069866d9c62b1fd"
+}

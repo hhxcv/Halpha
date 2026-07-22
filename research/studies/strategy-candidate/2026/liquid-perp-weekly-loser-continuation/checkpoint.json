@@ -1,0 +1,97 @@
+{
+  "created_at_utc": "2026-07-22T01:11:13.498772Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does weekly bottom-1 continuation in six liquid Binance USD-M perps survive funding, costs, market-beta control, and sequential holdouts?",
+  "evidence_boundary": "Other rules and frequencies on these assets are exposed; this exact weekly cross-sectional ranking and stage output are unviewed.",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT"
+  ],
+  "data_start": "2020-12-20T00:00:00Z",
+  "data_end_exclusive": "2025-07-01T00:00:00Z",
+  "stages": {
+    "development": [
+      "2021-01-04T00:00:00Z",
+      "2023-01-02T00:00:00Z"
+    ],
+    "evaluation": [
+      "2023-01-02T00:00:00Z",
+      "2025-01-06T00:00:00Z"
+    ],
+    "confirmation": [
+      "2025-01-06T00:00:00Z",
+      "2025-06-30T00:00:00Z"
+    ]
+  },
+  "config": {
+    "strategy_id": "RESEARCH_LIQUID_PERP_WEEKLY_BOTTOM1_SHORT_7D_0P25X_V1",
+    "formation_days": 7,
+    "hold_days": 7,
+    "bottom_count": 1,
+    "total_notional_fraction": 0.25,
+    "annual_capital_hurdle": 0.04,
+    "diagnostics": {
+      "formation_14d": {
+        "formation_days": 14,
+        "bottom_count": 1
+      },
+      "bottom_2": {
+        "formation_days": 7,
+        "bottom_count": 2
+      },
+      "equal_weight_short": {
+        "formation_days": 7,
+        "bottom_count": 6
+      },
+      "btc_short": {
+        "symbols": [
+          "BTCUSDT"
+        ]
+      }
+    },
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "short_funding_stress": {
+      "positive_benefit_multiplier": 0.5,
+      "negative_cost_multiplier": 1.5
+    }
+  },
+  "stage_open_rule": "development -> evaluation -> confirmation; next stage only after every prior gate passes",
+  "allowed_fixes": "retrieval, parsing, completeness, deterministic statistics, or implementation bugs that do not change the economic rule; record every outcome-affecting fix",
+  "study_py_sha256": "3d347a37715db0098a9d575e3a56def685569ad199145d4f10b8bd1d21fbbc31",
+  "preregistration_sha256": "376323457a5a1e35e0350618010d86f466771c621f7f16da5e9ce9dc6ef5e782",
+  "sources_sha256": "c7a1564891a9a5f1a904c1f82a3cba6f15ac213e0c0e21d707e7756b1106d1af",
+  "environment": {
+    "python": "3.13.14",
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0"
+  },
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\liquid-perp-weekly-loser-continuation\\2026-07-22-v1",
+  "content_digest": "1820d7f31e95fa958fb9b600ca9291a63e07f43e20eab6c644ce33ff62305f8c"
+}

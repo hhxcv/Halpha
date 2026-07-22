@@ -1,0 +1,22 @@
+{
+  "generated_at_utc": "2026-07-22T14:09:00.044379+00:00",
+  "status": "PASS",
+  "checks": {
+    "checkpoint": true,
+    "development_data_quality": true,
+    "development_analysis": true,
+    "development_panel_csv": true,
+    "development_event_csv": true,
+    "development_gate": true,
+    "evaluation_sealed": true,
+    "confirmation_sealed": true,
+    "conclusion_enum": true
+  },
+  "validated_stages": [
+    "development"
+  ],
+  "checkpoint_content_digest": "16a4e16b2c13aa1a98adcfa5bcda7956249909b7a8a2993f7932cc889b1ec57d",
+  "results_content_digest": "66ea2e5f67b24af134ce1117264ffe2654d18c18152cd03acad54beffbb89378",
+  "product_effects": "NONE",
+  "content_digest": "c1d05c29e9ed9048f8b8d1f6e7e840ef4ca5657ec9a59715083268495fdb0573"
+}

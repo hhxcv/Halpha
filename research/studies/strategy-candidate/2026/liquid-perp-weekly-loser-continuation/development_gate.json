@@ -1,0 +1,32 @@
+{
+  "generated_at_utc": "2026-07-22T01:18:13.870410Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "vectorbt_reconciled": true,
+    "base_total_positive": false,
+    "stress_total_positive": false,
+    "stress_after_hurdle_positive": false,
+    "selection_mean_positive": true,
+    "at_least_four_symbols_selected": true,
+    "weeks_at_least_100": true,
+    "each_full_year_base_positive": false,
+    "daily_drawdown_above_minus_15pct": false,
+    "selection_bootstrap_lower_positive": false,
+    "four_symbols_selected_at_least_five_times": true,
+    "largest_positive_pnl_share_at_most_half": false,
+    "beats_equal_weight_short_base": true
+  },
+  "failed_checks": [
+    "base_total_positive",
+    "stress_total_positive",
+    "stress_after_hurdle_positive",
+    "each_full_year_base_positive",
+    "daily_drawdown_above_minus_15pct",
+    "selection_bootstrap_lower_positive",
+    "largest_positive_pnl_share_at_most_half"
+  ],
+  "result_digest": "6c2d22c331ff3ae86c488bd3518744af03de0e37674b810d39bdfc5aa85d81f6",
+  "content_digest": "296a5ca1d3468b2fa6f73cc932cb5e68dfce99542d49f94286ee9ab264bf8445"
+}

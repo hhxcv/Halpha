@@ -1,0 +1,15 @@
+{
+  "generated_at_utc": "2026-07-22T00:30:26.549951Z",
+  "conclusion": "DOES_NOT_SUPPORT",
+  "stages_present": [
+    "development"
+  ],
+  "gates": {
+    "development": "FAIL"
+  },
+  "product_effects": "NONE",
+  "external_cache": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\low-relative-volume-daily-reversal\\2026-07-22-v1",
+  "source_manifest_sha256": "57f63438fef28c70fe4c7ed9f345b700e0c70058e3f9cf1798c71054107c82b3",
+  "study_py_sha256": "a7b5f5600a71dd9565fa9c97fb0bdc7a946ad10f50de93ce37deecb6c32c2522",
+  "content_digest": "fa311d1694a4190fd11aafc89a80af9d420ebd6bf08a4fb182893be523588efd"
+}

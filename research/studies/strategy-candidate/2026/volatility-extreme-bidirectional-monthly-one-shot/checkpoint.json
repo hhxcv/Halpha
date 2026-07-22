@@ -1,0 +1,162 @@
+{
+  "created_at_utc": "2026-07-22T08:40:30.334264Z",
+  "baseline_commit": "0bdfeffa616260cebd2d2188ddc8deb9e85c77f4",
+  "formal_strategy": {
+    "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+    "version": "1.0.1",
+    "instrument": "BTCUSDT-PERP"
+  },
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does a configured current liquid Binance USD-M target qualify a monthly 0.25x one-shot rule that proposes LONG in the bottom three VOL90 ranks, SHORT in the top three, and otherwise NO_ACTION, after retail costs, actual funding, capital hurdle, direction decomposition, robustness, risk and sequential evidence?",
+  "known_exposure": "The 2022-2023 low-volatility LONG and 2024 high-volatility SHORT single-leg outputs are exposed. Development 2024 is selection replay only and cannot independently support the candidate. The exact bidirectional 2025 output was not computed before this checkpoint; confirmation remains sealed until evaluation PASS.",
+  "configuration": {
+    "strategy_id": "RESEARCH_VOL90_BOTTOM3_LONG_TOP3_SHORT_MONTHLY_ONE_SHOT_0P25X_V1",
+    "formation_days": 90,
+    "extreme_targets": 3,
+    "notional_fraction": 0.25,
+    "minimum_rankable_symbols": 20,
+    "minimum_median_quote_volume_30d": 10000000.0,
+    "annual_capital_hurdle": 0.04,
+    "cooldown_full_days": 1,
+    "max_excluded_trade_fraction": 0.05,
+    "costs": {
+      "favorable": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.0,
+        "funding_stress": false
+      },
+      "base": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.001,
+        "funding_stress": false
+      },
+      "stress": {
+        "fee_per_side": 0.0006,
+        "slippage_per_side": 0.002,
+        "funding_stress": true
+      }
+    },
+    "long_funding_stress": {
+      "positive_cost_multiplier": 1.5,
+      "negative_benefit_multiplier": 0.5
+    },
+    "short_funding_stress": {
+      "positive_benefit_multiplier": 0.5,
+      "negative_cost_multiplier": 1.5
+    },
+    "diagnostics": [
+      "rv60",
+      "rv120",
+      "extreme5",
+      "reverse",
+      "momentum90",
+      "scheduled_long",
+      "scheduled_short"
+    ]
+  },
+  "stages": {
+    "development": [
+      "2024-01-01T00:00:00Z",
+      "2025-01-01T00:00:00Z"
+    ],
+    "evaluation": [
+      "2025-01-01T00:00:00Z",
+      "2026-01-01T00:00:00Z"
+    ],
+    "confirmation": [
+      "2026-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ]
+  },
+  "fetch_stage": {
+    "confirmation": {
+      "fetch_start": "2025-08-19T00:00:00Z",
+      "start": "2026-01-01T00:00:00Z",
+      "end_exclusive": "2026-07-01T00:00:00Z"
+    }
+  },
+  "symbols": [
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "AVAXUSDT",
+    "BCHUSDT",
+    "BNBUSDT",
+    "CRVUSDT",
+    "DASHUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "HBARUSDT",
+    "KAVAUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "NEARUSDT",
+    "RUNEUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "TRXUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZILUSDT"
+  ],
+  "categories": {
+    "DeFi": [
+      "AAVEUSDT",
+      "CRVUSDT",
+      "KAVAUSDT",
+      "RUNEUSDT",
+      "SNXUSDT",
+      "UNIUSDT"
+    ],
+    "Infrastructure": [
+      "ENSUSDT",
+      "LINKUSDT"
+    ],
+    "Layer-1": [
+      "AVAXUSDT",
+      "BNBUSDT",
+      "HBARUSDT",
+      "NEARUSDT",
+      "SOLUSDT",
+      "TRXUSDT",
+      "VETUSDT"
+    ],
+    "Layer-2": [
+      "XLMUSDT"
+    ],
+    "Payment": [
+      "1000XECUSDT",
+      "BCHUSDT",
+      "LTCUSDT",
+      "XRPUSDT"
+    ],
+    "PoW": [
+      "DASHUSDT",
+      "ETCUSDT",
+      "XMRUSDT",
+      "ZECUSDT",
+      "ZILUSDT"
+    ]
+  },
+  "family_stop_rule": "On failure, close the fixed VOL90 bottom3-LONG/top3-SHORT monthly family; do not search nearby lookbacks, cutoffs, directions, symbols or holds without genuinely new forward evidence or an independent mechanism.",
+  "stage_open_rule": "2024 selection replay -> 2025 evaluation -> authorized 2026H1 fetch/confirmation",
+  "frozen_file_sha256": {
+    "README.md": "ef9135c3100069526c0a14c491798514c8305c528f3129b4ff28582990a793f4",
+    "preregistration.md": "0c1ad7cb0b8b1657ccf9ff0b4a024bef434053e35aa0f4901df4e43ce2a810ce",
+    "sources.md": "63a288de452cdc8980125f74b23c04e61d658d9d9c276affea51ad8b33f384ef",
+    "study.py": "d800a8ee404de95b93cd17dddd6da91a2be147252fd29b63a3ec9c6d7705420e"
+  },
+  "source_reuse_digest": "cd7b791922ddda5eba0bff778fc9653617fe6959bd24a84d9bbbacffcbf822dc",
+  "environment": {
+    "python": "3.13.14",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "vectorbt": "1.1.0"
+  },
+  "confirmation_cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\volatility-extreme-bidirectional\\2026-07-22-v1",
+  "allowed_after_checkpoint": "Deterministic result artifacts and implementation-only fixes with explicit amendment; no economic rule change. Confirmation public data may be fetched only after evaluation PASS.",
+  "content_digest": "b07ead78a7aab58fd0805814ca59136395d0060b8917ab49c268eb491fdfa242"
+}

@@ -1,0 +1,215 @@
+{
+  "checked_at_utc": "2026-07-22T10:47:15.085868+00:00",
+  "stage": "development",
+  "status": "PASS",
+  "checkpoint_digest": "5ad3356fd2f0724d6e91f2ca8b80c15f77c54adcc1c4ea8e19521ba21777b4e1",
+  "source_overlap": {
+    "overlap_mismatch_rows": 0,
+    "sources": [
+      "ctrend",
+      "category-development"
+    ]
+  },
+  "scheduled_months": 24,
+  "action_months": 24,
+  "global_no_action_months": 0,
+  "minimum_rankable_on_action_months": 21,
+  "maximum_rankable_on_action_months": 25,
+  "future_target_missing_months": [],
+  "month_audit": [
+    {
+      "entry_time": "2022-01-01T00:00:00+00:00",
+      "signal_cutoff": "2021-12-30T00:00:00+00:00",
+      "exit_time": "2022-02-01T00:00:00+00:00",
+      "decision_eligible_count": 23,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-02-01T00:00:00+00:00",
+      "signal_cutoff": "2022-01-30T00:00:00+00:00",
+      "exit_time": "2022-03-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-03-01T00:00:00+00:00",
+      "signal_cutoff": "2022-02-27T00:00:00+00:00",
+      "exit_time": "2022-04-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-04-01T00:00:00+00:00",
+      "signal_cutoff": "2022-03-30T00:00:00+00:00",
+      "exit_time": "2022-05-01T00:00:00+00:00",
+      "decision_eligible_count": 25,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-05-01T00:00:00+00:00",
+      "signal_cutoff": "2022-04-29T00:00:00+00:00",
+      "exit_time": "2022-06-01T00:00:00+00:00",
+      "decision_eligible_count": 25,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-06-01T00:00:00+00:00",
+      "signal_cutoff": "2022-05-30T00:00:00+00:00",
+      "exit_time": "2022-07-01T00:00:00+00:00",
+      "decision_eligible_count": 25,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-07-01T00:00:00+00:00",
+      "signal_cutoff": "2022-06-29T00:00:00+00:00",
+      "exit_time": "2022-08-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-08-01T00:00:00+00:00",
+      "signal_cutoff": "2022-07-30T00:00:00+00:00",
+      "exit_time": "2022-09-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-09-01T00:00:00+00:00",
+      "signal_cutoff": "2022-08-30T00:00:00+00:00",
+      "exit_time": "2022-10-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-10-01T00:00:00+00:00",
+      "signal_cutoff": "2022-09-29T00:00:00+00:00",
+      "exit_time": "2022-11-01T00:00:00+00:00",
+      "decision_eligible_count": 25,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-11-01T00:00:00+00:00",
+      "signal_cutoff": "2022-10-30T00:00:00+00:00",
+      "exit_time": "2022-12-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2022-12-01T00:00:00+00:00",
+      "signal_cutoff": "2022-11-29T00:00:00+00:00",
+      "exit_time": "2023-01-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-01-01T00:00:00+00:00",
+      "signal_cutoff": "2022-12-30T00:00:00+00:00",
+      "exit_time": "2023-02-01T00:00:00+00:00",
+      "decision_eligible_count": 22,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-02-01T00:00:00+00:00",
+      "signal_cutoff": "2023-01-30T00:00:00+00:00",
+      "exit_time": "2023-03-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-03-01T00:00:00+00:00",
+      "signal_cutoff": "2023-02-27T00:00:00+00:00",
+      "exit_time": "2023-04-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-04-01T00:00:00+00:00",
+      "signal_cutoff": "2023-03-30T00:00:00+00:00",
+      "exit_time": "2023-05-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-05-01T00:00:00+00:00",
+      "signal_cutoff": "2023-04-29T00:00:00+00:00",
+      "exit_time": "2023-06-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-06-01T00:00:00+00:00",
+      "signal_cutoff": "2023-05-30T00:00:00+00:00",
+      "exit_time": "2023-07-01T00:00:00+00:00",
+      "decision_eligible_count": 23,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-07-01T00:00:00+00:00",
+      "signal_cutoff": "2023-06-29T00:00:00+00:00",
+      "exit_time": "2023-08-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-08-01T00:00:00+00:00",
+      "signal_cutoff": "2023-07-30T00:00:00+00:00",
+      "exit_time": "2023-09-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-09-01T00:00:00+00:00",
+      "signal_cutoff": "2023-08-30T00:00:00+00:00",
+      "exit_time": "2023-10-01T00:00:00+00:00",
+      "decision_eligible_count": 23,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-10-01T00:00:00+00:00",
+      "signal_cutoff": "2023-09-29T00:00:00+00:00",
+      "exit_time": "2023-11-01T00:00:00+00:00",
+      "decision_eligible_count": 21,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-11-01T00:00:00+00:00",
+      "signal_cutoff": "2023-10-30T00:00:00+00:00",
+      "exit_time": "2023-12-01T00:00:00+00:00",
+      "decision_eligible_count": 22,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    },
+    {
+      "entry_time": "2023-12-01T00:00:00+00:00",
+      "signal_cutoff": "2023-11-29T00:00:00+00:00",
+      "exit_time": "2024-01-01T00:00:00+00:00",
+      "decision_eligible_count": 24,
+      "future_missing_symbols": [],
+      "status": "ACTION"
+    }
+  ],
+  "rule": "All signals end two UTC days before entry; future target missing fails DQ rather than changing tails.",
+  "content_digest": "5bb14873cae7acf18822b69878c8f7f8e505ff3fefaf161bff80ccf5e4f31e12"
+}

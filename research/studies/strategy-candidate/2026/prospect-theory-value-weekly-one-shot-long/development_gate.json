@@ -1,0 +1,57 @@
+{
+  "generated_at_utc": "2026-07-22T09:53:13.212393Z",
+  "stage": "development",
+  "status": "FAIL",
+  "checks": {
+    "data_quality_pass": true,
+    "vectorbt_reconciled": true,
+    "excluded_trade_fraction_at_most_2pct": true,
+    "minimum_trades": true,
+    "minimum_entry_dates": true,
+    "minimum_symbols": false,
+    "each_half_minimum_dates": true,
+    "base_after_hurdle_positive": false,
+    "stress_after_hurdle_positive": false,
+    "stress_bootstrap_lower_positive": false,
+    "both_halves_positive": false,
+    "all_years_positive": false,
+    "beats_each_simple_mean": false,
+    "beats_simple_envelope_bootstrap_lower_positive": false,
+    "gross_excess_vs_market_positive": false,
+    "gross_excess_vs_market_bootstrap_lower_positive": false,
+    "two_of_three_neighbors_stress_positive": false,
+    "four_positive_categories": false,
+    "half_targets_positive": false,
+    "largest_positive_pnl_share_at_most_25pct": false,
+    "date_drawdown_above_minus_20pct": false,
+    "worst_target_drawdown_above_minus_30pct": true
+  },
+  "failed_checks": [
+    "minimum_symbols",
+    "base_after_hurdle_positive",
+    "stress_after_hurdle_positive",
+    "stress_bootstrap_lower_positive",
+    "both_halves_positive",
+    "all_years_positive",
+    "beats_each_simple_mean",
+    "beats_simple_envelope_bootstrap_lower_positive",
+    "gross_excess_vs_market_positive",
+    "gross_excess_vs_market_bootstrap_lower_positive",
+    "two_of_three_neighbors_stress_positive",
+    "four_positive_categories",
+    "half_targets_positive",
+    "largest_positive_pnl_share_at_most_25pct",
+    "date_drawdown_above_minus_20pct"
+  ],
+  "diagnostics": {
+    "excluded_trade_fraction": 0.011152416356877323,
+    "neighbor_stress_after_hurdle": [
+      -0.0005287732982651751,
+      0.0004369993469472586,
+      -0.003272881361482649
+    ],
+    "positive_categories": 2
+  },
+  "evidence_digest": "872fa631b81cd74e69d8c9700b6f97270d28a9c51d08618a89fd7147b6a881e2",
+  "content_digest": "e3128868937d437f7f1f36d0667b6514a415d8441e09ded33a89b183bbe1ed19"
+}
