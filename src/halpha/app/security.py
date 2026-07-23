@@ -20,6 +20,23 @@ class ASGIApp(Protocol):
     ) -> None: ...
 
 
+def allowed_local_origin(value: str, port: int) -> bool:
+    """Return whether an HTTP or WebSocket Origin is the local workbench."""
+
+    try:
+        parsed = urlsplit(value)
+        parsed_port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme == "http"
+        and parsed.hostname in {"127.0.0.1", "localhost"}
+        and parsed_port == port
+        and not parsed.username
+        and not parsed.password
+    )
+
+
 class CsrfMiddleware:
     """Thin Starlette middleware adapter around the selected ASGI component."""
 
@@ -52,18 +69,7 @@ class LocalRequestBoundaryMiddleware:
         self._port = port
 
     def _allowed_origin(self, value: str) -> bool:
-        try:
-            parsed = urlsplit(value)
-            port = parsed.port
-        except ValueError:
-            return False
-        return (
-            parsed.scheme == "http"
-            and parsed.hostname in {"127.0.0.1", "localhost"}
-            and port == self._port
-            and not parsed.username
-            and not parsed.password
-        )
+        return allowed_local_origin(value, self._port)
 
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope.get("type") != "http":

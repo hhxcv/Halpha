@@ -47,7 +47,7 @@ from halpha.planning.adapter import (
     HalphaStrategyAdapter,
 )
 from halpha.planning.models import PlanLifecycle, RunState
-from halpha.planning.registry import OneShotParameters
+from halpha.planning.registry import DIRECT_EXECUTION_REF, OneShotParameters
 from halpha.planning.repository import PostgreSQLPlanningRepository
 from halpha.planning.strategies.one_shot import (
     ActivationStrategyState,
@@ -64,6 +64,7 @@ from halpha.venue_integration.nautilus_client import NautilusVenueExecutionClien
 from halpha.venue_integration.repository import PostgreSQLExecutionActionRepository
 
 from .coordinator import HalphaCoordinator
+from .direct_schedule import DirectScheduleBoundary
 from .forward_observation import ForwardObservationSpec
 from .product_entry import (
     LiveEntryFactTracker,
@@ -365,6 +366,7 @@ class ProductExecutorRuntime:
         self._coordinator: HalphaCoordinator | None = None
         self._capability: object | None = None
         self._proposal_processors: dict[str, ProductProposalBoundary] = {}
+        self._direct_schedule_processors: dict[str, DirectScheduleBoundary] = {}
         self._responsibility_processors: dict[str, ProductResponsibilityBoundary] = {}
         self._recovery_complete = False
         self._recovered_action_count = 0
@@ -389,10 +391,84 @@ class ProductExecutorRuntime:
     def submit_strategy_proposal(self, proposal: StrategyProposal) -> str:
         """Enter the production EXE boundary used by the adapter proposal sink."""
 
+        if not self._activation_submission_enabled(proposal.activation_id):
+            raise ExecutorRuntimeError("STARTUP_RECOVERY_PENDING")
         processor = self._proposal_processors.get(proposal.activation_id)
         if processor is None:
             raise ExecutorRuntimeError("PRODUCT_PROPOSAL_PROCESSOR_NOT_READY")
         return processor.submit(proposal)
+
+    def _activation_submission_enabled(self, activation_id: str) -> bool:
+        coordinator = self.__dict__.get("_coordinator")
+        if coordinator is None:
+            # Narrow construction tests bypass __init__; production write
+            # runtimes always install and arm a coordinator before adapters.
+            return bool(getattr(self, "_recovery_complete", True))
+        return coordinator.startup_recovery_allows_submission(activation_id)
+
+    def _begin_startup_recovery(
+        self,
+        *,
+        observed_at: datetime,
+    ) -> tuple[object, ...]:
+        recovered = self.coordinator.recover_unresolved_actions(
+            observed_at=observed_at,
+            resolution_sink=self._queue_startup_recovery_resolution,
+        )
+        self._recovered_action_count = len(recovered)
+        self._recovery_complete = self.coordinator.startup_recovery_complete()
+        return recovered
+
+    def _queue_startup_recovery_resolution(
+        self,
+        activation_id: str,
+        execution_action_id: str,
+    ) -> None:
+        self._loop.call_soon_threadsafe(
+            self._apply_startup_recovery_resolution,
+            activation_id,
+            execution_action_id,
+        )
+
+    def _apply_startup_recovery_resolution(
+        self,
+        activation_id: str,
+        execution_action_id: str,
+    ) -> None:
+        self._recovery_complete = self.coordinator.startup_recovery_complete()
+        pending = self.coordinator.startup_recovery_pending_action_ids()
+        self._record_runtime_event(
+            "startup_recovery_identity_resolved",
+            activation_id=activation_id,
+            execution_action_id=execution_action_id,
+            pending_action_count=len(pending),
+        )
+        if not self._activation_submission_enabled(activation_id):
+            return
+        responsibility = self._responsibility_processors.get(activation_id)
+        if responsibility is not None:
+            responsibility.resume(activation_id)
+        direct = self._direct_schedule_processors.get(activation_id)
+        if direct is not None:
+            direct.resume(activation_id)
+
+    def _retry_startup_recovery(self, *, observed_at: datetime) -> tuple[str, ...]:
+        coordinator = self._coordinator
+        if coordinator is None or coordinator.startup_recovery_complete():
+            return ()
+        attempted = coordinator.retry_startup_recovery_queries(
+            observed_at=observed_at,
+        )
+        self._recovery_complete = coordinator.startup_recovery_complete()
+        if attempted:
+            self._record_runtime_event(
+                "startup_recovery_queries_retried",
+                execution_action_ids=attempted,
+                pending_action_count=len(
+                    coordinator.startup_recovery_pending_action_ids()
+                ),
+            )
+        return attempted
 
     @property
     def recovery_complete(self) -> bool:
@@ -522,6 +598,7 @@ class ProductExecutorRuntime:
                 live_write_activation_id=self._live_write_activation_id,
                 live_write_submission_guard=self._live_write_submission_guard,
             )
+            coordinator.arm_startup_recovery_barrier()
             self._coordinator = coordinator
         except ExecutorRuntimeError:
             self.close()
@@ -631,14 +708,147 @@ class ProductExecutorRuntime:
             )
         )
 
+    def _start_direct_execution_adapter(
+        self,
+        activation: object,
+        capability: object,
+    ) -> None:
+        if self._lifecycle is None:
+            raise ExecutorRuntimeError("PRODUCT_RUNTIME_NOT_BUILT")
+        api_key = self._api_key
+        api_secret = self._api_secret
+        if api_key is None or api_secret is None:
+            raise ExecutorRuntimeError("BINANCE_CREDENTIAL_REQUIRED")
+        fact_provider = ProductPreSubmitFactProvider(
+            node=self.node,
+            profile=self._settings.release.profile,
+            api_key=api_key,
+            api_secret=api_secret,
+            proxy_url=self._proxy_url,
+        )
+        environment_kind = (
+            EnvironmentKind.DEMO
+            if self._settings.release.profile == "BINANCE_DEMO"
+            else EnvironmentKind.LIVE
+        )
+        activation_id = str(getattr(activation, "activation_id"))
+
+        async def direct_facts(
+            used_activation,
+            leg,
+            owned_order_client_ids,
+            owned_algo_client_ids,
+            expected_signed_position,
+            outstanding_entry_quantity,
+            outstanding_entry_notional,
+            price_move_bps_by_window,
+        ):
+            return await fact_provider.direct_entry_facts(
+                used_activation,
+                leg,
+                owned_order_client_ids=owned_order_client_ids,
+                owned_algo_client_ids=owned_algo_client_ids,
+                expected_signed_position=expected_signed_position,
+                outstanding_entry_quantity=outstanding_entry_quantity,
+                outstanding_entry_notional=outstanding_entry_notional,
+                price_move_bps_by_window=price_move_bps_by_window,
+            )
+
+        direct = DirectScheduleBoundary(
+            loop=self._loop,
+            coordinator=self.coordinator,
+            fact_provider=direct_facts,
+            risk_reduction_fact_provider=fact_provider.risk_reduction_facts,
+            environment_id=self._settings.release.environment_id,
+            environment_kind=environment_kind,
+            authority_class=AuthorityClass(self._settings.release.authority_class),
+            account_ref=self._settings.release.account_id,
+            submission_enabled=lambda: self._activation_submission_enabled(
+                activation_id
+            ),
+            failure_sink=lambda activation_id, exception: self._record_runtime_event(
+                "direct_schedule_failed",
+                activation_id=activation_id,
+                reason=type(exception).__name__,
+                reason_code=str(exception),
+            ),
+        )
+        responsibility = ProductResponsibilityBoundary(
+            loop=self._loop,
+            coordinator=self.coordinator,
+            fact_provider=fact_provider.risk_reduction_facts,
+            entry_order_absence_provider=fact_provider.entry_order_is_definitely_absent,
+            environment_id=self._settings.release.environment_id,
+            submission_enabled=lambda: self._activation_submission_enabled(
+                activation_id
+            ),
+        )
+        instrument_ref = str(getattr(activation, "instrument_ref"))
+        normalizer = self.coordinator.build_nautilus_event_normalizer(
+            leaves_quantity_for_client_order_id=lambda client_order_id: (
+                _cached_leaves_quantity(self.node.cache, client_order_id)
+            ),
+        )
+
+        def event_sink(event: object) -> None:
+            client_order_id = getattr(event, "client_order_id", None)
+            self._record_runtime_event(
+                "execution_event_observed",
+                activation_id=activation_id,
+                event_type=type(event).__name__,
+                client_order_id=(
+                    str(client_order_id) if client_order_id is not None else None
+                ),
+            )
+            normalized = self.coordinator.handle_nautilus_order_event(
+                normalizer,
+                event,
+                observed_at=datetime.now(UTC),
+            )
+            responsibility.submit_event(normalized)
+            direct.resume(activation_id)
+
+        self._direct_schedule_processors[activation_id] = direct
+        self._responsibility_processors[activation_id] = responsibility
+        self._lifecycle.start(
+            ActivationAdapterSpec(
+                activation_id=activation_id,
+                factory=lambda: HalphaStrategyAdapter(
+                    activation_id=activation_id,
+                    instrument_ref=instrument_ref,
+                    persisted_action_capability=capability,
+                    execution_event_sink=event_sink,
+                    mark_price_event_sink=lambda update: direct.record_mark(
+                        activation_id,
+                        update,
+                    ),
+                    live_history_warmup=False,
+                ),
+            )
+        )
+        self._record_runtime_event(
+            "direct_execution_adapter_started",
+            activation_id=activation_id,
+            entry_valid_until=_activation_entry_deadline(activation).isoformat(),
+        )
+
     def _restore_paused_adapters(self, capability: object) -> None:
         if self._connection is None or self._lifecycle is None:
             raise ExecutorRuntimeError("PRODUCT_RUNTIME_NOT_BUILT")
+        # A few narrow construction tests instantiate the runtime without its
+        # initializer; keep the restore boundary self-contained as well.
+        if not hasattr(self, "_direct_schedule_processors"):
+            self._direct_schedule_processors = {}
         planning = PostgreSQLPlanningRepository(
             self._connection,
             self._settings.release.environment_id,
         )
-        activations = planning.list_open_activations()
+        list_runtime_activations = getattr(
+            planning,
+            "list_runtime_responsibility_activations",
+            planning.list_open_activations,
+        )
+        activations = list_runtime_activations()
         if self._settings.release.profile == "BINANCE_DEMO":
             observed_at = datetime.now(UTC)
             for activation in activations:
@@ -670,7 +880,7 @@ class ProductExecutorRuntime:
                         activation_id=activation.activation_id,
                         observed_at=observed_at,
                     )
-            activations = planning.list_open_activations()
+            activations = list_runtime_activations()
         if self._settings.release.profile == "BINANCE_LIVE_WRITE":
             authorized_activation_id = self._live_write_activation_id
             if (
@@ -687,6 +897,12 @@ class ProductExecutorRuntime:
             proposal_processor = self._proposal_processors.pop(activation_id, None)
             if proposal_processor is not None:
                 proposal_processor.close()
+            direct_processor = self._direct_schedule_processors.pop(
+                activation_id,
+                None,
+            )
+            if direct_processor is not None:
+                direct_processor.close()
             responsibility_processor = self._responsibility_processors.pop(
                 activation_id,
                 None,
@@ -700,7 +916,18 @@ class ProductExecutorRuntime:
             # starting the replacement activation and its warmup request.
             return
         for activation in activations:
+            if activation.lifecycle is PlanLifecycle.USER_TAKEOVER:
+                self.coordinator.apply_persisted_user_takeover(
+                    activation_id=activation.activation_id,
+                    observed_at=datetime.now(UTC),
+                )
             if activation.activation_id in self._lifecycle.activation_ids:
+                continue
+            if (
+                getattr(activation, "decision_basis_ref", None)
+                == DIRECT_EXECUTION_REF
+            ):
+                self._start_direct_execution_adapter(activation, capability)
                 continue
             version = planning.get_version(activation.plan_version_ref)
             parameters = OneShotParameters.model_validate(
@@ -747,6 +974,11 @@ class ProductExecutorRuntime:
                     fact_provider.entry_order_is_definitely_absent
                 ),
                 environment_id=self._settings.release.environment_id,
+                submission_enabled=(
+                    lambda activation_id=activation.activation_id: (
+                        self._activation_submission_enabled(activation_id)
+                    )
+                ),
             )
             self._responsibility_processors[activation.activation_id] = responsibility
 
@@ -769,6 +1001,7 @@ class ProductExecutorRuntime:
                         current.lifecycle is PlanLifecycle.RUNNING
                         and current.run_state is RunState.ACTIVE
                         and new_risk_allowed
+                        and self._activation_submission_enabled(activation_id)
                     ),
                 )
 
@@ -965,11 +1198,9 @@ class ProductExecutorRuntime:
         *,
         interval_seconds: float = 1.0,
     ) -> None:
-        """Discover UI-created Demo activations without restarting the Executor."""
+        """Periodically advance time-based duties; Demo also discovers activations."""
 
-        if self._settings.release.profile != "BINANCE_DEMO":
-            await self._loop.run_in_executor(None, stop_wait)
-            return
+        discover_activations = self._settings.release.profile == "BINANCE_DEMO"
         lifecycle = self._lifecycle
         if lifecycle is None:
             raise ExecutorRuntimeError("PRODUCT_RUNTIME_NOT_BUILT")
@@ -980,7 +1211,10 @@ class ProductExecutorRuntime:
             if stop_future.done():
                 break
             previous_ids = set(lifecycle.activation_ids)
-            self._restore_paused_adapters(capability)
+            if discover_activations:
+                self._restore_paused_adapters(capability)
+            if getattr(self, "_coordinator", None) is not None:
+                self._retry_startup_recovery(observed_at=datetime.now(UTC))
             for activation_id, processor in tuple(
                 self._responsibility_processors.items()
             ):
@@ -993,8 +1227,12 @@ class ProductExecutorRuntime:
                         reason=type(exc).__name__,
                         reason_code=str(exc),
                     )
+            for activation_id, processor in tuple(
+                getattr(self, "_direct_schedule_processors", {}).items()
+            ):
+                processor.resume(activation_id)
             current_ids = set(lifecycle.activation_ids)
-            if current_ids - previous_ids:
+            if discover_activations and current_ids - previous_ids:
                 await self._wait_for_strategy_history_warmup()
         await stop_future
 
@@ -1041,15 +1279,31 @@ class ProductExecutorRuntime:
         if self._capability is None:
             raise ExecutorRuntimeError("PRODUCT_RUNTIME_NOT_BUILT")
         self._restore_paused_adapters(self._capability)
-        await asyncio.sleep(10.0)
-        recovered = self.coordinator.recover_unresolved_actions(
-            observed_at=datetime.now(UTC)
+        recovered = self._begin_startup_recovery(observed_at=datetime.now(UTC))
+        pending_recovery_ids = (
+            self.coordinator.startup_recovery_pending_action_ids()
         )
-        self._recovered_action_count = len(recovered)
-        self._recovery_complete = True
+        if pending_recovery_ids:
+            self._record_runtime_event(
+                "startup_recovery_pending",
+                execution_action_ids=pending_recovery_ids,
+                pending_action_count=len(pending_recovery_ids),
+            )
         for activation_id, processor in self._responsibility_processors.items():
             processor.resume(activation_id)
         for processor in self._responsibility_processors.values():
+            await processor.wait_idle()
+        for activation_id, processor in getattr(
+            self,
+            "_direct_schedule_processors",
+            {},
+        ).items():
+            processor.resume(activation_id)
+        for processor in getattr(
+            self,
+            "_direct_schedule_processors",
+            {},
+        ).values():
             await processor.wait_idle()
         await self._wait_for_strategy_history_warmup()
         if on_ready is not None:
@@ -1057,8 +1311,11 @@ class ProductExecutorRuntime:
                 {
                     "product_runtime_started": True,
                     "database_continuity_guard_completed": True,
-                    "startup_reconciliation_completed": True,
+                    "startup_reconciliation_completed": self._recovery_complete,
                     "recovered_unresolved_actions": len(recovered),
+                    "startup_reconciliation_pending_actions": len(
+                        self.coordinator.startup_recovery_pending_action_ids()
+                    ),
                     "runtime_real_write_gate": self._runtime_real_write_gate,
                 }
             )
@@ -1091,6 +1348,10 @@ class ProductExecutorRuntime:
         for processor in self._proposal_processors.values():
             processor.close()
         self._proposal_processors.clear()
+        for processor in getattr(self, "_direct_schedule_processors", {}).values():
+            processor.close()
+        if hasattr(self, "_direct_schedule_processors"):
+            self._direct_schedule_processors.clear()
         for processor in self._responsibility_processors.values():
             processor.close()
         self._responsibility_processors.clear()

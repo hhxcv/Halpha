@@ -162,7 +162,7 @@ async function mockProfessionalReviews(page: Page) {
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({
       instrument_ref: "BTCUSDT-PERP",
       interval,
-      source: "PLAYWRIGHT_FIXTURE",
+      source: "BINANCE_DEMO_PUBLIC",
       source_cutoff: bars.at(-1)?.close_at,
       bars,
     }) });
@@ -205,6 +205,156 @@ async function mockProfessionalReviews(page: Page) {
   });
 }
 
+async function mockDirectExecutionReviews(page: Page) {
+  const directTradeResult = tradeResult({
+    entry: "100",
+    exit: "101",
+    netPnl: "0.8",
+    grossPnl: "1",
+    commission: "0.2",
+    firstFillTime: "2026-07-23T03:19:21Z",
+    lastFillTime: "2026-07-23T03:20:14Z",
+  });
+  directTradeResult.fills[1].action_kind = "EXIT";
+  const incompleteTradeResult = {
+    fill_count: 0,
+    fills: [],
+    position_quantity: "0",
+    average_entry_price: null,
+    average_exit_price: null,
+    entry_notional: "0",
+    commission: "0",
+    commission_complete: false,
+    calculation_complete: false,
+    closed: false,
+    gross_pnl: null,
+    net_pnl: null,
+    fill_times_complete: false,
+    first_fill_time: null,
+    last_fill_time: null,
+    holding_duration_seconds: null,
+    unresolved_refs: [],
+  };
+  const directReviews: JsonRecord[] = [
+    {
+      review_id: "review-direct-complete",
+      review_version: 1,
+      activation_id: "activation-direct-complete",
+      status: "DRAFT",
+      primary_result: "COMPLETED",
+      fact_cutoff: "2026-07-23T03:20:15Z",
+      content_digest: "d".repeat(64),
+      input_refs: { plan_events: [{}, {}], execution_actions: [{}, {}], venue_facts: [{}, {}, {}, {}], commands_and_receipts: [] },
+      open_responsibilities: { execution_action_refs: [], unknown_action_refs: [] },
+      evaluations: { owner_conclusion: { result: "UNKNOWN", reason: "", evidence_refs: [] } },
+      trade_context: {
+        plan_name: "直接执行完整成交",
+        instrument_ref: "BTCUSDT-PERP",
+        direction: "LONG",
+        decision_basis_ref: "DIRECT_EXECUTION@1",
+        strategy_id: null,
+        trade_amount: "100",
+      },
+      account_result: { trade_result: directTradeResult },
+      resolved_trade_result: directTradeResult,
+    },
+    {
+      review_id: "review-direct-partial",
+      review_version: 1,
+      activation_id: "activation-direct-partial",
+      status: "DRAFT",
+      primary_result: "PARTIAL",
+      fact_cutoff: "2026-07-23T03:18:40Z",
+      content_digest: "p".repeat(64),
+      input_refs: { plan_events: [{}], execution_actions: [{}], venue_facts: [], commands_and_receipts: [] },
+      open_responsibilities: { execution_action_refs: ["entry-open"], unknown_action_refs: [] },
+      evaluations: { owner_conclusion: { result: "UNKNOWN", reason: "", evidence_refs: [] } },
+      trade_context: {
+        plan_name: "直接执行责任待闭合",
+        instrument_ref: "BTCUSDT-PERP",
+        direction: "LONG",
+        decision_basis_ref: "DIRECT_EXECUTION@1",
+        strategy_id: null,
+        trade_amount: "100",
+      },
+      account_result: { trade_result: incompleteTradeResult },
+      resolved_trade_result: incompleteTradeResult,
+    },
+    {
+      review_id: "review-direct-no-action",
+      review_version: 1,
+      activation_id: "activation-direct-no-action",
+      status: "COMPLETE",
+      primary_result: "NO_ACTION",
+      fact_cutoff: "2026-07-23T03:40:00Z",
+      content_digest: "n".repeat(64),
+      input_refs: { plan_events: [], execution_actions: [], venue_facts: [], commands_and_receipts: [] },
+      open_responsibilities: { execution_action_refs: [], unknown_action_refs: [] },
+      evaluations: { owner_conclusion: { result: "NOT_APPLICABLE", reason: "", evidence_refs: [] } },
+      trade_context: {
+        plan_name: "直接执行未发生交易",
+        instrument_ref: "BTCUSDT-PERP",
+        direction: "LONG",
+        decision_basis_ref: "DIRECT_EXECUTION@1",
+        activation_updated_at: "2026-07-23T03:16:00Z",
+        strategy_id: null,
+        trade_amount: "100",
+      },
+      account_result: { trade_result: incompleteTradeResult },
+      resolved_trade_result: incompleteTradeResult,
+    },
+  ];
+  await page.route("**/api/v1/market-window**", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({
+      instrument_ref: "BTCUSDT-PERP",
+      interval: "1m",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: "2026-07-23T03:30:00Z",
+      bars: [],
+    }) });
+  });
+  await page.route("**/api/v1/reviews**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/v1/reviews") {
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify(directReviews) });
+      return;
+    }
+    if (path === "/api/v1/reviews/review-direct-complete") {
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ review: directReviews[0] }) });
+      return;
+    }
+    await route.fallback();
+  });
+  await page.route("**/api/v1/activations/activation-direct-complete**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/timeline")) {
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify([0, 1].map((index) => ({
+        source: "PLAN_EVENT",
+        source_ref: `direct-leg-event-${index}`,
+        status: "PROPOSED_ACTION_CAP_ACCEPTED",
+        at: "2026-07-23T03:19:20Z",
+        detail: {
+          rule_id: "DIRECT_ORDER_SCHEDULE_LEG",
+          source_identity: `activation-direct-complete:ORDER_SCHEDULE:digest:LEG:${index}`,
+          source_cutoff: "2026-07-23T03:19:20Z",
+        },
+      }))) });
+      return;
+    }
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({
+      activation: {
+        activation_id: "activation-direct-complete",
+        decision_basis_ref: "DIRECT_EXECUTION@1",
+        updated_at: "2026-07-23T03:20:15Z",
+      },
+      plan: { plan_name: "直接执行完整成交", creator_kind: "AI", created_at: "2026-07-23T03:18:00Z" },
+      strategy: null,
+      trade_result: directTradeResult,
+      execution_actions: [],
+    }) });
+  });
+}
+
 async function assertAccessible(page: Page, testInfo: TestInfo, name: string) {
   const violations = (await new AxeBuilder({ page }).analyze()).violations;
   await testInfo.attach(`${name}-axe.json`, { body: Buffer.from(JSON.stringify(violations, null, 2)), contentType: "application/json" });
@@ -222,7 +372,7 @@ test("review records support conjunctive strategy, instrument, direction, pnl, r
   await mockProfessionalReviews(page);
   await page.goto("/reviews");
 
-  await chooseFilter(page, "策略", "MEAN_REVERSION_TEST");
+  await chooseFilter(page, "决策依据 / 策略", "MEAN_REVERSION_TEST");
   await chooseFilter(page, "交易对象", "ETHUSDT-PERP");
   await chooseFilter(page, "方向", "做多");
   await chooseFilter(page, "盈亏", "亏损");
@@ -253,6 +403,40 @@ test("review records support conjunctive strategy, instrument, direction, pnl, r
   await expect(keyboardReviewRow).toBeFocused();
   await page.keyboard.press(" ");
   await expect(page.getByRole("heading", { name: "交易价格回看" })).toBeVisible();
+});
+
+test("direct-execution reviews use their authoritative basis and keep incomplete facts distinct from zero", async ({ page }, testInfo) => {
+  await mockDirectExecutionReviews(page);
+  await page.goto("/reviews");
+
+  const table = page.getByRole("table", { name: "交易与复盘记录" });
+  const completeRow = table.getByRole("row", { name: /查看 BTCUSDT-PERP 做多 2026-07-23 11:20:14/ });
+  await expect(completeRow.locator("td").nth(2)).toContainText("直接执行订单计划");
+  const partialRow = table.getByRole("row", { name: /查看 BTCUSDT-PERP 做多 2026-07-23 11:18:40/ });
+  await expect(partialRow.locator("td").nth(2)).toContainText("直接执行订单计划");
+  await expect(partialRow.locator("td").nth(3)).toHaveText("未知 / 未知");
+  await expect(partialRow.locator("td").nth(7)).toContainText("未知");
+  await expect(partialRow.locator("td").nth(7)).toContainText("1 个责任尚未闭合");
+  await expect(partialRow.locator("td").nth(7)).not.toContainText("0 秒");
+
+  await page.getByRole("tab", { name: "全部激活（3）" }).click();
+  await expect(table.locator("tbody tr").first()).toHaveAttribute(
+    "aria-label",
+    /查看 BTCUSDT-PERP 做多 2026-07-23 11:20:14/,
+  );
+  const noActionRow = table.getByRole("row", { name: /查看 BTCUSDT-PERP 做多 2026-07-23 11:16:00/ });
+  await expect(noActionRow.locator("td").nth(3)).toHaveText("不适用");
+  await expect(noActionRow.locator("td").nth(4)).toHaveText("不适用");
+  await expect(noActionRow.locator("td").nth(5)).toHaveText("不适用");
+  await expect(noActionRow.locator("td").nth(6)).toHaveText("不适用");
+
+  await completeRow.click();
+  await expect(page.getByText("直接执行订单计划 · 闭合于", { exact: false })).toBeVisible();
+  await expect(page.getByText("DIRECT_EXECUTION@1", { exact: true })).toBeVisible();
+  await expect(page.getByText("操作理由", { exact: true }).locator("..")).toContainText("直接执行订单计划的 2 个入场档位已通过资金检查");
+  await expect(page.getByText("触发来源", { exact: true }).locator("..")).toContainText("直接执行订单计划");
+  await expect(page.getByText("触发来源", { exact: true }).locator("..")).toContainText("DIRECT_EXECUTION@1");
+  await assertAccessible(page, testInfo, `review-direct-${testInfo.project.name}`);
 });
 
 test("review workbench exposes full-history performance and one visual trade narrative", async ({ page }, testInfo) => {

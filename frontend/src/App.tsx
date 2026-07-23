@@ -101,12 +101,19 @@ import {
   saveMarketColorScheme,
   type MarketColorScheme,
 } from "./marketColors";
+import {
+  expectedMarketSourceForEnvironment,
+  isMarketSourceForEnvironment,
+  marketEnvironmentScopeKey,
+} from "./marketStream";
 import { surfaceFrameSx } from "./theme";
 
 const DRAWER_WIDTH = 236;
 const COLLAPSED_DRAWER_WIDTH = 72;
 const NAVIGATION_COLLAPSED_STORAGE_KEY = "halpha.navigation-collapsed.v1";
 const STATUS_QUERY_KEY = ["settings-status"] as const;
+const DIRECT_EXECUTION_KIND = "DIRECT_EXECUTION";
+const DIRECT_EXECUTION_LABEL = "直接执行订单计划";
 const NewPlanPage = lazy(() => import("./pages/NewPlanPage"));
 const ReviewPriceChart = lazy(() => import("./components/ReviewCharts").then((module) => ({ default: module.ReviewPriceChart })));
 const CumulativePnlChart = lazy(() => import("./components/ReviewCharts").then((module) => ({ default: module.CumulativePnlChart })));
@@ -157,6 +164,111 @@ function finiteNumber(value: unknown): number | null {
 
 function recordsOf(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.map(recordOf) : [];
+}
+
+function isDirectExecution(value: unknown): boolean {
+  return String(value ?? "").split("@", 1)[0] === DIRECT_EXECUTION_KIND;
+}
+
+function reviewDecisionBasisKind(context: Record<string, unknown>): string {
+  const decisionBasisRef = valueOf(context, "decision_basis_ref", "");
+  if (isDirectExecution(decisionBasisRef)) return DIRECT_EXECUTION_KIND;
+  return valueOf(context, "strategy_id", decisionBasisRef.split("@", 1)[0]);
+}
+
+function orderScheduleSpecOf(value: unknown): Record<string, unknown> {
+  const schedule = recordOf(value);
+  const compiledSpec = recordOf(schedule.schedule_spec);
+  return Object.keys(compiledSpec).length > 0 ? compiledSpec : schedule;
+}
+
+function orderScheduleSummary(value: unknown): string {
+  const spec = orderScheduleSpecOf(value);
+  if (Object.keys(spec).length === 0) return "订单计划不可读";
+  const price = recordOf(spec.price_distribution);
+  const venue = recordOf(spec.venue_policy);
+  const priceKind = valueOf(price, "kind", "");
+  const levelCount = finiteNumber(price.level_count);
+  const distribution = priceKind === "LADDER"
+    ? `${levelCount === null ? "未知" : levelCount} 档阶梯`
+    : priceKind === "SINGLE" ? "单笔" : "价格分布未知";
+  const orderTypeValue = valueOf(venue, "order_type", "");
+  const orderType = orderTypeValue === "MARKET"
+    ? "市价"
+    : orderTypeValue === "LIMIT" ? "限价" : "订单类型未知";
+  const makerOnly = venue.post_only === true ? "Maker only" : "";
+  return [distribution, orderType, makerOnly].filter(Boolean).join(" · ");
+}
+
+function orderConditionSummary(value: unknown): string {
+  const spec = orderScheduleSpecOf(value);
+  const conditions = recordOf(spec.entry_conditions);
+  const items = recordsOf(conditions.items);
+  if (items.length === 0) return "无附加入场条件";
+  const operator = valueOf(conditions, "operator", "ALL") === "ANY" ? "任一成立" : "全部成立";
+  return `${operator} · ${items.length} 个条件`;
+}
+
+function orderProtectionSummary(value: unknown): string {
+  const spec = orderScheduleSpecOf(value);
+  const protection = recordOf(spec.protection_policy);
+  if (Object.keys(protection).length === 0) return "保护配置不可读";
+  const stop = recordOf(protection.initial_stop);
+  const takeProfit = recordOf(protection.take_profit_ladder);
+  const levels = recordsOf(takeProfit.levels);
+  const stopDistance = valueOf(stop, "distance_bps", "");
+  const timeExitSeconds = finiteNumber(protection.time_exit_seconds);
+  return [
+    stopDistance ? `止损 ${stopDistance} bps` : "",
+    levels.length > 0 ? `${levels.length} 档止盈` : "",
+    timeExitSeconds !== null ? `${Math.round(timeExitSeconds)} 秒时间退出` : "",
+  ].filter(Boolean).join(" · ") || "未配置保护";
+}
+
+const actionProfileLabels: Record<string, string> = {
+  ENTRY_MARKET: "市价入场",
+  ENTRY_LIMIT: "限价入场",
+  PROTECTIVE_STOP_REDUCE_ONLY: "只减仓保护止损",
+  TAKE_PROFIT_1: "第一档止盈",
+  TAKE_PROFIT_2: "第二档止盈",
+  CANCEL_ORDER: "撤单",
+  REDUCE_OR_CLOSE_MARKET: "市价减仓或退出",
+};
+
+function orderDynamicSummary(value: unknown): string {
+  const spec = orderScheduleSpecOf(value);
+  const rules = recordsOf(spec.dynamic_rules);
+  if (rules.length === 0) return "未启用动态撤单";
+  return rules.map((rule) => {
+    const kind = valueOf(rule, "kind", "");
+    if (kind === "EXPIRE_REMAINING") {
+      return `首档真实提交后 ${valueOf(rule, "after_seconds")} 秒终止并撤销剩余入场`;
+    }
+    if (kind === "CANCEL_ON_SHOCK") {
+      return `${valueOf(rule, "window_seconds")} 秒内不利变动 ${valueOf(rule, "adverse_move_bps")} bps：事实未知时暂停并撤开放档，首次触发后终止剩余档`;
+    }
+    return kind || "未知动态规则";
+  }).join("；");
+}
+
+function orderedCompiledLegs(snapshot: unknown): Array<Record<string, unknown>> {
+  const schedule = recordOf(snapshot);
+  const spec = orderScheduleSpecOf(schedule);
+  const legs = recordsOf(schedule.normalized_legs);
+  return valueOf(spec, "submission_order", "LOW_TO_HIGH") === "HIGH_TO_LOW"
+    ? [...legs].reverse()
+    : legs;
+}
+
+function scheduleSubmissionSummary(value: unknown): string {
+  const spec = orderScheduleSpecOf(value);
+  const mode = valueOf(spec, "submission_mode", "SERIAL_PROTECTED") === "SERIAL_PROTECTED"
+    ? "串行保护"
+    : valueOf(spec, "submission_mode");
+  const order = valueOf(spec, "submission_order", "LOW_TO_HIGH") === "HIGH_TO_LOW"
+    ? "高价 → 低价"
+    : "低价 → 高价";
+  return `${mode} · ${order}`;
 }
 
 function TradingViewAttribution() {
@@ -249,8 +361,8 @@ function ExpandableList<T>({
 }
 
 function signedUsdt(value: unknown): string {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return "未知";
+  const amount = finiteNumber(value);
+  if (amount === null) return "未知";
   const normalized = Math.abs(amount) < 0.0000005 ? 0 : amount;
   return `${new Intl.NumberFormat("zh-CN", {
     minimumFractionDigits: 2,
@@ -260,8 +372,8 @@ function signedUsdt(value: unknown): string {
 }
 
 function usdt(value: unknown): string {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return "未知";
+  const amount = finiteNumber(value);
+  if (amount === null) return "未知";
   return `${new Intl.NumberFormat("zh-CN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
@@ -292,8 +404,8 @@ function formatPlanKeyParameter(
 }
 
 function durationText(value: unknown): string {
-  const seconds = Number(value);
-  if (!Number.isFinite(seconds) || seconds < 0) return "未知";
+  const seconds = finiteNumber(value);
+  if (seconds === null || seconds < 0) return "未知";
   const whole = Math.round(seconds);
   const hours = Math.floor(whole / 3600);
   const minutes = Math.floor((whole % 3600) / 60);
@@ -362,7 +474,7 @@ const evaluationResultLabels: Record<string, string> = {
   NOT_APPLICABLE: "不适用",
 };
 
-type ReviewPnlFilter = "ALL" | "PROFIT" | "LOSS" | "BREAKEVEN" | "UNKNOWN";
+type ReviewPnlFilter = "ALL" | "PROFIT" | "LOSS" | "BREAKEVEN" | "UNKNOWN" | "NOT_APPLICABLE";
 
 type ReviewListFilters = {
   strategyId: string;
@@ -388,13 +500,25 @@ const pnlFilterLabels: Record<ReviewPnlFilter, string> = {
   LOSS: "亏损",
   BREAKEVEN: "持平",
   UNKNOWN: "盈亏未知",
+  NOT_APPLICABLE: "不适用（未交易）",
 };
 
 function tradeResultForReview(review: Record<string, unknown>): Record<string, unknown> {
   return recordOf(review.resolved_trade_result);
 }
 
+function reviewClosedAt(review: Record<string, unknown>): string {
+  const result = tradeResultForReview(review);
+  const context = recordOf(review.trade_context);
+  return valueOf(
+    result,
+    "last_fill_time",
+    valueOf(context, "activation_updated_at", valueOf(review, "fact_cutoff", "")),
+  );
+}
+
 function reviewPnlClass(review: Record<string, unknown>): Exclude<ReviewPnlFilter, "ALL"> {
+  if (valueOf(review, "primary_result", "") === "NO_ACTION") return "NOT_APPLICABLE";
   const result = tradeResultForReview(review);
   const netPnl = finiteNumber(result.net_pnl);
   if (result.calculation_complete !== true || result.closed !== true || netPnl === null) return "UNKNOWN";
@@ -406,7 +530,7 @@ function reviewPnlClass(review: Record<string, unknown>): Exclude<ReviewPnlFilte
 function reviewMatchesFilters(review: Record<string, unknown>, filters: ReviewListFilters): boolean {
   const context = recordOf(review.trade_context);
   return (
-    (filters.strategyId === "ALL" || valueOf(context, "strategy_id", "") === filters.strategyId)
+    (filters.strategyId === "ALL" || reviewDecisionBasisKind(context) === filters.strategyId)
     && (filters.instrumentRef === "ALL" || valueOf(context, "instrument_ref", "") === filters.instrumentRef)
     && (filters.direction === "ALL" || valueOf(context, "direction", "") === filters.direction)
     && (filters.pnl === "ALL" || reviewPnlClass(review) === filters.pnl)
@@ -556,6 +680,20 @@ function ConnectionFailure({ retry }: { retry: () => void }) {
         <Button component="a" href="/operations" variant="outlined" endIcon={<OpenInNewOutlined />}>
           打开故障接管
         </Button>
+      </Stack>
+    </Box>
+  );
+}
+
+function EnvironmentChanging() {
+  return (
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }} role="status" aria-live="assertive">
+      <Stack spacing={2} sx={{ alignItems: "center", px: 3, textAlign: "center" }}>
+        <CircularProgress size={26} />
+        <Typography variant="h2">运行环境已切换，正在清空旧数据</Typography>
+        <Typography variant="body2" color="text.secondary">
+          计划、激活、复盘、表单草稿、K 线与实时连接将按新环境重新载入。
+        </Typography>
       </Stack>
     </Box>
   );
@@ -840,7 +978,11 @@ function OverviewPage() {
     const unrealizedPnl = Number.isFinite(markPrice) && Number.isFinite(entryPrice)
       ? (markPrice - entryPrice) * quantity
       : null;
-    const strategyRef = valueOf(recordOf(detail.strategy), "strategy_ref");
+    const decisionBasis = recordOf(detail.decision_basis);
+    const directExecution = isDirectExecution(valueOf(decisionBasis, "kind", "STRATEGY_SIGNAL"));
+    const strategyRef = directExecution
+      ? valueOf(decisionBasis, "decision_basis_ref", "DIRECT_EXECUTION@1")
+      : valueOf(recordOf(detail.strategy), "strategy_ref");
     const strategyId = strategyRef.split("@", 1)[0];
     const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
     const planName = valueOf(recordOf(detail.plan), "plan_name", valueOf(summary, "plan_name", ""));
@@ -853,7 +995,8 @@ function OverviewPage() {
       entryPrice,
       unrealizedPnl,
       positionFact,
-      strategyName: strategy?.display_name ?? strategyRef,
+      strategyName: directExecution ? DIRECT_EXECUTION_LABEL : strategy?.display_name ?? strategyRef,
+      decisionBasisRef: directExecution ? strategyRef : "",
       planName,
     }];
   });
@@ -912,6 +1055,7 @@ function OverviewPage() {
                       <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ p: 2, justifyContent: "space-between", alignItems: { md: "center" } }}>
                         <Box sx={{ minWidth: 0 }}>
                           <Typography variant="overline" color="text.secondary">{position.strategyName}</Typography>
+                          {position.decisionBasisRef && <Typography variant="caption" color="text.secondary" className="mono" sx={{ display: "block" }}>{position.decisionBasisRef}</Typography>}
                           {position.planName && <Typography variant="h2" sx={{ mt: .25 }}>{position.planName}</Typography>}
                           <Typography sx={{ mt: position.planName ? .25 : 0, fontWeight: 750 }}>
                             {instrument} · <MarketToneText tone={marketToneForDirection(position.quantity > 0 ? "LONG" : "SHORT")}>{direction}</MarketToneText>
@@ -936,7 +1080,7 @@ function OverviewPage() {
               />
               {openActivations.length > 0 && (
                 <Box sx={{ mt: 4 }}>
-                  <Typography variant="h2" sx={{ mb: 1 }}>运行中的策略</Typography>
+                  <Typography variant="h2" sx={{ mb: 1 }}>运行中的计划</Typography>
                   <Typography color="text.secondary" variant="body2" sx={{ mb: 2 }}>包含尚未入场的激活；它们不是当前仓位。</Typography>
                   <ExpandableList
                     items={openActivations}
@@ -977,7 +1121,11 @@ function OverviewPage() {
                     const detail = recentTradeActivationQueries[index]?.data;
                     const activation = recordOf(detail?.activation);
                     const capital = recordOf(detail?.capital);
-                    const strategyRef = valueOf(recordOf(detail?.strategy), "strategy_ref");
+                    const decisionBasis = recordOf(detail?.decision_basis);
+                    const directExecution = isDirectExecution(valueOf(decisionBasis, "kind", "STRATEGY_SIGNAL"));
+                    const strategyRef = directExecution
+                      ? valueOf(decisionBasis, "decision_basis_ref", "DIRECT_EXECUTION@1")
+                      : valueOf(recordOf(detail?.strategy), "strategy_ref");
                     const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyRef.split("@", 1)[0]);
                     return <Box key={valueOf(review, "review_id")} sx={{ ...surfaceFrameSx, p: 2 }}>
                       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
@@ -985,7 +1133,8 @@ function OverviewPage() {
                           <Typography sx={{ fontWeight: 750 }}>
                             {valueOf(activation, "instrument_ref")} · <MarketToneText tone={marketToneForDirection(valueOf(activation, "direction"))}>{translatedLabel(directionLabels, valueOf(activation, "direction"))}</MarketToneText> · <MarketToneText tone={marketToneForSignedValue(result.net_pnl)}>{signedUsdt(result.net_pnl)}</MarketToneText>
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">{strategy?.display_name ?? strategyRef} · 交易金额 {usdt(capital.max_notional)}</Typography>
+                          <Typography variant="body2" color="text.secondary">{directExecution ? DIRECT_EXECUTION_LABEL : strategy?.display_name ?? strategyRef} · 交易金额 {usdt(capital.max_notional)}</Typography>
+                          {directExecution && <Typography variant="caption" color="text.secondary" className="mono" sx={{ display: "block" }}>{strategyRef}</Typography>}
                           <Typography variant="caption" color="text.secondary">{formatUserVisibleTime(valueOf(review, "fact_cutoff"))} · 手续费 {usdt(result.commission)}</Typography>
                         </Box>
                         <Button size="small" variant="outlined" onClick={() => navigate(`/reviews/${valueOf(review, "review_id")}`)}>查看交易明细</Button>
@@ -1124,7 +1273,17 @@ function PlansPage() {
   ));
   const currentPlans = plans.filter((plan) => !historicalPlans.includes(plan));
   const renderPlan = (plan: (typeof plans)[number]) => {
-    const strategy = strategiesQuery.data?.find((item) => item.strategy_id === plan.strategy_id);
+    const planRecord = recordOf(plan);
+    const decisionBasisKind = valueOf(planRecord, "decision_basis_kind", "STRATEGY_SIGNAL");
+    const directExecution = isDirectExecution(decisionBasisKind);
+    const decisionBasisRef = valueOf(
+      planRecord,
+      "decision_basis_ref",
+      directExecution ? "DIRECT_EXECUTION@1" : String(plan.strategy_id ?? ""),
+    );
+    const strategy = directExecution
+      ? undefined
+      : strategiesQuery.data?.find((item) => item.strategy_id === plan.strategy_id);
     const planParameters = plan.parameters ?? {};
     const keyParameterFacts = strategy?.plan_key_parameters?.map((definition) => ({
       label: definition.label,
@@ -1153,8 +1312,9 @@ function PlansPage() {
           <Typography variant="overline" color={unavailable ? "warning.main" : "text.secondary"}>{planState}</Typography>
           <Typography variant="h2" sx={{ mt: .5 }}>{planName}</Typography>
           <Typography variant="body2" color="text.secondary">
-            {strategy?.display_name ?? plan.strategy_id} · <Box component="span" className="mono">{plan.instrument_ref}</Box> · <MarketToneText tone={marketToneForDirection(plan.direction)}>{plan.direction === "LONG" ? "做多" : "做空"}</MarketToneText> · {plan.plan_version_id ? "已确认" : `草稿 v${plan.draft_version}`}
+            {directExecution ? DIRECT_EXECUTION_LABEL : strategy?.display_name ?? plan.strategy_id} · <Box component="span" className="mono">{plan.instrument_ref}</Box> · <MarketToneText tone={marketToneForDirection(plan.direction)}>{plan.direction === "LONG" ? "做多" : "做空"}</MarketToneText> · {plan.plan_version_id ? "已确认" : `草稿 v${plan.draft_version}`}
           </Typography>
+          {directExecution && <Typography variant="caption" color="text.secondary">决策依据 <Box component="span" className="mono">{decisionBasisRef}</Box></Typography>}
           <Typography variant="caption" color="text.secondary">{creatorLabel} · {creationTime} · <Box component="span" className="mono">{shortDigest(plan.plan_version_id ?? plan.draft_content_digest)}</Box></Typography>
           {oldProductVersion && <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>该计划由旧产品版本确认，不能用于当前运行实例。</Typography>}
           {!oldProductVersion && expired && <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>计划有效期已结束，请新建当前计划。</Typography>}
@@ -1164,7 +1324,7 @@ function PlansPage() {
           {!plan.plan_version_id && <Button variant="outlined" color="error" disabled={deleteMutation.isPending} onClick={() => { deleteMutation.reset(); setDeleteTarget(plan); }}>删除草稿</Button>}
           {!plan.plan_version_id && <Button variant="contained" disabled={fixMutation.isPending} onClick={() => fixMutation.mutate({ planId: plan.plan_id, version: plan.draft_version })}>确认计划</Button>}
           {plan.plan_version_id && <Button variant="outlined" onClick={() => navigate(`/plans/new?copyFrom=${encodeURIComponent(plan.plan_id)}`)}>沿用参数新建</Button>}
-          {plan.plan_version_id && !unavailable && <Button variant="contained" onClick={() => navigate(`/plans/${plan.plan_version_id}/activate`)}>启动策略</Button>}
+          {plan.plan_version_id && !unavailable && <Button variant="contained" onClick={() => navigate(`/plans/${plan.plan_version_id}/activate`)}>{directExecution ? "启动订单计划" : "启动策略"}</Button>}
         </Stack>
       </Stack>
       <Box component="details" sx={{ mt: 1.5, borderTop: 1, borderColor: "divider", pt: 1.25 }}>
@@ -1178,10 +1338,16 @@ function PlansPage() {
             facts={[
               { label: "交易金额", value: usdt(plan.max_notional), note: "本计划的资金边界" },
               { label: "计划有效期", value: planDurationMinutes(plan.valid_from, plan.valid_until), note: `截至 ${formatUserVisibleTime(plan.valid_until)}` },
+              ...(directExecution ? [
+                { label: "决策依据", value: DIRECT_EXECUTION_LABEL, note: decisionBasisRef },
+                { label: "订单计划", value: orderScheduleSummary(planRecord.order_schedule_spec) },
+                { label: "入场条件", value: orderConditionSummary(planRecord.order_schedule_spec) },
+                { label: "保护与退出", value: orderProtectionSummary(planRecord.order_schedule_spec) },
+              ] : []),
               ...keyParameterFacts,
             ]}
           />
-          {!strategy && (
+          {!directExecution && !strategy && (
             <Typography variant="caption" color="warning.main" sx={{ display: "block", mt: 1 }}>
               策略关键参数定义当前不可读；页面未猜测或重写参数含义。
             </Typography>
@@ -1196,7 +1362,7 @@ function PlansPage() {
         component="h1"
         sx={visuallyHiddenSx}
       >
-        策略计划
+        交易计划
       </Typography>
       <Stack
         direction={{ xs: "column", md: "row" }}
@@ -1253,13 +1419,48 @@ function PlanActivationRoute() {
   const { planVersionId = "" } = useParams();
   const navigate = useNavigate();
   const { status } = useOutletContext<FrameContext>();
-  const preview = useQuery({ queryKey: ["activation-preview", planVersionId], queryFn: () => getActivationPreview(planVersionId), enabled: Boolean(planVersionId) });
+  const expectedMarketSource = expectedMarketSourceForEnvironment(
+    status.environment_kind,
+  );
+  const environmentScope = `${status.environment_kind}:${status.environment_id}`;
+  const preview = useQuery({
+    queryKey: ["activation-preview", environmentScope, planVersionId],
+    queryFn: () => getActivationPreview(planVersionId),
+    enabled: Boolean(planVersionId),
+  });
+  const decisionBasisKind = valueOf(preview.data, "decision_basis_kind", "STRATEGY_SIGNAL");
+  const directExecution = isDirectExecution(decisionBasisKind);
+  const decisionBasisRef = valueOf(
+    preview.data,
+    "decision_basis_ref",
+    directExecution ? "DIRECT_EXECUTION@1" : valueOf(preview.data, "strategy_ref", ""),
+  );
+  const orderScheduleSpec = recordOf(preview.data?.order_schedule_spec);
+  const orderScheduleSnapshot = recordOf(preview.data?.order_schedule_snapshot);
+  const orderedScheduleLegs = orderedCompiledLegs(orderScheduleSnapshot);
+  const allowedActions = Array.isArray(preview.data?.allowed_actions)
+    ? preview.data.allowed_actions.map(String)
+    : [];
+  const expectedScheduleDigest = valueOf(preview.data, "expected_schedule_digest", "");
+  const hasCompiledSchedule = Object.keys(orderScheduleSnapshot).length > 0;
+  const compiledScheduleReady = !hasCompiledSchedule || (
+    orderScheduleSnapshot.valid === true
+    && /^[0-9a-f]{64}$/.test(expectedScheduleDigest)
+  );
+  const directScheduleReady = !directExecution || (hasCompiledSchedule && compiledScheduleReady);
   const parameters = recordOf(preview.data?.strategy_parameters);
   const instrumentRef = valueOf(preview.data, "instrument_ref");
   const direction = valueOf(preview.data, "direction");
   const channelLookback = Number(parameters.channel_lookback_15m) || 20;
   const market = useQuery({
-    queryKey: ["activation-preview-market-context", planVersionId, instrumentRef, channelLookback],
+    queryKey: [
+      "activation-preview-market-context",
+      environmentScope,
+      expectedMarketSource,
+      planVersionId,
+      instrumentRef,
+      channelLookback,
+    ],
     queryFn: () => getMarketContext(instrumentRef, channelLookback),
     enabled: Boolean(preview.data && instrumentRef),
     retry: 1,
@@ -1271,20 +1472,40 @@ function PlanActivationRoute() {
   const realAccountReady = Boolean(preview.data?.live_activation_eligible);
   const currentProductVersion = preview.data?.product_build_consistent === true;
   const executorReady = valueOf(preview.data, "executor_status") === "READY";
+  const validUntilMs = Date.parse(valueOf(preview.data, "valid_until", ""));
+  const planNotExpired = Number.isFinite(validUntilMs) && Date.now() < validUntilMs;
   const activationEnabled = Boolean(
     preview.data
+    && !preview.isFetching
     && !liveReadOnly
+    && planNotExpired
     && currentProductVersion
     && executorReady
+    && directScheduleReady
+    && compiledScheduleReady
     && (!liveWrite || realAccountReady),
   );
   const mutation = useMutation({
     mutationFn: () => createActivation({
       plan_version_id: planVersionId,
+      expected_schedule_digest: hasCompiledSchedule ? expectedScheduleDigest : null,
     }),
     onSuccess: (result) => { const activation = result.activation as Record<string, unknown> | undefined; navigate(`/activations/${valueOf(activation, "activation_id")}`); },
+    onError: (error) => {
+      if (error instanceof ApiFailure && error.code === "ACTIVATION_PREVIEW_STALE") {
+        void preview.refetch();
+        void market.refetch();
+      }
+    },
   });
-  const currentMarket = market.data;
+  const marketSourceMismatch = Boolean(
+    market.data
+    && !isMarketSourceForEnvironment(
+      market.data.source,
+      status.environment_kind,
+    ),
+  );
+  const currentMarket = marketSourceMismatch ? undefined : market.data;
   const activationMarketReady = Boolean(
     currentMarket
     && !market.isError
@@ -1305,19 +1526,32 @@ function PlanActivationRoute() {
   const planName = valueOf(preview.data, "plan_name", "");
   return (
     <Box sx={{ width: "min(920px, calc(100% - clamp(32px, 4vw, 48px)))", mx: "auto", py: { xs: 2.5, sm: 3 } }}>
-      <PageHeader eyebrow="确认启动计划" title={planName || "未命名计划"} description="交易金额已在策略计划中确定。这里仅确认启动固定计划，不再进行资金授权，也不会立即向 Binance 下单。" />
+      <PageHeader
+        eyebrow="确认启动计划"
+        title={planName || "未命名计划"}
+        description={directExecution
+          ? "交易金额和订单计划已固定。启动只让计划进入可运行状态；随后可按固定条件形成入场动作，仍经过当前事实、CAP 与 EXE。启动回执不表示已提交或成交。"
+          : "交易金额已在策略计划中确定。这里仅确认启动固定计划，不再进行资金授权，也不会立即向 Binance 下单。"}
+      />
       {preview.isPending && <LinearProgress aria-label="正在读取激活复核" />}
-      {preview.isError && <Alert severity="error">当前复核事实不可用，不能启动策略。</Alert>}
+      {preview.isError && <Alert severity="error">当前复核事实不可用，不能启动计划。</Alert>}
       {preview.data && <>
         <FactGrid facts={[
           { label: "账户", value: valueOf(preview.data, "account_ref") },
           { label: "交易对象 / 方向", value: `${valueOf(preview.data, "instrument_ref")} / ${translatedLabel(directionLabels, valueOf(preview.data, "direction"))}`, tone: marketToneForDirection(valueOf(preview.data, "direction")) },
-          { label: "策略", value: valueOf(preview.data, "strategy_ref") },
+          { label: directExecution ? "决策依据" : "策略", value: directExecution ? DIRECT_EXECUTION_LABEL : valueOf(preview.data, "strategy_ref"), note: directExecution ? decisionBasisRef : undefined },
           { label: "交易金额", value: `${valueOf(preview.data, "trade_amount")} USDT` },
           { label: "有效期", value: formatUserVisibleTime(valueOf(preview.data, "valid_until")) },
-          { label: "入场方式", value: parameters.demo_immediate_entry === true ? "下单流程验证 · 下一根有效闭合 1m" : `${valueOf(parameters, "channel_lookback_15m")} × 15m 通道 / ${valueOf(parameters, "confirmation_bars_1m")} × 1m 确认` },
-          { label: "保护", value: `初始止损 ${valueOf(parameters, "initial_stop_atr_multiple")} ATR / 最大追价 ${valueOf(parameters, "max_entry_extension_atr")} ATR` },
-          { label: "退出", value: `最大 ${valueOf(parameters, "max_hold_bars_15m")} × 15m / TP1 ${Number(valueOf(parameters, "take_profit_1_fraction")) * 100}% @ ${valueOf(parameters, "take_profit_1_r")}R / TP2 @ ${valueOf(parameters, "take_profit_2_r")}R` },
+          ...(directExecution ? [
+            { label: "订单计划", value: orderScheduleSummary(orderScheduleSpec) },
+            { label: "入场条件", value: orderConditionSummary(orderScheduleSpec) },
+            { label: "保护与退出", value: orderProtectionSummary(orderScheduleSpec) },
+            { label: "编译摘要", value: expectedScheduleDigest ? shortDigest(expectedScheduleDigest) : "不可用", note: orderScheduleSnapshot.valid === true ? "启动时必须与本次服务端预览一致" : "订单计划未通过服务端编译" },
+          ] : [
+            { label: "入场方式", value: parameters.demo_immediate_entry === true ? "下单流程验证 · 下一根有效闭合 1m" : `${valueOf(parameters, "channel_lookback_15m")} × 15m 通道 / ${valueOf(parameters, "confirmation_bars_1m")} × 1m 确认` },
+            { label: "保护", value: `初始止损 ${valueOf(parameters, "initial_stop_atr_multiple")} ATR / 最大追价 ${valueOf(parameters, "max_entry_extension_atr")} ATR` },
+            { label: "退出", value: `最大 ${valueOf(parameters, "max_hold_bars_15m")} × 15m / TP1 ${Number(valueOf(parameters, "take_profit_1_fraction")) * 100}% @ ${valueOf(parameters, "take_profit_1_r")}R / TP2 @ ${valueOf(parameters, "take_profit_2_r")}R` },
+          ]),
           { label: "产品版本", value: shortDigest(valueOf(preview.data, "product_build_id")) },
           { label: "当前版本一致", value: currentProductVersion ? "是" : "否" },
           { label: "执行器", value: translatedLabel(executorStatusLabels, valueOf(preview.data, "executor_status")), note: `核对于 ${formatUserVisibleTime(valueOf(preview.data, "executor_status_checked_at"))}` },
@@ -1325,11 +1559,58 @@ function PlanActivationRoute() {
             { label: "交易所变更请求", value: valueOf(preview.data, "configured_runtime_real_write_gate") },
           ] : []),
         ]} />
+        {directExecution && hasCompiledSchedule && <Box component="section" sx={{ mt: 3 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "baseline" }, mb: 1.5 }}>
+            <Box>
+              <Typography variant="h2">实际提交复核</Typography>
+              <Typography color="text.secondary" variant="body2" sx={{ mt: .5 }}>
+                表格按真实提交顺序排列；同一时刻最多一个增险入场档处于提交中、未知或开放状态。
+              </Typography>
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              规则截止 {formatUserVisibleTime(valueOf(orderScheduleSnapshot, "source_cutoff"))}
+            </Typography>
+          </Stack>
+          <FactGrid facts={[
+            { label: "提交方式", value: scheduleSubmissionSummary(orderScheduleSnapshot), note: orderedScheduleLegs.length > 0 ? `首档为计划档 ${Number(orderedScheduleLegs[0]?.leg_index ?? 0) + 1}` : "没有可提交档位" },
+            { label: "动态管理", value: orderDynamicSummary(orderScheduleSnapshot) },
+            { label: "允许动作", value: allowedActions.map((item) => actionProfileLabels[item] ?? item).join("、") || "不可读" },
+            { label: "服务端归一化", value: `${valueOf(orderScheduleSnapshot, "effective_total_notional", "0")} USDT`, note: `${orderedScheduleLegs.length} 档 · ${valueOf(recordOf(orderScheduleSnapshot.instrument_rules), "source", "规则来源未知")}` },
+          ]} />
+          <TableContainer sx={{ mt: 1.5, border: 1, borderColor: "divider", borderRadius: 1.5 }}>
+            <Table size="small" aria-label="按真实提交顺序排列的订单档位">
+              <TableHead>
+                <TableRow>
+                  <TableCell>提交序号</TableCell>
+                  <TableCell>计划档</TableCell>
+                  <TableCell align="right">价格（USDT）</TableCell>
+                  <TableCell align="right">数量</TableCell>
+                  <TableCell align="right">有效名义额（USDT）</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {orderedScheduleLegs.map((leg, index) => <TableRow key={valueOf(leg, "leg_index", String(index))}>
+                  <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
+                    {index + 1}{index === 0 ? <Chip label="首档" size="small" color="warning" variant="outlined" sx={{ ml: 1 }} /> : null}
+                  </TableCell>
+                  <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>{Number(leg.leg_index) + 1}</TableCell>
+                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>{leg.price === null ? `市价（数量参考 ${valueOf(leg, "sizing_price")}）` : valueOf(leg, "price")}</TableCell>
+                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>{valueOf(leg, "quantity")}</TableCell>
+                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>{valueOf(leg, "effective_notional")}</TableCell>
+                </TableRow>)}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>}
         <Box component="section" sx={{ mt: 3 }}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, mb: 2 }}>
             <Box>
               <Typography variant="h2">当前市场位置</Typography>
-              <Typography color="text.secondary" variant="body2" sx={{ mt: .75 }}>只读公开行情用于决定是否启动；策略仍只按固定参数和闭合 K 线执行。</Typography>
+              <Typography color="text.secondary" variant="body2" sx={{ mt: .75 }}>
+                {directExecution
+                  ? "只读公开行情用于启动前核对固定价格和当前价差；直接执行仍按已固定条件、当前事实与 CAP / EXE 检查处理。"
+                  : "只读公开行情用于决定是否启动；策略仍只按固定参数和闭合 K 线执行。"}
+              </Typography>
             </Box>
             <Button variant="outlined" onClick={() => market.refetch()} disabled={market.isFetching}>{market.isFetching ? "正在刷新…" : "刷新行情"}</Button>
           </Stack>
@@ -1337,37 +1618,58 @@ function PlanActivationRoute() {
           {market.isError && currentMarket && <Alert severity="warning" variant="outlined">
             行情刷新失败；以下保留上次成功行情（截止 {formatUserVisibleTime(currentMarket.source_cutoff)}），可能已经过期。请刷新成功后再决定是否启动。
           </Alert>}
-          {market.isError && !currentMarket && <Alert severity="warning" variant="outlined">当前公开行情不可用。不要在无法判断价格、价差和突破位置时启动。</Alert>}
+          {market.isError && !currentMarket && <Alert severity="warning" variant="outlined">
+            {directExecution
+              ? "当前公开行情不可用。不要在无法核对当前价格和价差时启动。"
+              : "当前公开行情不可用。不要在无法判断价格、价差和突破位置时启动。"}
+          </Alert>}
+          {marketSourceMismatch && <Alert severity="error" variant="outlined">
+            行情来源与当前 {status.environment_kind} 环境不一致，已拒绝显示和用于启动复核。
+          </Alert>}
           {currentMarket && <FactGrid facts={[
             { label: "盘口中间价", value: `${marketPrice(currentMarket.reference_price)} USDT` },
             { label: "买一 / 卖一", value: `${marketPrice(currentMarket.bid_price)} / ${marketPrice(currentMarket.ask_price)} USDT` },
             { label: "买卖价差", value: `${marketPrice(currentSpread)} USDT`, note: Number.isFinite(currentSpreadBps) ? `${currentSpreadBps.toFixed(2)} bps` : undefined },
-            { label: "通道上沿 / 下沿", value: `${marketPrice(currentMarket.channel_upper)} / ${marketPrice(currentMarket.channel_lower)} USDT`, note: `${direction === "LONG" ? "计划做多" : "计划做空"}；启动前同时比较两侧机会` },
-            { label: "最近闭合 1m", value: `${marketPrice(currentMarket.latest_close_1m)} USDT` },
-            { label: "1m 收盘距上沿 / 下沿", value: `${gapPercent(longClosedBarBreakoutGap)} / ${gapPercent(shortClosedBarBreakoutGap)}`, note: "策略触发口径；正值表示尚未突破，负值表示已经越过" },
-            { label: "盘口中间价距上沿 / 下沿", value: `${gapPercent(currentMarket.long_breakout_gap_pct)} / ${gapPercent(currentMarket.short_breakout_gap_pct)}`, note: "仅用于启动前定位，不替代闭合 K 线与执行前检查" },
+            ...(!directExecution ? [
+              { label: "通道上沿 / 下沿", value: `${marketPrice(currentMarket.channel_upper)} / ${marketPrice(currentMarket.channel_lower)} USDT`, note: `${direction === "LONG" ? "计划做多" : "计划做空"}；启动前同时比较两侧机会` },
+              { label: "最近闭合 1m", value: `${marketPrice(currentMarket.latest_close_1m)} USDT` },
+              { label: "1m 收盘距上沿 / 下沿", value: `${gapPercent(longClosedBarBreakoutGap)} / ${gapPercent(shortClosedBarBreakoutGap)}`, note: "策略触发口径；正值表示尚未突破，负值表示已经越过" },
+              { label: "盘口中间价距上沿 / 下沿", value: `${gapPercent(currentMarket.long_breakout_gap_pct)} / ${gapPercent(currentMarket.short_breakout_gap_pct)}`, note: "仅用于启动前定位，不替代闭合 K 线与执行前检查" },
+            ] : []),
             { label: "行情截止", value: formatUserVisibleTime(currentMarket.source_cutoff) },
           ]} />}
-          {Number.isFinite(currentSpreadBps) && currentSpreadBps > 10 && <Alert severity="warning" sx={{ mt: 2 }}>
+          {!directExecution && Number.isFinite(currentSpreadBps) && currentSpreadBps > 10 && <Alert severity="warning" sx={{ mt: 2 }}>
             当前买卖价差约 {currentSpreadBps.toFixed(1)} bps，超过 10 bps 入场上限。可以启动策略等待，但只有价差收窄且其他固定条件同时满足时才会创建入场动作。
           </Alert>}
         </Box>
         <Alert severity="warning" variant="outlined" sx={{ mt: 3 }}>{valueOf(preview.data, "capital_notice")}</Alert>
       </>}
       {liveReadOnly && <Alert severity="warning" sx={{ mt: 3 }}>只读环境仅用于公共市场观察，不能激活计划或向交易所提交变更请求。</Alert>}
+      {preview.data && directExecution && !directScheduleReady && <Alert severity="error" sx={{ mt: 2 }}>服务端订单计划预览无效或缺少完整摘要，当前不能启动。请返回计划编辑页修正后重新确认。</Alert>}
+      {preview.data && !planNotExpired && <Alert severity="warning" sx={{ mt: 2 }}>计划有效期已经结束，不能再启动；请基于当前事实创建并确认新计划。</Alert>}
       {preview.data && !currentProductVersion && <Alert severity="warning" sx={{ mt: 2 }}>该计划由旧产品版本确认，不能由当前 App 与 Executor 运行。请返回计划列表并新建计划。</Alert>}
-      {preview.data && !executorReady && <Alert severity="warning" sx={{ mt: 2 }}>执行器尚未完成连接、启动核对和历史预热，当前不能启动新策略。已有激活的退出与接管控制不受影响。</Alert>}
-      {liveWrite && !realAccountReady && <Alert severity="warning" sx={{ mt: 2 }}>当前产品版本或交易所变更请求配置不一致；当前不能启动真实账户策略。</Alert>}
-      {mutation.isError && <Alert severity="error" sx={{ mt: 2 }}>激活未提交：{mutation.error instanceof ApiFailure ? mutation.error.code : "结果未知"}</Alert>}
+      {preview.data && !executorReady && <Alert severity="warning" sx={{ mt: 2 }}>执行器尚未完成连接、启动核对和历史预热，当前不能启动新计划。已有激活的退出与接管控制不受影响。</Alert>}
+      {liveWrite && !realAccountReady && <Alert severity="warning" sx={{ mt: 2 }}>当前产品版本或交易所变更请求配置不一致；当前不能启动真实账户计划。</Alert>}
+      {mutation.isError && <Alert severity="error" sx={{ mt: 2 }}>
+        {mutation.error instanceof ApiFailure && mutation.error.code === "ACTIVATION_PREVIEW_STALE"
+          ? "启动复核已过期，页面正在刷新服务端订单快照与行情；刷新完成后请重新确认启动。"
+          : `激活未提交：${mutation.error instanceof ApiFailure ? mutation.error.code : "结果未知"}`}
+      </Alert>}
       <Button
         variant="contained"
         color="warning"
         sx={{ mt: 3 }}
-        disabled={!activationEnabled || !activationMarketReady || mutation.isPending}
+        disabled={!activationEnabled || !activationMarketReady || mutation.isPending || preview.isFetching}
         onClick={() => mutation.mutate()}
       >
         {mutation.isPending
           ? "正在启动…"
+          : preview.isFetching
+            ? "正在刷新启动复核…"
+          : directExecution && !directScheduleReady
+            ? "订单计划预览无效，不能启动"
+          : !planNotExpired
+            ? "计划已过期，不能启动"
           : !executorReady
             ? "执行器未就绪，不能启动"
           : market.isPending || market.isFetching
@@ -1375,8 +1677,8 @@ function PlanActivationRoute() {
             : market.isError || !currentMarket
               ? "行情不可用，不能启动"
               : liveWrite
-                ? "启动真实账户策略"
-                : "启动策略"}
+                ? directExecution ? "启动真实账户订单计划" : "启动真实账户策略"
+                : directExecution ? "启动直接执行订单计划" : "启动策略"}
       </Button>
     </Box>
   );
@@ -1384,6 +1686,11 @@ function PlanActivationRoute() {
 
 function ActivationRoute() {
   const { activationId = "" } = useParams();
+  const { status } = useOutletContext<FrameContext>();
+  const expectedMarketSource = expectedMarketSourceForEnvironment(
+    status.environment_kind,
+  );
+  const environmentScope = `${status.environment_kind}:${status.environment_id}`;
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["activation", activationId], queryFn: () => getActivation(activationId), enabled: Boolean(activationId), refetchInterval: 2_000 });
   const timelineQuery = useQuery({ queryKey: ["activation-timeline", activationId], queryFn: () => getActivationTimeline(activationId), enabled: Boolean(activationId), refetchInterval: 2_000 });
@@ -1401,6 +1708,14 @@ function ActivationRoute() {
     ? venueReasonText(valueOf(recordOf(rejectedEntryFact.payload), "reason", "交易所拒绝了本次订单"))
     : "";
   const receipts = recordsOf(query.data?.receipts);
+  const decisionBasis = recordOf(query.data?.decision_basis);
+  const directExecution = isDirectExecution(valueOf(decisionBasis, "kind", "STRATEGY_SIGNAL"));
+  const decisionBasisRef = valueOf(
+    decisionBasis,
+    "decision_basis_ref",
+    directExecution ? "DIRECT_EXECUTION@1" : "",
+  );
+  const orderSchedule = recordOf(query.data?.order_schedule);
   const strategy = recordOf(query.data?.strategy);
   const plan = recordOf(query.data?.plan);
   const parameters = recordOf(strategy.parameters);
@@ -1417,7 +1732,13 @@ function ActivationRoute() {
   ).length;
   const channelLookback = Number(parameters.channel_lookback_15m) || 20;
   const market = useQuery({
-    queryKey: ["activation-market-context", activationId, channelLookback],
+    queryKey: [
+      "activation-market-context",
+      environmentScope,
+      expectedMarketSource,
+      activationId,
+      channelLookback,
+    ],
     queryFn: () => getMarketContext(valueOf(activation, "instrument_ref"), channelLookback),
     enabled: Boolean(activationId && activation && valueOf(activation, "lifecycle") === "RUNNING"),
     retry: 1,
@@ -1458,7 +1779,7 @@ function ActivationRoute() {
   const controls: Array<{ intent: ControlIntent; label: string; color?: "warning" | "error" | "primary" }> = [
     { intent: "STOP_NEW_RISK", label: "停止新增风险", color: "warning" },
     { intent: "RESUME_ACTIVATION", label: "恢复连续性暂停" },
-    { intent: "EXIT_STRATEGY", label: "退出策略", color: "error" },
+    { intent: "EXIT_STRATEGY", label: directExecution ? "退出订单计划" : "退出策略", color: "error" },
     { intent: "USER_TAKEOVER", label: "用户接管", color: "error" },
   ];
   const selectedControlLabel = controls.find((control) => control.intent === intent)?.label;
@@ -1496,7 +1817,14 @@ function ActivationRoute() {
       ? "成交未知（保护不可证明）"
       : "未入场（无需保护）";
   const direction = valueOf(activation, "direction");
-  const currentMarket = market.data;
+  const marketSourceMismatch = Boolean(
+    market.data
+    && !isMarketSourceForEnvironment(
+      market.data.source,
+      status.environment_kind,
+    ),
+  );
+  const currentMarket = marketSourceMismatch ? undefined : market.data;
   const ruleState = recordOf(activation?.rule_state);
   const deadlines = recordOf(ruleState.deadlines);
   const entryValidUntil = valueOf(deadlines, "entry_valid_until", "");
@@ -1593,6 +1921,9 @@ function ActivationRoute() {
       <PageHeader eyebrow="激活运行与控制" title={planName} description="按计划事件 → 执行动作 → 交易所事实 → 核对结论观察同一责任链；命令回执不冒充订单、成交、持仓或保护事实。" />
       {(query.isPending || timelineQuery.isPending) && <LinearProgress aria-label="正在读取激活与时间线" />}
       {(query.isError || timelineQuery.isError) && <Alert severity="error" sx={{ mb: 2 }}>当前服务器事实不可确认；页面不会把旧缓存冒充当前事实，也不会开放离线资本命令。</Alert>}
+      {marketSourceMismatch && <Alert severity="error" variant="outlined" sx={{ mb: 2 }}>
+        行情来源与当前 {status.environment_kind} 环境不一致，已拒绝显示；执行器不会使用页面缓存替代当前环境事实。
+      </Alert>}
       {protectionGap && <Alert severity="error" variant="filled" sx={{ mb: 3 }}>存在已确认敞口，但交易所原生保护尚未证明为工作中。保持在线并核对 Binance 官方入口；任何“停止”或回执都不代表已经安全。</Alert>}
       {unknownEntryCount > 0 && <Alert severity="error" variant="filled" sx={{ mb: 3 }}>有 {unknownEntryCount} 个入场动作的交易所结果未决。未收到成交事实不等于未成交，保护也尚不可证明；系统只查询各自原 UUID，并禁止创建新的入场动作。</Alert>}
       {rejectedEntryReason && !hasEntryFill && <Alert severity="warning" variant="outlined" sx={{ mb: 3 }}>本次入场未成交：{rejectedEntryReason} 可重新启动一笔独立计划再次验证。</Alert>}
@@ -1606,9 +1937,13 @@ function ActivationRoute() {
         { label: "运行状态", value: runStateDisplay },
         { label: "状态版本", value: valueOf(activation, "state_version") },
         { label: "交易对象 / 方向", value: `${valueOf(activation, "instrument_ref")} / ${translatedLabel(directionLabels, valueOf(activation, "direction"))}`, tone: marketToneForDirection(valueOf(activation, "direction")) },
+        ...(directExecution ? [
+          { label: "决策依据", value: DIRECT_EXECUTION_LABEL, note: decisionBasisRef },
+          { label: "订单计划", value: orderScheduleSummary(orderSchedule) },
+        ] : []),
         { label: "入场截止", value: formatUserVisibleTime(entryValidUntil), note: terminal || entryRemainingMinutes === null ? undefined : hasOpenEntryResponsibility ? "已有入场责任，不再创建新入场" : entryWindowExpired ? hasEntryFill ? "入场机会已结束" : "已到期，等待闭合" : `剩余约 ${entryRemainingMinutes} 分钟` },
         { label: "保护", value: protectionDisplay },
-        { label: "策略状态", value: translatedLabel(lifecycleLabels, valueOf(activation, "lifecycle")), note: terminal ? "本次激活已闭合" : unknownEntryCount > 0 ? "入场结果未决，正在核对原 UUID" : newRiskStopped || capital.max_loss_reached === true ? "已停止新增风险" : hasEntryFill ? "持仓按计划管理" : "等待入场条件" },
+        { label: directExecution ? "计划状态" : "策略状态", value: translatedLabel(lifecycleLabels, valueOf(activation, "lifecycle")), note: terminal ? "本次激活已闭合" : unknownEntryCount > 0 ? "入场结果未决，正在核对原 UUID" : newRiskStopped || capital.max_loss_reached === true ? "已停止新增风险" : hasEntryFill ? "持仓按计划管理" : directExecution ? "等待固定入场条件" : "等待入场条件" },
         ...(fillCount > 0 ? [{
           label: terminal ? "本次净结果" : "立即市价退出估算净结果",
           value: terminal
@@ -1640,7 +1975,31 @@ function ActivationRoute() {
         { label: "交易所事实截止点", value: hasEntryFill || actions.length || facts.length ? venueFactCutoff ? formatUserVisibleTime(venueFactCutoff) : "未知" : "尚无交易所责任事实" },
       ]} />}
 
-      {activation && lifecycle === "RUNNING" && !hasEntryFill && !hasOpenEntryResponsibility && !newRiskStopped && <Box component="section" sx={{ mt: 4 }}>
+      {directExecution && activation && lifecycle === "RUNNING" && !hasEntryFill && !hasOpenEntryResponsibility && !newRiskStopped && <Box component="section" sx={{ mt: 4 }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, mb: 2 }}>
+          <Box>
+            <Typography variant="h2">等待直接执行条件</Typography>
+            <Typography color="text.secondary" variant="body2" sx={{ mt: .75 }}>本计划不等待策略信号；Executor 按已固定条件、订单档位和当前事实形成动作，并继续经过 CAP 与 EXE。</Typography>
+          </Box>
+          <Button variant="outlined" onClick={() => market.refetch()} disabled={market.isFetching}>{market.isFetching ? "正在刷新…" : "刷新行情"}</Button>
+        </Stack>
+        {market.isPending && <LinearProgress aria-label="正在读取激活行情" />}
+        {market.isError && currentMarket && <Alert severity="warning" variant="outlined">行情刷新失败；以下保留上次成功行情（截止 {formatUserVisibleTime(currentMarket.source_cutoff)}），可能已经过期，仅用于定位。Executor 不会用页面缓存代替当前事实。</Alert>}
+        {market.isError && !currentMarket && <Alert severity="warning" variant="outlined">当前行情不可用，页面无法定位相对于固定档位的市场位置；Executor 不会因此放宽事实和风险检查。</Alert>}
+        {latestNoActionText && <Alert severity="info" variant="outlined" sx={{ mb: 2 }}>
+          最近一次入场判断没有形成下单动作：{latestNoActionText}（{formatUserVisibleTime(valueOf(latestNoActionEvent, "at"))}）。计划仍在有效期内等待固定条件。
+        </Alert>}
+        {currentMarket && <FactGrid facts={[
+          { label: "订单计划", value: orderScheduleSummary(orderSchedule) },
+          { label: "入场条件", value: orderConditionSummary(orderSchedule) },
+          { label: "盘口中间价", value: `${marketPrice(currentMarket.reference_price)} USDT`, note: "页面只读定位；执行使用当前权威事实" },
+          { label: "买一 / 卖一", value: `${marketPrice(currentMarket.bid_price)} / ${marketPrice(currentMarket.ask_price)} USDT` },
+          { label: "买卖价差", value: `${marketPrice(currentSpread)} USDT`, note: Number.isFinite(currentSpreadBps) ? `${currentSpreadBps.toFixed(2)} bps` : undefined },
+          { label: "行情截止", value: formatUserVisibleTime(currentMarket.source_cutoff) },
+        ]} />}
+      </Box>}
+
+      {!directExecution && activation && lifecycle === "RUNNING" && !hasEntryFill && !hasOpenEntryResponsibility && !newRiskStopped && <Box component="section" sx={{ mt: 4 }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, mb: 2 }}>
           <Box>
             <Typography variant="h2">{demoImmediateEntry ? "等待验证入场" : "等待入场"}</Typography>
@@ -1681,7 +2040,7 @@ function ActivationRoute() {
         <Typography variant="h2" sx={{ mt: .75, mb: 1 }}>系统流程与机制</Typography>
         <Typography color="text.secondary" sx={{ mb: 2 }}>同一计划、资金检查、执行动作、交易所事实和复盘结果使用一致身份。系统首先验证持久动作、防重复、保护、核对、停止、恢复、接管和环境隔离。</Typography>
         <FactGrid facts={[
-          { label: "策略检查", value: `${Object.keys(ruleState).length} 条规则状态 · v${valueOf(activation, "state_version")}` },
+          { label: directExecution ? "计划规则状态" : "策略检查", value: `${Object.keys(ruleState).length} 条规则状态 · v${valueOf(activation, "state_version")}` },
           { label: "交易金额", value: `${valueOf(capital, "max_notional")} USDT` },
           { label: "损失风控计数", value: `${valueOf(capital, "activation_loss")} / ${valueOf(capital, "max_allowed_loss")} USDT`, note: "用于停止新增风险，不等于当前盈亏" },
           { label: "已归属手续费", value: `${valueOf(tradeResult, "commission", "0")} USDT`, note: tradeResult.commission_complete === true ? "当前成交手续费已齐全" : fillCount > 0 ? "仍有成交手续费待核对" : "尚无成交" },
@@ -1693,8 +2052,8 @@ function ActivationRoute() {
       </Box>
 
       <Box component="section" sx={{ mt: 4 }}>
-        <Typography variant="overline" color="text.secondary">次要证据 · 策略行为</Typography>
-        <Typography variant="h2" sx={{ mt: .75, mb: 1 }}>策略行为只作次要验证</Typography>
+        <Typography variant="overline" color="text.secondary">次要证据 · {directExecution ? "订单计划行为" : "策略行为"}</Typography>
+        <Typography variant="h2" sx={{ mt: .75, mb: 1 }}>{directExecution ? "订单计划行为只作次要验证" : "策略行为只作次要验证"}</Typography>
         <Alert severity="warning" variant="outlined" icon={false}>
           当前环境或历史结果不能证明其他环境中的流动性、排队、冲击、滑点、费用、资金费率、延迟、权限、可用性或真实收益能力；绿色状态也不能消除这些差异。
         </Alert>
@@ -1798,9 +2157,9 @@ function ReviewsPage() {
   const query = useQuery({ queryKey: ["reviews"], queryFn: getReviews, refetchInterval: 30_000 });
   const strategiesQuery = useQuery({ queryKey: ["strategies"], queryFn: getStrategies });
   const reviews = [...(query.data ?? [])].sort((left, right) => {
-    const rightCutoff = Date.parse(valueOf(right, "fact_cutoff", ""));
-    const leftCutoff = Date.parse(valueOf(left, "fact_cutoff", ""));
-    return (Number.isFinite(rightCutoff) ? rightCutoff : 0) - (Number.isFinite(leftCutoff) ? leftCutoff : 0);
+    const rightClosedAt = Date.parse(reviewClosedAt(right));
+    const leftClosedAt = Date.parse(reviewClosedAt(left));
+    return (Number.isFinite(rightClosedAt) ? rightClosedAt : 0) - (Number.isFinite(leftClosedAt) ? leftClosedAt : 0);
   });
   const tradedReviews = reviews.filter((review) => ["COMPLETED", "PARTIAL"].includes(valueOf(review, "primary_result")));
   const scopeReviews = filter === "DRAFT"
@@ -1809,7 +2168,7 @@ function ReviewsPage() {
       ? tradedReviews
       : reviews;
   const visibleReviews = scopeReviews.filter((review) => reviewMatchesFilters(review, listFilters));
-  const strategyOptions = [...new Set(reviews.map((review) => valueOf(recordOf(review.trade_context), "strategy_id", "")).filter(Boolean))].sort();
+  const strategyOptions = [...new Set(reviews.map((review) => reviewDecisionBasisKind(recordOf(review.trade_context))).filter(Boolean))].sort();
   const instrumentOptions = [...new Set(reviews.map((review) => valueOf(recordOf(review.trade_context), "instrument_ref", "")).filter(Boolean))].sort();
   const activeFilterCount = Object.values(listFilters).filter((value) => value !== "ALL").length;
   const reliableTrades = tradedReviews.filter((review) => {
@@ -1872,11 +2231,11 @@ function ReviewsPage() {
 
       <Box component="section" aria-label="交易记录联合筛选" sx={{ ...surfaceFrameSx, p: 1.25, mb: 1.5 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(150px, 1fr))", lg: "repeat(6, minmax(130px, 1fr))" }, gap: 1 }}>
-          <TextField select size="small" label="策略" value={listFilters.strategyId} onChange={(event) => updateListFilter("strategyId", event.target.value)}>
-            <MenuItem value="ALL">全部策略</MenuItem>
+          <TextField select size="small" label="决策依据 / 策略" value={listFilters.strategyId} onChange={(event) => updateListFilter("strategyId", event.target.value)}>
+            <MenuItem value="ALL">全部决策依据</MenuItem>
             {strategyOptions.map((strategyId) => {
               const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
-              return <MenuItem key={strategyId} value={strategyId}>{strategy?.display_name ?? strategyId}</MenuItem>;
+              return <MenuItem key={strategyId} value={strategyId}>{isDirectExecution(strategyId) ? DIRECT_EXECUTION_LABEL : strategy?.display_name ?? strategyId}</MenuItem>;
             })}
           </TextField>
           <TextField select size="small" label="交易对象" value={listFilters.instrumentRef} onChange={(event) => updateListFilter("instrumentRef", event.target.value)}>
@@ -1928,13 +2287,30 @@ function ReviewsPage() {
               const result = tradeResultForReview(review);
               const context = recordOf(review.trade_context);
               const ownerConclusion = recordOf(recordOf(review.evaluations).owner_conclusion);
-              const strategyId = valueOf(context, "strategy_id");
-              const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
+              const decisionBasisKind = reviewDecisionBasisKind(context);
+              const directExecution = isDirectExecution(decisionBasisKind);
+              const strategy = directExecution
+                ? undefined
+                : strategiesQuery.data?.find((item) => item.strategy_id === decisionBasisKind);
+              const decisionBasisLabel = directExecution
+                ? DIRECT_EXECUTION_LABEL
+                : strategy?.display_name ?? decisionBasisKind;
               const planName = valueOf(context, "plan_name", "");
+              const primaryResult = valueOf(review, "primary_result");
+              const noAction = primaryResult === "NO_ACTION";
               const resultAvailable = result.calculation_complete === true && result.closed === true && finiteNumber(result.net_pnl) !== null;
               const externalAccountResult = result.result_scope === "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE";
+              const averageEntry = finiteNumber(result.average_entry_price);
+              const averageExit = finiteNumber(result.average_exit_price);
+              const openResponsibilities = recordOf(review.open_responsibilities);
+              const openActionCount = Array.isArray(openResponsibilities.execution_action_refs)
+                ? openResponsibilities.execution_action_refs.length
+                : 0;
+              const unknownActionCount = Array.isArray(openResponsibilities.unknown_action_refs)
+                ? openResponsibilities.unknown_action_refs.length
+                : 0;
               const reviewId = valueOf(review, "review_id");
-              const closedAt = formatUserVisibleTime(valueOf(result, "last_fill_time", valueOf(review, "fact_cutoff")));
+              const closedAt = formatUserVisibleTime(reviewClosedAt(review));
               const openReview = () => navigate(`/reviews/${reviewId}`);
               return (
                 <TableRow
@@ -1959,18 +2335,33 @@ function ReviewsPage() {
                     <MarketToneText tone={marketToneForDirection(valueOf(context, "direction"))}>{translatedLabel(directionLabels, valueOf(context, "direction"))}</MarketToneText>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: planName ? 700 : 400 }}>{planName || strategy?.display_name || strategyId}</Typography>
-                    {planName && <Typography variant="caption" color="text.secondary">{strategy?.display_name ?? strategyId}</Typography>}
+                    <Typography variant="body2" sx={{ fontWeight: planName ? 700 : 400 }}>{planName || decisionBasisLabel}</Typography>
+                    {planName && <Typography variant="caption" color="text.secondary">{decisionBasisLabel}</Typography>}
                   </TableCell>
-                  <TableCell className="mono" align="right">{marketPrice(valueOf(result, "average_entry_price"))} / {marketPrice(valueOf(result, "average_exit_price"))}</TableCell>
-                  <TableCell className="mono" align="right">{finiteNumber(result.entry_notional) === null ? "未知" : usdt(result.entry_notional)}</TableCell>
                   <TableCell className="mono" align="right">
-                    {resultAvailable ? <MarketToneText tone={marketToneForSignedValue(result.net_pnl)}>{signedUsdt(result.net_pnl)}</MarketToneText> : "未知"}
+                    {noAction ? "不适用" : `${averageEntry === null ? "未知" : marketPrice(String(averageEntry))} / ${averageExit === null ? "未知" : marketPrice(String(averageExit))}`}
+                  </TableCell>
+                  <TableCell className="mono" align="right">{noAction ? "不适用" : finiteNumber(result.entry_notional) === null ? "未知" : usdt(result.entry_notional)}</TableCell>
+                  <TableCell className="mono" align="right">
+                    {noAction ? "不适用" : resultAvailable ? <MarketToneText tone={marketToneForSignedValue(result.net_pnl)}>{signedUsdt(result.net_pnl)}</MarketToneText> : "未知"}
                     {externalAccountResult && <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>账户结果</Typography>}
                   </TableCell>
-                  <TableCell className="mono" align="right">{resultAvailable ? usdt(result.commission) : "未知"}</TableCell>
-                  <TableCell>{durationText(result.holding_duration_seconds)}<Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{exitReason(result)}</Typography></TableCell>
-                  <TableCell>{translatedLabel(reviewResultLabels, valueOf(review, "primary_result"))}</TableCell>
+                  <TableCell className="mono" align="right">{noAction ? "不适用" : resultAvailable ? usdt(result.commission) : "未知"}</TableCell>
+                  <TableCell>
+                    {noAction ? "不适用" : durationText(result.holding_duration_seconds)}
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      {noAction
+                        ? "未发生交易"
+                        : resultAvailable
+                          ? exitReason(result)
+                          : unknownActionCount > 0
+                            ? `${unknownActionCount} 个动作结果未决`
+                            : openActionCount > 0
+                              ? `${openActionCount} 个责任尚未闭合`
+                              : "结果事实尚不完整"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{translatedLabel(reviewResultLabels, primaryResult)}</TableCell>
                   <TableCell sx={{ minWidth: 160, maxWidth: 200, verticalAlign: "top" }}>
                     {translatedLabel(evaluationResultLabels, reviewConclusion(review))}
                     <ClampedTooltipText text={valueOf(ownerConclusion, "reason", translatedLabel(reviewStatusLabels, valueOf(review, "status")))} />
@@ -1990,7 +2381,11 @@ function ReviewsPage() {
 function ReviewRoute() {
   const { reviewId = "" } = useParams();
   const navigate = useNavigate();
-  const { marketColorScheme } = useOutletContext<FrameContext>();
+  const { marketColorScheme, status: settingsStatus } = useOutletContext<FrameContext>();
+  const expectedMarketSource = expectedMarketSourceForEnvironment(
+    settingsStatus.environment_kind,
+  );
+  const environmentScope = `${settingsStatus.environment_kind}:${settingsStatus.environment_id}`;
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["review", reviewId], queryFn: () => getReview(reviewId), enabled: Boolean(reviewId), refetchInterval: 30_000 });
   const review = recordOf(query.data?.review);
@@ -2044,26 +2439,47 @@ function ReviewRoute() {
   const tradeContext = recordOf(review.trade_context);
   const reviewPlan = recordOf(activationQuery.data?.plan);
   const planName = valueOf(tradeContext, "plan_name", valueOf(reviewPlan, "plan_name", ""));
-  const strategyRef = valueOf(recordOf(activationQuery.data?.strategy), "strategy_ref", valueOf(tradeContext, "strategy_id"));
+  const decisionBasisRef = valueOf(
+    tradeContext,
+    "decision_basis_ref",
+    valueOf(recordOf(activationQuery.data?.activation), "decision_basis_ref", valueOf(tradeContext, "strategy_id", "")),
+  );
+  const directExecution = isDirectExecution(decisionBasisRef);
+  const strategyRef = directExecution
+    ? decisionBasisRef
+    : valueOf(recordOf(activationQuery.data?.strategy), "strategy_ref", decisionBasisRef);
   const strategyId = strategyRef.split("@", 1)[0];
-  const strategy = strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
+  const strategy = directExecution
+    ? undefined
+    : strategiesQuery.data?.find((item) => item.strategy_id === strategyId);
+  const decisionBasisLabel = directExecution
+    ? DIRECT_EXECUTION_LABEL
+    : strategy?.display_name ?? strategyRef;
   const fills = recordsOf(reviewTradeResult.fills);
   const planEvents = (timelineQuery.data ?? []).filter((item) => valueOf(item, "source") === "PLAN_EVENT");
-  const triggerEvent = planEvents.find((item) => {
+  const acceptedTriggerEvents = planEvents.filter((item) => {
     const detail = recordOf(item.detail);
-    return valueOf(detail, "rule_id") === "ENTRY_BREAKOUT"
+    return valueOf(detail, "rule_id") === (directExecution ? "DIRECT_ORDER_SCHEDULE_LEG" : "ENTRY_BREAKOUT")
       && ["PROPOSED_ACTION_CAP_ACCEPTED", "DEMO_ORDER_FLOW_CHECK"].includes(valueOf(item, "status"));
-  }) ?? planEvents.find((item) => valueOf(item, "status") === "PROPOSAL_CREATED");
+  });
+  const triggerEvent = acceptedTriggerEvents[0]
+    ?? planEvents.find((item) => valueOf(item, "status") === "PROPOSAL_CREATED");
   const triggerDetail = recordOf(triggerEvent?.detail);
   const reviewPrimaryResult = valueOf(review, "primary_result");
   const openResponsibilities = recordOf(review.open_responsibilities);
   const unknownActionRefs = Array.isArray(openResponsibilities.unknown_action_refs) ? openResponsibilities.unknown_action_refs : [];
   const openActionRefs = Array.isArray(openResponsibilities.execution_action_refs) ? openResponsibilities.execution_action_refs : [];
+  const unresolvedResultRefs = Array.isArray(reviewTradeResult.unresolved_refs) ? reviewTradeResult.unresolved_refs : [];
   const actions = recordsOf(activationQuery.data?.execution_actions);
   const firstFillAt = valueOf(reviewTradeResult, "first_fill_time", "");
   const lastFillAt = valueOf(reviewTradeResult, "last_fill_time", "");
   const activation = recordOf(activationQuery.data?.activation);
-  const fallbackAt = valueOf(review, "fact_cutoff", valueOf(activation, "updated_at", ""));
+  const activationClosedAt = valueOf(
+    tradeContext,
+    "activation_updated_at",
+    valueOf(activation, "updated_at", valueOf(review, "fact_cutoff", "")),
+  );
+  const fallbackAt = activationClosedAt;
   const baseStartMs = Date.parse(firstFillAt || fallbackAt);
   const baseEndMs = Date.parse(lastFillAt || fallbackAt);
   const intervalMs = chartInterval === "1m" ? 60_000 : 15 * 60_000;
@@ -2074,9 +2490,28 @@ function ReviewRoute() {
     ? new Date(Math.min(baseEndMs + intervalMs * paddingBars, latestCompleteBarOpenMs)).toISOString()
     : "";
   const marketWindowQuery = useQuery({
-    queryKey: ["review-market-window", valueOf(tradeContext, "instrument_ref", ""), chartInterval, chartStart, chartEnd],
-    queryFn: () => getMarketWindow(valueOf(tradeContext, "instrument_ref"), chartStart, chartEnd, chartInterval),
-    enabled: Boolean(valueOf(tradeContext, "instrument_ref", "") && chartStart && chartEnd),
+    queryKey: [
+      "review-market-window",
+      environmentScope,
+      expectedMarketSource,
+      valueOf(tradeContext, "instrument_ref", ""),
+      chartInterval,
+      chartStart,
+      chartEnd,
+    ],
+    queryFn: () => getMarketWindow(
+      valueOf(tradeContext, "instrument_ref"),
+      chartStart,
+      chartEnd,
+      chartInterval,
+      "EXECUTION_REVIEW",
+    ),
+    enabled: Boolean(
+      expectedMarketSource
+      && valueOf(tradeContext, "instrument_ref", "")
+      && chartStart
+      && chartEnd
+    ),
     staleTime: 10 * 60_000,
   });
   const instrumentRef = valueOf(tradeContext, "instrument_ref");
@@ -2085,9 +2520,33 @@ function ReviewRoute() {
   const externalAccountResult = reviewTradeResult.result_scope === "ACCOUNT_FACTS_WITH_EXTERNAL_CLOSURE";
   const tradeExpected = reviewPrimaryResult !== "NO_ACTION";
   const hasAttributedFills = fills.length > 0;
+  const averageEntryPrice = finiteNumber(reviewTradeResult.average_entry_price);
+  const averageExitPrice = finiteNumber(reviewTradeResult.average_exit_price);
+  const factIssueMessages = [
+    ...(unknownActionRefs.length > 0 ? [`${unknownActionRefs.length} 个执行动作的结果仍未决`] : []),
+    ...(openActionRefs.length > 0 ? [`${openActionRefs.length} 个执行责任在复盘截止时尚未闭合`] : []),
+    ...(unresolvedResultRefs.length > 0 ? [`${unresolvedResultRefs.length} 个复盘引用当前不可解析`] : []),
+    ...(hasAttributedFills && reviewTradeResult.commission_complete !== true ? ["成交手续费事实尚未齐全"] : []),
+    ...(hasAttributedFills && reviewTradeResult.fill_times_complete !== true ? ["成交时间事实尚未齐全"] : []),
+  ];
+  if (tradeExpected && !reviewClosed && factIssueMessages.length === 0) {
+    factIssueMessages.push("交易结果在复盘截止时尚未完整闭合");
+  }
   const ownerConclusion = recordOf(recordOf(review.evaluations).owner_conclusion);
   const status = valueOf(review, "status");
-  const marketBars = marketWindowQuery.data?.bars ? Array.from(marketWindowQuery.data.bars) : [];
+  const marketWindowSourceMismatch = Boolean(
+    marketWindowQuery.data
+    && !isMarketSourceForEnvironment(
+      marketWindowQuery.data.source,
+      settingsStatus.environment_kind,
+    ),
+  );
+  const currentMarketWindow = marketWindowSourceMismatch
+    ? undefined
+    : marketWindowQuery.data;
+  const marketBars = currentMarketWindow?.bars
+    ? Array.from(currentMarketWindow.bars)
+    : [];
 
   return (
     <Box sx={{ width: "min(1320px, calc(100% - clamp(24px, 4vw, 48px)))", mx: "auto", py: { xs: 2, sm: 2.5 } }}>
@@ -2103,7 +2562,8 @@ function ReviewRoute() {
               <Typography variant={planName ? "h2" : "h1"}>{instrumentRef}</Typography>
               <Typography sx={{ fontWeight: 750 }}><MarketToneText tone={marketToneForDirection(direction)}>{translatedLabel(directionLabels, direction)}</MarketToneText></Typography>
             </Stack>
-            <Typography variant="body2" color="text.secondary">{strategy?.display_name ?? strategyRef} · 闭合于 {formatUserVisibleTime(valueOf(reviewTradeResult, "last_fill_time", valueOf(review, "fact_cutoff")))}</Typography>
+            <Typography variant="body2" color="text.secondary">{decisionBasisLabel} · 闭合于 {formatUserVisibleTime(valueOf(reviewTradeResult, "last_fill_time", activationClosedAt))}</Typography>
+            {directExecution && <Typography variant="caption" color="text.secondary" className="mono">{decisionBasisRef}</Typography>}
           </Box>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
             <Chip size="small" label={translatedLabel(reviewResultLabels, reviewPrimaryResult)} />
@@ -2129,11 +2589,16 @@ function ReviewRoute() {
             </ToggleButtonGroup>
           </Stack>
           {marketWindowQuery.isPending && <LinearProgress aria-label="正在读取复盘行情" />}
-          {marketWindowQuery.isError && <Alert severity="warning" variant="outlined" sx={{ my: 1 }}>公开行情回看暂时不可用；成交、费用和复盘事实仍可核对。</Alert>}
+          {marketWindowQuery.isError && <Alert severity="warning" variant="outlined" sx={{ my: 1 }}>当前环境行情回看暂时不可用；成交、费用和复盘事实仍可核对。</Alert>}
+          {marketWindowSourceMismatch && <Alert severity="error" variant="outlined" sx={{ my: 1 }}>
+            K 线来源与当前 {settingsStatus.environment_kind} 环境不一致，已拒绝显示；不会用其他环境行情补齐复盘图。
+          </Alert>}
           {marketBars.length > 0 && <Suspense fallback={<LinearProgress aria-label="正在加载 K 线图" />}><ReviewPriceChart bars={marketBars} fills={fills} actions={actions} interval={chartInterval} direction={direction} marketColorScheme={marketColorScheme} /></Suspense>}
-          {!marketWindowQuery.isPending && !marketWindowQuery.isError && marketBars.length === 0 && <Alert severity="info" variant="outlined">当前时间窗没有可展示的 K 线。</Alert>}
+          {!marketWindowQuery.isPending && !marketWindowQuery.isError && !marketWindowSourceMismatch && marketBars.length === 0 && <Alert severity="info" variant="outlined">当前时间窗没有可展示的 K 线。</Alert>}
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-            {marketWindowQuery.data ? `公开行情 · 截止 ${formatUserVisibleTime(marketWindowQuery.data.source_cutoff)}` : "公开行情仅提供事后价格上下文"}；图表不替代持久成交事实，也不证明当时可按图示价格成交。
+            {currentMarketWindow
+              ? `${settingsStatus.environment_kind} · ${currentMarketWindow.source} · 截止 ${formatUserVisibleTime(currentMarketWindow.source_cutoff)}`
+              : `${settingsStatus.environment_kind} 行情仅提供事后价格上下文`}；图表不替代持久成交事实，也不证明当时可按图示价格成交。
           </Typography>
           <TradingViewAttribution />
         </Box>
@@ -2141,13 +2606,25 @@ function ReviewRoute() {
         {externalAccountResult && <Alert severity="warning" variant="outlined" sx={{ mb: 2 }}>
           出场由明确选定的 Binance 只减仓应急订单完成。以下盈亏是交易所成交与手续费形成的账户结果，不记作 Halpha 策略退出。
         </Alert>}
+        {factIssueMessages.length > 0 && <Alert
+          severity={unknownActionRefs.length > 0 || unresolvedResultRefs.length > 0 ? "warning" : "info"}
+          variant="outlined"
+          sx={{ mb: 2 }}
+          action={(
+            <Button color="inherit" size="small" disabled={refreshMutation.isPending} onClick={() => refreshMutation.mutate()}>
+              {refreshMutation.isPending ? "正在刷新…" : "刷新事实"}
+            </Button>
+          )}
+        >
+          {factIssueMessages.join("；")}。以上状态冻结于 {formatUserVisibleTime(valueOf(review, "fact_cutoff"))}，不会用 0 或推测值替代。
+        </Alert>}
         <FactGrid facts={[
           { label: externalAccountResult ? "账户净盈亏" : "净盈亏", value: tradeExpected && reviewClosed ? signedUsdt(reviewTradeResult.net_pnl) : tradeExpected ? "未知" : "不适用", tone: tradeExpected && reviewClosed ? marketToneForSignedValue(reviewTradeResult.net_pnl) : undefined },
           { label: externalAccountResult ? "账户毛盈亏" : "毛盈亏", value: tradeExpected && reviewClosed ? signedUsdt(reviewTradeResult.gross_pnl) : tradeExpected ? "未知" : "不适用", tone: tradeExpected && reviewClosed ? marketToneForSignedValue(reviewTradeResult.gross_pnl) : undefined },
           { label: "手续费", value: tradeExpected && hasAttributedFills ? usdt(reviewTradeResult.commission) : tradeExpected ? "未知" : "不适用", note: "净盈亏不含资金费" },
           { label: "持仓周期", value: tradeExpected ? durationText(reviewTradeResult.holding_duration_seconds) : "不适用" },
-          { label: "平均入场价", value: tradeExpected && hasAttributedFills ? `${marketPrice(valueOf(reviewTradeResult, "average_entry_price"))} USDT` : tradeExpected ? "未知" : "不适用" },
-          { label: "平均出场价", value: tradeExpected && hasAttributedFills ? `${marketPrice(valueOf(reviewTradeResult, "average_exit_price"))} USDT` : tradeExpected ? "未知" : "不适用" },
+          { label: "平均入场价", value: tradeExpected && averageEntryPrice !== null ? `${marketPrice(String(averageEntryPrice))} USDT` : tradeExpected ? "未知" : "不适用" },
+          { label: "平均出场价", value: tradeExpected && averageExitPrice !== null ? `${marketPrice(String(averageExitPrice))} USDT` : tradeExpected ? "未知" : "不适用" },
           { label: "入场成交额", value: tradeExpected && hasAttributedFills ? usdt(reviewTradeResult.entry_notional) : tradeExpected ? "未知" : "不适用" },
           { label: "退出原因", value: tradeExpected ? exitReason(reviewTradeResult) : "未发生交易" },
         ]} />
@@ -2155,9 +2632,25 @@ function ReviewRoute() {
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) minmax(360px,.8fr)" }, gap: 2, mt: 2 }}>
           <Box component="section" sx={{ ...surfaceFrameSx, p: 2 }}>
             <Typography variant="h2" sx={{ mb: 1.5 }}>机器为何交易</Typography>
+            {timelineQuery.isError && <Alert severity="warning" variant="outlined" sx={{ mb: 1.5 }}>激活时间线读取失败；以下不会把读取失败伪装成业务事实未知。</Alert>}
             <FactGrid facts={[
-              { label: "操作理由", value: triggerEvent ? planEventSummary(valueOf(triggerEvent, "status"), valueOf(triggerDetail, "rule_id", "")) : reviewPrimaryResult === "NO_ACTION" ? "未发生交易" : "未知" },
-              { label: "触发来源", value: triggerEvent ? valueOf(triggerDetail, "source_identity") : reviewPrimaryResult === "NO_ACTION" ? "不适用" : "未知", note: triggerEvent ? `${formatUserVisibleTime(valueOf(triggerDetail, "source_cutoff"))} · ${shortDigest(valueOf(triggerEvent, "source_ref"))}` : reviewPrimaryResult === "NO_ACTION" ? "没有入场触发事件" : "没有可归属的入场触发事件" },
+              {
+                label: "操作理由",
+                value: triggerEvent
+                  ? directExecution && acceptedTriggerEvents.length > 0
+                    ? `直接执行订单计划的 ${acceptedTriggerEvents.length} 个入场档位已通过资金检查`
+                    : planEventSummary(valueOf(triggerEvent, "status"), valueOf(triggerDetail, "rule_id", ""))
+                  : reviewPrimaryResult === "NO_ACTION" ? "未发生交易" : timelineQuery.isError ? "时间线读取失败" : "未知",
+              },
+              {
+                label: "触发来源",
+                value: triggerEvent
+                  ? directExecution ? DIRECT_EXECUTION_LABEL : valueOf(triggerDetail, "source_identity")
+                  : reviewPrimaryResult === "NO_ACTION" ? "不适用" : timelineQuery.isError ? "时间线读取失败" : "未知",
+                note: triggerEvent
+                  ? `${directExecution ? `${decisionBasisRef} · ` : ""}${formatUserVisibleTime(valueOf(triggerDetail, "source_cutoff"))} · ${shortDigest(valueOf(triggerEvent, "source_ref"))}`
+                  : reviewPrimaryResult === "NO_ACTION" ? "没有入场触发事件" : timelineQuery.isError ? "请恢复时间线读取后再核对触发事实" : "没有可归属的入场触发事件",
+              },
               { label: "首次成交", value: tradeExpected && hasAttributedFills ? formatUserVisibleTime(valueOf(reviewTradeResult, "first_fill_time")) : tradeExpected ? "未知" : "不适用" },
               { label: "末次成交", value: tradeExpected && hasAttributedFills ? formatUserVisibleTime(valueOf(reviewTradeResult, "last_fill_time")) : tradeExpected ? "未知" : "不适用" },
             ]} />
@@ -2261,15 +2754,41 @@ function WorkbenchRoutes({ status }: { status: SettingsStatus }) {
 }
 
 export default function App() {
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: STATUS_QUERY_KEY,
     queryFn: getSettingsStatus,
     refetchInterval: 30_000,
   });
+  const environmentScope = query.data
+    ? marketEnvironmentScopeKey(
+      query.data.environment_kind,
+      query.data.environment_id,
+    )
+    : null;
+  const initialEnvironmentScopeRef = useRef<string | null>(null);
+  if (
+    initialEnvironmentScopeRef.current === null
+    && environmentScope !== null
+  ) {
+    initialEnvironmentScopeRef.current = environmentScope;
+  }
+  const environmentChanged = environmentScope !== null
+    && initialEnvironmentScopeRef.current !== null
+    && environmentScope !== initialEnvironmentScopeRef.current;
+
+  useEffect(() => {
+    if (!environmentChanged) return;
+    queryClient.removeQueries({
+      predicate: (cachedQuery) => cachedQuery.queryKey[0] !== STATUS_QUERY_KEY[0],
+    });
+    window.location.reload();
+  }, [environmentChanged, environmentScope, queryClient]);
 
   if (query.isPending) return <AppLoading />;
   if (query.isError || !query.data) {
     return <ConnectionFailure retry={() => void query.refetch()} />;
   }
+  if (environmentChanged) return <EnvironmentChanging />;
   return <WorkbenchRoutes status={query.data} />;
 }

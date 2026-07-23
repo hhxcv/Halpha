@@ -2,12 +2,23 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from halpha.capital.models import AuthorityClass, EnvironmentKind
 from halpha.planning.models import PlanActivation
+from halpha.planning.order_policies import (
+    InitialStopSpec,
+    ProtectionPolicy,
+    TakeProfitLadderSpec,
+    TakeProfitLevel,
+)
 from halpha.planning.registry import Direction
 from halpha.planning.transitions import (
+    proposed_direct_protection_from_fill,
+    proposed_direct_take_profits_from_fill,
     proposed_protection_from_fill,
     proposed_take_profits_from_fill,
+    record_direct_fill,
     record_first_fill,
 )
 
@@ -25,7 +36,7 @@ def _activation(direction: Direction = Direction.LONG) -> PlanActivation:
         account_ref="demo-owner",
         instrument_ref="BTCUSDT-PERP",
         direction=direction,
-        strategy_id="ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+        decision_basis_ref="ONE_SHOT_DONCHIAN_ATR_BREAKOUT@1.0.1",
         framework_strategy_id="HALPHA-TEST-001",
         target_exposure="0.01",
         rule_state={"deadlines": {}, "condition_judgements": {}, "last_bar_cursors": {}},
@@ -145,3 +156,223 @@ def test_short_fill_reverses_price_direction_without_changing_execution_flow() -
     )
     assert protection.trigger_price == "103"
     assert (tp1.trigger_price, tp2.trigger_price) == ("95.5", "91")
+
+
+def test_direct_schedule_records_multiple_entry_actions_without_first_fill_conflict() -> None:
+    policy = ProtectionPolicy(
+        initial_stop=InitialStopSpec(distance_bps="100")
+    ).model_dump(mode="json")
+    first = record_direct_fill(
+        _activation(Direction.LONG),
+        entry_action_ref="entry-action-1",
+        fill_fact_ref="fill-1",
+        fill_price="100",
+        fill_quantity="0.01",
+        fill_time=NOW,
+        protection_policy=policy,
+        price_tick_size="0.1",
+        quantity_step="0.001",
+        observed_at=NOW,
+    )
+    second = record_direct_fill(
+        first,
+        entry_action_ref="entry-action-2",
+        fill_fact_ref="fill-2",
+        fill_price="110",
+        fill_quantity="0.02",
+        fill_time=NOW + timedelta(seconds=5),
+        protection_policy=policy,
+        price_tick_size="0.1",
+        quantity_step="0.001",
+        observed_at=NOW + timedelta(seconds=5),
+    )
+
+    fills = second.rule_state["direct_protection"]["fills"]
+    assert set(fills) == {"fill-1", "fill-2"}
+    assert fills["fill-1"]["targets"]["initial_stop_price"] == "99"
+    assert fills["fill-2"]["targets"]["initial_stop_price"] == "108.9"
+    assert second.rule_state["direct_protection"]["anchor_fill_ref"] == "fill-1"
+
+    protection = proposed_direct_protection_from_fill(
+        second,
+        entry_action_ref="entry-action-2",
+        fill_fact_ref="fill-2",
+        fill_source_identity="trade-2:1",
+    )
+    assert protection.quantity == "0.02"
+    assert protection.trigger_price == "108.9"
+    assert protection.execution_context["trigger_source"] == "MARK_PRICE"
+    assert proposed_direct_take_profits_from_fill(
+        second,
+        entry_action_ref="entry-action-2",
+        protection_action_ref="protection-action-2",
+        fill_fact_ref="fill-2",
+        fill_source_identity="trade-2:1",
+    ) == ()
+
+
+def test_direct_market_fill_preserves_unprotectable_price_for_gap_recovery() -> None:
+    policy = ProtectionPolicy(
+        initial_stop=InitialStopSpec(distance_bps="1"),
+        take_profit_ladder=TakeProfitLadderSpec(
+            levels=(TakeProfitLevel(trigger_r="1", quantity_fraction="1"),)
+        ),
+    ).model_dump(mode="json")
+
+    activation = record_direct_fill(
+        _activation(Direction.LONG),
+        entry_action_ref="entry-action-1",
+        fill_fact_ref="fill-invalid-target",
+        fill_price="100",
+        fill_quantity="0.01",
+        fill_time=NOW,
+        protection_policy=policy,
+        price_tick_size="1",
+        quantity_step="0.001",
+        observed_at=NOW,
+    )
+
+    fill = activation.rule_state["direct_protection"]["fills"][
+        "fill-invalid-target"
+    ]
+    assert activation.has_entry_fill
+    assert fill["targets"] is None
+    assert fill["protection_error"] == "PROTECTION_PRICE_INVALID"
+    with pytest.raises(ValueError, match="PROTECTION_PRICE_INVALID"):
+        proposed_direct_protection_from_fill(
+            activation,
+            entry_action_ref="entry-action-1",
+            fill_fact_ref="fill-invalid-target",
+            fill_source_identity="trade-invalid:1",
+        )
+
+
+def test_direct_take_profit_ladder_uses_persisted_targets_and_step_rounded_quantities() -> None:
+    policy = ProtectionPolicy(
+        initial_stop=InitialStopSpec(distance_bps="100"),
+        take_profit_ladder=TakeProfitLadderSpec(
+            levels=(
+                TakeProfitLevel(trigger_r="1", quantity_fraction="0.25"),
+                TakeProfitLevel(trigger_r="2", quantity_fraction="0.25"),
+                TakeProfitLevel(trigger_r="4", quantity_fraction="0.4"),
+            )
+        ),
+        time_exit_seconds=600,
+    ).model_dump(mode="json")
+    activation = record_direct_fill(
+        _activation(Direction.LONG),
+        entry_action_ref="entry-action-1",
+        fill_fact_ref="fill-1",
+        fill_price="100",
+        fill_quantity="0.011",
+        fill_time=NOW,
+        protection_policy=policy,
+        price_tick_size="0.1",
+        quantity_step="0.001",
+        observed_at=NOW,
+    )
+
+    actions = proposed_direct_take_profits_from_fill(
+        activation,
+        entry_action_ref="entry-action-1",
+        protection_action_ref="protection-action-1",
+        fill_fact_ref="fill-1",
+        fill_source_identity="trade-1:1",
+    )
+    replay = proposed_direct_take_profits_from_fill(
+        activation,
+        entry_action_ref="entry-action-1",
+        protection_action_ref="protection-action-1",
+        fill_fact_ref="fill-1",
+        fill_source_identity="trade-1:1",
+    )
+
+    assert tuple(action.action_profile for action in actions) == (
+        "TAKE_PROFIT_1",
+        "TAKE_PROFIT_2",
+        "TAKE_PROFIT_2",
+    )
+    assert tuple(action.quantity for action in actions) == ("0.002", "0.002", "0.004")
+    assert tuple(action.trigger_price for action in actions) == ("101", "102", "104")
+    assert all(action.reduce_only for action in actions)
+    assert all(action.valid_until == NOW + timedelta(seconds=600) for action in actions)
+    assert tuple(action.causation_ref for action in replay) == tuple(
+        action.causation_ref for action in actions
+    )
+    assert len({action.causation_ref for action in actions}) == len(actions)
+    assert actions[2].execution_context["direct_take_profit"] == {
+        "level_index": 2,
+        "trigger_r": "4",
+        "quantity_fraction": "0.4",
+        "trigger_price": "104",
+        "quantity": "0.004",
+    }
+
+
+def test_direct_take_profit_ladder_reverses_and_rounds_short_targets_conservatively() -> None:
+    policy = ProtectionPolicy(
+        initial_stop=InitialStopSpec(distance_bps="100"),
+        take_profit_ladder=TakeProfitLadderSpec(
+            levels=(
+                TakeProfitLevel(trigger_r="1.25", quantity_fraction="0.5"),
+                TakeProfitLevel(trigger_r="2.25", quantity_fraction="0.5"),
+            )
+        ),
+    ).model_dump(mode="json")
+    activation = record_direct_fill(
+        _activation(Direction.SHORT),
+        entry_action_ref="entry-action-1",
+        fill_fact_ref="fill-1",
+        fill_price="100",
+        fill_quantity="0.01",
+        fill_time=NOW,
+        protection_policy=policy,
+        price_tick_size="0.1",
+        quantity_step="0.001",
+        observed_at=NOW,
+    )
+
+    actions = proposed_direct_take_profits_from_fill(
+        activation,
+        entry_action_ref="entry-action-1",
+        protection_action_ref="protection-action-1",
+        fill_fact_ref="fill-1",
+        fill_source_identity="trade-1:1",
+    )
+
+    assert tuple(action.quantity for action in actions) == ("0.005", "0.005")
+    assert tuple(action.trigger_price for action in actions) == ("98.8", "97.8")
+    assert all(action.valid_until is None for action in actions)
+
+
+def test_direct_take_profit_ladder_rejects_a_level_rounded_to_zero() -> None:
+    policy = ProtectionPolicy(
+        initial_stop=InitialStopSpec(distance_bps="100"),
+        take_profit_ladder=TakeProfitLadderSpec(
+            levels=(
+                TakeProfitLevel(trigger_r="1", quantity_fraction="0.1"),
+                TakeProfitLevel(trigger_r="2", quantity_fraction="0.9"),
+            )
+        ),
+    ).model_dump(mode="json")
+    activation = record_direct_fill(
+        _activation(),
+        entry_action_ref="entry-action-1",
+        fill_fact_ref="fill-1",
+        fill_price="100",
+        fill_quantity="0.001",
+        fill_time=NOW,
+        protection_policy=policy,
+        price_tick_size="0.1",
+        quantity_step="0.001",
+        observed_at=NOW,
+    )
+
+    with pytest.raises(ValueError, match="TAKE_PROFIT_SPLIT_INVALID"):
+        proposed_direct_take_profits_from_fill(
+            activation,
+            entry_action_ref="entry-action-1",
+            protection_action_ref="protection-action-1",
+            fill_fact_ref="fill-1",
+            fill_source_identity="trade-1:1",
+        )

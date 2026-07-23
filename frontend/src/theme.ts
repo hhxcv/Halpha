@@ -211,6 +211,12 @@ export const theme = createTheme({
           "&.MuiButton-containedSuccess:hover": { backgroundColor: semanticColors.success.text },
           "&.MuiButton-containedWarning:hover": { backgroundColor: "#D98A00" },
           "&.MuiButton-containedError:hover": { backgroundColor: semanticColors.error.text },
+          "&.Mui-disabled": {
+            color: "#94A3B8",
+            borderColor: "#E2E8F0",
+            backgroundColor: "#F1F5F9",
+            opacity: 1,
+          },
         },
       },
     },

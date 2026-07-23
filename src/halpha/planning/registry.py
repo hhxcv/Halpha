@@ -6,7 +6,7 @@ from decimal import Decimal
 from enum import StrEnum
 import json
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -17,11 +17,44 @@ from halpha.source_identity import source_file_sha256
 ONE_SHOT_STRATEGY_ID = "ONE_SHOT_DONCHIAN_ATR_BREAKOUT"
 ONE_SHOT_STRATEGY_VERSION = "1.0.1"
 PARAMETER_SCHEMA_VERSION = "1.3.0"
+DIRECT_EXECUTION_REF = "DIRECT_EXECUTION@1"
+DIRECT_EXECUTION_PARAMETER_SCHEMA_VERSION = "1"
+DIRECT_EXECUTION_ALLOWED_ACTION_PROFILES = (
+    "ENTRY_MARKET",
+    "ENTRY_LIMIT",
+    "PROTECTIVE_STOP_REDUCE_ONLY",
+    "TAKE_PROFIT_1",
+    "TAKE_PROFIT_2",
+    "CANCEL_ORDER",
+    "REDUCE_OR_CLOSE_MARKET",
+)
+
+
+class DecisionBasisKind(StrEnum):
+    STRATEGY_SIGNAL = "STRATEGY_SIGNAL"
+    DIRECT_EXECUTION = "DIRECT_EXECUTION"
 
 
 class Direction(StrEnum):
     LONG = "LONG"
     SHORT = "SHORT"
+
+
+class DraftDecisionBasis(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: DecisionBasisKind
+    decision_basis_ref: str
+    parameters: dict[str, Any]
+
+    @model_validator(mode="after")
+    def reference_matches_kind(self) -> DraftDecisionBasis:
+        if self.kind is DecisionBasisKind.DIRECT_EXECUTION:
+            if self.decision_basis_ref != DIRECT_EXECUTION_REF or self.parameters:
+                raise ValueError("DIRECT_EXECUTION_BASIS_INVALID")
+        elif self.decision_basis_ref == DIRECT_EXECUTION_REF:
+            raise ValueError("STRATEGY_DECISION_BASIS_INVALID")
+        return self
 
 
 class PlanParameterDisplayFormat(StrEnum):
@@ -137,16 +170,64 @@ class CodeStrategyDefinition(BaseModel):
 class FixedStrategyPlanBasis(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    kind: Literal[DecisionBasisKind.STRATEGY_SIGNAL] = (
+        DecisionBasisKind.STRATEGY_SIGNAL
+    )
+    decision_basis_ref: str
     strategy_id: str
     strategy_version: str
-    implementation_digest: str
+    implementation_digest: str | None = None
     parameter_schema_version: str
     normalized_parameters: dict[str, Any]
     parameter_digest: str
-    fact_input_contract: dict[str, Any]
-    allowed_action_profiles: tuple[str, ...]
-    economic_scope: dict[str, Any]
+    fact_input_contract: dict[str, Any] = Field(default_factory=dict)
+    allowed_action_profiles: tuple[str, ...] = ()
+    economic_scope: dict[str, Any] = Field(default_factory=dict)
     product_build_id: str = Field(pattern=r"^[0-9a-f]{64}$")
+    legacy_unverified: bool = False
+
+    @model_validator(mode="after")
+    def full_or_explicitly_unverified(self) -> FixedStrategyPlanBasis:
+        if self.decision_basis_ref != f"{self.strategy_id}@{self.strategy_version}":
+            raise ValueError("STRATEGY_DECISION_BASIS_INVALID")
+        if self.legacy_unverified:
+            if self.implementation_digest is not None:
+                raise ValueError("LEGACY_STRATEGY_BASIS_INVALID")
+        elif (
+            self.implementation_digest is None
+            or not self.fact_input_contract
+            or not self.allowed_action_profiles
+            or not self.economic_scope
+        ):
+            raise ValueError("STRATEGY_DECISION_BASIS_INCOMPLETE")
+        return self
+
+
+class FixedDirectExecutionBasis(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal[DecisionBasisKind.DIRECT_EXECUTION] = (
+        DecisionBasisKind.DIRECT_EXECUTION
+    )
+    decision_basis_ref: Literal[DIRECT_EXECUTION_REF] = DIRECT_EXECUTION_REF
+    parameter_schema_version: Literal[DIRECT_EXECUTION_PARAMETER_SCHEMA_VERSION] = (
+        DIRECT_EXECUTION_PARAMETER_SCHEMA_VERSION
+    )
+    normalized_parameters: dict[str, Any] = Field(default_factory=dict)
+    parameter_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    product_build_id: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def parameters_are_canonical_empty(self) -> FixedDirectExecutionBasis:
+        if self.normalized_parameters or self.parameter_digest != content_digest({}):
+            raise ValueError("DIRECT_EXECUTION_BASIS_INVALID")
+        return self
+
+
+FixedDecisionBasis = Annotated[
+    FixedStrategyPlanBasis | FixedDirectExecutionBasis,
+    Field(discriminator="kind"),
+]
 
 
 def _implementation_path() -> Path:
@@ -390,6 +471,7 @@ def build_fixed_plan_basis(
     definition = describe_strategy(strategy_id)
     normalized = validate_parameters(strategy_id, parameters)
     return FixedStrategyPlanBasis(
+        decision_basis_ref=f"{definition.strategy_id}@{definition.strategy_version}",
         strategy_id=definition.strategy_id,
         strategy_version=definition.strategy_version,
         implementation_digest=definition.implementation_digest,
@@ -404,5 +486,22 @@ def build_fixed_plan_basis(
         },
         allowed_action_profiles=definition.allowed_action_profiles,
         economic_scope=definition.economic_scope,
+        product_build_id=product_build_id,
+    )
+
+
+def build_fixed_decision_basis(
+    basis: DraftDecisionBasis,
+    *,
+    product_build_id: str,
+) -> FixedDecisionBasis:
+    if basis.kind is DecisionBasisKind.DIRECT_EXECUTION:
+        return FixedDirectExecutionBasis(
+            parameter_digest=content_digest({}),
+            product_build_id=product_build_id,
+        )
+    return build_fixed_plan_basis(
+        basis.decision_basis_ref,
+        basis.parameters,
         product_build_id=product_build_id,
     )

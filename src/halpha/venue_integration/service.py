@@ -152,12 +152,13 @@ class ExecutionApplicationService:
         *,
         observed_at: datetime,
     ) -> tuple[ExecutionAction, ...]:
-        """Convert the submit crash window to query-only before recovery I/O."""
+        """Return every called order identity that startup must query."""
 
         unresolved = self._actions.list_by_states(
             (
                 ExecutionActionState.SUBMITTING.value,
                 ExecutionActionState.UNKNOWN.value,
+                ExecutionActionState.OPEN.value,
             ),
             for_update=True,
         )

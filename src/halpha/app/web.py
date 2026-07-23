@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 import html
 from pathlib import Path
-from typing import Any, Literal
+from time import monotonic
+from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -26,7 +28,19 @@ from halpha.public_market import (
     MarketContext,
     MarketContextProvider,
     MarketContextUnavailable,
+    MarketInterval,
     MarketWindow,
+    binance_public_market_identity,
+)
+from halpha.public_market_stream import (
+    BinancePublicMarketStream,
+    PublicMarketStreamProvider,
+)
+from halpha.public_instrument_rules import (
+    BinancePublicInstrumentRules,
+    InstrumentRulesProvider,
+    InstrumentRulesUnavailable,
+    binance_public_instrument_rules_identity,
 )
 from halpha.app.planning_api import (
     ActivationPayload,
@@ -48,15 +62,30 @@ from halpha.app.notifications import (
     StdlibSMTPTransport,
 )
 from halpha.app.secrets import AppSecrets
-from halpha.app.security import CsrfMiddleware, LocalRequestBoundaryMiddleware
+from halpha.app.security import (
+    CsrfMiddleware,
+    LocalRequestBoundaryMiddleware,
+    allowed_local_origin,
+)
 from halpha.capital.repository import CapitalConflict
 from halpha.configuration import HalphaSettings, app_settings
 from halpha.live_write_gate import LiveWriteGateStatus, evaluate_live_write_gate
 from halpha.product_build import calculate_product_build_id
 from halpha.planning.repository import PlanningConflict
+from halpha.planning.order_schedule import (
+    OrderSchedulePreview,
+    OrderScheduleSpec,
+    SinglePrice,
+    compile_order_schedule,
+    validate_current_order_schedule_support,
+)
+from halpha.planning.registry import DecisionBasisKind, Direction
 from halpha.planning.transitions import ControlIntent
 from halpha.outcomes.repository import OutcomeConflict
 from halpha.user_workbench.repository import CommandConflict
+
+
+ACTIVATION_SCHEDULE_PREVIEW_TTL_SECONDS = 60
 
 
 class WebConfigurationError(RuntimeError):
@@ -78,6 +107,19 @@ class OverviewResponse(FrozenResponse):
     view_retrieved_at: str
     open_activation_count: int
     database_name: str
+
+
+class OrderSchedulePreviewPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schedule_ref: str
+    decision_basis_kind: DecisionBasisKind = DecisionBasisKind.DIRECT_EXECUTION
+    venue_ref: str = "BINANCE_USDM"
+    instrument_ref: str
+    direction: Direction
+    max_notional: str
+    reference_price: str | None = None
+    spec: OrderScheduleSpec
 
 
 class SettingsStatusResponse(FrozenResponse):
@@ -507,7 +549,10 @@ def create_app(
     product_build_id: str | None = None,
     projection: WorkbenchProjection | None = None,
     market_context_provider: MarketContextProvider | None = None,
+    market_stream_provider: PublicMarketStreamProvider | None = None,
+    instrument_rules_provider: InstrumentRulesProvider | None = None,
     static_dist: Path | None = None,
+    monotonic_provider: Callable[[], float] | None = None,
 ) -> FastAPI:
     """Construct one local App surface without starting external writers."""
 
@@ -521,9 +566,68 @@ def create_app(
         settings.release.profile,
         proxy_url=settings.app.public_market_proxy_url,
     )
+    _, expected_market_source = binance_public_market_identity(settings.release.profile)
+    _, expected_instrument_rules_source = binance_public_instrument_rules_identity(
+        settings.release.profile
+    )
+
+    def require_current_market_source(source: str) -> None:
+        if source != expected_market_source:
+            raise MarketContextUnavailable("MARKET_SOURCE_ENVIRONMENT_MISMATCH")
+
+    def require_current_instrument_rules_source(source: str) -> None:
+        if source != expected_instrument_rules_source:
+            raise InstrumentRulesUnavailable(
+                "INSTRUMENT_RULES_SOURCE_ENVIRONMENT_MISMATCH"
+            )
+
+    public_market_stream = market_stream_provider or BinancePublicMarketStream(
+        settings.release.profile,
+        proxy_url=settings.app.public_market_proxy_url,
+    )
+    public_instrument_rules = (
+        instrument_rules_provider
+        or BinancePublicInstrumentRules(
+            settings.release.profile,
+            proxy_url=settings.app.public_market_proxy_url,
+        )
+    )
     current_product_build_id = product_build_id or calculate_product_build_id(
         repo_root.resolve(), settings
     )
+    schedule_preview_clock = monotonic_provider or monotonic
+    schedule_previews: dict[
+        tuple[str, str], tuple[float, OrderSchedulePreview]
+    ] = {}
+
+    def remember_schedule_preview(
+        plan_version_id: str,
+        schedule: OrderSchedulePreview,
+    ) -> None:
+        now = schedule_preview_clock()
+        for key, (expires_at, _) in tuple(schedule_previews.items()):
+            if expires_at <= now:
+                schedule_previews.pop(key, None)
+        schedule_previews[(plan_version_id, schedule.schedule_digest)] = (
+            now + ACTIVATION_SCHEDULE_PREVIEW_TTL_SECONDS,
+            schedule,
+        )
+
+    def recalled_schedule_preview(
+        plan_version_id: str,
+        expected_digest: str | None,
+    ) -> OrderSchedulePreview:
+        if expected_digest is None:
+            raise ValueError("ACTIVATION_PREVIEW_STALE")
+        key = (plan_version_id, expected_digest)
+        cached = schedule_previews.get(key)
+        if cached is None:
+            raise ValueError("ACTIVATION_PREVIEW_STALE")
+        expires_at, schedule = cached
+        if expires_at <= schedule_preview_clock():
+            schedule_previews.pop(key, None)
+            raise ValueError("ACTIVATION_PREVIEW_STALE")
+        return schedule
 
     def current_gate_status() -> LiveWriteGateStatus:
         base_status = evaluate_live_write_gate(
@@ -570,15 +674,24 @@ def create_app(
         environment_id=settings.release.environment_id,
     )
 
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        try:
+            yield
+        finally:
+            await public_market_stream.close()
+
     app = FastAPI(
         title="Halpha local owner API",
         version="0.1.0.dev0",
         docs_url=None,
         redoc_url=None,
         openapi_url="/api/v1/openapi.json",
+        lifespan=lifespan,
     )
     app.state.workbench_projection = database
     app.state.live_write_gate_status_provider = current_gate_status
+    app.state.public_market_stream = public_market_stream
 
     app.add_middleware(CsrfMiddleware, signing_secret=app_secrets.csrf_signing_secret)
     app.add_middleware(LocalRequestBoundaryMiddleware, port=role_settings.app.port)
@@ -643,6 +756,52 @@ def create_app(
                 "product_build_consistent": None,
             }
 
+    async def compile_activation_schedule(
+        preview: dict[str, Any],
+        *,
+        refresh_rules: bool = False,
+    ) -> OrderSchedulePreview | None:
+        raw_spec = preview.get("order_schedule_spec")
+        if raw_spec is None:
+            return None
+        instrument_ref = str(preview["instrument_ref"])
+        spec = domain_call(lambda: OrderScheduleSpec.model_validate(raw_spec))
+        domain_call(
+            lambda: validate_current_order_schedule_support(
+                DecisionBasisKind(str(preview["decision_basis_kind"])),
+                spec,
+            )
+        )
+        try:
+            refresh = getattr(public_instrument_rules, "refresh", None)
+            rules = (
+                await refresh(instrument_ref)
+                if refresh_rules and callable(refresh)
+                else await public_instrument_rules.fetch(instrument_ref)
+            )
+            require_current_instrument_rules_source(rules.source)
+            price_plan = spec.price_distribution
+            reference_price = None
+            if isinstance(price_plan, SinglePrice) and price_plan.limit_price is None:
+                context = await public_market_context.fetch(instrument_ref, 20)
+                require_current_market_source(context.source)
+                reference_price = context.reference_price
+        except (InstrumentRulesUnavailable, MarketContextUnavailable) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": str(exc)},
+            ) from None
+        return compile_order_schedule(
+            spec,
+            rules,
+            venue_ref=str(preview.get("venue_ref", "BINANCE_USDM")),
+            instrument_ref=instrument_ref,
+            direction=Direction(str(preview["direction"])),
+            max_notional=str(preview["trade_amount"]),
+            schedule_ref=str(preview["plan_version_id"]),
+            reference_price=reference_price,
+        )
+
     @app.get(
         "/api/v1/overview",
         response_model=OverviewResponse,
@@ -685,10 +844,12 @@ def create_app(
         channel_lookback_15m: int = 20,
     ) -> MarketContext:
         try:
-            return await public_market_context.fetch(
+            context = await public_market_context.fetch(
                 instrument_ref,
                 channel_lookback_15m,
             )
+            require_current_market_source(context.source)
+            return context
         except MarketContextUnavailable as exc:
             raise HTTPException(
                 status_code=503,
@@ -703,7 +864,7 @@ def create_app(
         instrument_ref: str,
         start_at: datetime,
         end_at: datetime,
-        interval: Literal["1m", "15m"] = "1m",
+        interval: MarketInterval = "1m",
     ) -> MarketWindow:
         if start_at.utcoffset() is None or end_at.utcoffset() is None:
             raise HTTPException(
@@ -711,17 +872,88 @@ def create_app(
                 detail={"code": "MARKET_WINDOW_TIMEZONE_REQUIRED"},
             )
         try:
-            return await public_market_context.fetch_window(
+            window = await public_market_context.fetch_window(
                 instrument_ref,
                 interval,
                 start_at,
                 end_at,
             )
+            require_current_market_source(window.source)
+            return window
         except MarketContextUnavailable as exc:
             raise HTTPException(
                 status_code=503,
                 detail={"code": str(exc)},
             ) from None
+
+    @app.websocket("/api/v1/market-stream")
+    async def market_stream(
+        websocket: WebSocket,
+        instrument_ref: str = "BTCUSDT-PERP",
+    ) -> None:
+        origin = websocket.headers.get("origin")
+        if websocket.headers.get("authorization") is not None:
+            await websocket.close(
+                code=1008,
+                reason="AUTHORIZATION_HEADER_FORBIDDEN",
+            )
+            return
+        if origin is None or not allowed_local_origin(origin, role_settings.app.port):
+            await websocket.close(code=1008, reason="LOCAL_ORIGIN_REQUIRED")
+            return
+        await websocket.accept()
+        try:
+            async for event in public_market_stream.stream(instrument_ref):
+                require_current_market_source(event.source)
+                await websocket.send_text(event.model_dump_json())
+        except WebSocketDisconnect:
+            return
+        except MarketContextUnavailable as exc:
+            try:
+                await websocket.close(code=1013, reason=str(exc)[:120])
+            except RuntimeError:
+                pass
+
+    @app.post(
+        "/api/v1/order-schedules/preview",
+        response_model=OrderSchedulePreview,
+    )
+    async def order_schedule_preview(
+        payload: OrderSchedulePreviewPayload,
+    ) -> OrderSchedulePreview:
+        domain_call(
+            lambda: validate_current_order_schedule_support(
+                payload.decision_basis_kind,
+                payload.spec,
+            )
+        )
+        try:
+            rules = await public_instrument_rules.fetch(payload.instrument_ref)
+            require_current_instrument_rules_source(rules.source)
+            reference_price = payload.reference_price
+            price_plan = payload.spec.price_distribution
+            if isinstance(price_plan, SinglePrice) and price_plan.limit_price is None:
+                context = await public_market_context.fetch(
+                    payload.instrument_ref,
+                    20,
+                )
+                require_current_market_source(context.source)
+                reference_price = context.reference_price
+        except (InstrumentRulesUnavailable, MarketContextUnavailable) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": str(exc)},
+            ) from None
+        return compile_order_schedule(
+            payload.spec,
+            rules,
+            venue_ref=payload.venue_ref,
+            instrument_ref=payload.instrument_ref,
+            direction=payload.direction,
+            max_notional=payload.max_notional,
+            schedule_ref=payload.schedule_ref,
+            reference_price=reference_price,
+        )
 
     @app.get(
         "/api/v1/strategies/{strategy_id}/schema",
@@ -823,17 +1055,23 @@ def create_app(
         "/api/v1/plan-versions/{plan_version_id}/activation-preview",
         response_model=dict[str, Any],
     )
-    def activation_preview(plan_version_id: str) -> dict[str, Any]:
-        def operation() -> dict[str, Any]:
-            preview = planning_api.activation_preview(plan_version_id)
-            executor = current_executor_status()
-            return {
-                **preview,
-                "executor_status": executor["status"],
-                "executor_status_checked_at": executor["checked_at"],
-            }
-
-        return domain_call(operation)
+    async def activation_preview(plan_version_id: str) -> dict[str, Any]:
+        preview = domain_call(lambda: planning_api.activation_preview(plan_version_id))
+        schedule = await compile_activation_schedule(preview)
+        if schedule is not None:
+            remember_schedule_preview(plan_version_id, schedule)
+        executor = current_executor_status()
+        return {
+            **preview,
+            "order_schedule_snapshot": (
+                schedule.model_dump(mode="json") if schedule is not None else None
+            ),
+            "expected_schedule_digest": (
+                schedule.schedule_digest if schedule is not None else None
+            ),
+            "executor_status": executor["status"],
+            "executor_status_checked_at": executor["checked_at"],
+        }
 
     @app.get(
         "/api/v1/activations",
@@ -847,20 +1085,71 @@ def create_app(
         response_model=dict[str, Any],
         status_code=201,
     )
-    def create_activation(
+    async def create_activation(
         payload: ActivationPayload,
         idempotency_key: str = Header(alias="Idempotency-Key"),
     ) -> dict[str, Any]:
-        def operation() -> dict[str, Any]:
-            if current_executor_status()["status"] != "READY":
-                raise ValueError("EXECUTOR_NOT_READY")
-            return planning_api.activate(
+        replay = domain_call(
+            lambda: planning_api.activation_replay(
+                payload,
+                idempotency_key=idempotency_key,
+            )
+        )
+        if replay is not None:
+            return replay
+        if current_executor_status()["status"] != "READY":
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "EXECUTOR_NOT_READY"},
+            )
+        preview = domain_call(
+            lambda: planning_api.activation_preview(payload.plan_version_id)
+        )
+        cached_schedule = (
+            domain_call(
+                lambda: recalled_schedule_preview(
+                    payload.plan_version_id,
+                    payload.expected_schedule_digest,
+                )
+            )
+            if preview.get("order_schedule_spec") is not None
+            else None
+        )
+        schedule = (
+            await compile_activation_schedule(preview, refresh_rules=True)
+            if cached_schedule is not None
+            else None
+        )
+        if (
+            cached_schedule is not None
+            and (
+                schedule is None
+                or schedule.schedule_digest != cached_schedule.schedule_digest
+            )
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "ACTIVATION_PREVIEW_STALE"},
+            )
+        if schedule is not None and not schedule.valid:
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "ORDER_SCHEDULE_INVALID"},
+            )
+        result = domain_call(
+            lambda: planning_api.activate(
                 payload,
                 idempotency_key=idempotency_key,
                 observed_at=datetime.now(UTC),
+                order_schedule_snapshot=schedule,
             )
-
-        return domain_call(operation)
+        )
+        if schedule is not None:
+            schedule_previews.pop(
+                (payload.plan_version_id, schedule.schedule_digest),
+                None,
+            )
+        return result
 
     @app.get(
         "/api/v1/activations/{activation_id}",

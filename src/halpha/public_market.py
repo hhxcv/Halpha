@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, TypeAlias
 
 from nautilus_trader.adapters.binance import get_cached_binance_http_client
 from nautilus_trader.adapters.binance.common.enums import (
@@ -28,6 +29,32 @@ ONE_MINUTE_MS = 60 * 1000
 _INSTRUMENT_SYMBOLS = {"BTCUSDT-PERP": "BTCUSDT"}
 PUBLIC_MARKET_TIMEOUT_SECONDS = 10
 MAX_MARKET_WINDOW_BARS = 300
+
+MarketInterval: TypeAlias = Literal["1m", "5m", "15m", "1h", "4h", "1d"]
+MARKET_INTERVALS: tuple[MarketInterval, ...] = (
+    "1m",
+    "5m",
+    "15m",
+    "1h",
+    "4h",
+    "1d",
+)
+MARKET_INTERVAL_MILLISECONDS: dict[MarketInterval, int] = {
+    "1m": ONE_MINUTE_MS,
+    "5m": 5 * ONE_MINUTE_MS,
+    "15m": FIFTEEN_MINUTES_MS,
+    "1h": 60 * ONE_MINUTE_MS,
+    "4h": 4 * 60 * ONE_MINUTE_MS,
+    "1d": 24 * 60 * ONE_MINUTE_MS,
+}
+BINANCE_KLINE_INTERVALS: dict[MarketInterval, BinanceKlineInterval] = {
+    "1m": BinanceKlineInterval.MINUTE_1,
+    "5m": BinanceKlineInterval.MINUTE_5,
+    "15m": BinanceKlineInterval.MINUTE_15,
+    "1h": BinanceKlineInterval.HOUR_1,
+    "4h": BinanceKlineInterval.HOUR_4,
+    "1d": BinanceKlineInterval.DAY_1,
+}
 
 
 class MarketContextUnavailable(RuntimeError):
@@ -73,7 +100,7 @@ class MarketWindow(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     instrument_ref: str
-    interval: Literal["1m", "15m"]
+    interval: MarketInterval
     source: str
     source_cutoff: datetime
     bars: tuple[MarketBar, ...]
@@ -85,7 +112,7 @@ class MarketContextProvider(Protocol):
     async def fetch_window(
         self,
         instrument_ref: str,
-        interval: Literal["1m", "15m"],
+        interval: MarketInterval,
         start_at: datetime,
         end_at: datetime,
     ) -> MarketWindow: ...
@@ -108,8 +135,20 @@ class BinanceMarketApi(Protocol):
     ) -> list[Any]: ...
 
 
+def binance_public_market_identity(
+    profile: str,
+) -> tuple[BinanceEnvironment, str]:
+    """Resolve one market-data identity for the complete runtime profile."""
+
+    if profile == "BINANCE_DEMO":
+        return BinanceEnvironment.DEMO, "BINANCE_DEMO_PUBLIC"
+    if profile in {"BINANCE_LIVE_READ_ONLY", "BINANCE_LIVE_WRITE"}:
+        return BinanceEnvironment.LIVE, "BINANCE_LIVE_PUBLIC"
+    raise ValueError("PUBLIC_MARKET_PROFILE_UNSUPPORTED")
+
+
 class BinancePublicMarketContext:
-    """Read the two public Binance endpoints needed by the planning UI."""
+    """Read environment-qualified Binance market data for the planning UI."""
 
     def __init__(
         self,
@@ -117,16 +156,14 @@ class BinancePublicMarketContext:
         *,
         proxy_url: str | None = None,
         market_api: BinanceMarketApi | None = None,
+        observed_at_provider: Callable[[], datetime] | None = None,
     ) -> None:
-        demo = profile == "BINANCE_DEMO"
-        self._source = "BINANCE_DEMO_PUBLIC" if demo else "BINANCE_LIVE_PUBLIC"
+        environment, self._source = binance_public_market_identity(profile)
         if market_api is None:
             client = get_cached_binance_http_client(
                 clock=LiveClock(),
                 account_type=BinanceAccountType.USDT_FUTURES,
-                environment=(
-                    BinanceEnvironment.DEMO if demo else BinanceEnvironment.LIVE
-                ),
+                environment=environment,
                 proxy_url=proxy_url,
             )
             market_api = BinanceFuturesMarketHttpAPI(
@@ -134,6 +171,7 @@ class BinancePublicMarketContext:
                 BinanceAccountType.USDT_FUTURES,
             )
         self._market_api = market_api
+        self._observed_at_provider = observed_at_provider or (lambda: datetime.now(UTC))
 
     async def fetch(self, instrument_ref: str, lookback: int) -> MarketContext:
         symbol = _INSTRUMENT_SYMBOLS.get(instrument_ref)
@@ -276,7 +314,7 @@ class BinancePublicMarketContext:
     async def fetch_window(
         self,
         instrument_ref: str,
-        interval: Literal["1m", "15m"],
+        interval: MarketInterval,
         start_at: datetime,
         end_at: datetime,
     ) -> MarketWindow:
@@ -285,12 +323,8 @@ class BinancePublicMarketContext:
             raise MarketContextUnavailable("MARKET_CONTEXT_INSTRUMENT_UNSUPPORTED")
         if start_at.utcoffset() is None or end_at.utcoffset() is None:
             raise MarketContextUnavailable("MARKET_WINDOW_TIMEZONE_REQUIRED")
-        interval_ms = ONE_MINUTE_MS if interval == "1m" else FIFTEEN_MINUTES_MS
-        native_interval = (
-            BinanceKlineInterval.MINUTE_1
-            if interval == "1m"
-            else BinanceKlineInterval.MINUTE_15
-        )
+        interval_ms = MARKET_INTERVAL_MILLISECONDS[interval]
+        native_interval = BINANCE_KLINE_INTERVALS[interval]
         start_ms = int(start_at.timestamp() * 1000) // interval_ms * interval_ms
         end_ms = int(end_at.timestamp() * 1000) // interval_ms * interval_ms
         count = (end_ms - start_ms) // interval_ms + 1
@@ -329,11 +363,17 @@ class BinancePublicMarketContext:
                 )
                 for bar in bars
             )
+            observed_at = self._observed_at_provider()
+            if observed_at.utcoffset() is None:
+                raise ValueError("public market observation timezone invalid")
             return MarketWindow(
                 instrument_ref=instrument_ref,
                 interval=interval,
                 source=self._source,
-                source_cutoff=normalized[-1].close_at,
+                source_cutoff=min(
+                    normalized[-1].close_at,
+                    observed_at.astimezone(UTC),
+                ),
                 bars=normalized,
             )
         except MarketContextUnavailable:

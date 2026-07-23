@@ -88,7 +88,8 @@ class PostgreSQLOutcomesApi:
             return reviews
         rows = connection.execute(
             """
-            SELECT a.activation_id, a.instrument_ref, a.direction, a.strategy_id,
+            SELECT a.activation_id, a.instrument_ref, a.direction,
+                   a.decision_basis_ref,
                    v.max_notional, a.created_at, a.updated_at,
                    v.terms ->> 'plan_name',
                    v.terms ->> 'created_at',
@@ -105,7 +106,12 @@ class PostgreSQLOutcomesApi:
             str(row[0]): {
                 "instrument_ref": str(row[1]),
                 "direction": str(row[2]),
-                "strategy_id": str(row[3]),
+                "decision_basis_ref": str(row[3]),
+                "strategy_id": (
+                    None
+                    if str(row[3]) == "DIRECT_EXECUTION@1"
+                    else str(row[3]).split("@", maxsplit=1)[0]
+                ),
                 "trade_amount": str(row[4]) if row[4] is not None else None,
                 "activation_started_at": row[5].isoformat(),
                 "activation_updated_at": row[6].isoformat(),

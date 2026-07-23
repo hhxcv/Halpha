@@ -22,9 +22,11 @@ class _Connection:
         *,
         omit_exit_fact: bool = False,
         exit_fact_digest: str = "exit-fill-digest",
+        decision_basis_ref: str = "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
     ) -> None:
         self._omit_exit_fact = omit_exit_fact
         self._exit_fact_digest = exit_fact_digest
+        self._decision_basis_ref = decision_basis_ref
 
     def execute(self, query, parameters):
         if "FROM halpha.venue_fact" in query:
@@ -42,7 +44,7 @@ class _Connection:
                         "activation-1",
                         "BTCUSDT-PERP",
                         "LONG",
-                        "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+                        self._decision_basis_ref,
                         "300",
                         datetime(2026, 7, 20, 1, tzinfo=UTC),
                         datetime(2026, 7, 20, 2, tzinfo=UTC),
@@ -220,6 +222,7 @@ def test_review_projection_adds_compact_trade_context() -> None:
         "instrument_ref": "BTCUSDT-PERP",
         "direction": "LONG",
         "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+        "decision_basis_ref": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
         "trade_amount": "300",
         "activation_started_at": "2026-07-20T01:00:00+00:00",
         "activation_updated_at": "2026-07-20T02:00:00+00:00",
@@ -277,6 +280,22 @@ def test_review_projection_adds_compact_trade_context() -> None:
         "strategy_attribution_complete": True,
         "unresolved_refs": [],
     }
+
+
+def test_review_projection_keeps_direct_execution_as_a_decision_basis() -> None:
+    api = PostgreSQLOutcomesApi(
+        database_name="halpha_demo",
+        password=SecretStr("secret-password"),
+        environment_id="demo-main",
+    )
+
+    result = api._attach_trade_context(
+        _Connection(decision_basis_ref="DIRECT_EXECUTION@1"),  # type: ignore[arg-type]
+        [_review()],
+    )[0]["trade_context"]
+
+    assert result["decision_basis_ref"] == "DIRECT_EXECUTION@1"
+    assert result["strategy_id"] is None
 
 
 def test_review_projection_keeps_result_unknown_when_a_referenced_fact_is_missing() -> None:

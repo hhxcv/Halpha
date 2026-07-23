@@ -99,6 +99,7 @@ export function notSubmittedReasonText(value: string): string {
 
 const acceptedPlanEventLabels: Record<string, string> = {
   ENTRY_BREAKOUT: "入场意图已通过资金检查",
+  DIRECT_ORDER_SCHEDULE_LEG: "直接执行入场档位已通过资金检查",
   PROTECTION_AFTER_FILL: "保护委托已通过资金检查",
   TAKE_PROFIT_1_AFTER_PROTECTION: "止盈一委托已通过资金检查",
   TAKE_PROFIT_2_AFTER_PROTECTION: "止盈二委托已通过资金检查",
@@ -108,6 +109,7 @@ const acceptedPlanEventLabels: Record<string, string> = {
 
 const rejectedPlanEventLabels: Record<string, string> = {
   ENTRY_BREAKOUT: "入场意图未通过资金检查",
+  DIRECT_ORDER_SCHEDULE_LEG: "直接执行入场档位未通过资金检查",
   PROTECTION_AFTER_FILL: "保护委托未通过资金检查",
   TAKE_PROFIT_1_AFTER_PROTECTION: "止盈一委托未通过资金检查",
   TAKE_PROFIT_2_AFTER_PROTECTION: "止盈二委托未通过资金检查",

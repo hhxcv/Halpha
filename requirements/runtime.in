@@ -2,6 +2,7 @@
 # Compile only with the repository Python 3.13.14 venv and pip-tools.
 fastapi==0.139.0
 uvicorn==0.51.0
+websockets==16.1.1
 starlette==1.3.1
 pydantic==2.13.4
 pydantic-settings==2.14.2

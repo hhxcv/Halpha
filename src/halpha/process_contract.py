@@ -33,10 +33,11 @@ PROCESS_CONTRACTS = {
             "postgresql_app_boundary",
             "local_web_api",
             "local_origin_and_csrf",
+            "binance_public_read_only",
         ),
         forbidden_capabilities=(
             "binance_credentials",
-            "binance_connection",
+            "binance_private_connection",
             "nautilus_trading_node",
             "venue_write",
         ),

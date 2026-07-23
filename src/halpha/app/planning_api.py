@@ -7,7 +7,14 @@ from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
 import psycopg
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 
 from halpha.capital.models import (
     AuthorityClass,
@@ -26,8 +33,17 @@ from halpha.planning.models import (
     RequestedLimits,
     TradePlanContent,
 )
+from halpha.planning.order_schedule import (
+    OrderSchedulePreview,
+    OrderScheduleSpec,
+    direct_allowed_action_profiles,
+    validate_current_order_schedule_support,
+)
 from halpha.planning.control_service import ActivationControlService
 from halpha.planning.registry import (
+    DecisionBasisKind,
+    DraftDecisionBasis,
+    FixedStrategyPlanBasis,
     describe_strategy,
     list_strategies,
     strategy_parameter_schema,
@@ -44,8 +60,10 @@ class ApiModel(BaseModel):
 
 class PlanDraftPayload(ApiModel):
     plan_name: str
-    strategy_id: str
-    parameters: dict[str, Any]
+    decision_basis: DraftDecisionBasis | None = None
+    order_schedule_spec: OrderScheduleSpec | None = None
+    strategy_id: str | None = None
+    parameters: dict[str, Any] | None = None
     venue_ref: str = "BINANCE_USDM"
     instrument_ref: str
     direction: str
@@ -75,6 +93,38 @@ class PlanDraftPayload(ApiModel):
             decimal_from_string(value, code="PLAN_VALUE_INVALID", positive=True)
         )
 
+    @model_validator(mode="after")
+    def decision_basis_is_unambiguous(self) -> PlanDraftPayload:
+        has_legacy = self.strategy_id is not None or self.parameters is not None
+        if self.decision_basis is not None and has_legacy:
+            raise ValueError("DECISION_BASIS_AMBIGUOUS")
+        if self.decision_basis is None:
+            if self.strategy_id is None or self.parameters is None:
+                raise ValueError("DECISION_BASIS_REQUIRED")
+            basis_kind = DecisionBasisKind.STRATEGY_SIGNAL
+        else:
+            basis_kind = self.decision_basis.kind
+        validate_current_order_schedule_support(
+            basis_kind,
+            self.order_schedule_spec,
+        )
+        return self
+
+    def resolved_decision_basis(self) -> DraftDecisionBasis:
+        if self.decision_basis is not None:
+            basis = self.decision_basis
+        else:
+            basis = DraftDecisionBasis(
+                kind=DecisionBasisKind.STRATEGY_SIGNAL,
+                decision_basis_ref=str(self.strategy_id),
+                parameters=dict(self.parameters or {}),
+            )
+        if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL:
+            return basis.model_copy(
+                update={"parameters": {**basis.parameters, "direction": self.direction}}
+            )
+        return basis
+
 
 class PlanCreatePayload(PlanDraftPayload):
     creator_kind: PlanCreatorKind
@@ -82,6 +132,10 @@ class PlanCreatePayload(PlanDraftPayload):
 
 class ActivationPayload(ApiModel):
     plan_version_id: str
+    expected_schedule_digest: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
 
 
 class ControlPayload(ApiModel):
@@ -97,6 +151,51 @@ def _stable_id(environment_id: str, kind: str, idempotency_key: str) -> str:
     return str(
         uuid5(NAMESPACE_URL, f"urn:halpha:{environment_id}:{kind}:{idempotency_key}")
     )
+
+
+def _enum_value(value: Any) -> Any:
+    return value.value if hasattr(value, "value") else value
+
+
+def _iso_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
+def _fixed_decision_basis_projection(version: Any) -> dict[str, Any]:
+    basis = getattr(version, "decision_basis", None)
+    if basis is None:
+        basis = version.strategy_basis
+    kind = str(
+        _enum_value(getattr(basis, "kind", DecisionBasisKind.STRATEGY_SIGNAL))
+    )
+    decision_basis_ref = getattr(basis, "decision_basis_ref", None)
+    if decision_basis_ref is None:
+        decision_basis_ref = (
+            f"{basis.strategy_id}@{basis.strategy_version}"
+            if kind == DecisionBasisKind.STRATEGY_SIGNAL.value
+            else str(getattr(basis, "strategy_id", ""))
+        )
+    if hasattr(basis, "model_dump"):
+        payload = basis.model_dump(mode="json")
+    else:
+        payload = {
+            key: _enum_value(value)
+            for key, value in vars(basis).items()
+        }
+    payload["kind"] = kind
+    payload["decision_basis_ref"] = str(decision_basis_ref)
+    return {
+        "model": basis,
+        "payload": payload,
+        "kind": kind,
+        "decision_basis_ref": str(decision_basis_ref),
+        "parameter_digest": str(basis.parameter_digest),
+        "normalized_parameters": dict(basis.normalized_parameters),
+        "product_build_id": str(basis.product_build_id),
+        "legacy_unverified": bool(getattr(basis, "legacy_unverified", False)),
+    }
 
 
 class PostgreSQLPlanningApi:
@@ -206,22 +305,42 @@ class PostgreSQLPlanningApi:
                 """,
                 (self._environment_id,),
             ).fetchall()
-        return [
-            {
+        result: list[dict[str, Any]] = []
+        for row in rows:
+            content = dict(row[4])
+            basis = DraftDecisionBasis.model_validate(
+                content.get("decision_basis")
+                or {
+                    "kind": DecisionBasisKind.STRATEGY_SIGNAL.value,
+                    "decision_basis_ref": content["strategy_id"],
+                    "parameters": content["parameters"],
+                }
+            )
+            requested_limits = dict(content["requested_limits"])
+            result.append(
+                {
                 "plan_id": str(row[0]),
                 "draft_version": int(row[1]),
                 "draft_content_digest": str(row[2]),
                 "updated_at": row[3].isoformat(),
-                "plan_name": row[4].get("plan_name"),
-                "created_at": row[4].get("created_at"),
-                "creator_kind": row[4].get("creator_kind"),
-                "strategy_id": row[4]["strategy_id"],
-                "instrument_ref": row[4]["instrument_ref"],
-                "direction": row[4]["direction"],
-                "parameters": dict(row[4]["parameters"]),
-                "max_notional": str(row[4]["requested_limits"]["max_notional"]),
-                "valid_from": str(row[4]["valid_from"]),
-                "valid_until": str(row[4]["valid_until"]),
+                "plan_name": content.get("plan_name"),
+                "created_at": _iso_value(content.get("created_at")),
+                "creator_kind": _enum_value(content.get("creator_kind")),
+                "decision_basis": basis.model_dump(mode="json"),
+                "decision_basis_kind": basis.kind.value,
+                "decision_basis_ref": basis.decision_basis_ref,
+                "strategy_id": (
+                    basis.decision_basis_ref
+                    if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL
+                    else None
+                ),
+                "instrument_ref": str(content["instrument_ref"]),
+                "direction": str(_enum_value(content["direction"])),
+                "parameters": dict(basis.parameters),
+                "order_schedule_spec": content.get("order_schedule_spec"),
+                "max_notional": str(requested_limits["max_notional"]),
+                "valid_from": _iso_value(content["valid_from"]),
+                "valid_until": _iso_value(content["valid_until"]),
                 "plan_version_id": str(row[5]) if row[5] is not None else None,
                 "fixed_at": row[6].isoformat() if row[6] is not None else None,
                 "fixed_content_digest": str(row[7]) if row[7] is not None else None,
@@ -232,9 +351,9 @@ class PostgreSQLPlanningApi:
                     if row[8] is not None
                     else None
                 ),
-            }
-            for row in rows
-        ]
+                }
+            )
+        return result
 
     def get_plan(self, plan_id: str) -> dict[str, Any]:
         with self._connect() as connection, connection.transaction():
@@ -257,20 +376,28 @@ class PostgreSQLPlanningApi:
         idempotency_key: str,
         observed_at: datetime,
     ) -> dict[str, Any]:
-        definition = describe_strategy(payload.strategy_id)
-        if payload.direction not in {
-            item.value for item in definition.supported_directions
-        }:
-            raise ValueError("PARAMETER_INVALID")
-        parameters = {**payload.parameters, "direction": payload.direction}
-        self._require_demo_parameter_scope(parameters)
+        basis = payload.resolved_decision_basis()
+        if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL:
+            definition = describe_strategy(basis.decision_basis_ref)
+            if payload.direction not in {
+                item.value for item in definition.supported_directions
+            }:
+                raise ValueError("PARAMETER_INVALID")
+            allowed_actions = frozenset(
+                definition.allowed_action_profiles
+            )
+            self._require_demo_parameter_scope(basis.parameters)
+        else:
+            allowed_actions = direct_allowed_action_profiles(
+                payload.order_schedule_spec
+            )
         plan_id = _stable_id(self._environment_id, "plan", idempotency_key)
         content = TradePlanContent(
             plan_name=payload.plan_name,
             created_at=observed_at,
             creator_kind=payload.creator_kind,
-            strategy_id=payload.strategy_id,
-            parameters=parameters,
+            decision_basis=basis,
+            order_schedule_spec=payload.order_schedule_spec,
             environment_id=self._environment_id,
             environment_kind=self._environment_kind,
             authority_class=self._authority_class,
@@ -286,7 +413,7 @@ class PostgreSQLPlanningApi:
             ),
             valid_from=observed_at,
             valid_until=observed_at + timedelta(minutes=payload.valid_minutes),
-            allowed_actions=definition.allowed_action_profiles,
+            allowed_actions=allowed_actions,
             terms={
                 "one_entry_cycle": True,
                 "resume_policy": "MANUAL_PLAN_RESUME",
@@ -305,7 +432,15 @@ class PostgreSQLPlanningApi:
             except PlanningConflict:
                 with connection.transaction():
                     draft = repository.get_draft(plan_id)
-                if draft.content_digest != content_digest(content):
+                request_duration = content.valid_until - content.valid_from
+                comparable = content.model_copy(
+                    update={
+                        "created_at": draft.content.created_at,
+                        "valid_from": draft.content.valid_from,
+                        "valid_until": draft.content.valid_from + request_duration,
+                    }
+                )
+                if content_digest(draft.content) != content_digest(comparable):
                     raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
         return draft.model_dump(mode="json")
 
@@ -317,13 +452,25 @@ class PostgreSQLPlanningApi:
         expected_version: int,
         observed_at: datetime,
     ) -> dict[str, Any]:
-        definition = describe_strategy(payload.strategy_id)
-        parameters = {**payload.parameters, "direction": payload.direction}
-        self._require_demo_parameter_scope(parameters)
+        basis = payload.resolved_decision_basis()
+        if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL:
+            definition = describe_strategy(basis.decision_basis_ref)
+            if payload.direction not in {
+                item.value for item in definition.supported_directions
+            }:
+                raise ValueError("PARAMETER_INVALID")
+            allowed_actions = frozenset(
+                definition.allowed_action_profiles
+            )
+            self._require_demo_parameter_scope(basis.parameters)
+        else:
+            allowed_actions = direct_allowed_action_profiles(
+                payload.order_schedule_spec
+            )
         content = TradePlanContent(
             plan_name=payload.plan_name,
-            strategy_id=payload.strategy_id,
-            parameters=parameters,
+            decision_basis=basis,
+            order_schedule_spec=payload.order_schedule_spec,
             environment_id=self._environment_id,
             environment_kind=self._environment_kind,
             authority_class=self._authority_class,
@@ -339,7 +486,7 @@ class PostgreSQLPlanningApi:
             ),
             valid_from=observed_at,
             valid_until=observed_at + timedelta(minutes=payload.valid_minutes),
-            allowed_actions=definition.allowed_action_profiles,
+            allowed_actions=allowed_actions,
             terms={"one_entry_cycle": True, "resume_policy": "MANUAL_PLAN_RESUME"},
         )
         with self._connect() as connection, connection.transaction():
@@ -404,9 +551,11 @@ class PostgreSQLPlanningApi:
             version = PostgreSQLPlanningRepository(
                 connection, self._environment_id
             ).get_version(plan_version_id)
+        basis = _fixed_decision_basis_projection(version)
         gate_status = self._gate_status()
         product_build_consistent = (
-            version.strategy_basis.product_build_id == self._product_build_id
+            not basis["legacy_unverified"]
+            and basis["product_build_id"] == self._product_build_id
             and (
                 self._profile != "BINANCE_LIVE_WRITE"
                 or gate_status.product_build_consistent is True
@@ -425,20 +574,32 @@ class PostgreSQLPlanningApi:
             "environment_kind": self._environment_kind.value,
             "authority_class": self._authority_class.value,
             "account_ref": version.account_ref,
+            "venue_ref": getattr(version, "venue_ref", "BINANCE_USDM"),
             "instrument_ref": version.instrument_ref,
             "direction": version.direction.value,
+            "decision_basis": basis["payload"],
+            "decision_basis_kind": basis["kind"],
+            "decision_basis_ref": basis["decision_basis_ref"],
             "strategy_ref": (
-                f"{version.strategy_basis.strategy_id}@{version.strategy_basis.strategy_version}"
+                basis["decision_basis_ref"]
+                if basis["kind"] == DecisionBasisKind.STRATEGY_SIGNAL.value
+                else None
             ),
-            "parameter_digest": version.strategy_basis.parameter_digest,
-            "strategy_parameters": version.strategy_basis.normalized_parameters,
+            "parameter_digest": basis["parameter_digest"],
+            "strategy_parameters": basis["normalized_parameters"],
+            "order_schedule_spec": (
+                version.order_schedule_spec.model_dump(mode="json")
+                if getattr(version, "order_schedule_spec", None) is not None
+                else None
+            ),
             "trade_amount": version.requested_limits.max_notional,
             "limits": version.requested_limits.model_dump(mode="json"),
             "valid_until": version.valid_until.isoformat(),
             "allowed_actions": sorted(version.allowed_actions),
             "actual_account_configuration": "PRE_SUBMIT_FACT_NOT_REQUIRED_FOR_PLAN_ACTIVATION",
             "account_mode_policy": "USE_ACTUAL_CONFIGURATION_WITH_EFFECTIVE_LEVERAGE_MIN_ACTUAL_5",
-            "product_build_id": version.strategy_basis.product_build_id,
+            "product_build_id": basis["product_build_id"],
+            "legacy_unverified": basis["legacy_unverified"],
             "product_build_consistent": product_build_consistent,
             "configured_runtime_real_write_gate": (
                 gate_status.configured_runtime_real_write_gate
@@ -449,7 +610,7 @@ class PostgreSQLPlanningApi:
                 and product_build_consistent
                 and gate_status.configured_runtime_real_write_gate == "CLOSED"
             ),
-            "capital_notice": "策略计划中的交易金额就是本次边界；激活不再要求独立资金授权，也不会立即向 Binance 下单。",
+            "capital_notice": "计划中的交易金额就是本次边界；激活不再要求独立资金授权，也不会绕过事实、CAP 或 EXE。",
         }
 
     def activate(
@@ -458,6 +619,7 @@ class PostgreSQLPlanningApi:
         *,
         idempotency_key: str,
         observed_at: datetime,
+        order_schedule_snapshot: OrderSchedulePreview | None = None,
     ) -> dict[str, Any]:
         gate_status = self._gate_status()
         if self._profile == "BINANCE_LIVE_READ_ONLY":
@@ -467,6 +629,13 @@ class PostgreSQLPlanningApi:
                 raise ValueError("LIVE_WRITE_PRODUCT_BUILD_MISMATCH")
             if gate_status.configured_runtime_real_write_gate != "CLOSED":
                 raise ValueError("LIVE_WRITE_GATE_MUST_BE_CLOSED_FOR_ACTIVATION")
+        actual_schedule_digest = (
+            order_schedule_snapshot.schedule_digest
+            if order_schedule_snapshot is not None
+            else None
+        )
+        if payload.expected_schedule_digest != actual_schedule_digest:
+            raise ValueError("ACTIVATION_PREVIEW_STALE")
         activation_id = _stable_id(self._environment_id, "activation", idempotency_key)
         with self._connect() as connection:
             planning = PostgreSQLPlanningRepository(connection, self._environment_id)
@@ -481,6 +650,7 @@ class PostgreSQLPlanningApi:
                         authority_class=self._authority_class,
                         product_build_id=self._product_build_id,
                         observed_at=observed_at,
+                        order_schedule_snapshot=order_schedule_snapshot,
                     )
             except psycopg.errors.UniqueViolation as exc:
                 constraint_name = exc.diag.constraint_name
@@ -494,6 +664,47 @@ class PostgreSQLPlanningApi:
                         raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
                 if activation.plan_version_ref != payload.plan_version_id:
                     raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
+                persisted_digest = (
+                    activation.order_schedule_snapshot.schedule_digest
+                    if activation.order_schedule_snapshot is not None
+                    else None
+                )
+                if persisted_digest != actual_schedule_digest:
+                    raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
+        return self._activation_response(activation)
+
+    def activation_replay(
+        self,
+        payload: ActivationPayload,
+        *,
+        idempotency_key: str,
+    ) -> dict[str, Any] | None:
+        """Replay a committed activation before any rule refresh or readiness check."""
+
+        activation_id = _stable_id(self._environment_id, "activation", idempotency_key)
+        with self._connect() as connection, connection.transaction():
+            try:
+                activation = PostgreSQLPlanningRepository(
+                    connection,
+                    self._environment_id,
+                ).get_activation(activation_id)
+            except PlanningConflict as exc:
+                if str(exc) == "ACTIVATION_NOT_FOUND":
+                    return None
+                raise
+        persisted_digest = (
+            activation.order_schedule_snapshot.schedule_digest
+            if activation.order_schedule_snapshot is not None
+            else None
+        )
+        if (
+            activation.plan_version_ref != payload.plan_version_id
+            or persisted_digest != payload.expected_schedule_digest
+        ):
+            raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT")
+        return self._activation_response(activation)
+
+    def _activation_response(self, activation: Any) -> dict[str, Any]:
         return {
             "activation": activation.model_dump(mode="json"),
             "venue_write_created": False,
@@ -553,7 +764,8 @@ class PostgreSQLPlanningApi:
                        client_order_id, state, state_version, unknown_reason,
                        not_submitted_reason, protection_digest, closure_evidence_digest,
                        created_at, updated_at, execution_profile_ref, account_ref,
-                       authority_class, cancel_target
+                       authority_class, cancel_target, call_started_at,
+                       call_completed_at
                 FROM halpha.execution_action
                 WHERE environment_id = %s AND activation_id = %s
                 ORDER BY created_at, execution_action_id
@@ -628,13 +840,20 @@ class PostgreSQLPlanningApi:
                     else None
                 ),
             },
-            "strategy": {
-                "strategy_ref": (
-                    f"{version.strategy_basis.strategy_id}@"
-                    f"{version.strategy_basis.strategy_version}"
-                ),
-                "parameters": version.strategy_basis.normalized_parameters,
-            },
+            "decision_basis": version.decision_basis.model_dump(mode="json"),
+            "strategy": (
+                {
+                    "strategy_ref": version.decision_basis.decision_basis_ref,
+                    "parameters": version.decision_basis.normalized_parameters,
+                }
+                if isinstance(version.decision_basis, FixedStrategyPlanBasis)
+                else None
+            ),
+            "order_schedule": (
+                activation.order_schedule_snapshot.model_dump(mode="json")
+                if activation.order_schedule_snapshot is not None
+                else None
+            ),
             "capital": {
                 "max_margin": version.requested_limits.max_margin,
                 "max_notional": version.requested_limits.max_notional,
@@ -677,6 +896,12 @@ class PostgreSQLPlanningApi:
                     "account_ref": str(row[14]),
                     "authority_class": str(row[15]),
                     "cancel_target": dict(row[16]) if row[16] is not None else None,
+                    "call_started_at": (
+                        row[17].isoformat() if row[17] is not None else None
+                    ),
+                    "call_completed_at": (
+                        row[18].isoformat() if row[18] is not None else None
+                    ),
                 }
                 for row in actions
             ],
@@ -868,10 +1093,15 @@ class PostgreSQLPlanningApi:
         receipt_id = _stable_id(self._environment_id, "receipt", idempotency_key)
         stop_id = _stable_id(self._environment_id, "stop-state", idempotency_key)
         scope = {
+            **payload.takeover_scope,
             "activation_id": activation_id,
             "cutoff": observed_at.isoformat(),
-            **payload.takeover_scope,
         }
+        if intent is ControlIntent.USER_TAKEOVER:
+            # EXE closure attributes the post-handover boundary to this exact
+            # immutable command. User-provided scope must not be able to
+            # replace that identity.
+            scope["command_ref"] = command_id
         command = build_command(
             command_id=command_id,
             environment_id=self._environment_id,

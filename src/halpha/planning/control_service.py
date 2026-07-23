@@ -28,6 +28,8 @@ from halpha.user_workbench.commands import (
     initial_receipt,
 )
 from halpha.user_workbench.repository import CommandConflict, PostgreSQLCommandRepository
+from halpha.venue_integration.repository import PostgreSQLExecutionActionRepository
+from halpha.venue_integration.dispatch_lock import acquire_activation_control_lock
 
 
 class ActivationControlService:
@@ -37,6 +39,10 @@ class ActivationControlService:
         self._planning = PostgreSQLPlanningRepository(connection, environment_id)
         self._capital = PostgreSQLCapitalRepository(connection, environment_id)
         self._commands = PostgreSQLCommandRepository(connection, environment_id)
+        self._execution_actions = PostgreSQLExecutionActionRepository(
+            connection,
+            environment_id,
+        )
 
     def _complete_if_no_venue_responsibility(
         self,
@@ -49,6 +55,12 @@ class ActivationControlService:
         if (
             activation.has_entry_fill
             or activation.pending_action_digest is not None
+            or self._execution_actions.has_open_entry_responsibility(
+                activation.activation_id
+            )
+            or self._execution_actions.has_unclosed_called_responsibility(
+                activation.activation_id
+            )
         ):
             return activation
         closure_digest = content_digest(
@@ -115,6 +127,15 @@ class ActivationControlService:
         plan_current: bool = True,
         facts_known: bool = True,
     ) -> Receipt:
+        # Serialize every owner lifecycle decision with the Executor's final
+        # venue-mutation boundary.  If dispatch acquired the lock first, this
+        # command becomes effective only after that call is durably normalized;
+        # if control acquired it first, dispatch must re-read the new state.
+        acquire_activation_control_lock(
+            self._connection,
+            environment_id=self._environment_id,
+            activation_id=command.target_ref,
+        )
         existing = self._commands.find_by_idempotency(
             command.owner_scope,
             command.idempotency_key,

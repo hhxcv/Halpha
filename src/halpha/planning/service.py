@@ -38,8 +38,17 @@ from halpha.planning.models import (
     TradePlanContent,
     TradePlanDraft,
     TradePlanVersion,
+    validate_current_plan_admission,
 )
-from halpha.planning.registry import build_fixed_plan_basis
+from halpha.planning.order_schedule import (
+    OrderSchedulePreview,
+    validate_order_schedule_snapshot,
+)
+from halpha.planning.registry import (
+    DecisionBasisKind,
+    FixedStrategyPlanBasis,
+    build_fixed_decision_basis,
+)
 from halpha.planning.repository import PostgreSQLPlanningRepository
 from halpha.planning.strategies.one_shot import StrategyProposal
 from halpha.planning.transitions import (
@@ -49,6 +58,7 @@ from halpha.planning.transitions import (
     deadline_source_identity,
     enter_exit,
     proposed_action_from_strategy_proposal,
+    record_direct_fill,
     record_first_fill,
     resolve_existing_event,
     update_protection_projection,
@@ -60,6 +70,8 @@ def _entry_valid_until(
     *,
     activated_at: datetime,
 ) -> datetime:
+    if version.decision_basis.kind is DecisionBasisKind.DIRECT_EXECUTION:
+        return version.valid_until
     value = version.strategy_basis.normalized_parameters.get("entry_valid_minutes")
     if not isinstance(value, int):
         raise ValueError("ENTRY_VALID_MINUTES_INVALID")
@@ -143,9 +155,8 @@ class PlanningApplicationService:
         if draft.draft_version != expected_draft_version:
             raise ValueError("PLAN_VERSION_CONFLICT")
         content = draft.content
-        basis = build_fixed_plan_basis(
-            content.strategy_id,
-            content.parameters,
+        basis = build_fixed_decision_basis(
+            content.decision_basis,
             product_build_id=product_build_id,
         )
         fields = {
@@ -156,7 +167,8 @@ class PlanningApplicationService:
             "plan_name": content.plan_name,
             "created_at": content.created_at,
             "creator_kind": content.creator_kind,
-            "strategy_basis": basis,
+            "decision_basis": basis,
+            "order_schedule_spec": content.order_schedule_spec,
             "account_ref": content.account_ref,
             "venue_ref": content.venue_ref,
             "instrument_ref": content.instrument_ref,
@@ -181,13 +193,40 @@ class PlanningApplicationService:
         authority_class: AuthorityClass,
         product_build_id: str,
         observed_at: datetime,
+        order_schedule_snapshot: OrderSchedulePreview | None = None,
     ) -> PlanActivation:
         version = self._planning.get_version(plan_version_id, for_update=True)
-        if version.strategy_basis.product_build_id != product_build_id:
+        validate_current_plan_admission(
+            decision_basis_kind=version.decision_basis.kind,
+            order_schedule_spec=version.order_schedule_spec,
+            allowed_actions=version.allowed_actions,
+        )
+        if (
+            isinstance(version.decision_basis, FixedStrategyPlanBasis)
+            and version.decision_basis.legacy_unverified
+        ):
+            raise ValueError("LEGACY_PLAN_BASIS_UNVERIFIED")
+        if version.decision_basis.product_build_id != product_build_id:
             raise ValueError("PRODUCT_BUILD_MISMATCH")
         if not (version.valid_from <= observed_at < version.valid_until):
             raise ValueError("PLAN_EXPIRED")
         entry_valid_until = _entry_valid_until(version, activated_at=observed_at)
+        if (version.order_schedule_spec is None) != (order_schedule_snapshot is None):
+            raise ValueError("ORDER_SCHEDULE_SNAPSHOT_REQUIRED")
+        if order_schedule_snapshot is not None:
+            validate_order_schedule_snapshot(order_schedule_snapshot)
+            if (
+                not order_schedule_snapshot.valid
+                or order_schedule_snapshot.schedule_ref != version.plan_version_id
+                or content_digest(order_schedule_snapshot.schedule_spec)
+                != content_digest(version.order_schedule_spec)
+                or order_schedule_snapshot.venue_ref != version.venue_ref
+                or order_schedule_snapshot.instrument_ref != version.instrument_ref
+                or order_schedule_snapshot.direction is not version.direction
+                or order_schedule_snapshot.max_notional
+                != version.requested_limits.max_notional
+            ):
+                raise ValueError("ORDER_SCHEDULE_SNAPSHOT_MISMATCH")
         activation = PlanActivation(
             activation_id=activation_id,
             environment_id=self._environment_id,
@@ -197,8 +236,9 @@ class PlanningApplicationService:
             account_ref=version.account_ref,
             instrument_ref=version.instrument_ref,
             direction=version.direction,
-            strategy_id=version.strategy_basis.strategy_id,
+            decision_basis_ref=version.decision_basis.decision_basis_ref,
             framework_strategy_id=strategy_id_for_activation(activation_id),
+            order_schedule_snapshot=order_schedule_snapshot,
             target_exposure=version.target_exposure,
             rule_state={
                 "deadlines": {"entry_valid_until": entry_valid_until.isoformat()},
@@ -472,6 +512,40 @@ class PlanningApplicationService:
             fill_price=fill_price,
             fill_time=fill_time,
             entry_risk_context=entry_risk_context,
+            observed_at=observed_at,
+        )
+        if updated is not activation:
+            self._planning.update_activation(
+                updated,
+                expected_version=activation.state_version,
+            )
+        return updated
+
+    def record_direct_fill(
+        self,
+        *,
+        activation_id: str,
+        entry_action_ref: str,
+        fill_fact_ref: str,
+        fill_price: str,
+        fill_quantity: str,
+        fill_time: datetime,
+        protection_policy: dict[str, object],
+        price_tick_size: str,
+        quantity_step: str,
+        observed_at: datetime,
+    ) -> PlanActivation:
+        activation = self._planning.get_activation(activation_id, for_update=True)
+        updated = record_direct_fill(
+            activation,
+            entry_action_ref=entry_action_ref,
+            fill_fact_ref=fill_fact_ref,
+            fill_price=fill_price,
+            fill_quantity=fill_quantity,
+            fill_time=fill_time,
+            protection_policy=protection_policy,
+            price_tick_size=price_tick_size,
+            quantity_step=quantity_step,
             observed_at=observed_at,
         )
         if updated is not activation:

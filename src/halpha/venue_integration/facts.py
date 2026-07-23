@@ -86,6 +86,92 @@ def terminal_order_status(facts: Iterable[VenueFact]) -> str | None:
     return status if status in TERMINAL_ORDER_STATUSES else None
 
 
+def terminal_fills_complete(
+    action: ExecutionAction,
+    facts: Iterable[VenueFact],
+) -> bool:
+    """Prove that every fill preceding a terminal order result is persisted.
+
+    A terminal status alone is not a cumulative execution report.  In
+    particular, CANCELLED and EXPIRED can race a final fill callback.  The
+    terminal observation must therefore carry the venue-derived cumulative
+    filled quantity, and the locally persisted fill facts must add up to it.
+    A final fill with zero leaves is the equivalent cumulative proof for the
+    Nautilus path which does not emit a separate FILLED order-state callback.
+    """
+
+    materialized = tuple(facts)
+    terminal_fact = _latest_terminal_fact(materialized)
+    if terminal_fact is None:
+        return False
+    status = terminal_order_status((terminal_fact,))
+    try:
+        requested = Decimal(str(action.action_terms["quantity"]))
+    except (InvalidOperation, KeyError, TypeError, ValueError):
+        return False
+    if requested < 0:
+        return False
+
+    cumulative_raw = terminal_fact.payload.get("cumulative_filled_quantity")
+    if cumulative_raw is None:
+        try:
+            terminal_leaves = Decimal(
+                str(terminal_fact.payload.get("leaves_quantity"))
+            )
+        except (InvalidOperation, TypeError, ValueError):
+            terminal_leaves = None
+        if (
+            terminal_fact.kind is VenueFactKind.FILL
+            and status == "FILLED"
+            and terminal_leaves == 0
+        ):
+            cumulative = requested
+        else:
+            return False
+    else:
+        try:
+            cumulative = Decimal(str(cumulative_raw))
+        except (InvalidOperation, TypeError, ValueError):
+            return False
+    if cumulative < 0 or cumulative > requested:
+        return False
+    if status == "FILLED" and cumulative != requested:
+        return False
+    if status == "REJECTED" and cumulative != 0:
+        return False
+
+    persisted = Decimal(0)
+    for fact in materialized:
+        if fact.kind is not VenueFactKind.FILL:
+            continue
+        raw_quantity = fact.payload.get("last_quantity")
+        try:
+            quantity = Decimal(str(raw_quantity))
+        except (InvalidOperation, TypeError, ValueError):
+            return False
+        if quantity <= 0:
+            return False
+        persisted += quantity
+    return persisted == cumulative
+
+
+def _latest_terminal_fact(facts: tuple[VenueFact, ...]) -> VenueFact | None:
+    terminal_facts = tuple(
+        fact for fact in facts if terminal_order_status((fact,)) is not None
+    )
+    if not terminal_facts:
+        return None
+    return max(
+        terminal_facts,
+        key=lambda fact: (
+            fact.source_time or fact.cutoff,
+            fact.cutoff,
+            fact.received_at,
+            fact.venue_fact_id,
+        ),
+    )
+
+
 def build_venue_fact(
     *,
     venue_fact_id: str,

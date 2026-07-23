@@ -14,6 +14,7 @@ from halpha.capital.models import AuthorityClass, EnvironmentKind
 from halpha.domain_values import content_digest
 import halpha.executor.product_entry as product_entry_module
 from halpha.executor.product_entry import (
+    DirectScheduleFacts,
     LiveEntryFactTracker,
     ProductAccountFacts,
     ProductPreSubmitRejected,
@@ -25,8 +26,20 @@ from halpha.executor.product_entry import (
     _require_flat_entry_scope,
     instrument_rules_payload,
 )
-from halpha.venue_integration.nautilus_account import query_single_asset_mode
-from halpha.planning.registry import Direction
+from halpha.planning.models import PlanActivation
+from halpha.planning.order_policies import InitialStopSpec, ProtectionPolicy
+from halpha.planning.order_schedule import (
+    AmountDistribution,
+    InstrumentOrderRules,
+    OrderScheduleSpec,
+    SinglePrice,
+    compile_order_schedule,
+)
+from halpha.planning.order_schedule_actions import (
+    MaterializedOrderLeg,
+    materialize_direct_schedule,
+)
+from halpha.planning.registry import DIRECT_EXECUTION_REF, Direction
 from halpha.planning.strategies.one_shot import (
     EntryRiskContext,
     RiskDirection,
@@ -36,9 +49,11 @@ from halpha.venue_integration.models import (
     ExecutionActionKind,
     ExecutionActionState,
 )
+from halpha.venue_integration.nautilus_account import query_single_asset_mode
 
 
 NOW = datetime(2026, 7, 18, 6, 0, tzinfo=UTC)
+DIRECT_CHECKED_AT = NOW + timedelta(minutes=1)
 
 
 def _proposal() -> StrategyProposal:
@@ -113,6 +128,354 @@ def _facts() -> ProductAccountFacts:
     )
 
 
+def _direct_rules() -> InstrumentOrderRules:
+    return InstrumentOrderRules(
+        source="BINANCE_DEMO_EXCHANGE_INFO",
+        min_price="0.1",
+        max_price="1000000",
+        price_tick_size="0.1",
+        limit_quantity_step="0.01",
+        min_limit_quantity="0.01",
+        max_limit_quantity="1000",
+        market_quantity_step="0.1",
+        min_market_quantity="0.1",
+        max_market_quantity="100",
+        min_notional="5",
+        source_cutoff=NOW.isoformat(),
+    )
+
+
+def _direct_activation() -> PlanActivation:
+    snapshot = compile_order_schedule(
+        OrderScheduleSpec(
+            price_distribution=SinglePrice(limit_price="100"),
+            amount_distribution=AmountDistribution(base_notional="10"),
+            protection_policy=ProtectionPolicy(
+                initial_stop=InitialStopSpec(distance_bps="100")
+            ),
+        ),
+        _direct_rules(),
+        venue_ref="BINANCE_USDM",
+        instrument_ref="BTCUSDT-PERP",
+        direction=Direction.LONG,
+        max_notional="100",
+        schedule_ref="plan-version-direct-entry",
+        reference_price="100",
+    )
+    assert snapshot.valid
+    return PlanActivation(
+        activation_id="activation-direct-entry",
+        environment_id="demo-main",
+        environment_kind=EnvironmentKind.DEMO,
+        authority_class=AuthorityClass.DEMO_VALIDATION,
+        plan_version_ref="plan-version-direct-entry",
+        account_ref="demo-owner",
+        instrument_ref="BTCUSDT-PERP",
+        direction=Direction.LONG,
+        decision_basis_ref=DIRECT_EXECUTION_REF,
+        framework_strategy_id="HALPHA-INTERNAL-001",
+        order_schedule_snapshot=snapshot,
+        target_exposure="100",
+        rule_state={
+            "deadlines": {
+                "entry_valid_until": (NOW + timedelta(hours=1)).isoformat()
+            }
+        },
+        created_at=NOW,
+        updated_at=NOW,
+    )
+
+
+def _direct_fact_case(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    valid_until: datetime | None = NOW + timedelta(hours=1),
+    current_tick_size: str = "0.1",
+    position_amount: str = "0.2",
+    open_order_ids: tuple[str, ...] = ("owned-order",),
+    open_algo_ids: tuple[str, ...] = ("owned-algo",),
+) -> tuple[ProductPreSubmitFactProvider, PlanActivation, MaterializedOrderLeg]:
+    activation = _direct_activation()
+    leg = materialize_direct_schedule(
+        activation,
+        entry_valid_until=NOW + timedelta(hours=1),
+    )[0]
+    leg = leg.model_copy(
+        update={
+            "proposed_action": leg.proposed_action.model_copy(
+                update={"valid_until": valid_until}
+            )
+        }
+    )
+    symbol = "BTCUSDT"
+    positions = [
+        SimpleNamespace(
+            symbol=symbol,
+            positionAmt=position_amount,
+            notional=str(abs(Decimal(position_amount)) * Decimal("100")),
+            markPrice="100",
+        ),
+        SimpleNamespace(
+            symbol="ETHUSDT",
+            positionAmt="2",
+            notional="200",
+            markPrice="100",
+        ),
+    ]
+    exchange_info = SimpleNamespace(
+        serverTime=int(DIRECT_CHECKED_AT.timestamp() * 1000),
+        symbols=[
+            SimpleNamespace(
+                symbol=symbol,
+                filters=[
+                    {
+                        "filterType": "PRICE_FILTER",
+                        "minPrice": "0.1",
+                        "maxPrice": "1000000",
+                        "tickSize": current_tick_size,
+                    },
+                    {
+                        "filterType": "LOT_SIZE",
+                        "stepSize": "0.01",
+                        "minQty": "0.01",
+                        "maxQty": "1000",
+                    },
+                    {
+                        "filterType": "MARKET_LOT_SIZE",
+                        "stepSize": "0.1",
+                        "minQty": "0.1",
+                        "maxQty": "100",
+                    },
+                    {"filterType": "MIN_NOTIONAL", "notional": "5"},
+                ],
+            )
+        ],
+    )
+
+    class AccountAPI:
+        async def query_futures_account_info(self, **_kwargs):
+            return SimpleNamespace(
+                canTrade=True,
+                availableBalance="1000",
+                assets=[],
+            )
+
+        async def query_futures_symbol_config(self, **_kwargs):
+            return [
+                SimpleNamespace(
+                    symbol=symbol,
+                    marginType="CROSSED",
+                    leverage="5",
+                )
+            ]
+
+        async def query_futures_hedge_mode(self, **_kwargs):
+            return SimpleNamespace(dualSidePosition=False)
+
+        async def query_futures_position_risk(self, **_kwargs):
+            return positions
+
+        async def query_open_orders(self, **_kwargs):
+            return [
+                SimpleNamespace(clientOrderId=client_order_id)
+                for client_order_id in open_order_ids
+            ]
+
+        async def query_open_algo_orders(self, **_kwargs):
+            return [
+                SimpleNamespace(clientAlgoId=client_algo_id)
+                for client_algo_id in open_algo_ids
+            ]
+
+    class MarketAPI:
+        async def query_futures_exchange_info(self):
+            return exchange_info
+
+        async def query_ticker_book(self, **_kwargs):
+            return [
+                SimpleNamespace(
+                    symbol=symbol,
+                    bidPrice="99",
+                    askPrice="101",
+                )
+            ]
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return DIRECT_CHECKED_AT.replace(tzinfo=None)
+            return DIRECT_CHECKED_AT.astimezone(tz)
+
+    async def single_asset_mode(*_args, **_kwargs):
+        return True
+
+    async def current_mark_price(*_args, **_kwargs):
+        return Decimal("100"), DIRECT_CHECKED_AT
+
+    provider = ProductPreSubmitFactProvider(
+        node=SimpleNamespace(kernel=SimpleNamespace(clock=object())),
+        profile="BINANCE_DEMO",
+        api_key=SecretStr("key"),
+        api_secret=SecretStr("secret"),
+        proxy_url=None,
+    )
+    client = object()
+    monkeypatch.setattr(provider, "_binance_client", lambda: client)
+    monkeypatch.setattr(provider, "_account_api", lambda _client: AccountAPI())
+    monkeypatch.setattr(provider, "_market_api", lambda _client: MarketAPI())
+    monkeypatch.setattr(product_entry_module, "datetime", FrozenDateTime)
+    monkeypatch.setattr(
+        product_entry_module,
+        "query_single_asset_mode",
+        single_asset_mode,
+    )
+    monkeypatch.setattr(
+        product_entry_module,
+        "_query_current_mark_price",
+        current_mark_price,
+    )
+    return provider, activation, leg
+
+
+def _run_direct_facts(
+    provider: ProductPreSubmitFactProvider,
+    activation: PlanActivation,
+    leg: MaterializedOrderLeg,
+    *,
+    owned_order_client_ids: frozenset[str] = frozenset({"owned-order"}),
+    owned_algo_client_ids: frozenset[str] = frozenset({"owned-algo"}),
+    expected_signed_position: str = "0.2",
+) -> DirectScheduleFacts:
+    return asyncio.run(
+        provider.direct_entry_facts(
+            activation,
+            leg,
+            owned_order_client_ids=owned_order_client_ids,
+            owned_algo_client_ids=owned_algo_client_ids,
+            expected_signed_position=expected_signed_position,
+            outstanding_entry_quantity="0.3",
+            outstanding_entry_notional="30",
+            price_move_bps_by_window={5: "-12.5"},
+        )
+    )
+
+
+def test_direct_entry_facts_accepts_no_expiry_and_returns_complete_inputs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider, activation, leg = _direct_fact_case(
+        monkeypatch,
+        valid_until=None,
+    )
+
+    facts = _run_direct_facts(provider, activation, leg)
+
+    assert facts.account.checked_at == DIRECT_CHECKED_AT
+    assert facts.account.conservative_price == "101"
+    assert facts.account.activation_current_notional == "50.2"
+    assert facts.account.account_current_notional == "250"
+    assert facts.account.activation_current_margin == "10.04"
+    assert facts.account.current_abs_position == "0.2"
+    assert facts.account.post_action_abs_position == "0.6"
+    assert facts.conditions.basis_ready is True
+    assert facts.conditions.mark_price == "100"
+    assert facts.conditions.bid_price == "99"
+    assert facts.conditions.ask_price == "101"
+    assert facts.conditions.price_move_bps_by_window == {5: "-12.5"}
+    assert facts.conditions.elapsed_seconds == 60
+
+    action_check = facts.account.direct_action_check(
+        leg.proposed_action,
+        activation_id=activation.activation_id,
+        economic_action_prior_notional="7",
+        environment_id=activation.environment_id,
+        environment_kind=activation.environment_kind,
+        authority_class=activation.authority_class,
+        account_ref=activation.account_ref,
+    )
+    assert action_check.quantized_quantity == "0.1"
+    assert action_check.economic_action_prior_notional == "7"
+    assert action_check.activation_current_notional == "50.2"
+    assert action_check.account_current_notional == "250"
+
+
+def test_direct_entry_facts_rejects_an_expired_leg(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider, activation, leg = _direct_fact_case(
+        monkeypatch,
+        valid_until=DIRECT_CHECKED_AT,
+    )
+
+    with pytest.raises(ProductPreSubmitRejected) as exc_info:
+        _run_direct_facts(provider, activation, leg)
+
+    assert exc_info.value.reason_code == "DIRECT_ENTRY_EXPIRED"
+
+
+def test_direct_entry_facts_rejects_instrument_rule_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider, activation, leg = _direct_fact_case(
+        monkeypatch,
+        current_tick_size="0.2",
+    )
+
+    with pytest.raises(ProductPreSubmitRejected) as exc_info:
+        _run_direct_facts(provider, activation, leg)
+
+    assert exc_info.value.reason_code == "INSTRUMENT_RULES_DRIFT"
+
+
+@pytest.mark.parametrize(
+    ("open_order_ids", "open_algo_ids", "owned_order_ids", "owned_algo_ids"),
+    [
+        (("foreign-order",), (), frozenset({"owned-order"}), frozenset()),
+        ((), ("foreign-algo",), frozenset(), frozenset({"owned-algo"})),
+    ],
+)
+def test_direct_entry_facts_rejects_unowned_open_ids(
+    monkeypatch: pytest.MonkeyPatch,
+    open_order_ids: tuple[str, ...],
+    open_algo_ids: tuple[str, ...],
+    owned_order_ids: frozenset[str],
+    owned_algo_ids: frozenset[str],
+) -> None:
+    provider, activation, leg = _direct_fact_case(
+        monkeypatch,
+        open_order_ids=open_order_ids,
+        open_algo_ids=open_algo_ids,
+    )
+
+    with pytest.raises(ProductPreSubmitRejected) as exc_info:
+        _run_direct_facts(
+            provider,
+            activation,
+            leg,
+            owned_order_client_ids=owned_order_ids,
+            owned_algo_client_ids=owned_algo_ids,
+        )
+
+    assert exc_info.value.reason_code == "ENTRY_OPEN_ORDER_CONFLICT"
+
+
+def test_direct_entry_facts_requires_the_expected_signed_position(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider, activation, leg = _direct_fact_case(monkeypatch)
+
+    with pytest.raises(ProductPreSubmitRejected) as exc_info:
+        _run_direct_facts(
+            provider,
+            activation,
+            leg,
+            expected_signed_position="0.1",
+        )
+
+    assert exc_info.value.reason_code == "POSITION_ATTRIBUTION_UNKNOWN"
+
+
 def test_product_market_rules_use_the_execution_profile_filters() -> None:
     instrument = SimpleNamespace(
         size_increment="0.0001",
@@ -121,6 +484,8 @@ def test_product_market_rules_use_the_execution_profile_filters() -> None:
             "filters": [
                 {
                     "filterType": "PRICE_FILTER",
+                    "minPrice": "0.10",
+                    "maxPrice": "1000000.00",
                     "tickSize": "0.10",
                 },
                 {

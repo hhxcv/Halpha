@@ -54,6 +54,8 @@ def test_process_secret_capabilities_are_not_shared() -> None:
     assert "local_web_api" in executor.forbidden_capabilities
     assert "smtp_credentials" in executor.forbidden_capabilities
     assert "nautilus_trading_node" in app.forbidden_capabilities
+    assert "binance_public_read_only" in app.allowed_capabilities
+    assert "binance_private_connection" in app.forbidden_capabilities
 
 
 def test_preflight_starts_no_product_or_external_runtime() -> None:
