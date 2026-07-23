@@ -6,11 +6,32 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from halpha.capital.models import AuthorityClass, EnvironmentKind
 from halpha.domain_values import canonical_decimal, decimal_from_string
-from halpha.planning.registry import Direction, FixedStrategyPlanBasis
+from halpha.planning.order_schedule import (
+    OrderSchedulePreview,
+    OrderScheduleSpec,
+    direct_allowed_action_profiles,
+    validate_current_order_schedule_support,
+    validate_order_schedule_snapshot,
+)
+from halpha.planning.registry import (
+    DIRECT_EXECUTION_REF,
+    DecisionBasisKind,
+    Direction,
+    DraftDecisionBasis,
+    FixedDecisionBasis,
+    FixedStrategyPlanBasis,
+)
 
 
 class PlanLifecycle(StrEnum):
@@ -37,6 +58,35 @@ class ProtectionState(StrEnum):
 class PlanCreatorKind(StrEnum):
     HUMAN = "HUMAN"
     AI = "AI"
+
+
+PERSISTED_HISTORY_CONTEXT_KEY = "persisted_history"
+
+
+def validate_current_plan_admission(
+    *,
+    decision_basis_kind: DecisionBasisKind,
+    order_schedule_spec: OrderScheduleSpec | None,
+    allowed_actions: frozenset[str],
+) -> None:
+    """Apply release-current admission without redefining persisted history."""
+
+    validate_current_order_schedule_support(
+        decision_basis_kind,
+        order_schedule_spec,
+    )
+    if (
+        decision_basis_kind is DecisionBasisKind.DIRECT_EXECUTION
+        and allowed_actions != direct_allowed_action_profiles(order_schedule_spec)
+    ):
+        raise ValueError("DIRECT_EXECUTION_ACTION_SCOPE_MISMATCH")
+
+
+def _is_persisted_history(info: ValidationInfo) -> bool:
+    return bool(
+        info.context
+        and info.context.get(PERSISTED_HISTORY_CONTEXT_KEY) is True
+    )
 
 
 class ConditionResult(StrEnum):
@@ -78,8 +128,8 @@ class TradePlanContent(PlanningModel):
     plan_name: str | None = None
     created_at: datetime | None = None
     creator_kind: PlanCreatorKind | None = None
-    strategy_id: str
-    parameters: dict[str, Any]
+    decision_basis: DraftDecisionBasis
+    order_schedule_spec: OrderScheduleSpec | None = None
     environment_id: str
     environment_kind: EnvironmentKind
     authority_class: AuthorityClass
@@ -93,6 +143,21 @@ class TradePlanContent(PlanningModel):
     valid_until: datetime
     allowed_actions: frozenset[str]
     terms: dict[str, Any]
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_legacy_strategy_drafts(cls, value: Any) -> Any:
+        if not isinstance(value, dict) or "decision_basis" in value:
+            return value
+        if "strategy_id" not in value or "parameters" not in value:
+            return value
+        migrated = dict(value)
+        migrated["decision_basis"] = {
+            "kind": DecisionBasisKind.STRATEGY_SIGNAL.value,
+            "decision_basis_ref": migrated.pop("strategy_id"),
+            "parameters": migrated.pop("parameters"),
+        }
+        return migrated
 
     @field_validator("plan_name")
     @classmethod
@@ -112,7 +177,7 @@ class TradePlanContent(PlanningModel):
         )
 
     @model_validator(mode="after")
-    def boundaries_are_consistent(self) -> TradePlanContent:
+    def boundaries_are_consistent(self, info: ValidationInfo) -> TradePlanContent:
         expected = (
             AuthorityClass.DEMO_VALIDATION
             if self.environment_kind is EnvironmentKind.DEMO
@@ -124,6 +189,12 @@ class TradePlanContent(PlanningModel):
             raise ValueError("PLAN_WINDOW_INVALID")
         if not self.allowed_actions:
             raise ValueError("PLAN_ACTIONS_EMPTY")
+        if not _is_persisted_history(info):
+            validate_current_plan_admission(
+                decision_basis_kind=self.decision_basis.kind,
+                order_schedule_spec=self.order_schedule_spec,
+                allowed_actions=self.allowed_actions,
+            )
         return self
 
 
@@ -152,7 +223,8 @@ class TradePlanVersion(PlanningModel):
     plan_name: str | None = None
     created_at: datetime | None = None
     creator_kind: PlanCreatorKind | None = None
-    strategy_basis: FixedStrategyPlanBasis
+    decision_basis: FixedDecisionBasis
+    order_schedule_spec: OrderScheduleSpec | None = None
     account_ref: str
     venue_ref: str
     instrument_ref: str
@@ -164,6 +236,25 @@ class TradePlanVersion(PlanningModel):
     allowed_actions: frozenset[str]
     terms: dict[str, Any]
     content_digest: str
+
+    @model_validator(mode="after")
+    def schedule_has_a_current_runtime_consumer(
+        self,
+        info: ValidationInfo,
+    ) -> TradePlanVersion:
+        if not _is_persisted_history(info):
+            validate_current_plan_admission(
+                decision_basis_kind=self.decision_basis.kind,
+                order_schedule_spec=self.order_schedule_spec,
+                allowed_actions=self.allowed_actions,
+            )
+        return self
+
+    @property
+    def strategy_basis(self) -> FixedStrategyPlanBasis:
+        if not isinstance(self.decision_basis, FixedStrategyPlanBasis):
+            raise ValueError("STRATEGY_BASIS_NOT_APPLICABLE")
+        return self.decision_basis
 
 
 class ConditionJudgement(PlanningModel):
@@ -224,8 +315,9 @@ class PlanActivation(PlanningModel):
     account_ref: str
     instrument_ref: str
     direction: Direction
-    strategy_id: str
+    decision_basis_ref: str
     framework_strategy_id: str
+    order_schedule_snapshot: OrderSchedulePreview | None = None
     target_exposure: str
     lifecycle: PlanLifecycle = PlanLifecycle.RUNNING
     run_state: RunState = RunState.ACTIVE
@@ -265,7 +357,30 @@ class PlanActivation(PlanningModel):
             raise ValueError("TAKEOVER_SCOPE_REQUIRED")
         if self.lifecycle is PlanLifecycle.COMPLETED and not self.closure_digest:
             raise ValueError("CLOSURE_UNPROVEN")
+        is_direct = self.decision_basis_ref == DIRECT_EXECUTION_REF
+        if self.order_schedule_snapshot is not None and not is_direct:
+            raise ValueError("STRATEGY_ORDER_SCHEDULE_NOT_SUPPORTED")
+        if is_direct and self.order_schedule_snapshot is None:
+            raise ValueError("ORDER_SCHEDULE_SNAPSHOT_REQUIRED")
+        if self.order_schedule_snapshot is not None:
+            # The activation snapshot is immutable execution history.  Current
+            # catalog admission belongs to TradePlanContent/TradePlanVersion;
+            # reapplying it here would make a valid historical activation
+            # unreadable whenever a later release narrows supported inputs.
+            validate_order_schedule_snapshot(self.order_schedule_snapshot)
+            if (
+                self.order_schedule_snapshot.schedule_ref != self.plan_version_ref
+                or self.order_schedule_snapshot.instrument_ref != self.instrument_ref
+                or self.order_schedule_snapshot.direction is not self.direction
+            ):
+                raise ValueError("ORDER_SCHEDULE_SNAPSHOT_MISMATCH")
         return self
+
+    @property
+    def strategy_id(self) -> str:
+        if self.decision_basis_ref == DIRECT_EXECUTION_REF:
+            raise ValueError("STRATEGY_BASIS_NOT_APPLICABLE")
+        return self.decision_basis_ref.split("@", maxsplit=1)[0]
 
 
 class PlanEvent(PlanningModel):

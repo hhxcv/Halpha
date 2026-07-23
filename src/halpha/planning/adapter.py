@@ -24,6 +24,30 @@ from halpha.planning.strategies.one_shot import (
 from halpha.planning.bar_evaluation import NautilusBarEntryEvaluator
 
 
+_LIMIT_TIME_IN_FORCE = {
+    "GTC": TimeInForce.GTC,
+    "GTD": TimeInForce.GTD,
+    "IOC": TimeInForce.IOC,
+    "FOK": TimeInForce.FOK,
+}
+_BINANCE_PRICE_MATCH_VALUES = frozenset(
+    {
+        "OPPONENT",
+        "OPPONENT_5",
+        "OPPONENT_10",
+        "OPPONENT_20",
+        "QUEUE",
+        "QUEUE_5",
+        "QUEUE_10",
+        "QUEUE_20",
+    }
+)
+_CONDITIONAL_TRIGGER_TYPES = {
+    "LAST_PRICE": TriggerType.LAST_PRICE,
+    "MARK_PRICE": TriggerType.MARK_PRICE,
+}
+
+
 class ProposalSink(Protocol):
     def __call__(self, proposal: StrategyProposal) -> None: ...
 
@@ -93,9 +117,9 @@ class HalphaStrategyAdapter(Strategy):
         self,
         *,
         activation_id: str,
-        logic: OneShotDonchianAtrLogic,
-        state_provider: Callable[[], ActivationStrategyState],
-        proposal_sink: ProposalSink,
+        logic: OneShotDonchianAtrLogic | None = None,
+        state_provider: Callable[[], ActivationStrategyState] | None = None,
+        proposal_sink: ProposalSink | None = None,
         instrument_ref: str | None = None,
         persisted_action_capability: object | None = None,
         execution_event_sink: ExecutionEventSink | None = None,
@@ -110,6 +134,13 @@ class HalphaStrategyAdapter(Strategy):
         history_cache_provider: HistoryCacheProvider | None = None,
     ) -> None:
         super().__init__(config=strategy_config_for_activation(activation_id))
+        strategy_parts = (logic, state_provider, proposal_sink)
+        if any(item is None for item in strategy_parts) and not all(
+            item is None for item in strategy_parts
+        ):
+            raise ValueError("STRATEGY_ADAPTER_CONFIGURATION_INCOMPLETE")
+        if bar_evaluator is not None and all(item is None for item in strategy_parts):
+            raise ValueError("STRATEGY_ADAPTER_EVALUATOR_WITHOUT_LOGIC")
         self._activation_id = activation_id
         self._logic = logic
         self._state_provider = state_provider
@@ -152,6 +183,12 @@ class HalphaStrategyAdapter(Strategy):
         )
 
     def evaluate_normalized_entry(self, evaluation: EntryEvaluationInput) -> None:
+        if (
+            self._logic is None
+            or self._state_provider is None
+            or self._proposal_sink is None
+        ):
+            raise RuntimeError("STRATEGY_EVALUATION_NOT_CONFIGURED")
         result = self._logic.evaluate_entry(evaluation, self._state_provider())
         if result.proposal is not None:
             self._proposal_sink(result.proposal)
@@ -276,6 +313,8 @@ class HalphaStrategyAdapter(Strategy):
             # (and therefore avoid the live pre-submit fact read) after that
             # permanent product decision. The state is checked again below for
             # the still-open path so a concurrent stop remains fail-closed.
+            if self._state_provider is None:
+                raise RuntimeError("STRATEGY_STATE_PROVIDER_NOT_CONFIGURED")
             if self._state_provider().entry_opportunity_consumed:
                 return
             evaluation = self._bar_evaluator.accept(bar)
@@ -306,12 +345,25 @@ class HalphaStrategyAdapter(Strategy):
         trigger_price: str | None,
         reduce_only: bool,
         client_order_id: str,
+        time_in_force: str | None = None,
+        post_only: bool = False,
+        price_match: str | None = None,
+        expire_at: datetime | None = None,
+        trigger_source: str | None = None,
     ) -> object:
         """EXE-only final write hop after a committed SUBMITTING action."""
 
         self._require_persisted_action_capability(capability)
         if client_order_id in self._persisted_orders:
             raise RuntimeError("DUPLICATE_IDENTITY_CONFLICT")
+        if type(post_only) is not bool:
+            raise ValueError("VENUE_ORDER_POLICY_INVALID")
+        if price_match is not None and not isinstance(price_match, str):
+            raise ValueError("VENUE_ORDER_POLICY_INVALID")
+        if expire_at is not None and not isinstance(expire_at, datetime):
+            raise ValueError("VENUE_ORDER_POLICY_INVALID")
+        if trigger_source is not None and not isinstance(trigger_source, str):
+            raise ValueError("VENUE_TRIGGER_SOURCE_INVALID")
         instrument_id = InstrumentId.from_str(f"{instrument_ref}.BINANCE")
         if self.cache.instrument(instrument_id) is None:
             raise RuntimeError("INSTRUMENT_NOT_IN_CACHE")
@@ -327,40 +379,108 @@ class HalphaStrategyAdapter(Strategy):
             "client_order_id": ClientOrderId(client_order_id),
         }
         if profile == "ENTRY_MARKET" or profile == "REDUCE_OR_CLOSE_MARKET":
+            if (
+                time_in_force is not None
+                or post_only
+                or price_match is not None
+                or expire_at is not None
+                or trigger_source is not None
+            ):
+                raise ValueError("VENUE_ORDER_POLICY_CONFLICT")
             order = self.order_factory.market(**common, reduce_only=reduce_only)
         elif profile == "ENTRY_LIMIT":
             if price is None:
                 raise ValueError("ACTION_PROFILE_MISMATCH")
+            if trigger_source is not None:
+                raise ValueError("VENUE_TRIGGER_SOURCE_CONFLICT")
+            if time_in_force is None:
+                if post_only or price_match is not None or expire_at is not None:
+                    raise ValueError("VENUE_ORDER_POLICY_CONFLICT")
+                normalized_time_in_force = TimeInForce.GTC
+            else:
+                try:
+                    normalized_time_in_force = _LIMIT_TIME_IN_FORCE[time_in_force]
+                except (KeyError, TypeError):
+                    raise ValueError("VENUE_ORDER_POLICY_INVALID") from None
+            if (
+                price_match is not None
+                and price_match not in _BINANCE_PRICE_MATCH_VALUES
+            ):
+                raise ValueError("VENUE_ORDER_POLICY_INVALID")
+            if post_only and (
+                normalized_time_in_force is not TimeInForce.GTC
+                or price_match is not None
+            ):
+                raise ValueError("VENUE_ORDER_POLICY_CONFLICT")
+            if (normalized_time_in_force is TimeInForce.GTD) != (expire_at is not None):
+                raise ValueError("VENUE_ORDER_POLICY_CONFLICT")
+            if expire_at is not None and expire_at.utcoffset() is None:
+                raise ValueError("VENUE_ORDER_POLICY_INVALID")
             order = self.order_factory.limit(
                 **common,
                 price=Price.from_str(price),
-                time_in_force=TimeInForce.GTC,
+                time_in_force=normalized_time_in_force,
+                expire_time=expire_at,
+                post_only=post_only,
             )
         elif profile in {
             "ENTRY_STOP_MARKET",
             "PROTECTIVE_STOP_REDUCE_ONLY",
         }:
+            if (
+                time_in_force is not None
+                or post_only
+                or price_match is not None
+                or expire_at is not None
+            ):
+                raise ValueError("VENUE_ORDER_POLICY_CONFLICT")
             if trigger_price is None:
                 raise ValueError("ACTION_PROFILE_MISMATCH")
+            try:
+                normalized_trigger_type = (
+                    TriggerType.LAST_PRICE
+                    if trigger_source is None
+                    else _CONDITIONAL_TRIGGER_TYPES[trigger_source]
+                )
+            except KeyError:
+                raise ValueError("VENUE_TRIGGER_SOURCE_INVALID") from None
             order = self.order_factory.stop_market(
                 **common,
                 trigger_price=Price.from_str(trigger_price),
-                trigger_type=TriggerType.LAST_PRICE,
+                trigger_type=normalized_trigger_type,
                 reduce_only=reduce_only,
             )
         elif profile in {"TAKE_PROFIT_1", "TAKE_PROFIT_2"}:
+            if (
+                time_in_force is not None
+                or post_only
+                or price_match is not None
+                or expire_at is not None
+            ):
+                raise ValueError("VENUE_ORDER_POLICY_CONFLICT")
             if trigger_price is None:
                 raise ValueError("ACTION_PROFILE_MISMATCH")
+            try:
+                normalized_trigger_type = (
+                    TriggerType.LAST_PRICE
+                    if trigger_source is None
+                    else _CONDITIONAL_TRIGGER_TYPES[trigger_source]
+                )
+            except KeyError:
+                raise ValueError("VENUE_TRIGGER_SOURCE_INVALID") from None
             order = self.order_factory.market_if_touched(
                 **common,
                 trigger_price=Price.from_str(trigger_price),
-                trigger_type=TriggerType.LAST_PRICE,
+                trigger_type=normalized_trigger_type,
                 reduce_only=True,
             )
         else:
             raise ValueError("ACTION_PROFILE_UNQUALIFIED")
         self._persisted_orders[client_order_id] = order
-        self.submit_order(order)
+        if price_match is None:
+            self.submit_order(order)
+        else:
+            self.submit_order(order, params={"price_match": price_match})
         return order
 
     def _query_persisted_order(self, capability: object, client_order_id: str) -> object:
@@ -434,7 +554,7 @@ class ActivationAdapterSpec:
 
 
 class ActivationAdapterLifecycle:
-    """One adapter per open non-takeover activation, owned by Controller."""
+    """One adapter per runtime responsibility activation, owned by Controller."""
 
     def __init__(self, controller: ControllerPort) -> None:
         self._controller = controller

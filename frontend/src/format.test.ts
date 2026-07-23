@@ -80,6 +80,8 @@ describe("deterministic workbench formatting", () => {
   it("按计划规则显示实际动作含义，而不是把所有事件都写成入场", () => {
     expect(planEventSummary("PROPOSED_ACTION_CAP_ACCEPTED", "ENTRY_BREAKOUT"))
       .toBe("入场意图已通过资金检查");
+    expect(planEventSummary("PROPOSED_ACTION_CAP_ACCEPTED", "DIRECT_ORDER_SCHEDULE_LEG"))
+      .toBe("直接执行入场档位已通过资金检查");
     expect(planEventSummary("PROPOSED_ACTION_CAP_ACCEPTED", "PROTECTION_AFTER_FILL"))
       .toBe("保护委托已通过资金检查");
     expect(planEventSummary("PROPOSED_ACTION_CAP_ACCEPTED", "TAKE_PROFIT_1_AFTER_PROTECTION"))

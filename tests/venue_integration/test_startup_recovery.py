@@ -18,6 +18,7 @@ from halpha.venue_integration.service import ExecutionApplicationService
 from halpha.venue_integration.transitions import (
     begin_submission,
     build_execution_action,
+    mark_action_open,
     mark_submission_unknown,
 )
 
@@ -167,7 +168,18 @@ def test_startup_recovery_makes_submitting_query_only_and_preserves_existing_unk
         next_query_at=NOW + timedelta(seconds=5),
         observed_at=NOW + timedelta(seconds=2),
     )
-    repository = FakeActionRepository((submitting, already_unknown))
+    already_open = mark_action_open(
+        submitting.model_copy(
+            update={
+                "execution_action_id": "10000000-0000-0000-0000-000000000006",
+                "client_order_id": "00112233445566778899aabbccddeeff",
+            }
+        ),
+        venue_order_refs=("venue-order-open",),
+        venue_fact_refs=("open-fact",),
+        observed_at=NOW + timedelta(seconds=3),
+    )
+    repository = FakeActionRepository((submitting, already_unknown, already_open))
     service = ExecutionApplicationService(
         repository,  # type: ignore[arg-type]
         object(),  # type: ignore[arg-type]
@@ -185,10 +197,12 @@ def test_startup_recovery_makes_submitting_query_only_and_preserves_existing_unk
     assert tuple(action.state for action in recovered) == (
         ExecutionActionState.UNKNOWN,
         ExecutionActionState.UNKNOWN,
+        ExecutionActionState.OPEN,
     )
     assert recovered[0].unknown_reason == "EXECUTOR_RESTART_AFTER_SUBMITTING"
     assert recovered[0].request_digest == submitting.request_digest
     assert recovered[1] is already_unknown
+    assert recovered[2] is already_open
     assert all(action.state is not ExecutionActionState.READY for action in recovered)
 
 

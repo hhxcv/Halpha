@@ -6,13 +6,13 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
+from nautilus_trader.adapters.binance.common.enums import BinanceEnvironment
 
-from nautilus_trader.adapters.binance.common.enums import BinanceKlineInterval
-
+import halpha.public_market as public_market_module
 from halpha.public_market import (
+    BINANCE_KLINE_INTERVALS,
     BinancePublicMarketContext,
-    FIFTEEN_MINUTES_MS,
-    ONE_MINUTE_MS,
+    MARKET_INTERVAL_MILLISECONDS,
     MarketContextUnavailable,
 )
 
@@ -46,10 +46,10 @@ class FakeMarketApi:
         assert end_time is not None
         count = int(limit)
         start = int(start_time)
-        interval_ms = (
-            ONE_MINUTE_MS
-            if interval is BinanceKlineInterval.MINUTE_1
-            else FIFTEEN_MINUTES_MS
+        interval_ms = next(
+            MARKET_INTERVAL_MILLISECONDS[key]
+            for key, native in BINANCE_KLINE_INTERVALS.items()
+            if interval is native
         )
         if not self.complete:
             count -= 1
@@ -123,6 +123,7 @@ def test_public_market_window_returns_exact_contiguous_review_bars() -> None:
     provider = BinancePublicMarketContext(
         "BINANCE_DEMO",
         market_api=FakeMarketApi(),
+        observed_at_provider=lambda: datetime(2027, 2, 1, tzinfo=UTC),
     )
     start = datetime(2027, 1, 15, 8, 0, 30, tzinfo=UTC)
 
@@ -141,6 +142,132 @@ def test_public_market_window_returns_exact_contiguous_review_bars() -> None:
     assert window.bars[0].open_at == datetime(2027, 1, 15, 8, 0, tzinfo=UTC)
     assert window.bars[-1].close == "105"
     assert window.source_cutoff == datetime(2027, 1, 15, 8, 5, tzinfo=UTC)
+
+
+def test_current_open_daily_candle_does_not_project_a_future_source_cutoff() -> None:
+    observed_at = datetime(2027, 1, 15, 8, 2, 30, tzinfo=UTC)
+    provider = BinancePublicMarketContext(
+        "BINANCE_DEMO",
+        market_api=FakeMarketApi(),
+        observed_at_provider=lambda: observed_at,
+    )
+
+    window = asyncio.run(
+        provider.fetch_window(
+            "BTCUSDT-PERP",
+            "1d",
+            observed_at,
+            observed_at,
+        )
+    )
+
+    assert len(window.bars) == 1
+    assert window.bars[0].open_at == datetime(2027, 1, 15, tzinfo=UTC)
+    assert window.bars[0].close_at == datetime(2027, 1, 16, tzinfo=UTC)
+    assert window.source_cutoff == observed_at
+    assert window.source_cutoff < window.bars[0].close_at
+
+
+@pytest.mark.parametrize(
+    ("profile", "expected_environment", "expected_source"),
+    (
+        (
+            "BINANCE_DEMO",
+            BinanceEnvironment.DEMO,
+            "BINANCE_DEMO_PUBLIC",
+        ),
+        (
+            "BINANCE_LIVE_READ_ONLY",
+            BinanceEnvironment.LIVE,
+            "BINANCE_LIVE_PUBLIC",
+        ),
+        (
+            "BINANCE_LIVE_WRITE",
+            BinanceEnvironment.LIVE,
+            "BINANCE_LIVE_PUBLIC",
+        ),
+    ),
+)
+def test_market_profile_routes_context_and_history_to_only_its_own_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    profile: str,
+    expected_environment: BinanceEnvironment,
+    expected_source: str,
+) -> None:
+    environments: list[BinanceEnvironment] = []
+
+    def fake_http_client(**kwargs):
+        environments.append(kwargs["environment"])
+        return object()
+
+    monkeypatch.setattr(
+        public_market_module,
+        "get_cached_binance_http_client",
+        fake_http_client,
+    )
+    monkeypatch.setattr(
+        public_market_module,
+        "BinanceFuturesMarketHttpAPI",
+        lambda *_args, **_kwargs: FakeMarketApi(),
+    )
+
+    provider = BinancePublicMarketContext(profile)
+    start = datetime(2027, 1, 15, 8, 0, tzinfo=UTC)
+    context = asyncio.run(provider.fetch("BTCUSDT-PERP", 20))
+    window = asyncio.run(
+        provider.fetch_window(
+            "BTCUSDT-PERP",
+            "1m",
+            start,
+            start,
+        )
+    )
+
+    assert environments == [expected_environment]
+    assert context.source == expected_source
+    assert window.source == expected_source
+
+
+def test_unknown_profile_cannot_fall_back_to_live_market_data() -> None:
+    with pytest.raises(ValueError, match="PUBLIC_MARKET_PROFILE_UNSUPPORTED"):
+        BinancePublicMarketContext(
+            "UNRECOGNIZED_PROFILE",
+            market_api=FakeMarketApi(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("interval", "duration"),
+    [
+        ("5m", timedelta(minutes=5)),
+        ("15m", timedelta(minutes=15)),
+        ("1h", timedelta(hours=1)),
+        ("4h", timedelta(hours=4)),
+        ("1d", timedelta(days=1)),
+    ],
+)
+def test_public_market_window_supports_chart_intervals(
+    interval: str,
+    duration: timedelta,
+) -> None:
+    provider = BinancePublicMarketContext(
+        "BINANCE_DEMO",
+        market_api=FakeMarketApi(),
+    )
+    start = datetime(2027, 1, 15, 0, 0, tzinfo=UTC)
+
+    window = asyncio.run(
+        provider.fetch_window(
+            "BTCUSDT-PERP",
+            interval,
+            start,
+            start + duration * 2,
+        )
+    )
+
+    assert window.interval == interval
+    assert len(window.bars) == 3
+    assert window.bars[1].open_at == start + duration
 
 
 def test_public_market_window_rejects_unbounded_review_range() -> None:

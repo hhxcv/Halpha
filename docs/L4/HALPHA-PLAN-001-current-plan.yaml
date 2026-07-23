@@ -1,7 +1,7 @@
 document_id: HALPHA-PLAN-001
 level: L4
 language: zh-CN
-as_of: 2026-07-21
+as_of: 2026-07-23
 
 current_summary: >-
   Halpha 在现有 Windows 10 单机上持续完善最小交易闭环。开发每次选择一个可验证的小结果，
@@ -38,11 +38,11 @@ current_facts:
   source:
     repository: 当前 Git 工作区
     identity_rule: 构建或验证时直接读取提交、分支和工作树；本计划不抄写易失真的 SHA
-    checked_at: 2026-07-21
+    checked_at: 2026-07-23
   evidence_limit: >-
     历史测试和观察只说明当时输入；当前实现仍在连续修改，因此不把历史结果表述为当前产品闭环或真实账户交易能力。
   persistence:
-    migration_head: 20260721_0010
+    migration_head: 20260723_0012
     demo_database_at_head: true
     live_database_at_head: false
     product_record_family_count: 10

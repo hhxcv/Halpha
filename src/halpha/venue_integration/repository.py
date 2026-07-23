@@ -134,6 +134,21 @@ class PostgreSQLExecutionActionRepository:
         ).fetchone()
         return row is not None
 
+    def has_unclosed_called_responsibility(self, activation_id: str) -> bool:
+        """Return whether any venue call still needs authoritative reconciliation."""
+
+        row = self._connection.execute(
+            """
+            SELECT 1
+            FROM halpha.execution_action
+            WHERE environment_id = %s AND activation_id = %s
+              AND state IN ('SUBMITTING', 'UNKNOWN', 'OPEN')
+            LIMIT 1
+            """,
+            (self._environment_id, activation_id),
+        ).fetchone()
+        return row is not None
+
     def list_by_states(
         self,
         states: tuple[str, ...],

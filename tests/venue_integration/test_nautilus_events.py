@@ -189,6 +189,47 @@ def test_deterministic_order_rejection_remains_a_terminal_venue_fact() -> None:
     assert result.unknown_reason is None
     assert result.facts[0].payload["status"] == "REJECTED"
     assert result.facts[0].payload["reason"] == "MIN_NOTIONAL"
+    assert result.facts[0].payload["cumulative_filled_quantity"] == "0"
+
+
+def test_terminal_cancel_derives_cumulative_fill_from_authoritative_leaves() -> None:
+    action = begin_submission(
+        _action(),
+        capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+        request_payload={"profile": "ENTRY_MARKET"},
+        observed_at=NOW,
+    )
+
+    result = _normalizer(action).normalize(
+        _event("OrderCanceled"),
+        received_at=NOW,
+    )
+
+    assert result.facts[0].payload["status"] == "CANCELLED"
+    assert result.facts[0].payload["cumulative_filled_quantity"] == "0.001"
+
+
+def test_terminal_cancel_without_leaves_does_not_invent_fill_completeness() -> None:
+    action = begin_submission(
+        _action(),
+        capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
+        request_payload={"profile": "ENTRY_MARKET"},
+        observed_at=NOW,
+    )
+    normalizer = NautilusExecutionEventNormalizer(
+        lambda _client_order_id: action,
+        environment_id="demo-main",
+        leaves_quantity_for_client_order_id=lambda _client_order_id: None,
+        fact_id_factory=lambda: "10000000-0000-0000-0000-000000000015",
+    )
+
+    result = normalizer.normalize(
+        _event("OrderCanceled"),
+        received_at=NOW,
+    )
+
+    assert result.facts[0].payload["status"] == "CANCELLED"
+    assert "cumulative_filled_quantity" not in result.facts[0].payload
 
 
 def test_binance_timeout_rejection_keeps_submission_result_unknown() -> None:

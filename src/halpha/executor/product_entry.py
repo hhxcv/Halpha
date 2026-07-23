@@ -42,15 +42,23 @@ from halpha.capital.models import (
     RiskClass,
     StopCategory,
 )
-from halpha.domain_values import canonical_decimal, content_digest
+from halpha.domain_values import canonical_decimal, content_digest, decimal_from_string
 from halpha.planning.bar_evaluation import EntrySizingSnapshot
-from halpha.planning.models import PlanActivation
+from halpha.planning.models import PlanActivation, ProposedAction
+from halpha.planning.order_policies import ConditionFacts
+from halpha.planning.order_schedule import InstrumentOrderRules
+from halpha.planning.order_schedule_actions import MaterializedOrderLeg
 from halpha.planning.registry import Direction
 from halpha.planning.strategies.one_shot import (
     InstrumentQuantityRules,
     StrategyProposal,
 )
 from halpha.venue_integration.facts import build_venue_fact
+from halpha.venue_integration.binance_rules import (
+    BinanceInstrumentRulesError,
+    binance_exchange_symbol_rules,
+    parse_binance_symbol_filters,
+)
 from halpha.venue_integration.models import (
     ExecutionAction,
     ExecutionActionKind,
@@ -118,19 +126,101 @@ class ProductAccountFacts:
         authority_class: AuthorityClass,
         account_ref: str,
     ) -> ActionCheckInput:
+        return self.entry_action_check(
+            activation_id=proposal.activation_id,
+            instrument_ref=_instrument_ref(proposal.instrument_id),
+            action_profile=proposal.action_profile,
+            quantity=proposal.quantity,
+            environment_id=environment_id,
+            environment_kind=environment_kind,
+            authority_class=authority_class,
+            account_ref=account_ref,
+        )
+
+    def direct_action_check(
+        self,
+        proposed: ProposedAction,
+        *,
+        activation_id: str,
+        economic_action_prior_notional: str,
+        environment_id: str,
+        environment_kind: EnvironmentKind,
+        authority_class: AuthorityClass,
+        account_ref: str,
+    ) -> ActionCheckInput:
+        if proposed.quantity is None:
+            raise ProductPreSubmitRejected("DIRECT_ENTRY_QUANTITY_REQUIRED")
+        return self.entry_action_check(
+            activation_id=activation_id,
+            instrument_ref=proposed.instrument_ref,
+            action_profile=proposed.action_profile,
+            quantity=proposed.quantity,
+            economic_action_prior_notional=economic_action_prior_notional,
+            environment_id=environment_id,
+            environment_kind=environment_kind,
+            authority_class=authority_class,
+            account_ref=account_ref,
+        )
+
+    def cancel_action_check(
+        self,
+        activation: PlanActivation,
+    ) -> ActionCheckInput:
+        """Build a risk-neutral check for one direct-entry cancellation."""
+
+        return ActionCheckInput(
+            environment_id=activation.environment_id,
+            environment_kind=activation.environment_kind,
+            authority_class=activation.authority_class,
+            activation_id=activation.activation_id,
+            account_ref=activation.account_ref,
+            instrument_ref=activation.instrument_ref,
+            action_profile="CANCEL_ORDER",
+            control_category=StopCategory.RISK_REDUCTION_OR_ORDER_MANAGEMENT,
+            risk_class=RiskClass.RISK_NEUTRAL,
+            checked_at=self.checked_at,
+            quantized_quantity="0",
+            conservative_price=self.conservative_price,
+            activation_current_notional=self.activation_current_notional,
+            account_current_notional=self.account_current_notional,
+            activation_current_margin=self.activation_current_margin,
+            account_dynamic_available_margin=self.available_margin,
+            actual_margin_mode=self.actual_margin_mode,
+            actual_leverage=self.actual_leverage,
+            post_action_abs_position=self.current_abs_position,
+            current_abs_position=self.current_abs_position,
+            would_reverse_position=False,
+            facts_fresh=True,
+            attribution_unambiguous=True,
+        )
+
+    def entry_action_check(
+        self,
+        *,
+        activation_id: str,
+        instrument_ref: str,
+        action_profile: str,
+        quantity: str,
+        economic_action_prior_notional: str = "0",
+        environment_id: str,
+        environment_kind: EnvironmentKind,
+        authority_class: AuthorityClass,
+        account_ref: str,
+    ) -> ActionCheckInput:
         return ActionCheckInput(
             environment_id=environment_id,
             environment_kind=environment_kind,
             authority_class=authority_class,
-            activation_id=proposal.activation_id,
+            activation_id=activation_id,
             account_ref=account_ref,
-            instrument_ref=_instrument_ref(proposal.instrument_id),
-            action_profile=proposal.action_profile,
+            instrument_ref=instrument_ref,
+            action_profile=action_profile,
             control_category=StopCategory.NEW_RISK,
             risk_class=RiskClass.RISK_INCREASING,
             checked_at=self.checked_at,
-            quantized_quantity=proposal.quantity,
+            quantized_quantity=quantity,
             conservative_price=self.conservative_price,
+            economic_action_prior_notional=economic_action_prior_notional,
             activation_current_notional=self.activation_current_notional,
             account_current_notional=self.account_current_notional,
             activation_current_margin=self.activation_current_margin,
@@ -143,6 +233,12 @@ class ProductAccountFacts:
             facts_fresh=True,
             attribution_unambiguous=True,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class DirectScheduleFacts:
+    account: ProductAccountFacts
+    conditions: ConditionFacts
 
 
 @dataclass(frozen=True, slots=True)
@@ -328,36 +424,10 @@ def instrument_rules_payload(instrument: object) -> dict[str, str]:
         raw_filters = info.get("filters")
         if not isinstance(raw_filters, list):
             raise TypeError("instrument filters are not a list")
-        filters = {
-            str(item["filterType"]): item
-            for item in raw_filters
-            if isinstance(item, dict) and "filterType" in item
-        }
-        price = filters["PRICE_FILTER"]
-        market_lot = filters["MARKET_LOT_SIZE"]
-        notional = filters["MIN_NOTIONAL"]
-        minimum_notional = notional.get("notional") or notional.get("minNotional")
-        if minimum_notional is None:
-            raise KeyError("minimum notional")
-        return {
-            "step_size": canonical_decimal(
-                Decimal(str(market_lot["stepSize"]))
-            ),
-            "price_tick_size": canonical_decimal(
-                Decimal(str(price["tickSize"]))
-            ),
-            "min_quantity": canonical_decimal(
-                Decimal(str(market_lot["minQty"]))
-            ),
-            "max_market_quantity": canonical_decimal(
-                Decimal(str(market_lot["maxQty"]))
-            ),
-            "min_notional": canonical_decimal(
-                Decimal(str(minimum_notional))
-            ),
-        }
+        return parse_binance_symbol_filters(raw_filters).market_sizing_payload()
     except (
         AttributeError,
+        BinanceInstrumentRulesError,
         InvalidOperation,
         KeyError,
         TypeError,
@@ -476,6 +546,38 @@ class ProductPreSubmitFactProvider:
     async def __call__(self, proposal: StrategyProposal) -> ProductAccountFacts:
         try:
             return await self._load_facts(proposal)
+        except ProductPreSubmitRejected:
+            raise
+        except Exception as exc:
+            raise ProductPreSubmitRejected(
+                f"ACCOUNT_FACT_INVALID_{type(exc).__name__.upper()}"
+            ) from None
+
+    async def direct_entry_facts(
+        self,
+        activation: PlanActivation,
+        leg: MaterializedOrderLeg,
+        *,
+        owned_order_client_ids: frozenset[str],
+        owned_algo_client_ids: frozenset[str],
+        expected_signed_position: str,
+        outstanding_entry_quantity: str,
+        outstanding_entry_notional: str,
+        price_move_bps_by_window: dict[int, str] | None = None,
+    ) -> DirectScheduleFacts:
+        """Refresh facts for one fixed direct leg without strategy assumptions."""
+
+        try:
+            return await self._load_direct_entry_facts(
+                activation,
+                leg,
+                owned_order_client_ids=owned_order_client_ids,
+                owned_algo_client_ids=owned_algo_client_ids,
+                expected_signed_position=expected_signed_position,
+                outstanding_entry_quantity=outstanding_entry_quantity,
+                outstanding_entry_notional=outstanding_entry_notional,
+                price_move_bps_by_window=price_move_bps_by_window or {},
+            )
         except ProductPreSubmitRejected:
             raise
         except Exception as exc:
@@ -661,6 +763,199 @@ class ProductPreSubmitFactProvider:
             position_fact=position_fact,
             open_order_client_ids=_client_order_ids(open_orders),
             open_algo_client_ids=_client_algo_order_ids(open_algo_orders),
+        )
+
+    async def _load_direct_entry_facts(
+        self,
+        activation: PlanActivation,
+        leg: MaterializedOrderLeg,
+        *,
+        owned_order_client_ids: frozenset[str],
+        owned_algo_client_ids: frozenset[str],
+        expected_signed_position: str,
+        outstanding_entry_quantity: str,
+        outstanding_entry_notional: str,
+        price_move_bps_by_window: dict[int, str],
+    ) -> DirectScheduleFacts:
+        snapshot = activation.order_schedule_snapshot
+        if snapshot is None or snapshot.schedule_spec.protection_policy is None:
+            raise ProductPreSubmitRejected("ORDER_SCHEDULE_SNAPSHOT_REQUIRED")
+        schedule_context = leg.proposed_action.execution_context.get("order_schedule")
+        if (
+            not isinstance(schedule_context, dict)
+            or schedule_context.get("schedule_digest") != snapshot.schedule_digest
+        ):
+            raise ProductPreSubmitRejected("ORDER_SCHEDULE_ACTION_CONFLICT")
+        client = self._binance_client()
+        account_api = self._account_api(client)
+        market_api = self._market_api(client)
+        symbol = _binance_symbol(f"{activation.instrument_ref}.BINANCE")
+        started_at = datetime.now(UTC)
+        try:
+            (
+                account_info,
+                symbol_configs,
+                hedge_mode,
+                single_asset_mode,
+                positions,
+                exchange_info,
+                book_tickers,
+                mark_snapshot,
+                open_orders,
+                open_algo_orders,
+            ) = await asyncio.wait_for(
+                asyncio.gather(
+                    account_api.query_futures_account_info(recv_window="5000"),
+                    account_api.query_futures_symbol_config(
+                        symbol=symbol,
+                        recv_window="5000",
+                    ),
+                    account_api.query_futures_hedge_mode(recv_window="5000"),
+                    query_single_asset_mode(
+                        client,
+                        self._node.kernel.clock,
+                        recv_window="5000",
+                    ),
+                    account_api.query_futures_position_risk(recv_window="5000"),
+                    market_api.query_futures_exchange_info(),
+                    market_api.query_ticker_book(symbol=symbol),
+                    _query_current_mark_price(client, symbol),
+                    account_api.query_open_orders(
+                        symbol=symbol,
+                        recv_window="5000",
+                    ),
+                    account_api.query_open_algo_orders(
+                        symbol=symbol,
+                        recv_window="5000",
+                    ),
+                ),
+                timeout=float(MAX_QUERY_WINDOW_SECONDS),
+            )
+        except ProductPreSubmitRejected:
+            raise
+        except BinanceAccountContractError as exc:
+            raise ProductPreSubmitRejected(str(exc)) from None
+        except Exception as exc:
+            raise ProductPreSubmitRejected(
+                f"ACCOUNT_FACT_QUERY_FAILED_{type(exc).__name__.upper()}"
+            ) from None
+        checked_at = datetime.now(UTC)
+        if Decimal(str((checked_at - started_at).total_seconds())) > MAX_QUERY_WINDOW_SECONDS:
+            raise ProductPreSubmitRejected("ACCOUNT_FACT_QUERY_STALE")
+        valid_until = leg.proposed_action.valid_until
+        if valid_until is not None and checked_at >= valid_until:
+            raise ProductPreSubmitRejected("DIRECT_ENTRY_EXPIRED")
+        _require_supported_account_mode(
+            hedge_mode,
+            single_asset_mode=single_asset_mode,
+        )
+        margin_mode, leverage, current_effective = _account_margin_state(
+            account_info,
+            symbol_configs,
+            symbol,
+        )
+        try:
+            current_rule_set = binance_exchange_symbol_rules(exchange_info, symbol)
+            source_time_ms = getattr(exchange_info, "serverTime")
+            if not isinstance(source_time_ms, int) or source_time_ms <= 0:
+                raise ValueError("source time missing")
+            current_rules = InstrumentOrderRules(
+                **current_rule_set.order_schedule_payload(),
+                source=snapshot.instrument_rules.source,
+                source_cutoff=datetime.fromtimestamp(
+                    source_time_ms / 1000,
+                    tz=UTC,
+                ).isoformat(),
+            )
+        except (
+            AttributeError,
+            BinanceInstrumentRulesError,
+            TypeError,
+            ValueError,
+        ):
+            raise ProductPreSubmitRejected("INSTRUMENT_RULES_UNKNOWN") from None
+        if current_rules.digest != snapshot.instrument_rules_digest:
+            raise ProductPreSubmitRejected("INSTRUMENT_RULES_DRIFT")
+
+        ordinary_ids = frozenset(_client_order_ids(open_orders))
+        algo_ids = frozenset(_client_algo_order_ids(open_algo_orders))
+        if not ordinary_ids.issubset(owned_order_client_ids) or not algo_ids.issubset(
+            owned_algo_client_ids
+        ):
+            raise ProductPreSubmitRejected("ENTRY_OPEN_ORDER_CONFLICT")
+        signed_position = _symbol_position(symbol=symbol, positions=positions)
+        expected_position = Decimal(
+            canonical_decimal(
+                decimal_from_string(
+                    expected_signed_position,
+                    code="POSITION_FACT_INVALID",
+                )
+            )
+        )
+        if signed_position != expected_position:
+            raise ProductPreSubmitRejected("POSITION_ATTRIBUTION_UNKNOWN")
+        if (
+            activation.direction is Direction.LONG
+            and signed_position < 0
+        ) or (
+            activation.direction is Direction.SHORT
+            and signed_position > 0
+        ):
+            raise ProductPreSubmitRejected("POSITION_DIRECTION_CONFLICT")
+        outstanding = decimal_from_string(
+            outstanding_entry_quantity,
+            code="OPEN_ORDER_FACT_INVALID",
+            non_negative=True,
+        )
+        outstanding_notional = decimal_from_string(
+            outstanding_entry_notional,
+            code="OPEN_ORDER_FACT_INVALID",
+            non_negative=True,
+        )
+        bid, ask = _top_of_book(book_tickers, symbol)
+        mark = _fresh_mark(mark_snapshot, checked_at)
+        conservative_price = max(
+            mark,
+            bid,
+            ask,
+            Decimal(leg.leg.sizing_price),
+        )
+        current_abs = abs(signed_position)
+        activation_quantity = current_abs + outstanding
+        activation_notional = current_abs * conservative_price + outstanding_notional
+        account_notional = sum(
+            (_position_notional(item) for item in positions),
+            Decimal(0),
+        ) + outstanding_notional
+        account_facts = ProductAccountFacts(
+            checked_at=checked_at,
+            conservative_price=canonical_decimal(conservative_price),
+            available_margin=canonical_decimal(_available_margin(account_info)),
+            actual_margin_mode=margin_mode,
+            actual_leverage=leverage,
+            activation_current_notional=canonical_decimal(activation_notional),
+            account_current_notional=canonical_decimal(account_notional),
+            activation_current_margin=canonical_decimal(
+                activation_notional / current_effective
+            ),
+            current_abs_position=canonical_decimal(current_abs),
+            post_action_abs_position=canonical_decimal(
+                activation_quantity + Decimal(leg.leg.quantity)
+            ),
+        )
+        return DirectScheduleFacts(
+            account=account_facts,
+            conditions=ConditionFacts(
+                basis_ready=True,
+                mark_price=canonical_decimal(mark),
+                bid_price=canonical_decimal(bid),
+                ask_price=canonical_decimal(ask),
+                price_move_bps_by_window=price_move_bps_by_window,
+                elapsed_seconds=max(
+                    0,
+                    int((checked_at - activation.created_at).total_seconds()),
+                ),
+            ),
         )
 
     async def _load_facts(self, proposal: StrategyProposal) -> ProductAccountFacts:
@@ -1017,37 +1312,13 @@ def _binance_symbol(instrument_id: str) -> str:
 
 
 def _exchange_rules_digest(exchange_info: object, symbol: str) -> str:
-    symbol_info = next(
-        (item for item in exchange_info.symbols if item.symbol == symbol),
-        None,
-    )
-    if symbol_info is None:
-        raise ProductPreSubmitRejected("INSTRUMENT_RULES_UNKNOWN")
-    filters = {
-        getattr(item.filterType, "value", str(item.filterType)): item
-        for item in symbol_info.filters
-    }
-    price = filters.get("PRICE_FILTER")
-    market_lot = filters.get("MARKET_LOT_SIZE")
-    notional = filters.get("MIN_NOTIONAL")
-    if price is None or market_lot is None or notional is None:
-        raise ProductPreSubmitRejected("INSTRUMENT_RULES_UNKNOWN")
-    values = (
-        price.tickSize,
-        market_lot.stepSize,
-        market_lot.minQty,
-        market_lot.maxQty,
-        notional.notional or notional.minNotional,
-    )
-    if any(value is None for value in values):
-        raise ProductPreSubmitRejected("INSTRUMENT_RULES_UNKNOWN")
-    payload = {
-        "step_size": canonical_decimal(Decimal(str(values[1]))),
-        "price_tick_size": canonical_decimal(Decimal(str(values[0]))),
-        "min_quantity": canonical_decimal(Decimal(str(values[2]))),
-        "max_market_quantity": canonical_decimal(Decimal(str(values[3]))),
-        "min_notional": canonical_decimal(Decimal(str(values[4]))),
-    }
+    try:
+        payload = binance_exchange_symbol_rules(
+            exchange_info,
+            symbol,
+        ).market_sizing_payload()
+    except BinanceInstrumentRulesError:
+        raise ProductPreSubmitRejected("INSTRUMENT_RULES_UNKNOWN") from None
     return content_digest(payload)
 
 

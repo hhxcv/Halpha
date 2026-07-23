@@ -27,11 +27,94 @@ from halpha.product_build import EXECUTOR_STARTING_APPLICATION_NAME
 from halpha.planning.adapter import HalphaStrategyAdapter
 from halpha.planning.bar_evaluation import NautilusBarEntryEvaluator
 from halpha.planning.models import PlanLifecycle
-from halpha.planning.registry import Direction, OneShotParameters
+from halpha.planning.registry import DIRECT_EXECUTION_REF, Direction, OneShotParameters
 from halpha.planning.strategies.one_shot import OneShotDonchianAtrLogic
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_runtime_submission_barrier_is_scoped_to_the_affected_activation() -> None:
+    submitted: list[str] = []
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._coordinator = SimpleNamespace(
+        startup_recovery_allows_submission=lambda activation_id: (
+            activation_id == "activation-clear"
+        )
+    )
+    runtime._proposal_processors = {
+        "activation-clear": SimpleNamespace(
+            submit=lambda proposal: submitted.append(proposal.activation_id) or "accepted"
+        )
+    }
+
+    with pytest.raises(ExecutorRuntimeError, match="STARTUP_RECOVERY_PENDING"):
+        runtime.submit_strategy_proposal(
+            SimpleNamespace(activation_id="activation-pending")
+        )
+
+    assert runtime.submit_strategy_proposal(
+        SimpleNamespace(activation_id="activation-clear")
+    ) == "accepted"
+    assert submitted == ["activation-clear"]
+
+
+def test_runtime_does_not_mark_recovery_complete_until_resolution_is_absorbed() -> None:
+    action = SimpleNamespace(
+        execution_action_id="startup-open",
+        activation_id="activation-pending",
+    )
+    coordinator = SimpleNamespace(
+        complete=False,
+        sink=None,
+    )
+    coordinator.recover_unresolved_actions = lambda **values: (
+        setattr(coordinator, "sink", values["resolution_sink"]) or (action,)
+    )
+    coordinator.startup_recovery_complete = lambda: coordinator.complete
+    coordinator.startup_recovery_pending_action_ids = lambda: (
+        () if coordinator.complete else (action.execution_action_id,)
+    )
+    coordinator.startup_recovery_allows_submission = (
+        lambda _activation_id: coordinator.complete
+    )
+    responsibility_resumes: list[str] = []
+    direct_resumes: list[str] = []
+    events: list[tuple[str, dict[str, object]]] = []
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._coordinator = coordinator
+    runtime._recovered_action_count = 0
+    runtime._recovery_complete = False
+    runtime._responsibility_processors = {
+        action.activation_id: SimpleNamespace(
+            resume=responsibility_resumes.append
+        )
+    }
+    runtime._direct_schedule_processors = {
+        action.activation_id: SimpleNamespace(resume=direct_resumes.append)
+    }
+    runtime._runtime_event_sink = lambda event, fields: events.append((event, fields))
+
+    recovered = runtime._begin_startup_recovery(
+        observed_at=datetime(2026, 7, 23, 7, 0, tzinfo=UTC)
+    )
+
+    assert recovered == (action,)
+    assert runtime.recovery_complete is False
+    assert responsibility_resumes == []
+    assert direct_resumes == []
+
+    # The callback is invoked only after the coordinator has absorbed a fact.
+    coordinator.complete = True
+    runtime._apply_startup_recovery_resolution(
+        action.activation_id,
+        action.execution_action_id,
+    )
+
+    assert runtime.recovery_complete is True
+    assert responsibility_resumes == [action.activation_id]
+    assert direct_resumes == [action.activation_id]
+    assert events[-1][0] == "startup_recovery_identity_resolved"
 
 
 def test_activation_entry_deadline_uses_persisted_activation_window() -> None:
@@ -625,6 +708,48 @@ def test_demo_runtime_discovers_ui_created_activation_without_restart() -> None:
     assert warmup_calls == 1
 
 
+def test_live_runtime_periodically_advances_time_based_responsibilities() -> None:
+    stop = threading.Event()
+    responsibility_calls: list[str] = []
+    direct_calls: list[str] = []
+
+    class Responsibility:
+        @staticmethod
+        async def sync(activation_id: str) -> None:
+            responsibility_calls.append(activation_id)
+            stop.set()
+
+    class Direct:
+        @staticmethod
+        def resume(activation_id: str) -> None:
+            direct_calls.append(activation_id)
+
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(profile="BINANCE_LIVE_READ_ONLY")
+    )
+    runtime._lifecycle = SimpleNamespace(activation_ids=("activation-live",))
+    runtime._responsibility_processors = {"activation-live": Responsibility()}
+    runtime._direct_schedule_processors = {"activation-live": Direct()}
+    runtime._runtime_event_sink = lambda *_args: None
+    runtime._restore_paused_adapters = lambda _capability: (_ for _ in ()).throw(
+        AssertionError("Live must not discover new activations")
+    )
+
+    async def exercise() -> None:
+        runtime._loop = asyncio.get_running_loop()
+        await runtime._wait_for_stop_and_sync_activations(
+            stop.wait,
+            object(),
+            interval_seconds=0.001,
+        )
+
+    asyncio.run(exercise())
+
+    assert responsibility_calls == ["activation-live"]
+    assert direct_calls == ["activation-live"]
+
+
 def test_demo_runtime_keeps_running_when_responsibility_sync_fails() -> None:
     stop = threading.Event()
     events: list[tuple[str, dict[str, object]]] = []
@@ -718,6 +843,111 @@ def test_demo_runtime_closes_an_expired_empty_activation_before_wiring(
     runtime._restore_paused_adapters(object())
 
     assert state["closed"] is True
+
+
+def test_live_runtime_rejects_an_activation_outside_the_authorized_set(
+    monkeypatch,
+) -> None:
+    activation = SimpleNamespace(
+        activation_id="activation-live-unauthorized",
+        lifecycle=PlanLifecycle.RUNNING,
+        entry_opportunity_consumed=False,
+        rule_state={
+            "deadlines": {"entry_valid_until": "2026-07-19T00:00:00+00:00"}
+        },
+    )
+
+    class FakePlanning:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def list_open_activations():
+            return (activation,)
+
+    monkeypatch.setattr(
+        runtime_module,
+        "PostgreSQLPlanningRepository",
+        FakePlanning,
+    )
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._connection = object()
+    runtime._lifecycle = SimpleNamespace(activation_ids=())
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(
+            profile="BINANCE_LIVE_WRITE",
+            environment_id="live-main",
+        )
+    )
+    runtime._live_write_activation_id = "activation-live-authorized"
+    runtime._coordinator = SimpleNamespace(
+        expire_empty_entry_window=lambda **_values: pytest.fail(
+            "unauthorized activation must not reach lifecycle mutation"
+        )
+    )
+    runtime._proposal_processors = {}
+    runtime._responsibility_processors = {}
+
+    with pytest.raises(
+        ExecutorRuntimeError,
+        match="LIVE_WRITE_ACTIVATION_SET_MISMATCH",
+    ):
+        runtime._restore_paused_adapters(object())
+
+
+def test_runtime_keeps_user_takeover_identity_for_read_only_reconciliation(
+    monkeypatch,
+) -> None:
+    activation = SimpleNamespace(
+        activation_id="activation-takeover",
+        lifecycle=PlanLifecycle.USER_TAKEOVER,
+        entry_opportunity_consumed=True,
+        rule_state={},
+    )
+    inventory_reads: list[str] = []
+    takeover_calls: list[str] = []
+
+    class FakePlanning:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def list_runtime_responsibility_activations():
+            inventory_reads.append("runtime")
+            return (activation,)
+
+        @staticmethod
+        def list_open_activations():
+            raise AssertionError("takeover must use the responsibility inventory")
+
+    monkeypatch.setattr(
+        runtime_module,
+        "PostgreSQLPlanningRepository",
+        FakePlanning,
+    )
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._connection = object()
+    runtime._lifecycle = SimpleNamespace(
+        activation_ids=(activation.activation_id,)
+    )
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(
+            profile="BINANCE_DEMO",
+            environment_id="demo-main",
+        )
+    )
+    runtime._coordinator = SimpleNamespace(
+        apply_persisted_user_takeover=lambda **values: takeover_calls.append(
+            values["activation_id"]
+        )
+    )
+    runtime._proposal_processors = {}
+    runtime._responsibility_processors = {}
+
+    runtime._restore_paused_adapters(object())
+
+    assert inventory_reads == ["runtime", "runtime"]
+    assert takeover_calls == [activation.activation_id]
 
 
 def test_product_activation_handoff_defers_warmup_until_old_adapter_is_removed(
@@ -926,6 +1156,108 @@ def test_product_open_activation_wires_warmup_proposal_and_event_path(
         )
     finally:
         for processor in runtime._proposal_processors.values():
+            processor.close()
+        for processor in runtime._responsibility_processors.values():
+            processor.close()
+        loop.close()
+
+
+def test_direct_activation_uses_execution_adapter_without_strategy_basis(
+    monkeypatch,
+) -> None:
+    activation = SimpleNamespace(
+        activation_id="activation-direct-wiring",
+        plan_version_ref="plan-version-direct-wiring",
+        decision_basis_ref=DIRECT_EXECUTION_REF,
+        instrument_ref="BTCUSDT-PERP",
+        direction=Direction.LONG,
+        entry_opportunity_consumed=False,
+        lifecycle=PlanLifecycle.RUNNING,
+        run_state=SimpleNamespace(value="ACTIVE"),
+        rule_state={
+            "deadlines": {"entry_valid_until": "2099-07-19T00:00:00+00:00"}
+        },
+    )
+    version_reads: list[str] = []
+
+    class FakePlanning:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def list_open_activations():
+            return (activation,)
+
+        @staticmethod
+        def get_version(plan_version_ref):
+            version_reads.append(plan_version_ref)
+            raise AssertionError("direct execution must not read strategy basis")
+
+    class FakeLifecycle:
+        adapter = None
+
+        @property
+        def activation_ids(self):
+            return () if self.adapter is None else (self.adapter.activation_id,)
+
+        def start(self, spec):
+            self.adapter = spec.factory()
+            return self.adapter
+
+    class FakeCoordinator:
+        @staticmethod
+        def build_nautilus_event_normalizer(**_kwargs):
+            return object()
+
+        @staticmethod
+        def handle_nautilus_order_event(*_args, **_kwargs):
+            return None
+
+    monkeypatch.setattr(runtime_module, "PostgreSQLPlanningRepository", FakePlanning)
+    lifecycle = FakeLifecycle()
+    loop = asyncio.new_event_loop()
+    runtime = object.__new__(ProductExecutorRuntime)
+    runtime._connection = object()
+    runtime._lifecycle = lifecycle
+    runtime._settings = SimpleNamespace(
+        release=SimpleNamespace(
+            profile="BINANCE_DEMO",
+            environment_id="demo-main",
+            authority_class="DEMO_VALIDATION",
+            account_id="demo-owner",
+        )
+    )
+    runtime._api_key = SecretStr("qualification-key")
+    runtime._api_secret = SecretStr("qualification-secret")
+    runtime._proxy_url = None
+    runtime._loop = loop
+    runtime._node = SimpleNamespace(cache=SimpleNamespace())
+    runtime._coordinator = FakeCoordinator()
+    runtime._proposal_processors = {}
+    runtime._direct_schedule_processors = {}
+    runtime._responsibility_processors = {}
+    runtime._recovery_complete = False
+    runtime._runtime_event_sink = None
+    try:
+        runtime._restore_paused_adapters(object())
+
+        adapter = lifecycle.adapter
+        assert isinstance(adapter, HalphaStrategyAdapter)
+        assert adapter._logic is None
+        assert adapter._state_provider is None
+        assert adapter._proposal_sink is None
+        assert adapter._bar_evaluator is None
+        assert adapter.live_history_ready is True
+        assert version_reads == []
+        assert tuple(runtime._proposal_processors) == ()
+        assert tuple(runtime._direct_schedule_processors) == (
+            "activation-direct-wiring",
+        )
+        assert tuple(runtime._responsibility_processors) == (
+            "activation-direct-wiring",
+        )
+    finally:
+        for processor in runtime._direct_schedule_processors.values():
             processor.close()
         for processor in runtime._responsibility_processors.values():
             processor.close()

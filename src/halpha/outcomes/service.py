@@ -124,7 +124,7 @@ class OutcomeApplicationService:
         activation = self._connection.execute(
             """
             SELECT activation_id, plan_version_ref, environment_kind, authority_class,
-                   account_ref, instrument_ref, strategy_id, lifecycle, run_state,
+                   account_ref, instrument_ref, decision_basis_ref, lifecycle, run_state,
                    protection_state,
                    responsibility_owner, takeover_scope, closure_digest, result_ref,
                    created_at, updated_at, state_version, direction

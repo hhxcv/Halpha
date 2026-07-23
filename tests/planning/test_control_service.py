@@ -28,7 +28,7 @@ def _activation(**updates: object) -> PlanActivation:
         "account_ref": "demo-owner",
         "instrument_ref": "BTCUSDT-PERP",
         "direction": "SHORT",
-        "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+        "decision_basis_ref": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT@1.0.1",
         "framework_strategy_id": "HALPHA-EMPTY-DEMO",
         "target_exposure": "500",
         "rule_state": {},
@@ -42,6 +42,13 @@ def _activation(**updates: object) -> PlanActivation:
 
 def test_empty_activation_can_close_without_inventing_venue_facts() -> None:
     service = object.__new__(ActivationControlService)
+    checked_activation_ids: list[str] = []
+    service._execution_actions = SimpleNamespace(
+        has_open_entry_responsibility=lambda activation_id: (
+            checked_activation_ids.append(activation_id) or False
+        ),
+        has_unclosed_called_responsibility=lambda _activation_id: False,
+    )
 
     completed = service._complete_if_no_venue_responsibility(
         _activation(lifecycle=PlanLifecycle.EXITING),
@@ -54,10 +61,38 @@ def test_empty_activation_can_close_without_inventing_venue_facts() -> None:
     assert completed.closure_digest is not None
     assert completed.entry_opportunity_consumed is True
     assert completed.result_ref is not None
+    assert checked_activation_ids == ["activation-empty-demo"]
+
+
+def test_activation_with_open_entry_responsibility_stays_open_for_cancel() -> None:
+    service = object.__new__(ActivationControlService)
+    checked_activation_ids: list[str] = []
+    service._execution_actions = SimpleNamespace(
+        has_open_entry_responsibility=lambda activation_id: (
+            checked_activation_ids.append(activation_id) or True
+        ),
+        has_unclosed_called_responsibility=lambda _activation_id: False,
+    )
+    exiting = _activation(lifecycle=PlanLifecycle.EXITING)
+
+    result = service._complete_if_no_venue_responsibility(
+        exiting,
+        reason="EXIT_WITHOUT_VENUE_RESPONSIBILITY",
+        command_ref="command-exit-with-open-entry",
+        observed_at=NOW,
+    )
+
+    assert result is exiting
+    assert result.lifecycle is PlanLifecycle.EXITING
+    assert checked_activation_ids == ["activation-empty-demo"]
 
 
 def test_activation_with_a_pending_action_stays_open_for_real_closure() -> None:
     service = object.__new__(ActivationControlService)
+    service._execution_actions = SimpleNamespace(
+        has_open_entry_responsibility=lambda _activation_id: False,
+        has_unclosed_called_responsibility=lambda _activation_id: False,
+    )
     exiting = _activation(
         lifecycle=PlanLifecycle.EXITING,
         pending_action_digest="a" * 64,
@@ -72,6 +107,74 @@ def test_activation_with_a_pending_action_stays_open_for_real_closure() -> None:
 
     assert result is exiting
     assert result.lifecycle is PlanLifecycle.EXITING
+
+
+def test_activation_with_unknown_cancel_stays_open_for_original_identity_query() -> None:
+    service = object.__new__(ActivationControlService)
+    service._execution_actions = SimpleNamespace(
+        has_open_entry_responsibility=lambda _activation_id: False,
+        has_unclosed_called_responsibility=lambda _activation_id: True,
+    )
+    takeover = _activation(
+        lifecycle=PlanLifecycle.USER_TAKEOVER,
+        takeover_scope={"execution_responsibility": "USER"},
+    )
+
+    result = service._complete_if_no_venue_responsibility(
+        takeover,
+        reason="USER_TAKEOVER_WITHOUT_VENUE_RESPONSIBILITY",
+        command_ref="command-takeover-with-unknown-cancel",
+        observed_at=NOW,
+    )
+
+    assert result is takeover
+    assert result.lifecycle is PlanLifecycle.USER_TAKEOVER
+
+
+def test_control_submission_serializes_with_final_venue_dispatch(monkeypatch) -> None:
+    activation = _activation()
+    command = build_command(
+        command_id="command-lock-1",
+        environment_id=activation.environment_id,
+        owner_scope="owner-1",
+        idempotency_key="stop-lock-1",
+        activation_id=activation.activation_id,
+        expected_version=activation.state_version,
+        intent=ControlIntent.STOP_NEW_RISK,
+        scope={},
+        parameters={},
+        submitted_at=NOW,
+    )
+    receipt = initial_receipt(
+        command,
+        receipt_id="receipt-lock-1",
+        processing_owner="TRADEPLAN",
+    )
+    lock_calls: list[tuple[object, str, str]] = []
+    connection = object()
+    monkeypatch.setattr(
+        "halpha.planning.control_service.acquire_activation_control_lock",
+        lambda used_connection, *, environment_id, activation_id: lock_calls.append(
+            (used_connection, environment_id, activation_id)
+        ),
+    )
+    service = object.__new__(ActivationControlService)
+    service._connection = connection
+    service._environment_id = activation.environment_id
+    service._commands = SimpleNamespace(
+        find_by_idempotency=lambda *_args, **_kwargs: (command, receipt)
+    )
+
+    result = service.submit(
+        command,
+        receipt_id=receipt.receipt_id,
+        stop_state_version_id="stop-lock-1",
+    )
+
+    assert result is receipt
+    assert lock_calls == [
+        (connection, activation.environment_id, activation.activation_id)
+    ]
 
 
 def test_completed_activation_finalizes_processing_exit_receipt() -> None:

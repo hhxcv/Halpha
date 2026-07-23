@@ -175,6 +175,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/order-schedules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Order Schedule Preview */
+        post: operations["order_schedule_preview_api_v1_order_schedules_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/overview": {
         parameters: {
             query?: never;
@@ -423,9 +440,103 @@ export interface components {
     schemas: {
         /** ActivationPayload */
         ActivationPayload: {
+            /** Expected Schedule Digest */
+            expected_schedule_digest?: string | null;
             /** Plan Version Id */
             plan_version_id: string;
         };
+        /** AmountDistribution */
+        AmountDistribution: {
+            /**
+             * Base Notional
+             * @default 10
+             */
+            base_notional: string;
+            /**
+             * Custom Notionals
+             * @default []
+             */
+            custom_notionals: string[];
+            /** @default LOW_TO_HIGH */
+            direction: components["schemas"]["DistributionDirection"];
+            /**
+             * Exponential Ratio
+             * @default 2
+             */
+            exponential_ratio: string;
+            /**
+             * Linear Step
+             * @default 10
+             */
+            linear_step: string;
+            /** @default FIXED */
+            mode: components["schemas"]["AmountDistributionMode"];
+        };
+        /**
+         * AmountDistributionMode
+         * @enum {string}
+         */
+        AmountDistributionMode: "FIXED" | "LINEAR" | "EXPONENTIAL" | "CUSTOM";
+        /**
+         * BinancePriceMatch
+         * @enum {string}
+         */
+        BinancePriceMatch: "OPPONENT" | "OPPONENT_5" | "OPPONENT_10" | "OPPONENT_20" | "QUEUE" | "QUEUE_5" | "QUEUE_10" | "QUEUE_20";
+        /** CancelOnShockRule */
+        CancelOnShockRule: {
+            /** Adverse Move Bps */
+            adverse_move_bps: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "CANCEL_ON_SHOCK";
+            /**
+             * Max Triggers
+             * @default 1
+             */
+            max_triggers: number;
+            /** Window Seconds */
+            window_seconds: number;
+        };
+        /** CompiledOrderLeg */
+        CompiledOrderLeg: {
+            /** Effective Notional */
+            effective_notional: string;
+            /** Leg Count */
+            leg_count: number;
+            /** Leg Index */
+            leg_index: number;
+            /** Price */
+            price: string | null;
+            /** Quantity */
+            quantity: string;
+            /** Raw Price */
+            raw_price: string | null;
+            /** Requested Notional */
+            requested_notional: string;
+            /** Sizing Price */
+            sizing_price: string;
+        };
+        /** ConditionGroup */
+        ConditionGroup: {
+            /**
+             * Items
+             * @default [
+             *       {
+             *         "kind": "DECISION_BASIS_READY"
+             *       }
+             *     ]
+             */
+            items: (components["schemas"]["DecisionBasisReadyCondition"] | components["schemas"]["MarkPriceCondition"] | components["schemas"]["SpreadBpsCondition"] | components["schemas"]["PriceMoveBpsCondition"] | components["schemas"]["ProfitRCondition"] | components["schemas"]["ElapsedCondition"])[];
+            /** @default ALL */
+            operator: components["schemas"]["ConditionOperator"];
+        };
+        /**
+         * ConditionOperator
+         * @enum {string}
+         */
+        ConditionOperator: "ALL" | "ANY";
         /**
          * ControlIntent
          * @enum {string}
@@ -441,14 +552,118 @@ export interface components {
             };
         };
         /**
+         * DecisionBasisKind
+         * @enum {string}
+         */
+        DecisionBasisKind: "STRATEGY_SIGNAL" | "DIRECT_EXECUTION";
+        /** DecisionBasisReadyCondition */
+        DecisionBasisReadyCondition: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "DECISION_BASIS_READY";
+        };
+        /**
+         * Direction
+         * @enum {string}
+         */
+        Direction: "LONG" | "SHORT";
+        /**
+         * DistributionDirection
+         * @enum {string}
+         */
+        DistributionDirection: "LOW_TO_HIGH" | "HIGH_TO_LOW";
+        /** DraftDecisionBasis */
+        DraftDecisionBasis: {
+            /** Decision Basis Ref */
+            decision_basis_ref: string;
+            kind: components["schemas"]["DecisionBasisKind"];
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+        };
+        /** ElapsedCondition */
+        ElapsedCondition: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ELAPSED_SECONDS";
+            /** Minimum Seconds */
+            minimum_seconds: number;
+        };
+        /**
          * EvaluationResult
          * @enum {string}
          */
         EvaluationResult: "AS_EXPECTED" | "ISSUE_FOUND" | "UNKNOWN" | "NOT_APPLICABLE";
+        /** ExpireRemainingRule */
+        ExpireRemainingRule: {
+            /** After Seconds */
+            after_seconds: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "EXPIRE_REMAINING";
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InitialStopSpec */
+        InitialStopSpec: {
+            /** @default EACH_CONFIRMED_FILL */
+            coverage: components["schemas"]["StopCoverage"];
+            /** Distance Bps */
+            distance_bps: string;
+            /** @default MARK_PRICE */
+            trigger_source: components["schemas"]["StopTriggerSource"];
+        };
+        /** InstrumentOrderRules */
+        InstrumentOrderRules: {
+            /** Limit Quantity Step */
+            limit_quantity_step: string;
+            /** Market Quantity Step */
+            market_quantity_step: string;
+            /** Max Limit Quantity */
+            max_limit_quantity: string;
+            /** Max Market Quantity */
+            max_market_quantity: string;
+            /** Max Price */
+            max_price: string;
+            /** Min Limit Quantity */
+            min_limit_quantity: string;
+            /** Min Market Quantity */
+            min_market_quantity: string;
+            /** Min Notional */
+            min_notional: string;
+            /** Min Price */
+            min_price: string;
+            /** Price Tick Size */
+            price_tick_size: string;
+            /** Source */
+            source: string;
+            /** Source Cutoff */
+            source_cutoff: string;
+        };
+        /** MarkPriceCondition */
+        MarkPriceCondition: {
+            /**
+             * Comparator
+             * @enum {string}
+             */
+            comparator: "GTE" | "LTE";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "MARK_PRICE";
+            /** Price */
+            price: string;
         };
         /** MarketBar */
         MarketBar: {
@@ -531,7 +746,7 @@ export interface components {
              * Interval
              * @enum {string}
              */
-            interval: "1m" | "15m";
+            interval: "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
             /** Source */
             source: string;
             /**
@@ -539,6 +754,104 @@ export interface components {
              * Format: date-time
              */
             source_cutoff: string;
+        };
+        /**
+         * NumericComparator
+         * @enum {string}
+         */
+        NumericComparator: "GTE" | "LTE" | "ABS_GTE";
+        /** OrderSchedulePreview */
+        OrderSchedulePreview: {
+            /** Compiler Version */
+            compiler_version: string;
+            direction: components["schemas"]["Direction"];
+            /** Effective Total Notional */
+            effective_total_notional: string;
+            /** Instrument Ref */
+            instrument_ref: string;
+            instrument_rules: components["schemas"]["InstrumentOrderRules"];
+            /** Instrument Rules Digest */
+            instrument_rules_digest: string;
+            /** Issues */
+            issues: components["schemas"]["ScheduleIssue"][];
+            /** Legs */
+            legs: components["schemas"]["CompiledOrderLeg"][];
+            /** Max Notional */
+            max_notional: string;
+            /** Normalized Legs */
+            normalized_legs: components["schemas"]["CompiledOrderLeg"][];
+            /** Preprotected Parallel Supported */
+            preprotected_parallel_supported: boolean;
+            /** Reference Price */
+            reference_price: string | null;
+            /** Requested Total Notional */
+            requested_total_notional: string;
+            /** Schedule Digest */
+            schedule_digest: string;
+            /** Schedule Ref */
+            schedule_ref: string;
+            schedule_spec: components["schemas"]["OrderScheduleSpec"];
+            /** Source Cutoff */
+            source_cutoff: string;
+            /** Valid */
+            valid: boolean;
+            /** Venue Ref */
+            venue_ref: string;
+        };
+        /** OrderSchedulePreviewPayload */
+        OrderSchedulePreviewPayload: {
+            /** @default DIRECT_EXECUTION */
+            decision_basis_kind: components["schemas"]["DecisionBasisKind"];
+            direction: components["schemas"]["Direction"];
+            /** Instrument Ref */
+            instrument_ref: string;
+            /** Max Notional */
+            max_notional: string;
+            /** Reference Price */
+            reference_price?: string | null;
+            /** Schedule Ref */
+            schedule_ref: string;
+            spec: components["schemas"]["OrderScheduleSpec"];
+            /**
+             * Venue Ref
+             * @default BINANCE_USDM
+             */
+            venue_ref: string;
+        };
+        /** OrderScheduleSpec */
+        OrderScheduleSpec: {
+            amount_distribution: components["schemas"]["AmountDistribution"];
+            /**
+             * Dynamic Rules
+             * @default []
+             */
+            dynamic_rules: (components["schemas"]["CancelOnShockRule"] | components["schemas"]["ExpireRemainingRule"] | components["schemas"]["SteppedProtectionRule"])[];
+            /**
+             * @default {
+             *       "items": [
+             *         {
+             *           "kind": "DECISION_BASIS_READY"
+             *         }
+             *       ],
+             *       "operator": "ALL"
+             *     }
+             */
+            entry_conditions: components["schemas"]["ConditionGroup"];
+            /** Price Distribution */
+            price_distribution: components["schemas"]["SinglePrice"] | components["schemas"]["PriceDistribution"];
+            protection_policy?: components["schemas"]["ProtectionPolicy"] | null;
+            /** @default SERIAL_PROTECTED */
+            submission_mode: components["schemas"]["ScheduleSubmissionMode"];
+            /** @default LOW_TO_HIGH */
+            submission_order: components["schemas"]["ScheduleSubmissionOrder"];
+            /**
+             * @default {
+             *       "order_type": "LIMIT",
+             *       "post_only": false,
+             *       "time_in_force": "GTC"
+             *     }
+             */
+            venue_policy: components["schemas"]["VenueOrderPolicy"];
         };
         /** OverviewResponse */
         OverviewResponse: {
@@ -566,6 +879,7 @@ export interface components {
         /** PlanCreatePayload */
         PlanCreatePayload: {
             creator_kind: components["schemas"]["PlanCreatorKind"];
+            decision_basis?: components["schemas"]["DraftDecisionBasis"] | null;
             /** Direction */
             direction: string;
             /** Instrument Ref */
@@ -576,14 +890,15 @@ export interface components {
             max_margin: string;
             /** Max Notional */
             max_notional: string;
+            order_schedule_spec?: components["schemas"]["OrderScheduleSpec"] | null;
             /** Parameters */
-            parameters: {
+            parameters?: {
                 [key: string]: unknown;
-            };
+            } | null;
             /** Plan Name */
             plan_name: string;
             /** Strategy Id */
-            strategy_id: string;
+            strategy_id?: string | null;
             /** Target Exposure */
             target_exposure: string;
             /** Valid Minutes */
@@ -601,6 +916,7 @@ export interface components {
         PlanCreatorKind: "HUMAN" | "AI";
         /** PlanDraftPayload */
         PlanDraftPayload: {
+            decision_basis?: components["schemas"]["DraftDecisionBasis"] | null;
             /** Direction */
             direction: string;
             /** Instrument Ref */
@@ -611,14 +927,15 @@ export interface components {
             max_margin: string;
             /** Max Notional */
             max_notional: string;
+            order_schedule_spec?: components["schemas"]["OrderScheduleSpec"] | null;
             /** Parameters */
-            parameters: {
+            parameters?: {
                 [key: string]: unknown;
-            };
+            } | null;
             /** Plan Name */
             plan_name: string;
             /** Strategy Id */
-            strategy_id: string;
+            strategy_id?: string | null;
             /** Target Exposure */
             target_exposure: string;
             /** Valid Minutes */
@@ -628,6 +945,91 @@ export interface components {
              * @default BINANCE_USDM
              */
             venue_ref: string;
+        };
+        /** PriceDistribution */
+        PriceDistribution: {
+            /**
+             * Custom Gap Weights
+             * @default []
+             */
+            custom_gap_weights: string[];
+            /**
+             * Geometric Ratio
+             * @default 2
+             */
+            geometric_ratio: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "LADDER";
+            /** Level Count */
+            level_count: number;
+            /**
+             * Linear Start Weight
+             * @default 1
+             */
+            linear_start_weight: string;
+            /**
+             * Linear Step
+             * @default 1
+             */
+            linear_step: string;
+            /** Lower Price */
+            lower_price: string;
+            /** @default LOW_TO_HIGH */
+            spacing_direction: components["schemas"]["DistributionDirection"];
+            /** @default EQUAL */
+            spacing_mode: components["schemas"]["PriceSpacingMode"];
+            /** Upper Price */
+            upper_price: string;
+        };
+        /** PriceMoveBpsCondition */
+        PriceMoveBpsCondition: {
+            comparator: components["schemas"]["NumericComparator"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "PRICE_MOVE_BPS";
+            /** Threshold Bps */
+            threshold_bps: string;
+            /** Window Seconds */
+            window_seconds: number;
+        };
+        /**
+         * PriceSpacingMode
+         * @enum {string}
+         */
+        PriceSpacingMode: "EQUAL" | "LINEAR" | "GEOMETRIC" | "CUSTOM_WEIGHTS";
+        /** ProfitRCondition */
+        ProfitRCondition: {
+            /**
+             * Comparator
+             * @enum {string}
+             */
+            comparator: "GTE" | "LTE";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "PROFIT_R";
+            /** Threshold R */
+            threshold_r: string;
+        };
+        /** ProtectionPolicy */
+        ProtectionPolicy: {
+            initial_stop: components["schemas"]["InitialStopSpec"];
+            take_profit_ladder?: components["schemas"]["TakeProfitLadderSpec"] | null;
+            /** Time Exit Seconds */
+            time_exit_seconds?: number | null;
+        };
+        /** ProtectionStep */
+        ProtectionStep: {
+            /** Stop R */
+            stop_r: string;
+            /** Trigger R */
+            trigger_r: string;
         };
         /** ReviewCompletionPayload */
         ReviewCompletionPayload: {
@@ -645,6 +1047,25 @@ export interface components {
             /** Expected Version */
             expected_version: number;
         };
+        /** ScheduleIssue */
+        ScheduleIssue: {
+            /** Code */
+            code: string;
+            /** Field */
+            field: string;
+            /** Leg Index */
+            leg_index?: number | null;
+        };
+        /**
+         * ScheduleSubmissionMode
+         * @enum {string}
+         */
+        ScheduleSubmissionMode: "SERIAL_PROTECTED" | "PREPROTECTED_PARALLEL";
+        /**
+         * ScheduleSubmissionOrder
+         * @enum {string}
+         */
+        ScheduleSubmissionOrder: "LOW_TO_HIGH" | "HIGH_TO_LOW";
         /** SettingsStatusResponse */
         SettingsStatusResponse: {
             /** Account Id */
@@ -692,6 +1113,68 @@ export interface components {
             /** View Retrieved At */
             view_retrieved_at: string;
         };
+        /** SinglePrice */
+        SinglePrice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SINGLE";
+            /** Limit Price */
+            limit_price?: string | null;
+        };
+        /** SpreadBpsCondition */
+        SpreadBpsCondition: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SPREAD_BPS";
+            /** Maximum Bps */
+            maximum_bps: string;
+        };
+        /** SteppedProtectionRule */
+        SteppedProtectionRule: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "STEPPED_PROTECTION";
+            /**
+             * Max Adjustments
+             * @default 8
+             */
+            max_adjustments: number;
+            /**
+             * Minimum Update Interval Seconds
+             * @default 5
+             */
+            minimum_update_interval_seconds: number;
+            /** Steps */
+            steps: components["schemas"]["ProtectionStep"][];
+        };
+        /**
+         * StopCoverage
+         * @enum {string}
+         */
+        StopCoverage: "EACH_CONFIRMED_FILL";
+        /**
+         * StopTriggerSource
+         * @enum {string}
+         */
+        StopTriggerSource: "MARK_PRICE";
+        /** TakeProfitLadderSpec */
+        TakeProfitLadderSpec: {
+            /** Levels */
+            levels: components["schemas"]["TakeProfitLevel"][];
+        };
+        /** TakeProfitLevel */
+        TakeProfitLevel: {
+            /** Quantity Fraction */
+            quantity_fraction: string;
+            /** Trigger R */
+            trigger_r: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -705,6 +1188,33 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** VenueOrderPolicy */
+        VenueOrderPolicy: {
+            /** Display Quantity */
+            display_quantity?: string | null;
+            /** Expire At */
+            expire_at?: string | null;
+            /** @default LIMIT */
+            order_type: components["schemas"]["VenueOrderType"];
+            /**
+             * Post Only
+             * @default false
+             */
+            post_only: boolean;
+            price_match?: components["schemas"]["BinancePriceMatch"] | null;
+            /** @default GTC */
+            time_in_force: components["schemas"]["VenueTimeInForce"] | null;
+        };
+        /**
+         * VenueOrderType
+         * @enum {string}
+         */
+        VenueOrderType: "LIMIT" | "MARKET";
+        /**
+         * VenueTimeInForce
+         * @enum {string}
+         */
+        VenueTimeInForce: "GTC" | "GTD" | "IOC" | "FOK";
     };
     responses: never;
     parameters: never;
@@ -1068,7 +1578,7 @@ export interface operations {
                 instrument_ref: string;
                 start_at: string;
                 end_at: string;
-                interval?: "1m" | "15m";
+                interval?: "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
             };
             header?: never;
             path?: never;
@@ -1083,6 +1593,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarketWindow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    order_schedule_preview_api_v1_order_schedules_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderSchedulePreviewPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderSchedulePreview"];
                 };
             };
             /** @description Validation Error */

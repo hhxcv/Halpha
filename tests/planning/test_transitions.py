@@ -25,6 +25,7 @@ from halpha.planning.transitions import (
     proposed_action_from_strategy_proposal,
     resolve_existing_event,
     resume_activation,
+    update_protection_projection,
 )
 from halpha.planning.strategies.one_shot import RiskDirection, StrategyProposal
 
@@ -42,7 +43,7 @@ def _activation(**updates: object) -> PlanActivation:
         "account_ref": "account-1",
         "instrument_ref": "BTCUSDT-PERP",
         "direction": "LONG",
-        "strategy_id": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT",
+        "decision_basis_ref": "ONE_SHOT_DONCHIAN_ATR_BREAKOUT@1.0.1",
         "framework_strategy_id": "HALPHA-TEST",
         "target_exposure": "0.1",
         "rule_state": {},
@@ -52,6 +53,26 @@ def _activation(**updates: object) -> PlanActivation:
     }
     values.update(updates)
     return PlanActivation(**values)
+
+
+def test_protection_gap_cannot_be_erased_by_an_unrelated_working_fact() -> None:
+    activation = _activation(protection_state=ProtectionState.GAP)
+
+    with pytest.raises(ValueError, match="PROTECTION_STATE_INVALID"):
+        update_protection_projection(
+            activation,
+            protection_state=ProtectionState.WORKING,
+            pending_action_digest="a" * 64,
+            observed_at=NOW,
+        )
+
+    closed = update_protection_projection(
+        activation,
+        protection_state=ProtectionState.CLOSED,
+        pending_action_digest=None,
+        observed_at=NOW,
+    )
+    assert closed.protection_state is ProtectionState.CLOSED
 
 
 def test_bar_identity_is_stable_and_digest_conflict_is_not_a_second_event() -> None:

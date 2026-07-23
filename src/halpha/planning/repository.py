@@ -7,15 +7,66 @@ from typing import Any
 
 from psycopg import Connection
 from psycopg.types.json import Jsonb
+from pydantic import TypeAdapter
+
+from halpha.domain_values import content_digest
 
 from halpha.planning.models import (
+    PERSISTED_HISTORY_CONTEXT_KEY,
     PlanActivation,
     PlanEvent,
     TradePlanContent,
     TradePlanDraft,
     TradePlanVersion,
 )
-from halpha.planning.registry import FixedStrategyPlanBasis
+from halpha.planning.order_schedule import (
+    OrderSchedulePreview,
+    OrderScheduleSpec,
+    validate_order_schedule_snapshot,
+)
+from halpha.planning.registry import FixedDecisionBasis
+
+
+_FIXED_DECISION_BASIS_ADAPTER = TypeAdapter(FixedDecisionBasis)
+
+
+def _fixed_decision_basis(value: object) -> FixedDecisionBasis:
+    if isinstance(value, dict) and "normalized_parameters" not in value:
+        migrated = dict(value)
+        reference = str(
+            migrated.get("decision_basis_ref")
+            or migrated.get("strategy_definition_ref")
+            or ""
+        )
+        strategy_id, separator, strategy_version = reference.rpartition("@")
+        if not separator or not strategy_id or not strategy_version:
+            raise PlanningConflict("LEGACY_FIXED_STRATEGY_BASIS_INVALID")
+        migrated = {
+            "kind": "STRATEGY_SIGNAL",
+            "decision_basis_ref": reference,
+            "strategy_id": strategy_id,
+            "strategy_version": strategy_version,
+            "implementation_digest": None,
+            "parameter_schema_version": migrated["parameter_schema_version"],
+            "normalized_parameters": migrated["parameters"],
+            "parameter_digest": migrated["parameter_digest"],
+            "fact_input_contract": {},
+            "allowed_action_profiles": (),
+            "economic_scope": {},
+            "product_build_id": (
+                migrated.get("product_build_id") or migrated.get("build_digest")
+            ),
+            "legacy_unverified": True,
+        }
+        value = migrated
+    elif isinstance(value, dict) and "kind" not in value:
+        migrated = dict(value)
+        migrated["kind"] = "STRATEGY_SIGNAL"
+        migrated["decision_basis_ref"] = (
+            f"{migrated['strategy_id']}@{migrated['strategy_version']}"
+        )
+        value = migrated
+    return _FIXED_DECISION_BASIS_ADAPTER.validate_python(value)
 
 
 class PlanningConflict(RuntimeError):
@@ -88,7 +139,10 @@ class PostgreSQLPlanningRepository:
             environment_id=str(row[1]),
             draft_version=int(row[2]),
             content_digest=str(row[3]),
-            content=TradePlanContent.model_validate(row[4]),
+            content=TradePlanContent.model_validate(
+                row[4],
+                context={PERSISTED_HISTORY_CONTEXT_KEY: True},
+            ),
             updated_at=row[5],
         )
 
@@ -116,18 +170,20 @@ class PostgreSQLPlanningRepository:
             raise PlanningConflict("PLAN_VERSION_CONFLICT")
 
     def insert_version(self, version: TradePlanVersion) -> None:
-        basis = version.strategy_basis
+        basis = version.decision_basis
+        schedule_spec = version.order_schedule_spec
         self._connection.execute(
             """
             INSERT INTO halpha.trade_plan_version (
                 plan_version_id, environment_id, plan_id, fixed_at,
-                strategy_definition_ref, product_build_id, parameter_schema_version,
+                decision_basis_ref, product_build_id, parameter_schema_version,
                 parameters, parameter_digest, account_ref, venue_ref, instrument_ref,
                 direction, max_margin, max_notional, max_allowed_loss, terms,
-                content_digest, fixed_strategy_basis
+                content_digest, fixed_decision_basis,
+                order_schedule_spec, order_schedule_spec_digest
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             """,
             (
@@ -135,7 +191,7 @@ class PostgreSQLPlanningRepository:
                 version.environment_id,
                 version.plan_id,
                 version.fixed_at,
-                f"{basis.strategy_id}@{basis.strategy_version}",
+                basis.decision_basis_ref,
                 basis.product_build_id,
                 basis.parameter_schema_version,
                 Jsonb(basis.normalized_parameters),
@@ -172,7 +228,22 @@ class PostgreSQLPlanningRepository:
                     }
                 ),
                 version.content_digest,
-                Jsonb(basis.model_dump(mode="json")),
+                Jsonb(
+                    basis.model_dump(
+                        mode="json",
+                        exclude=(
+                            set()
+                            if getattr(basis, "legacy_unverified", False)
+                            else {"legacy_unverified"}
+                        ),
+                    )
+                ),
+                (
+                    Jsonb(schedule_spec.model_dump(mode="json"))
+                    if schedule_spec is not None
+                    else None
+                ),
+                content_digest(schedule_spec) if schedule_spec is not None else None,
             ),
         )
 
@@ -181,9 +252,9 @@ class PostgreSQLPlanningRepository:
         row = self._connection.execute(
             """
             SELECT plan_version_id, plan_id, environment_id, fixed_at,
-                   fixed_strategy_basis, account_ref, venue_ref, instrument_ref,
+                   fixed_decision_basis, account_ref, venue_ref, instrument_ref,
                    direction, max_margin, max_notional, max_allowed_loss, terms,
-                   content_digest
+                   content_digest, order_schedule_spec, order_schedule_spec_digest
             FROM halpha.trade_plan_version
             WHERE environment_id = %s AND plan_version_id = %s
             """ + suffix,
@@ -193,30 +264,45 @@ class PostgreSQLPlanningRepository:
             raise PlanningConflict("PLAN_VERSION_NOT_FOUND")
         terms = dict(row[12])
         created_at = terms.pop("created_at", None)
-        return TradePlanVersion(
-            plan_version_id=str(row[0]),
-            plan_id=str(row[1]),
-            environment_id=str(row[2]),
-            fixed_at=row[3],
-            plan_name=terms.pop("plan_name", None),
-            created_at=datetime.fromisoformat(str(created_at)) if created_at else None,
-            creator_kind=terms.pop("creator_kind", None),
-            strategy_basis=FixedStrategyPlanBasis.model_validate(row[4]),
-            account_ref=str(row[5]),
-            venue_ref=str(row[6]),
-            instrument_ref=str(row[7]),
-            direction=str(row[8]),
-            target_exposure=str(terms.pop("target_exposure")),
-            requested_limits={
-                "max_margin": str(row[9]),
-                "max_notional": str(row[10]),
-                "max_allowed_loss": str(row[11]),
+        schedule_spec = (
+            OrderScheduleSpec.model_validate(row[14])
+            if row[14] is not None
+            else None
+        )
+        if (schedule_spec is None) != (row[15] is None):
+            raise PlanningConflict("ORDER_SCHEDULE_SPEC_CORRUPT")
+        if schedule_spec is not None and content_digest(schedule_spec) != str(row[15]):
+            raise PlanningConflict("ORDER_SCHEDULE_SPEC_CORRUPT")
+        return TradePlanVersion.model_validate(
+            {
+                "plan_version_id": str(row[0]),
+                "plan_id": str(row[1]),
+                "environment_id": str(row[2]),
+                "fixed_at": row[3],
+                "plan_name": terms.pop("plan_name", None),
+                "created_at": (
+                    datetime.fromisoformat(str(created_at)) if created_at else None
+                ),
+                "creator_kind": terms.pop("creator_kind", None),
+                "decision_basis": _fixed_decision_basis(row[4]),
+                "order_schedule_spec": schedule_spec,
+                "account_ref": str(row[5]),
+                "venue_ref": str(row[6]),
+                "instrument_ref": str(row[7]),
+                "direction": str(row[8]),
+                "target_exposure": str(terms.pop("target_exposure")),
+                "requested_limits": {
+                    "max_margin": str(row[9]),
+                    "max_notional": str(row[10]),
+                    "max_allowed_loss": str(row[11]),
+                },
+                "valid_from": datetime.fromisoformat(str(terms.pop("valid_from"))),
+                "valid_until": datetime.fromisoformat(str(terms.pop("valid_until"))),
+                "allowed_actions": frozenset(terms.pop("allowed_actions")),
+                "terms": terms,
+                "content_digest": str(row[13]),
             },
-            valid_from=datetime.fromisoformat(str(terms.pop("valid_from"))),
-            valid_until=datetime.fromisoformat(str(terms.pop("valid_until"))),
-            allowed_actions=frozenset(terms.pop("allowed_actions")),
-            terms=terms,
-            content_digest=str(row[13]),
+            context={PERSISTED_HISTORY_CONTEXT_KEY: True},
         )
 
     def insert_activation(self, activation: PlanActivation) -> None:
@@ -225,15 +311,16 @@ class PostgreSQLPlanningRepository:
             INSERT INTO halpha.plan_activation (
                 activation_id, environment_id, environment_kind, authority_class,
                 plan_version_ref, account_ref, instrument_ref, direction,
-                strategy_id, framework_strategy_id,
-                target_exposure,
+                decision_basis_ref, framework_strategy_id,
+                target_exposure, order_schedule_snapshot,
+                order_schedule_snapshot_digest,
                 lifecycle, run_state, pause_reason, paused_at, reconciliation_digest,
                 current_resume_command_ref, has_entry_fill, entry_opportunity_consumed,
                 responsibility_owner, state_version, rule_state, pending_action_digest,
                 protection_state, takeover_scope, latest_venue_cutoff, closure_digest,
                 result_ref, created_at, updated_at
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s
             )
@@ -247,9 +334,19 @@ class PostgreSQLPlanningRepository:
                 activation.account_ref,
                 activation.instrument_ref,
                 activation.direction.value,
-                activation.strategy_id,
+                activation.decision_basis_ref,
                 activation.framework_strategy_id,
                 activation.target_exposure,
+                (
+                    Jsonb(activation.order_schedule_snapshot.model_dump(mode="json"))
+                    if activation.order_schedule_snapshot is not None
+                    else None
+                ),
+                (
+                    activation.order_schedule_snapshot.schedule_digest
+                    if activation.order_schedule_snapshot is not None
+                    else None
+                ),
                 activation.lifecycle.value,
                 activation.run_state.value,
                 activation.pause_reason,
@@ -279,8 +376,10 @@ class PostgreSQLPlanningRepository:
         row = self._connection.execute(
             """
             SELECT activation_id, environment_id, environment_kind, authority_class,
-                   plan_version_ref, account_ref, instrument_ref, direction, strategy_id,
-                   framework_strategy_id, target_exposure, lifecycle, run_state,
+                   plan_version_ref, account_ref, instrument_ref, direction,
+                   decision_basis_ref, framework_strategy_id, target_exposure,
+                   order_schedule_snapshot, order_schedule_snapshot_digest,
+                   lifecycle, run_state,
                    pause_reason, paused_at, reconciliation_digest,
                    current_resume_command_ref, has_entry_fill,
                    entry_opportunity_consumed, responsibility_owner, state_version,
@@ -294,6 +393,20 @@ class PostgreSQLPlanningRepository:
         ).fetchone()
         if row is None:
             raise PlanningConflict("ACTIVATION_NOT_FOUND")
+        schedule_snapshot = (
+            OrderSchedulePreview.model_validate(row[11])
+            if row[11] is not None
+            else None
+        )
+        if (schedule_snapshot is None) != (row[12] is None):
+            raise PlanningConflict("ORDER_SCHEDULE_SNAPSHOT_CORRUPT")
+        if schedule_snapshot is not None:
+            try:
+                validate_order_schedule_snapshot(schedule_snapshot)
+            except ValueError:
+                raise PlanningConflict("ORDER_SCHEDULE_SNAPSHOT_CORRUPT") from None
+            if schedule_snapshot.schedule_digest != str(row[12]):
+                raise PlanningConflict("ORDER_SCHEDULE_SNAPSHOT_CORRUPT")
         return PlanActivation(
             activation_id=str(row[0]),
             environment_id=str(row[1]),
@@ -303,28 +416,29 @@ class PostgreSQLPlanningRepository:
             account_ref=str(row[5]),
             instrument_ref=str(row[6]),
             direction=str(row[7]),
-            strategy_id=str(row[8]),
+            decision_basis_ref=str(row[8]),
             framework_strategy_id=str(row[9]),
             target_exposure=str(row[10]),
-            lifecycle=str(row[11]),
-            run_state=str(row[12]),
-            pause_reason=str(row[13]) if row[13] is not None else None,
-            paused_at=row[14],
-            reconciliation_digest=str(row[15]) if row[15] is not None else None,
-            current_resume_command_ref=str(row[16]) if row[16] is not None else None,
-            has_entry_fill=bool(row[17]),
-            entry_opportunity_consumed=bool(row[18]),
-            responsibility_owner=str(row[19]),
-            state_version=int(row[20]),
-            rule_state=dict(row[21]),
-            pending_action_digest=str(row[22]) if row[22] is not None else None,
-            protection_state=str(row[23]),
-            takeover_scope=dict(row[24]) if row[24] is not None else None,
-            latest_venue_cutoff=row[25],
-            closure_digest=str(row[26]) if row[26] is not None else None,
-            result_ref=str(row[27]) if row[27] is not None else None,
-            created_at=row[28],
-            updated_at=row[29],
+            order_schedule_snapshot=schedule_snapshot,
+            lifecycle=str(row[13]),
+            run_state=str(row[14]),
+            pause_reason=str(row[15]) if row[15] is not None else None,
+            paused_at=row[16],
+            reconciliation_digest=str(row[17]) if row[17] is not None else None,
+            current_resume_command_ref=str(row[18]) if row[18] is not None else None,
+            has_entry_fill=bool(row[19]),
+            entry_opportunity_consumed=bool(row[20]),
+            responsibility_owner=str(row[21]),
+            state_version=int(row[22]),
+            rule_state=dict(row[23]),
+            pending_action_digest=str(row[24]) if row[24] is not None else None,
+            protection_state=str(row[25]),
+            takeover_scope=dict(row[26]) if row[26] is not None else None,
+            latest_venue_cutoff=row[27],
+            closure_digest=str(row[28]) if row[28] is not None else None,
+            result_ref=str(row[29]) if row[29] is not None else None,
+            created_at=row[30],
+            updated_at=row[31],
         )
 
     def list_open_activations(self) -> tuple[PlanActivation, ...]:
@@ -334,6 +448,21 @@ class PostgreSQLPlanningRepository:
             FROM halpha.plan_activation
             WHERE environment_id = %s
               AND lifecycle NOT IN ('COMPLETED', 'USER_TAKEOVER')
+            ORDER BY created_at, activation_id
+            """,
+            (self._environment_id,),
+        ).fetchall()
+        return tuple(self.get_activation(str(row[0])) for row in rows)
+
+    def list_runtime_responsibility_activations(self) -> tuple[PlanActivation, ...]:
+        """Return active trading plus takeover identities needing read-only closure."""
+
+        rows = self._connection.execute(
+            """
+            SELECT activation_id
+            FROM halpha.plan_activation
+            WHERE environment_id = %s
+              AND lifecycle <> 'COMPLETED'
             ORDER BY created_at, activation_id
             """,
             (self._environment_id,),

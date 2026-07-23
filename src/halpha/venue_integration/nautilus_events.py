@@ -6,6 +6,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import uuid4
 
@@ -16,6 +17,7 @@ from nautilus_trader.model.enums import (
     order_side_to_str,
 )
 
+from halpha.domain_values import canonical_decimal
 from halpha.venue_integration.facts import build_venue_fact
 from halpha.venue_integration.models import (
     ExecutionAction,
@@ -170,6 +172,21 @@ class NautilusExecutionEventNormalizer:
         )
         if source_object_id is None:
             raise ValueError("VENUE_FACT_SOURCE_IDENTITY_REQUIRED")
+        payload: dict[str, Any] = {
+            "event_type": type(event).__name__,
+            "status": status,
+            "client_order_id": client_order_id,
+            "venue_order_ref": _identifier(getattr(event, "venue_order_id", None)),
+            "reconciliation": bool(getattr(event, "reconciliation", False)),
+            "reason": str(getattr(event, "reason", "")) or None,
+        }
+        cumulative = self._terminal_cumulative_filled_quantity(
+            action=action,
+            client_order_id=client_order_id,
+            status=status,
+        )
+        if cumulative is not None:
+            payload["cumulative_filled_quantity"] = cumulative
         return build_venue_fact(
             venue_fact_id=self._fact_id_factory(),
             environment_id=self._environment_id,
@@ -191,16 +208,40 @@ class NautilusExecutionEventNormalizer:
             source_time=source_time,
             received_at=received_at,
             cutoff=received_at,
-            payload={
-                "event_type": type(event).__name__,
-                "status": status,
-                "client_order_id": client_order_id,
-                "venue_order_ref": _identifier(getattr(event, "venue_order_id", None)),
-                "reconciliation": bool(getattr(event, "reconciliation", False)),
-                "reason": str(getattr(event, "reason", "")) or None,
-            },
+            payload=payload,
             action=action,
         )
+
+    def _terminal_cumulative_filled_quantity(
+        self,
+        *,
+        action: ExecutionAction | None,
+        client_order_id: str | None,
+        status: str,
+    ) -> str | None:
+        if action is None or status not in {"REJECTED", "CANCELLED", "EXPIRED"}:
+            return None
+        try:
+            requested = Decimal(str(action.action_terms["quantity"]))
+        except (InvalidOperation, KeyError, TypeError, ValueError):
+            return None
+        if requested < 0:
+            return None
+        if status == "REJECTED":
+            return "0"
+        leaves_raw = (
+            self._leaves_quantity(client_order_id)
+            if self._leaves_quantity is not None and client_order_id is not None
+            else None
+        )
+        try:
+            leaves = Decimal(str(leaves_raw))
+        except (InvalidOperation, TypeError, ValueError):
+            return None
+        cumulative = requested - leaves
+        if leaves < 0 or cumulative < 0 or cumulative > requested:
+            return None
+        return canonical_decimal(cumulative)
 
     def _fill_facts(
         self,
