@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T01:22:26.319392+00:00",
+  "phase": "development_selection",
+  "source_sha256": "7c75d4a74703f663f37312df7c03dc4aefc187d94c4a1b6412ba68322a633f53",
+  "candidate_id": "BTC_8H_LONG_BALANCED_4",
+  "checks": {
+    "base_total_positive": true,
+    "stress_total_positive": true,
+    "stress_cagr_above_4pct": false,
+    "base_sharpe_at_least_0p75": false,
+    "twelve_trial_dsr_at_least_0p80": false,
+    "drawdown_above_minus_12pct": true,
+    "two_of_three_years_positive": true,
+    "worst_year_at_least_minus_3pct": false,
+    "active_days_at_least_365": true,
+    "turnover_at_most_50": true,
+    "sharpe_exceeds_daily_execution": true,
+    "calmar_exceeds_daily_execution": true
+  },
+  "failed_checks": [
+    "stress_cagr_above_4pct",
+    "base_sharpe_at_least_0p75",
+    "twelve_trial_dsr_at_least_0p80",
+    "worst_year_at_least_minus_3pct"
+  ],
+  "evaluation_authorized": false
+}

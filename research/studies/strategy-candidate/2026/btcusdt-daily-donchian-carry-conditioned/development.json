@@ -1,0 +1,572 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T00:44:28.291595+00:00",
+  "phase": "development",
+  "period": [
+    "2021-01-01T00:00:00Z",
+    "2024-01-01T00:00:00Z"
+  ],
+  "framework_versions": {
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6"
+  },
+  "method_identity": {
+    "study_sha256": "ef1243d2f618e37360562528c003c56451080d37255f6a21d76bdcb7c0f9ee64",
+    "base_study_sha256": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+    "data_identity": "e7347b8226e6d27525c2b21bb3332a18e46e1e6af1b3457b11afe0ab01480723"
+  },
+  "data_quality": {
+    "bars": 2373,
+    "first_open_time": "2020-01-01T00:00:00+00:00",
+    "last_open_time": "2026-06-30T00:00:00+00:00",
+    "continuous_daily": true,
+    "valid_ohlc": true,
+    "duplicate_bars": 0,
+    "archives_verified": 78,
+    "archive_bytes": 161737,
+    "mark_price_archives_verified": 78,
+    "mark_price_archive_bytes": 254031,
+    "mark_price_timeline_gap_count": 6,
+    "funding_records_used": 7119,
+    "funding_source_records_without_mark_price": 4198,
+    "funding_marks_backfilled_from_official_8h_klines": 4173,
+    "funding_marks_using_daily_open_fallback": 25
+  },
+  "carry_definition": "sign of prior completed UTC day's realized funding cashflow per unit; positive means long pays",
+  "carry_diagnostics": {
+    "days": 1095,
+    "positive_day_fraction": 0.8821917808219178,
+    "negative_day_fraction": 0.1178082191780822,
+    "zero_day_fraction": 0.0,
+    "next_day_sign_persistence_nonzero": 0.8775137111517367,
+    "nonzero_sign_comparisons": 1094
+  },
+  "lookbacks_days": [
+    20,
+    30,
+    60,
+    90
+  ],
+  "costs_per_unit_turnover": {
+    "favorable": {
+      "fee": 0.0004,
+      "slippage": 0.0002
+    },
+    "base": {
+      "fee": 0.0004,
+      "slippage": 0.001
+    },
+    "stress": {
+      "fee": 0.0004,
+      "slippage": 0.0015
+    }
+  },
+  "target_volatility": 0.1,
+  "max_absolute_weight": 0.5,
+  "rebalance_threshold": 0.2,
+  "benchmarks": {
+    "pure_long_short": {
+      "favorable": {
+        "days": 1095,
+        "total_return": 0.09488358202999758,
+        "cagr": 0.030698480870320788,
+        "annualized_volatility": 0.0772526364774426,
+        "sharpe": 0.4296719956671129,
+        "max_drawdown": -0.1094539094637006,
+        "calmar": 0.2804694781642465,
+        "daily_skew": 0.6498901200098999,
+        "daily_excess_kurtosis": 8.08044241066046,
+        "positive_day_fraction": 0.44474885844748857,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.03694143277132955,
+          "2022": -0.007431702819293506,
+          "2023": 0.06378366220415099
+        },
+        "turnover": 10.322771186580404,
+        "trade_events": 162,
+        "active_days": 991,
+        "price_pnl_on_initial_equity": 0.14107870139810388,
+        "funding_pnl_on_initial_equity": -0.03977756201879825,
+        "fee_cost_on_initial_equity": 0.004278371566208453,
+        "slippage_cost_on_initial_equity": 0.0021391857831042265,
+        "terminal_liquidation": true
+      },
+      "base": {
+        "days": 1095,
+        "total_return": 0.08587873981469651,
+        "cagr": 0.027863109585240187,
+        "annualized_volatility": 0.07724299362962941,
+        "sharpe": 0.39407515056640985,
+        "max_drawdown": -0.11382699877677427,
+        "calmar": 0.24478471614526562,
+        "daily_skew": 0.6480754153282944,
+        "daily_excess_kurtosis": 8.085690978720617,
+        "positive_day_fraction": 0.4429223744292237,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.035115525256373736,
+          "2022": -0.010066860386334975,
+          "2023": 0.059709053303744763
+        },
+        "turnover": 10.32243062087246,
+        "trade_events": 162,
+        "active_days": 991,
+        "price_pnl_on_initial_equity": 0.14047408216366514,
+        "funding_pnl_on_initial_equity": -0.03968252811282736,
+        "fee_cost_on_initial_equity": 0.004260804067468945,
+        "slippage_cost_on_initial_equity": 0.010652010168672366,
+        "terminal_liquidation": true
+      },
+      "stress": {
+        "days": 1095,
+        "total_return": 0.08028833395248558,
+        "cagr": 0.02609495625407532,
+        "annualized_volatility": 0.07723813122046715,
+        "sharpe": 0.3718181951907312,
+        "max_drawdown": -0.11654927107842283,
+        "calmar": 0.22389634883702303,
+        "daily_skew": 0.6469228959465798,
+        "daily_excess_kurtosis": 8.08862347109501,
+        "positive_day_fraction": 0.4420091324200913,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.03397596397951719,
+          "2022": -0.011710275545608217,
+          "2023": 0.05717032305429104
+        },
+        "turnover": 10.322217869581443,
+        "trade_events": 162,
+        "active_days": 991,
+        "price_pnl_on_initial_equity": 0.14009868257805883,
+        "funding_pnl_on_initial_equity": -0.03962345090577959,
+        "fee_cost_on_initial_equity": 0.004249873204168731,
+        "slippage_cost_on_initial_equity": 0.015937024515632732,
+        "terminal_liquidation": true
+      }
+    },
+    "pure_long_only": {
+      "favorable": {
+        "days": 1095,
+        "total_return": 0.08855932553020152,
+        "cagr": 0.028708783342346944,
+        "annualized_volatility": 0.060577875270834414,
+        "sharpe": 0.49712222646553883,
+        "max_drawdown": -0.0828171401044121,
+        "calmar": 0.34665267728579147,
+        "daily_skew": 1.2157542437925142,
+        "daily_excess_kurtosis": 15.977349251754948,
+        "positive_day_fraction": 0.2831050228310502,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": 0.02210293711960598,
+          "2022": -0.04995387588463407,
+          "2023": 0.1210184900568585
+        },
+        "turnover": 5.484783308579146,
+        "trade_events": 97,
+        "active_days": 664,
+        "price_pnl_on_initial_equity": 0.1391474033437919,
+        "funding_pnl_on_initial_equity": -0.04725317552307625,
+        "fee_cost_on_initial_equity": 0.002223268193676852,
+        "slippage_cost_on_initial_equity": 0.001111634096838426,
+        "terminal_liquidation": true
+      },
+      "base": {
+        "days": 1095,
+        "total_return": 0.08379323414288598,
+        "cagr": 0.027204209485433894,
+        "annualized_volatility": 0.06055720034422421,
+        "sharpe": 0.4731166216753555,
+        "max_drawdown": -0.08455527843013522,
+        "calmar": 0.3217328354954409,
+        "daily_skew": 1.2124017172078407,
+        "daily_excess_kurtosis": 15.977338259334715,
+        "positive_day_fraction": 0.2831050228310502,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": 0.02105486061147266,
+          "2022": -0.050961150663650145,
+          "2023": 0.11844174284697373
+        },
+        "turnover": 5.484630808044774,
+        "trade_events": 97,
+        "active_days": 664,
+        "price_pnl_on_initial_equity": 0.13874678878705304,
+        "funding_pnl_on_initial_equity": -0.047189172757739865,
+        "fee_cost_on_initial_equity": 0.002218394824694994,
+        "slippage_cost_on_initial_equity": 0.005545987061737487,
+        "terminal_liquidation": true
+      },
+      "stress": {
+        "days": 1095,
+        "total_return": 0.08082501078843918,
+        "cagr": 0.026264962525894164,
+        "annualized_volatility": 0.060545004823592666,
+        "sharpe": 0.4580999777124785,
+        "max_drawdown": -0.08563994142344677,
+        "calmar": 0.3066905708870938,
+        "daily_skew": 1.2102899884655358,
+        "daily_excess_kurtosis": 15.976837496665237,
+        "positive_day_fraction": 0.2831050228310502,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": 0.020400354601685322,
+          "2022": -0.05159015276058265,
+          "2023": 0.11683426664191332
+        },
+        "turnover": 5.484535556533704,
+        "trade_events": 97,
+        "active_days": 664,
+        "price_pnl_on_initial_equity": 0.13849722200275794,
+        "funding_pnl_on_initial_equity": -0.047149269117538264,
+        "fee_cost_on_initial_equity": 0.002215356230901531,
+        "slippage_cost_on_initial_equity": 0.008307585865880741,
+        "terminal_liquidation": true
+      }
+    },
+    "continuous_vol_target_long": {
+      "favorable": {
+        "days": 1095,
+        "total_return": 0.14052896814235472,
+        "cagr": 0.044836842538775956,
+        "annualized_volatility": 0.10412622632064963,
+        "sharpe": 0.4728953257129258,
+        "max_drawdown": -0.1861745443456415,
+        "calmar": 0.24083229367562903,
+        "daily_skew": 0.43621770832551426,
+        "daily_excess_kurtosis": 4.6301388926299705,
+        "positive_day_fraction": 0.4831050228310502,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.05375215955745194,
+          "2022": -0.13560387236981908,
+          "2023": 0.25214617166198616
+        },
+        "turnover": 1.4910857990984285,
+        "trade_events": 26,
+        "active_days": 1095,
+        "price_pnl_on_initial_equity": 0.21048476359624801,
+        "funding_pnl_on_initial_equity": -0.0690240855123763,
+        "fee_cost_on_initial_equity": 0.0006211399610077873,
+        "slippage_cost_on_initial_equity": 0.00031056998050389364,
+        "terminal_liquidation": true
+      },
+      "base": {
+        "days": 1095,
+        "total_return": 0.13916917798050266,
+        "cagr": 0.04442115905037669,
+        "annualized_volatility": 0.10411917669609028,
+        "sharpe": 0.469100694765545,
+        "max_drawdown": -0.18633265166041402,
+        "calmar": 0.23839707455745865,
+        "daily_skew": 0.436332767747498,
+        "daily_excess_kurtosis": 4.631988950228269,
+        "positive_day_fraction": 0.4831050228310502,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.053323165788716764,
+          "2022": -0.13574932091211567,
+          "2023": 0.25137323178473414
+        },
+        "turnover": 1.4910661632119746,
+        "trade_events": 26,
+        "active_days": 1095,
+        "price_pnl_on_initial_equity": 0.2103361346752579,
+        "funding_pnl_on_initial_equity": -0.06899422127460517,
+        "fee_cost_on_initial_equity": 0.0006207815486142778,
+        "slippage_cost_on_initial_equity": 0.0015519538715356948,
+        "terminal_liquidation": true
+      },
+      "stress": {
+        "days": 1095,
+        "total_return": 0.13832009727311867,
+        "cagr": 0.044161430070883245,
+        "annualized_volatility": 0.10411491828765553,
+        "sharpe": 0.4667281780287151,
+        "max_drawdown": -0.18643144083721552,
+        "calmar": 0.23687758820382254,
+        "daily_skew": 0.43640501310266644,
+        "daily_excess_kurtosis": 4.633111029265674,
+        "positive_day_fraction": 0.4821917808219178,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.053055130068075496,
+          "2022": -0.1358402031229815,
+          "2023": 0.2508903363824697
+        },
+        "turnover": 1.491053922722117,
+        "trade_events": 26,
+        "active_days": 1095,
+        "price_pnl_on_initial_equity": 0.2102433115134595,
+        "funding_pnl_on_initial_equity": -0.06897556521989273,
+        "fee_cost_on_initial_equity": 0.0006205576885138396,
+        "slippage_cost_on_initial_equity": 0.0023270913319268986,
+        "terminal_liquidation": true
+      }
+    }
+  },
+  "candidates": [
+    {
+      "candidate_id": "CARRY_BOTH_SIDES",
+      "condition_long": true,
+      "condition_short": true,
+      "scenarios": {
+        "favorable": {
+          "days": 1095,
+          "total_return": 0.05786928451927609,
+          "cagr": 0.018942273762172945,
+          "annualized_volatility": 0.04400150502967427,
+          "sharpe": 0.4481118256247409,
+          "max_drawdown": -0.08726724749089665,
+          "calmar": 0.21706051590717265,
+          "daily_skew": 1.5803337870101,
+          "daily_excess_kurtosis": 23.89217733447101,
+          "positive_day_fraction": 0.1872146118721461,
+          "positive_month_fraction": 0.3611111111111111,
+          "annual_returns": {
+            "2021": 0.04115990351695742,
+            "2022": 0.03949890109141507,
+            "2023": -0.02255903077456911
+          },
+          "turnover": 17.779157950213296,
+          "trade_events": 191,
+          "active_days": 388,
+          "price_pnl_on_initial_equity": 0.06318732436673502,
+          "funding_pnl_on_initial_equity": 0.006114329851202441,
+          "fee_cost_on_initial_equity": 0.007621579799107196,
+          "slippage_cost_on_initial_equity": 0.003810789899553598,
+          "terminal_liquidation": false
+        },
+        "base": {
+          "days": 1095,
+          "total_return": 0.04292881653933822,
+          "cagr": 0.014119320713448014,
+          "annualized_volatility": 0.04401409420925048,
+          "sharpe": 0.3402704091102724,
+          "max_drawdown": -0.09423683531455618,
+          "calmar": 0.14982804405855393,
+          "daily_skew": 1.5591256295716092,
+          "daily_excess_kurtosis": 23.941150376961364,
+          "positive_day_fraction": 0.1863013698630137,
+          "positive_month_fraction": 0.3611111111111111,
+          "annual_returns": {
+            "2021": 0.0386691641024528,
+            "2022": 0.032236700322308076,
+            "2023": -0.027256958342930182
+          },
+          "turnover": 17.778293724932368,
+          "trade_events": 191,
+          "active_days": 388,
+          "price_pnl_on_initial_equity": 0.06333361730084502,
+          "funding_pnl_on_initial_equity": 0.006081627372383999,
+          "fee_cost_on_initial_equity": 0.007567550895396515,
+          "slippage_cost_on_initial_equity": 0.01891887723849129,
+          "terminal_liquidation": false
+        },
+        "stress": {
+          "days": 1095,
+          "total_return": 0.03369836318998254,
+          "cagr": 0.011116573579081912,
+          "annualized_volatility": 0.04402659087007105,
+          "sharpe": 0.2728774725712277,
+          "max_drawdown": -0.09870958082185832,
+          "calmar": 0.1126189928730834,
+          "daily_skew": 1.5453768497630187,
+          "daily_excess_kurtosis": 23.963210742286243,
+          "positive_day_fraction": 0.18538812785388128,
+          "positive_month_fraction": 0.3611111111111111,
+          "annual_returns": {
+            "2021": 0.03711548306493273,
+            "2022": 0.02772361946384949,
+            "2023": -0.030181704030521006
+          },
+          "turnover": 17.777753704163786,
+          "trade_events": 191,
+          "active_days": 388,
+          "price_pnl_on_initial_equity": 0.06342373846611628,
+          "funding_pnl_on_initial_equity": 0.006061317597716208,
+          "fee_cost_on_initial_equity": 0.007534040605020755,
+          "slippage_cost_on_initial_equity": 0.02825265226882784,
+          "terminal_liquidation": false
+        }
+      },
+      "deflated_sharpe_probability": 0.5434280686236197
+    },
+    {
+      "candidate_id": "CARRY_LONG_SIDE_ONLY",
+      "condition_long": true,
+      "condition_short": false,
+      "scenarios": {
+        "favorable": {
+          "days": 1095,
+          "total_return": 0.00010997417208247207,
+          "cagr": 3.6681821428352634e-05,
+          "annualized_volatility": 0.05113059339035016,
+          "sharpe": 0.026246148155608565,
+          "max_drawdown": -0.11070012606729607,
+          "calmar": 0.0003313620564989535,
+          "daily_skew": 0.31733477819610084,
+          "daily_excess_kurtosis": 17.53166535682232,
+          "positive_day_fraction": 0.22922374429223744,
+          "positive_month_fraction": 0.3333333333333333,
+          "annual_returns": {
+            "2021": 0.012545540087901319,
+            "2022": 0.01680743554791886,
+            "2023": -0.028608094853107335
+          },
+          "turnover": 8.023528898055028,
+          "trade_events": 107,
+          "active_days": 491,
+          "price_pnl_on_initial_equity": -0.0005062978617292224,
+          "funding_pnl_on_initial_equity": 0.005518472652501987,
+          "fee_cost_on_initial_equity": 0.0032681337457961166,
+          "slippage_cost_on_initial_equity": 0.0016340668728980583,
+          "terminal_liquidation": false
+        },
+        "base": {
+          "days": 1095,
+          "total_return": -0.006289215799249348,
+          "cagr": -0.0021022530032657194,
+          "annualized_volatility": 0.051141451202137325,
+          "sharpe": -0.015586496341273593,
+          "max_drawdown": -0.11403616534265659,
+          "calmar": -0.018434967511831497,
+          "daily_skew": 0.31039381163243285,
+          "daily_excess_kurtosis": 17.5516318479217,
+          "positive_day_fraction": 0.228310502283105,
+          "positive_month_fraction": 0.3333333333333333,
+          "annual_returns": {
+            "2021": 0.011795363248430446,
+            "2022": 0.01431475271890581,
+            "2023": -0.031734236623227274
+          },
+          "turnover": 8.023196887425698,
+          "trade_events": 107,
+          "active_days": 491,
+          "price_pnl_on_initial_equity": -0.00039598984123563217,
+          "funding_pnl_on_initial_equity": 0.005508948846571496,
+          "fee_cost_on_initial_equity": 0.003257764229882714,
+          "slippage_cost_on_initial_equity": 0.008144410574706782,
+          "terminal_liquidation": false
+        },
+        "stress": {
+          "days": 1095,
+          "total_return": -0.010267909359367056,
+          "cagr": -0.0034367664724527236,
+          "annualized_volatility": 0.05114992719918985,
+          "sharpe": -0.04171974514385513,
+          "max_drawdown": -0.11611483881435691,
+          "calmar": -0.029597995463330806,
+          "daily_skew": 0.30600121755554033,
+          "daily_excess_kurtosis": 17.562197309470722,
+          "positive_day_fraction": 0.2273972602739726,
+          "positive_month_fraction": 0.3333333333333333,
+          "annual_returns": {
+            "2021": 0.01132678699300671,
+            "2022": 0.012759933701108839,
+            "2023": -0.03368297844177226
+          },
+          "turnover": 8.022989443903006,
+          "trade_events": 107,
+          "active_days": 491,
+          "price_pnl_on_initial_equity": -0.0003272180332988166,
+          "funding_pnl_on_initial_equity": 0.005503010309869774,
+          "fee_cost_on_initial_equity": 0.0032513056075653825,
+          "slippage_cost_on_initial_equity": 0.012192396028370172,
+          "terminal_liquidation": false
+        }
+      },
+      "deflated_sharpe_probability": 0.305598781592504
+    },
+    {
+      "candidate_id": "CARRY_SHORT_SIDE_ONLY",
+      "condition_long": false,
+      "condition_short": true,
+      "scenarios": {
+        "favorable": {
+          "days": 1095,
+          "total_return": 0.15811634866735225,
+          "cagr": 0.050183731009133314,
+          "annualized_volatility": 0.07270869770014947,
+          "sharpe": 0.7092536345260285,
+          "max_drawdown": -0.08924599353496965,
+          "calmar": 0.5623079425909422,
+          "daily_skew": 1.003065128197091,
+          "daily_excess_kurtosis": 9.64906404671876,
+          "positive_day_fraction": 0.40273972602739727,
+          "positive_month_fraction": 0.5555555555555556,
+          "annual_returns": {
+            "2021": 0.0662452199465553,
+            "2022": 0.014718832796040138,
+            "2023": 0.07040806941228661
+          },
+          "turnover": 20.078400238738666,
+          "trade_events": 246,
+          "active_days": 888,
+          "price_pnl_on_initial_equity": 0.21137518527038343,
+          "funding_pnl_on_initial_equity": -0.040173865306970764,
+          "fee_cost_on_initial_equity": 0.008723314197370878,
+          "slippage_cost_on_initial_equity": 0.004361657098685439,
+          "terminal_liquidation": true
+        },
+        "base": {
+          "days": 1095,
+          "total_return": 0.13966180806928996,
+          "cagr": 0.044571792667260635,
+          "annualized_volatility": 0.07270192716240932,
+          "sharpe": 0.635655147446245,
+          "max_drawdown": -0.0971117134970444,
+          "calmar": 0.4589744229836618,
+          "daily_skew": 1.0022288762680234,
+          "daily_excess_kurtosis": 9.660739695417037,
+          "positive_day_fraction": 0.4009132420091324,
+          "positive_month_fraction": 0.5555555555555556,
+          "annual_returns": {
+            "2021": 0.06260872150639152,
+            "2022": 0.007424288008651914,
+            "2023": 0.06460916699902453
+          },
+          "turnover": 20.077527458379134,
+          "trade_events": 246,
+          "active_days": 888,
+          "price_pnl_on_initial_equity": 0.2099297148681829,
+          "funding_pnl_on_initial_equity": -0.03998141915442425,
+          "fee_cost_on_initial_equity": 0.008653282184134851,
+          "slippage_cost_on_initial_equity": 0.02163320546033712,
+          "terminal_liquidation": true
+        },
+        "stress": {
+          "days": 1095,
+          "total_return": 0.12827733195666324,
+          "cagr": 0.04107956367398469,
+          "annualized_volatility": 0.07270048570018672,
+          "sharpe": 0.5896297515330002,
+          "max_drawdown": -0.10199325510390755,
+          "calmar": 0.4027674539079482,
+          "daily_skew": 1.001603576207991,
+          "daily_excess_kurtosis": 9.666687171970604,
+          "positive_day_fraction": 0.4,
+          "positive_month_fraction": 0.5555555555555556,
+          "annual_returns": {
+            "2021": 0.06034221099649284,
+            "2022": 0.0028918590641600073,
+            "2023": 0.061000787920237
+          },
+          "turnover": 20.076982129842214,
+          "trade_events": 246,
+          "active_days": 888,
+          "price_pnl_on_initial_equity": 0.20903678823880828,
+          "funding_pnl_on_initial_equity": -0.03986247729208347,
+          "fee_cost_on_initial_equity": 0.008609890313695929,
+          "slippage_cost_on_initial_equity": 0.03228708867635975,
+          "terminal_liquidation": true
+        }
+      },
+      "deflated_sharpe_probability": 0.735271749133241
+    }
+  ],
+  "candidate_distribution_digest": "74e76820151dda5cb449db060bc6eb9b7ce6cf223c70b3377915511ebf2310fa",
+  "product_effects": "NONE"
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "amended_at": "2026-07-22T10:43:00+08:00",
+  "status": "PRE_ANALYSIS_INTEGRITY_FIX",
+  "reason": "The monthly 8h mark-price archives have eight complete missing UTC days, while the five missing daily trade-bar dates are already present in mark-price history. Reusing the trade-bar fill dates would create duplicate mark bars.",
+  "change": "Use official daily markPriceKlines only for 2021-07-01, 2021-07-24 through 2021-07-27, 2022-10-02, 2023-02-24, and 2026-06-29; do not include any other daily mark archive in the manifest.",
+  "outcomes_or_prices_viewed": false,
+  "old_prepare_data_sha256": "8b0dc2f5265bc7e43e575530b9bc5bcf500e64c4e470ac4b82715fb4367bcbd8",
+  "new_prepare_data_sha256": "67562094d8245d942a2f9d58eb3541b3c571ab679d5547634212114ffb3865ad",
+  "study_sha256_unchanged": "21b35064832caf9c20b045bf00564dca0c151e4cd8aca3a19598035875c65801",
+  "product_effects": "NONE"
+}

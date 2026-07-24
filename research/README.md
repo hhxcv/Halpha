@@ -1,6 +1,6 @@
 # Halpha 研究总目录
 
-更新于 2026-07-21。下述 32 个历史问题共同采用产品基准提交 `de6b3052f28fe547730e89e58186d4ab397884b1` 和当时正式策略身份 `ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 / BTCUSDT-PERP`；新问题必须在自身材料中另行记录开题时的当前产品基准与策略身份，不能沿用这里的历史值。
+更新于 2026-07-24。下述 32 个历史问题共同采用产品基准提交 `de6b3052f28fe547730e89e58186d4ab397884b1` 和当时正式策略身份 `ONE_SHOT_DONCHIAN_ATR_BREAKOUT 1.0.0 / BTCUSDT-PERP`；新问题必须在自身材料中另行记录开题时的当前产品基准与策略身份，不能沿用这里的历史值。
 
 截至 2026-07-21 的冻结快照共有 33 个完成问题：4 个 `SUPPORTS_WITHIN_SCOPE`、12 个 `DOES_NOT_SUPPORT`、17 个 `INSUFFICIENT_EVIDENCE`。每个问题目录保留 checkpoint、来源、数据身份、代码/命令、实际尝试、门、结果与限制；大型公开数据和重演输出在 `D:/projects/Codex/CodexHome/research-data/halpha/`。历史完整性快照见 `catalog-2026-07-21.json`，其中保存每个最终结果文件 SHA-256；它不再承担新研究登记、状态管理或实时计数。
 
@@ -13,6 +13,7 @@ research/
 ├─ README.md
 ├─ requirements.in
 ├─ requirements.txt
+├─ halpha_research_data.py
 ├─ verify_vectorbt.py
 ├─ market-universe/
 └─ studies/
@@ -31,6 +32,25 @@ research/
 - 持续监控的固定 cutoff 证据进入问题目录 `evidence/`；反复刷新的最新状态和大型缓存放在 Git 外，不持续修改已完成证据。
 
 `studies/` 的具体开题、命名和迁移规则见其 README。
+
+## Git 外数据与保留
+
+`research/halpha_research_data.py` 是唯一的研究数据根与不可变 raw 字节解析器。路径优先级为调用方显式参数、环境变量 `HALPHA_RESEARCH_DATA_ROOT`、兼容默认值 `D:/projects/Codex/CodexHome/research-data/halpha/`。manifest/checkpoint 记录相对数据身份、来源 URL、区间、字节数和 SHA-256，不把本机数据根或临时 worktree 绝对路径当作身份。
+
+新的共享 raw 使用 `raw/<source>/<venue>/<instrument>/<family>/<interval>/<period>/<sha256><suffix>`。读取顺序是规范位置、调用方明确列出的历史位置；均缺失时由问题自己的来源代码重新取得，并在采用前核对预期字节身份。解析器不扫描全盘猜测来源、不下载数据，也不加载其他问题的 `study.py`。现有历史命令、checkpoint、manifest 和目录原样保留。
+
+Git 外材料按用途处理：
+
+| 类型 | 保留与复用 |
+|---|---|
+| immutable raw | 按来源身份只保存一次；研究引用并校验，不能原地刷新 |
+| fixed evidence | 支持结论且适合 Git 的固定 cutoff 小型证据留在问题目录，不覆盖 |
+| derived/replay | 可由 raw、代码和命令重算的 panel、逐笔交易、完整诊断与重演输出放 Git 外 |
+| latest/tmp | 最新页面状态、下载临时文件和未被证据引用的中间结果可以替换或清理 |
+
+批量搜索在 Git 中保留全部配置的紧凑结果、失败和选择范围，不能只保留冠军；完整 trades、逐 bar panel 和大型诊断矩阵默认外置，并记录相对身份、摘要和重算命令。迁移只分批处理哈希固定的不可变数据：先建立规范位置，核对迁移前后 SHA-256，再验证旧路径和新解析器均可离线读取；历史路径先通过硬链接兼容，只有确认无引用且可重新取得的副本、latest 或 tmp 才删除。迁移不修改历史证据，也不恢复任何问题的未暴露资格。
+
+2026-07-24 首批历史兼容迁移回执保存在数据根的 `migration-receipts/2026-07-24-shared-raw-v1.json` 至 `v4.json`；回执只记录相对旧路径、规范身份、哈希、字节数和链接验证，不承担长期登记或调度。
 
 ## 研究类型与证据分流
 

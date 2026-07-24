@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T08:54:22+08:00",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does the fixed BTCUSDT 20/30/60/90-day long-only Donchian ensemble retain sufficiently stable realistic-cost profitability on Binance Spot after removing perpetual funding?",
+  "intended_claim": "product consideration for a Binance Spot extension only after all sequential gates",
+  "known_exposure": "BTC market history through 2026H1 and the same Donchian family on perpetuals have been viewed. Exact Spot Donchian outcomes have not been run. The transferred candidate was selected from six prior Donchian candidates, so related-trial DSR uses ten total columns including later carry attempts.",
+  "data_boundary": {
+    "market": "BINANCE_SPOT",
+    "instrument": "BTCUSDT",
+    "timezone": "UTC",
+    "interval": "1d",
+    "warmup": ["2020-01-01T00:00:00Z", "2021-01-01T00:00:00Z"],
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "data_quality_before_outcomes": {
+    "bars": 2373,
+    "first_open_time": "2020-01-01T00:00:00Z",
+    "last_open_time": "2026-06-30T00:00:00Z",
+    "continuous_daily": true,
+    "valid_ohlc": true,
+    "duplicate_bars": 0,
+    "archives_verified": 78,
+    "archive_bytes": 170000,
+    "timestamp_normalization": "official millisecond values retained; official 2025+ microsecond values divided by 1000"
+  },
+  "input_identity": {
+    "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-spot-daily-donchian",
+    "manifest_content_identity": "ca7c316776adbde68187ba5f0e81dc25691ea01c3ca78df5b3e38bfdc5fb8874",
+    "manifest_sha256": "f1dcc7c4d1a6c41131fb44bbefaf24e6a315202853067d0a88a737552d097eb3",
+    "loaded_data_identity": "145ec8356efb2526b90bc00d997ef961d19c3bdc21f60092a2ec6a4b064d40ae",
+    "prepare_data_sha256": "526b3f1fe5b88716cc0d9d4c3aad92ef4683ea1306bbf9bd287f06ed0f080255",
+    "study_sha256": "98ff2251e26a9e24028436437b5f733f2d60f20ed209b1f3e7af1d079e366bd5",
+    "base_study_sha256": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+    "prior_donchian_returns_sha256": "629675bbb8827e14c7e7aad2d2c468f1b5fcf9dcf008ac378d102b0df195ca9a",
+    "prior_carry_returns_sha256": "27555e2b0ae34630e98e36c0f55351f222c8e109e5767732c0ea535b0ebf9c89"
+  },
+  "fixed_candidate": {
+    "candidate_id": "SPOT_LONG_BALANCED_4",
+    "direction": "LONG_ONLY",
+    "donchian_lookbacks_days": [20, 30, 60, 90],
+    "exit": "component midpoint trailing exit that never moves against the position",
+    "component_weighting": "equal state average",
+    "target_annual_volatility": 0.1,
+    "maximum_weight": 0.5,
+    "volatility_window_days": 90,
+    "rebalance_relative_tolerance": 0.2,
+    "action_time": "next UTC day open",
+    "stage_end": "liquidate"
+  },
+  "costs_per_unit_turnover": {
+    "favorable": {"fee": 0.001, "slippage": 0.0002},
+    "base": {"fee": 0.001, "slippage": 0.0005},
+    "stress": {"fee": 0.001, "slippage": 0.001}
+  },
+  "selection_bias": {
+    "related_trial_count": 10,
+    "columns": "six prior daily Donchian candidates, three prior carry-conditioned candidates, and this Spot candidate",
+    "development_threshold": "Deflated Sharpe probability at least 0.80"
+  },
+  "development_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "base Sharpe at least 0.60",
+    "ten-trial DSR at least 0.80",
+    "base max drawdown greater than -15%",
+    "at least two of 2021/2022/2023 positive and worst year at least -5%",
+    "at least 180 active days",
+    "base Calmar exceeds continuous volatility-target long benchmark",
+    "base drawdown at least 25% shallower than 0.5x buy-and-hold"
+  ],
+  "evaluation_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "2024 and 2025 base returns each positive",
+    "base Sharpe at least 0.60",
+    "base max drawdown greater than -12%",
+    "at least 120 active days",
+    "base Calmar exceeds continuous volatility-target long benchmark"
+  ],
+  "confirmation_gate": [
+    "base and stress total returns non-negative",
+    "base max drawdown greater than -8%",
+    "at least 15 active days",
+    "evaluation plus confirmation compound base and stress CAGR above 4%"
+  ],
+  "allowed_fixes_after_checkpoint": "Only code, serialization, timestamp, integrity or documentation fixes that do not change candidate, costs, periods, metrics, gates or trial accounting. Record each fix and refresh the code hash before opening a new phase.",
+  "opening_rule": "Run development only; evaluation requires evaluation_authorized=true; confirmation requires confirmation_authorized=true.",
+  "product_effects": "NONE"
+}

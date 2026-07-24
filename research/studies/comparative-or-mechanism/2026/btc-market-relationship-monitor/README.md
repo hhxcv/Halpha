@@ -27,11 +27,11 @@
 
 ## 运行
 
-研究虚拟环境和依赖锁位于 `research/.venv` 与 `research/requirements.txt`。默认缓存和持续刷新的最新页面状态都位于 Git 外：
+研究虚拟环境和依赖锁位于 `research/.venv` 与 `research/requirements.txt`。缓存根遵循 `HALPHA_RESEARCH_DATA_ROOT`，未设置时使用兼容默认值；本问题的持续刷新状态位于：
 
 `D:/projects/Codex/CodexHome/research-data/halpha/btc-market-relationship-monitor/`
 
-其中固定 cutoff 的审核证据保存在本目录 `evidence/`；刷新默认写入 Git 外 `live/`，不会覆盖固定证据或持续制造工作树改动。页面优先读取 `live/`，尚无最新状态时回退到 `evidence/`。
+其中固定 cutoff 的审核证据保存在本目录 `evidence/`；刷新默认写入 Git 外 `live/`，不会覆盖固定证据或持续制造工作树改动。页面优先读取 `live/` 当前完整 generation，尚无最新状态时回退到 `evidence/`。每次检查仍更新 latest 状态；联网刷新只有在 cutoff、universe 或规范化输入字节改变时，才按输入身份保留一份包含完整规范化输入的不可变快照。同一输入直接复用，A→B→A 也回到原身份；离线刷新优先直接读取最近的已验证快照，不能把可变 `current/` 晋升为证据。没有快照时仍可显式分析 current，但 manifest 会标为未保留来源并给出警告。
 
 一次刷新并生成 Git 外最新结果：
 
@@ -53,6 +53,8 @@ research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026
 research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026/btc-market-relationship-monitor/monitor.py refresh --offline
 ```
 
+需要重演指定快照时增加 `--input-identity <SHA-256>`；即使删除 `current/`，只要该 `snapshots/by-input/` 身份完整且校验通过，仍可直接重演。
+
 测试：
 
 ```powershell
@@ -65,5 +67,6 @@ research/.venv/Scripts/python.exe research/studies/comparative-or-mechanism/2026
 ## 产物
 
 - Git 内：问题、检查点、来源、代码、测试、结果与限制，以及固定 cutoff 的 `evidence/` 规范化结果、摘要、验证 JSON 和桌面/窄屏截图。
-- Git 外：`live/` 最新页面状态、逐 symbol 原始/规范化 kline 缓存、Coin Metrics 核对数据和每次不可覆盖的 source manifest；可用 manifest、SHA-256 和命令重取。
+- Git 外：`live/generations/` 中完整的最新与上一代页面结果、由 `live/current-generation.json` 原子选择的当前代，`current/` 逐 symbol 规范化 kline 缓存和 Coin Metrics 核对数据，以及 `snapshots/by-input/` 中按 cutoff 与输入字节身份保存的完整规范化输入和 source manifest；可用相对数据键、SHA-256 和离线命令重演。
 - 页面只读取本问题的 Git 外最新状态或固定证据回退；刷新失败时保留上次成功快照并明确显示陈旧/失败对象，不静默缩小宇宙。
+- 同一缓存根同一时刻只允许一个刷新进程；`current/` 单文件先写唯一临时文件再原子替换，页面的 CSV、summary、manifest 和 rolling 则全部写完一个 generation 后才原子切换指针。summary 返回 generation id，results/detail 必须读取同一代；若该代已经清理，页面重新取得整组结果，避免半文件、崩溃后永久混代或跨请求拼接两代。

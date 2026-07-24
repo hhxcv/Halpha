@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T11:40:00+08:00",
+  "status": "PRE_REGISTERED_BEFORE_ANY_CANDIDATE_RETURN",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "candidate_id": "BTC_MACRO_SCORE_3_MAX_1P5",
+  "question": "Can a fixed three-vote slow BTC trend overlay beat raw 1x buy-and-hold after realistic costs in every ex-post historical bull trough-to-peak leg, while reducing bear-cycle losses, without future information in its decisions?",
+  "decision_use": "Determine whether this low-complexity BTC macro-cycle mechanism deserves continued candidate research; Demo and product effects remain excluded.",
+  "strongest_claim_if_all_gates_pass": "Supports within the three observed historical cycles and Binance funding bridge only; does not prove that the current bear has ended or that the next bull cycle will be profitable.",
+  "known_exposure": "BTC price history through 2026H1, several Donchian and momentum variants, and a paper-scale 25% volatility/2x Donchian diagnostic have already been viewed in other studies. The exact three-vote mapping, raw 1x bull-leg objective, fixed cycle windows and outputs have not been run. This is a rule-level sequential test, not untouched market data.",
+  "data": {
+    "coin_metrics": {
+      "asset": "btc",
+      "metrics": ["PriceUSD", "CapMVRVCur"],
+      "frequency": "1d",
+      "period": ["2013-01-01", "2026-07-01"],
+      "rows": 4930,
+      "manifest_sha256": "2f15ec29ee17eba71241e95833397ffbca9a493e94360bbb90c5ae573e5b031d",
+      "raw_sha256": "a7fc7a063d6f658f1482ed3b6a3fb322fa328554f7624b618f171a680aaea69c",
+      "content_identity": "ce0a4ccde58593952a2d71cac7710c465cc890e69951df1976da46fb7c28193c",
+      "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-macro-cycle-trend-overlay"
+    },
+    "binance_bridge": {
+      "instrument": "BTCUSDT perpetual",
+      "period": ["2020-01-01", "2026-07-01"],
+      "manifest_sha256": "2e0de6c4396e48c00fc64b87dee7dedf509be8cc0ea56f0fc970f89218eb3e3d",
+      "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-daily-donchian-ensemble",
+      "contents": "official 1d perpetual bars, 8h mark-price bars and actual funding history; only opened after development authorization"
+    }
+  },
+  "fixed_rule": {
+    "signals": [
+      "completed daily price above SMA200",
+      "completed daily SMA50 above SMA200",
+      "completed 84-day return positive"
+    ],
+    "weight_per_true_signal": 0.5,
+    "possible_target_weights": [0.0, 0.5, 1.0, 1.5],
+    "action_time": "next daily observation; Binance bridge uses next UTC daily open",
+    "rebalance_relative_tolerance": 0.2,
+    "shorting": false,
+    "cash_return": 0.0
+  },
+  "fixed_diagnostics_not_eligible_for_selection": [
+    "same three-vote score scaled to maximum 1.0x",
+    "binary price-above-SMA200 with 1.5x maximum",
+    "raw 1.0x buy-and-hold"
+  ],
+  "periods": {
+    "warmup": ["2013-01-01", "2014-01-01"],
+    "development": ["2014-01-01", "2022-01-01"],
+    "confirmation": ["2022-01-01", "2026-07-01"]
+  },
+  "cycle_windows": {
+    "cycle_2015_2017": {
+      "bottom": ["2014-12-01", "2015-03-01"],
+      "peak": ["2017-11-01", "2018-02-01"]
+    },
+    "cycle_2018_2021": {
+      "bottom": ["2018-11-01", "2019-03-01"],
+      "peak": ["2021-10-01", "2022-01-01"]
+    },
+    "cycle_2022_2025": {
+      "bottom": ["2022-10-01", "2023-02-01"],
+      "peak": ["2025-09-01", "2025-12-01"]
+    }
+  },
+  "costs": {
+    "coin_metrics_per_unit_turnover": {
+      "favorable": 0.001,
+      "base": 0.0025,
+      "stress": 0.005
+    },
+    "coin_metrics_full_notional_annual_financing": {
+      "favorable": 0.0,
+      "base": 0.05,
+      "stress": 0.1
+    },
+    "binance_bridge": {
+      "favorable": {"taker_fee": 0.0004, "slippage": 0.0002},
+      "base": {"taker_fee": 0.0004, "slippage": 0.001},
+      "stress": {"taker_fee": 0.0004, "slippage": 0.0015},
+      "funding": "all actual events from the frozen source manifest"
+    }
+  },
+  "selection_bias": {
+    "dsr_trial_sensitivity": [3, 20, 40],
+    "primary_related_trial_count": 20,
+    "bootstrap": {
+      "method": "paired circular block bootstrap",
+      "block_days": 180,
+      "replications": 20000,
+      "seed": 20260722
+    }
+  },
+  "development_gate": [
+    "both development bull legs beat 1x buy-and-hold in base and stress",
+    "full development base and stress beat buy-and-hold",
+    "development base maximum drawdown is shallower than buy-and-hold",
+    "the complete 2017-peak to 2018-bottom bear leg beats buy-and-hold",
+    "both bull-entry lags to at least 1x are at most 180 days",
+    "the first peak-exit lag to at most 0.5x is at most 120 days",
+    "not strictly dominated by binary SMA200 at the same 1.5x cap",
+    "20-trial DSR is at least 0.80",
+    "180-day block-bootstrap probability of beating buy-and-hold is at least 0.80"
+  ],
+  "confirmation_gate": [
+    "2022-2025 bull leg beats buy-and-hold in base and stress",
+    "full confirmation period beats buy-and-hold in base",
+    "confirmation maximum drawdown is shallower than buy-and-hold",
+    "observed post-2025-peak bear segment beats buy-and-hold",
+    "Binance actual-funding bridge beats the spot buy-and-hold proxy in base and stress for the 2022-2025 bull leg"
+  ],
+  "stop_rule": "Any development failure keeps confirmation and Binance bridge unopened. Diagnostics cannot be promoted to a replacement candidate from this study.",
+  "allowed_fixes": "Only data integrity, parsing, timestamp, deterministic calculation, serialization or documentation fixes that do not change the rule, periods, cycle windows, costs, gates, trial counts or bootstrap settings; record before rerun.",
+  "method_hashes": {
+    "prepare_data_sha256": "75ae194a203eaa3c117306533180369bc01245c745ae332d49852320f36d7bbf",
+    "study_sha256": "b39111d75541cd1f497dfc42e85d3f47f85ed631b8908f5c429204ec4aa5a4f4",
+    "base_study_sha256": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+    "readme_sha256": "f1c2a2c30eb1222d6048346f218128f57a7a4f985cede1fc54cfb6f255ca4a10",
+    "sources_sha256": "2244f91aae04d739bb53adf0ec670cd0f48e64524f6ad63d96ae40b6b0141cf5"
+  },
+  "product_effects": "NONE"
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "conclusion": "DOES_NOT_SUPPORT",
+  "candidate_id": "BTC_MVRV_BOTTOM_TREND_EXIT_ENSEMBLE_1P25",
+  "phase_reached": "development",
+  "confirmation_authorized": false,
+  "binance_bridge_run": false,
+  "development": {
+    "candidate_base_total_return": 107.46941380008383,
+    "candidate_stress_total_return": 81.49759699806826,
+    "buy_hold_base_total_return": 60.302021287619695,
+    "buy_hold_stress_total_return": 59.99627173319841,
+    "candidate_base_sharpe": 1.143486220546994,
+    "candidate_base_max_drawdown": -0.8170801539490128,
+    "buy_hold_base_max_drawdown": -0.8378314303412521,
+    "turnover": 47.47117592743468,
+    "trade_events": 38
+  },
+  "bull_legs": {
+    "2015_2017": {
+      "candidate_base": 112.49278417261428,
+      "candidate_stress": 110.62828290032104,
+      "buy_hold_base": 91.0338284140947,
+      "buy_hold_stress": 90.57480110246281,
+      "bottom_action_lag_days": -2,
+      "post_peak_exit_lag_days": 52
+    },
+    "2018_2021": {
+      "candidate_base": 15.445972364460495,
+      "candidate_stress": 13.70293583817607,
+      "buy_hold_base": 20.0316651362669,
+      "buy_hold_stress": 19.926767742851695,
+      "bottom_action_lag_days": 7,
+      "post_peak_exit_lag_days": 40
+    }
+  },
+  "selection_bias": {
+    "dsr_30_trials": 0.9967859744507954,
+    "dsr_60_trials": 0.9961114262681754,
+    "bootstrap_probability_beats_buy_hold": 0.71395,
+    "bootstrap_excess_p05": -236.7766615568318,
+    "bootstrap_excess_median": 17.360375222398815,
+    "bootstrap_excess_p95": 5038.020540961942
+  },
+  "failed_checks": [
+    "both_development_bull_legs_beat_buy_hold_base_and_stress",
+    "bootstrap_probability_beats_buy_hold_at_least_0p80"
+  ],
+  "deterministic_replay": {
+    "semantic_json_equal": true,
+    "daily_returns_sha256": "d04cf4a0a3ce76e81ff93d08cd6ce7304a4eaf011819fba4286be9e42c1673b1"
+  },
+  "strongest_support": "The candidate beat buy-and-hold over the full development Base and Stress periods, reduced the complete 2017-2018 bear loss, and was fully invested at both historical peaks.",
+  "strongest_counterevidence": "It lagged buy-and-hold by about 4.59x total return in the 2018-2021 bull leg because the 2021 double-top path caused a sell-low/re-enter-higher whipsaw, and its block-bootstrap relative win probability was only 71.40%.",
+  "product_effects": "NONE"
+}

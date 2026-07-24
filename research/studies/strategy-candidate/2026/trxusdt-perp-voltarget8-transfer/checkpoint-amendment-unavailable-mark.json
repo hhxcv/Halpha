@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "amended_at": "2026-07-22T10:47:00+08:00",
+  "status": "PRE_ANALYSIS_SOURCE_LIMIT",
+  "source_check": "https://data.binance.vision/data/futures/um/daily/markPriceKlines/TRXUSDT/8h/TRXUSDT-8h-2026-06-29.zip returned HTTP 404; the other seven complete missing mark days returned 200.",
+  "decision": "Leave 2026-06-29 absent and use the already-defined official daily-open funding-mark fallback. Preserve and disclose the exact fallback event count. Do not interpolate or use another venue.",
+  "expected_scale": "Approximately three funding events out of about 7,076 records, subject to loader verification.",
+  "outcomes_or_prices_viewed": false,
+  "old_prepare_data_sha256": "67562094d8245d942a2f9d58eb3541b3c571ab679d5547634212114ffb3865ad",
+  "new_prepare_data_sha256": "9c3b6c5670378febc5d0fb23551cf62e6dc39a050087e8bd02de4ba4c698ced3",
+  "study_sha256_unchanged": "21b35064832caf9c20b045bf00564dca0c151e4cd8aca3a19598035875c65801",
+  "product_effects": "NONE"
+}

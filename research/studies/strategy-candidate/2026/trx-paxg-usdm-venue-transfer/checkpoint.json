@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "checkpoint_at": "2026-07-22T09:55:00+08:00",
+  "status": "PRE_REGISTERED_BEFORE_DATA_ANALYSIS",
+  "question": "Does the already-supported monthly 25% TRX plus 25% PAXG spot allocation retain a useful return and risk profile when transferred unchanged to Binance USD-M perpetuals with actual funding and contract prices?",
+  "candidate_id": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH",
+  "period": [
+    "2025-04-01T00:00:00Z",
+    "2026-07-01T00:00:00Z"
+  ],
+  "fixed_rule": {
+    "target_weights": {
+      "TRXUSDT": 0.25,
+      "PAXGUSDT": 0.25
+    },
+    "rebalance": "first UTC daily open monthly",
+    "maximum_gross": 0.5,
+    "directions": "long only",
+    "terminal_liquidation": true,
+    "costs_per_unit_turnover": {
+      "favorable": 0.001,
+      "base": 0.003,
+      "stress": 0.006
+    },
+    "actual_funding": true,
+    "annual_capital_hurdle": 0.04
+  },
+  "transfer_gate": [
+    "spot_support_inherited",
+    "contracts_were_trading_perpetual",
+    "base_total_positive",
+    "stress_total_positive",
+    "stress_after_4pct_hurdle_positive",
+    "both_calendar_segments_stress_positive",
+    "base_sharpe_at_least_0p75",
+    "base_calmar_at_least_1",
+    "drawdown_above_minus_10pct",
+    "drawdown_shallower_than_both_single_legs",
+    "calmar_exceeds_both_single_legs",
+    "funding_drag_at_most_half_price_pnl",
+    "active_days_at_least_450",
+    "turnover_at_most_2p5"
+  ],
+  "falsification": "Any failed gate stops this venue transfer. Do not change weights, instruments, period, direction, rebalancing, costs, or select a diagnostic benchmark as the candidate.",
+  "known_evidence_limit": "The underlying spot price path for this interval has already been viewed. The only new evidence is venue-specific perpetual price, funding, and execution-cost survival; passing requires forward Demo evidence before any stronger claim.",
+  "hashes": {
+    "study_sha256": "4a597ef49cacc8b94aae3a10334c84ff8202d09d58de2d3b2d4e05426523e014",
+    "prepare_data_sha256": "a56af26054ffb2f57fe4b3589bcd3142a2412ac17146ead223e5b4c0356559a5",
+    "readme_sha256": "c63e53d429f30fee85a01a38c8e5ac675da50b08f256af3963d859374d349bad",
+    "sources_sha256": "d4019fdcf7cc3ac47c01a9627b67f9a044ccc0cb051de8063b57aac201957778",
+    "attempts_sha256": "a9213921d1ea2859af0c0335d86efe05ab2cbd85489af5453654d5b9548bf152",
+    "spot_results_sha256": "d524114190f4f541c22ca4fd8eeae01bf33569be1d6cebd5df2791bb25ecb3bc",
+    "pair_base_sha256": "df77dd89e285fdce325fd967297b3b596c50336d4cb20ae44d92be32b2b7d26c"
+  },
+  "product_effects": "NONE"
+}

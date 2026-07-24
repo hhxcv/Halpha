@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T13:35:00+08:00",
+  "status": "PRE_REGISTERED_BEFORE_ANY_CANDIDATE_RETURN",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "candidate_id": "BTC_MVRV_LT1_OR_MONTHLY_10M_TREND_1P25",
+  "question": "Can a fixed MVRV-below-one value zone OR completed-month 10-month slow trend, at a 1.25x cap, beat raw 1x BTC buy-and-hold in every complete historical bull leg after conservative costs and financing while reducing bear losses?",
+  "decision_use": "Test a low-complexity value-plus-momentum structure that avoids daily double-top whipsaw and decaying high MVRV-Z thresholds; Demo remains excluded.",
+  "strongest_claim_if_all_gates_pass": "Supports a stable historical possibility across three rule-level cycles and an actual-funding bridge; it does not guarantee future returns or prove that the present market is at a bottom.",
+  "known_exposure": "All BTC price and MVRV history through 2026H1 has been viewed, and several related rules have failed. The 10-month trend is selected from external published work rather than a BTC horizon sweep, but this exact OR rule and 1.25x mapping have not been run. Confirmation is not untouched market data.",
+  "data": {
+    "source": "Coin Metrics Community API v4",
+    "metrics": ["PriceUSD", "CapMVRVCur", "CapMrktCurUSD"],
+    "frequency": "1d",
+    "period": ["2010-07-18", "2026-07-01"],
+    "rows": 5828,
+    "manifest_sha256": "095cf442b9e0e5a391c049c1389826d15f3ec22326fc53c56b527c691b3f5100",
+    "raw_sha256": "14c84f48355e596a85f8c36bcbfed67fcf3a27608a6df1292a2fea91f3ac5aa4",
+    "content_identity": "2d6bc1c6aaa9343f81226b1c604668987eb2a53db106058d8255248d7aaa6995",
+    "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btc-mvrv-cycle-timing-replication"
+  },
+  "fixed_rule": {
+    "value_zone": "completed daily CapMVRVCur < 1.0",
+    "slow_trend": "last completed month-end PriceUSD is above the rolling mean of the last 10 completed month-end observations, including that month",
+    "combination": "value_zone OR slow_trend",
+    "target_when_true": 1.25,
+    "target_when_false": 0.0,
+    "action_time": "next daily observation",
+    "rebalance_relative_tolerance": 0.20,
+    "shorting": false,
+    "cash_return": 0.0
+  },
+  "fixed_diagnostics_not_eligible_for_selection": [
+    "the same OR rule capped at 1.0x",
+    "completed-month 10-month slow trend alone capped at 1.25x",
+    "MVRV below 1.0 value zone alone capped at 1.25x",
+    "raw 1.0x buy-and-hold"
+  ],
+  "periods": {
+    "warmup": ["2010-07-18", "2014-01-01"],
+    "development": ["2014-01-01", "2022-01-01"],
+    "confirmation": ["2022-01-01", "2026-07-01"]
+  },
+  "cycle_windows": {
+    "cycle_2015_2017": {"bottom": ["2014-12-01", "2015-03-01"], "peak": ["2017-11-01", "2018-02-01"]},
+    "cycle_2018_2021": {"bottom": ["2018-11-01", "2019-03-01"], "peak": ["2021-10-01", "2022-01-01"]},
+    "cycle_2022_2025": {"bottom": ["2022-10-01", "2023-02-01"], "peak": ["2025-09-01", "2025-12-01"]}
+  },
+  "costs": {
+    "per_unit_turnover": {"favorable": 0.001, "base": 0.0025, "stress": 0.005},
+    "annual_financing_on_all_candidate_notional": {"favorable": 0.0, "base": 0.05, "stress": 0.10},
+    "benchmark_financing": 0.0,
+    "terminal_liquidation": true
+  },
+  "selection_bias": {
+    "dsr_trial_sensitivity": [4, 35, 70],
+    "primary_related_trial_count": 35,
+    "bootstrap": {"method": "paired circular block bootstrap", "block_days": 180, "replications": 20000, "seed": 20260722}
+  },
+  "development_gate": [
+    "both complete development bull legs beat buy-and-hold in Base and Stress",
+    "full development Base and Stress beat buy-and-hold",
+    "development Base maximum drawdown is shallower than buy-and-hold",
+    "the complete 2017-peak to 2018-bottom bear leg beats buy-and-hold",
+    "both MVRV value-zone actions are within plus or minus 90 days and actual peak weights are at least 1.0x",
+    "both first post-peak reductions to at most 0.25x occur within 180 days",
+    "the candidate is not strictly dominated by any fixed diagnostic on total return, Sharpe and maximum drawdown",
+    "35-trial DSR is at least 0.80",
+    "180-day block-bootstrap probability of beating buy-and-hold is at least 0.80"
+  ],
+  "confirmation_gate": [
+    "the 2022-2025 bull leg beats buy-and-hold in Base and Stress",
+    "the full confirmation period beats buy-and-hold in Base",
+    "confirmation maximum drawdown is shallower than buy-and-hold",
+    "the observed post-2025-peak bear segment beats buy-and-hold",
+    "the Binance actual-funding bridge beats the spot buy-and-hold proxy in Base and Stress for the 2022-2025 bull leg"
+  ],
+  "stop_rule": "Any development failure keeps confirmation and Binance bridge unopened. Diagnostics cannot replace the candidate, and MVRV, monthly horizon, OR mapping or 1.25x cap cannot be retuned from this study.",
+  "allowed_fixes": "Only data-integrity, parsing, timestamp, deterministic calculation, serialization or documentation fixes that do not change the rule, periods, windows, costs, gates, trial counts or bootstrap settings; record before rerun.",
+  "method_hashes": {
+    "study_sha256": "67b33696ff16b86fcb80e901d1978f2cabd2b998dcb5972305cc3e2ae6c523ef",
+    "base_study_sha256": "bba33efb76e751726351533726537a249494b71f277c26b48037c535b4ed6019",
+    "readme_sha256": "32d8e1810688d2a9a933a6709ac050fe9e80265f5584b0b8f360aeaea8f93f4c",
+    "sources_sha256": "da30166d90f01da4fec9380e9bd482f080a28026d7a8c298644c479ee821efde"
+  },
+  "product_effects": "NONE"
+}

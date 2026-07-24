@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T12:20:00+08:00",
+  "status": "PRE_REGISTERED_BEFORE_ANY_STRATEGY_RETURN",
+  "research_kind": "COMPARATIVE_OR_MECHANISM",
+  "question": "Does the published BTC MVRV Z-score cycle-timing rule survive an independent Coin Metrics source, a no-lookahead expanding standard deviation, next-day execution, realistic costs, and a fair same-start 1x buy-and-hold benchmark?",
+  "decision_use": "Decide whether MVRV can support a later BTC macro-cycle state model; this replication is not a product strategy candidate and has no Demo or trading effect.",
+  "strongest_claim_if_all_gates_pass": "The fixed MVRV rule shows repeatable historical timing consistency across the observed cycles under this independent definition; it does not prove a causal relation, that the present bear market has ended, or that the next cycle will outperform buy-and-hold.",
+  "known_exposure": "The peer-reviewed paper's positive summary and fixed -0.2 entry plus 5/6/7 exit rules were read before preregistration. Halpha has also inspected BTC price and MVRV history. Exact results under expanding standardization, fair same-start buy-and-hold, costs and the complete 2025 peak window have not been run.",
+  "data": {
+    "source": "Coin Metrics Community API v4",
+    "asset": "btc",
+    "metrics": [
+      "PriceUSD",
+      "CapMVRVCur",
+      "CapMrktCurUSD"
+    ],
+    "frequency": "1d",
+    "period": [
+      "2010-07-18",
+      "2026-07-01"
+    ],
+    "rows": 5828,
+    "manifest_sha256": "230452826a5fe28835ed63049db5a3e9f9a3dc8268c9a2634488b87aa0690231",
+    "raw_sha256": "14c84f48355e596a85f8c36bcbfed67fcf3a27608a6df1292a2fea91f3ac5aa4",
+    "content_identity": "2d6bc1c6aaa9343f81226b1c604668987eb2a53db106058d8255248d7aaa6995",
+    "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btc-mvrv-cycle-timing-replication"
+  },
+  "fixed_definition": {
+    "realized_cap": "CapMrktCurUSD / CapMVRVCur",
+    "primary_z_score": "(market cap - realized cap) / expanding standard deviation of market cap through that day, minimum 365 observations",
+    "lookahead_diagnostic_only": "the same numerator divided by the full available sample standard deviation",
+    "entry": "cross from at or above -0.2 to below -0.2",
+    "exits": [
+      "cross from below 5 to at or above 5",
+      "cross from below 6 to at or above 6",
+      "cross from below 7 to at or above 7"
+    ],
+    "action_time": "next daily PriceUSD observation",
+    "position": "0x cash or 1x BTC long",
+    "shorting": false,
+    "leverage": false,
+    "cash_return": 0.0,
+    "costs_per_order": {
+      "base": 0.0025,
+      "stress": 0.005
+    }
+  },
+  "periods": {
+    "warmup": [
+      "2010-07-18",
+      "2013-12-07"
+    ],
+    "development": [
+      "2013-12-07",
+      "2022-01-01"
+    ],
+    "confirmation": [
+      "2022-01-01",
+      "2026-07-01"
+    ]
+  },
+  "cycle_windows": {
+    "cycle_2015_2017": {
+      "bottom": [
+        "2014-12-01",
+        "2015-03-01"
+      ],
+      "peak": [
+        "2017-11-01",
+        "2018-02-01"
+      ]
+    },
+    "cycle_2018_2021": {
+      "bottom": [
+        "2018-11-01",
+        "2019-03-01"
+      ],
+      "peak": [
+        "2021-10-01",
+        "2022-01-01"
+      ]
+    },
+    "cycle_2022_2025": {
+      "bottom": [
+        "2022-10-01",
+        "2023-02-01"
+      ],
+      "peak": [
+        "2025-09-01",
+        "2025-12-01"
+      ]
+    }
+  },
+  "benchmark": "1x BTC buy-and-hold with the same phase start, initial capital and entry cost; strict bull diagnostics additionally compare a hypothetical perfect next-day purchase immediately after each ex-post trough.",
+  "development_gate": [
+    "at least two variants beat same-start buy-and-hold in Base total return and have shallower maximum drawdown",
+    "all three variants enter within plus or minus 180 days of both development troughs",
+    "at least two variants exit within plus or minus 180 days of both development peaks",
+    "the direction of the total-return comparison with buy-and-hold is consistent across exit thresholds 5, 6 and 7"
+  ],
+  "confirmation_gate": [
+    "at least two variants beat same-start buy-and-hold in Base total return",
+    "at least two variants enter near the 2022 trough and exit near the 2025 peak within plus or minus 180 days",
+    "strict 2022-trough-to-2025-peak candidate and perfect next-day buy-and-hold returns are reported without relabeling risk-adjusted superiority as raw outperformance"
+  ],
+  "stop_rule": "Any development failure keeps confirmation unopened. The 2025 exit threshold cannot be lowered after viewing results, and a diagnostic full-sample Z-score cannot replace the no-lookahead primary definition.",
+  "allowed_fixes": "Only data-integrity, parsing, timestamp, deterministic calculation, serialization or documentation fixes that do not change the definitions, rules, periods, cycle windows, costs, benchmark or gates; record before rerun.",
+  "method_hashes": {
+    "prepare_data_sha256": "aab4897cfbe7a2e16313ac9e198af002a65f03f25b208f419c3b1cc2a90056df",
+    "study_sha256": "5b9b0927ecc6730e3dbbf02a13a9969fe7c16cb0bb336910999d880559b31bf2",
+    "readme_sha256": "8a7ad8fe2a5c9cf6466b85ac0e97e83af5b760f2c034c24b41a845dfe2b9f4ae",
+    "sources_sha256": "b8dced1dcf751b10c4bf97838948b73ce1095147627c2430b10aa6f9409b5ab0"
+  },
+  "post_result_integrity_amendments": [
+    {
+      "recorded_at": "2026-07-22T12:35:00+08:00",
+      "exposure": "The first development output had already failed the frozen peak-exit timing gate; its SHA-256 was 2e6873658f2041b4ecf1b13dc36370309ca76cb44c845ab70c1b0a1d31c577f0. Confirmation remained unopened.",
+      "reason": "The report listed repeated threshold crossings that vectorbt did not execute while already in or out of the position, and its strict bull slice included the trough-to-next-day return for the candidate while the stated comparator began at the next-day action price.",
+      "scope": "Deterministically collapse signals to executed 0x/1x state transitions and align the candidate strict-bull slice to begin after the same next-day action close. Thresholds, portfolio returns, development benchmark, periods, costs, gates and stop rule are unchanged.",
+      "original_study_sha256": "5b9b0927ecc6730e3dbbf02a13a9969fe7c16cb0bb336910999d880559b31bf2",
+      "amended_study_sha256": "21c25689ceb67664800cd61e0cec1a7d62a780004e19848a1fd06d93664dcd92"
+    }
+  ],
+  "product_effects": "NONE"
+}

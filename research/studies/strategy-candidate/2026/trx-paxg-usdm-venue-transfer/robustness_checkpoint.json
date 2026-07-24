@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "checkpoint_at": "2026-07-22T10:02:00+08:00",
+  "status": "PRE_REGISTERED_BEFORE_ROBUSTNESS_EXECUTION",
+  "purpose": "Falsify, never optimize, the already-passed fixed venue-transfer candidate.",
+  "fixed_inputs": {
+    "cost_scenario": "stress: 60 bp per unit absolute turnover",
+    "weight_neighborhood": [
+      [0.2, 0.3],
+      [0.25, 0.25],
+      [0.3, 0.2]
+    ],
+    "funding_stress": "double every positive funding value paid by a long; retain negative funding receipts unchanged",
+    "concentration_stress": "replace every return in the single best calendar month with zero",
+    "bootstrap": {
+      "kind": "circular moving block",
+      "block_days": 30,
+      "samples": 20000,
+      "seed": 20260722
+    }
+  },
+  "gate": [
+    "all weight neighbors remain above the 4% annual full-capital hurdle",
+    "all weight neighbors keep max drawdown above -12%",
+    "doubled positive funding remains above the 4% annual full-capital hurdle",
+    "doubled positive funding keeps max drawdown above -12%",
+    "removing the best month still remains above the 4% annual full-capital hurdle",
+    "bootstrap probability of positive total return is at least 80%",
+    "bootstrap probability of exceeding the 4% annual hurdle is at least 65%",
+    "bootstrap 5th-percentile max drawdown is above -20%"
+  ],
+  "falsification": "Any failed check stops robustness support. No variant may replace the 25%/25% candidate and no threshold may be changed after seeing results.",
+  "hashes": {
+    "robustness_sha256": "ec92f53fe9c1ca99286efa36ef6236f569694e079d2b297d99e580679657090f",
+    "transfer_result_sha256": "2b615b5c7c6f06039cc45cbe445f16863bb3abfaa80146edb7b304696a74f77d",
+    "transfer_gate_sha256": "44843d0318304ad3042ce51bb12c5f290c1c9f98f917764c1999f6e3e19d0a05"
+  },
+  "product_effects": "NONE"
+}

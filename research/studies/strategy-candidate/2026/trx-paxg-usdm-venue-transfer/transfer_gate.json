@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T01:47:47.081876+00:00",
+  "phase": "venue_transfer_gate",
+  "source_sha256": "2b615b5c7c6f06039cc45cbe445f16863bb3abfaa80146edb7b304696a74f77d",
+  "candidate_id": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH",
+  "stress_return_after_4pct_annual_hurdle": 0.08802450915059801,
+  "base_price_pnl_on_initial_equity": 0.15548316138517587,
+  "base_funding_pnl_on_initial_equity": -0.004017220538435229,
+  "base_funding_drag_fraction_of_price_pnl": 0.025837013491663157,
+  "checks": {
+    "spot_support_inherited": true,
+    "contracts_were_trading_perpetual": true,
+    "base_total_positive": true,
+    "stress_total_positive": true,
+    "stress_after_4pct_hurdle_positive": true,
+    "both_calendar_segments_stress_positive": true,
+    "base_sharpe_at_least_0p75": true,
+    "base_calmar_at_least_1": true,
+    "drawdown_above_minus_10pct": true,
+    "drawdown_shallower_than_both_single_legs": true,
+    "calmar_exceeds_both_single_legs": true,
+    "funding_drag_at_most_half_price_pnl": true,
+    "active_days_at_least_450": true,
+    "turnover_at_most_2p5": true
+  },
+  "failed_checks": [],
+  "research_supports_demo_candidate": true,
+  "conclusion": "SUPPORTS_VENUE_TRANSFER"
+}

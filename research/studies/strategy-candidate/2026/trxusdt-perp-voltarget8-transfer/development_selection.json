@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T02:16:56.142597+00:00",
+  "phase": "development_selection",
+  "source_sha256": "ca1465be96eee33a0ede9a1d6a7ba7d53036e18843a80b098447d79a0846b1b2",
+  "checks": {
+    "spot_support_inherited": true,
+    "base_total_positive": true,
+    "stress_total_positive": true,
+    "stress_after_4pct_hurdle_positive": false,
+    "base_sharpe_at_least_0p45": false,
+    "drawdown_above_minus_12pct": true,
+    "drawdown_shallower_than_unscaled": true,
+    "six_and_ten_pct_neighbors_positive": true,
+    "active_days_at_least_700": true,
+    "turnover_at_most_3": true,
+    "funding_drag_at_most_half_price_pnl": true
+  },
+  "failed_checks": [
+    "stress_after_4pct_hurdle_positive",
+    "base_sharpe_at_least_0p45"
+  ],
+  "stress_return_after_4pct_annual_hurdle": -0.0028526516708161642,
+  "funding_drag_fraction_of_price_pnl": 0.0988015573172717,
+  "evaluation_authorized": false
+}

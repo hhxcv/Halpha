@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "checkpoint_at": "2026-07-22T11:05:00+08:00",
+  "status": "PRE_REGISTERED_BEFORE_NEW_COMPARISON_OUTCOMES",
+  "parent_candidate": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH",
+  "question": "After accounting for the candidate's full selection lineage, simple asset substitutes, rebalancing attribution, risk concentration and external prior art, does the evidence still support treating fixed monthly 25% TRX plus 25% PAXG as a Demo-worthy candidate?",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "claim_strength": "product_consideration_audit_on_exposed_history",
+  "periods": {
+    "full_spot_audit": ["2021-01-01T00:00:00Z", "2026-07-01T00:00:00Z"],
+    "common_dsr_and_inverse_vol": ["2022-01-01T00:00:00Z", "2026-07-01T00:00:00Z"],
+    "parent_perpetual_transfer_reference": ["2025-04-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "known_exposure": "All TRX/PAXG spot and perpetual outcomes are exposed. BTC and ETH histories overlap other Halpha studies. This audit creates no untouched holdout and cannot strengthen the candidate beyond product consideration with limits.",
+  "fixed_variants": [
+    "TRX_PAXG_MONTHLY_25PCT_EACH",
+    "TRX_PAXG_BUY_HOLD_25PCT_EACH",
+    "BTC_PAXG_MONTHLY_25PCT_EACH",
+    "ETH_PAXG_MONTHLY_25PCT_EACH",
+    "TRX_PAXG_INV_VOL360_MONTHLY_GROSS0P5",
+    "BTC_PAXG_INV_VOL360_MONTHLY_GROSS0P5"
+  ],
+  "costs_per_unit_turnover": {
+    "favorable": 0.001,
+    "base": 0.003,
+    "stress": 0.006
+  },
+  "annual_capital_hurdle": 0.04,
+  "selection_bias": {
+    "dsr_trial_sensitivity": [3, 12, 33],
+    "primary_related_trial_count": 12,
+    "upper_bound_prior_completed_question_count": 33,
+    "aligned_return_columns": 6,
+    "cscv_blocks": 16
+  },
+  "bootstrap": {
+    "method": "paired circular block bootstrap",
+    "block_days": 90,
+    "replications": 20000,
+    "seed": 20260722
+  },
+  "method_hashes": {
+    "prepare_data_sha256": "ecd47e71974bb54fa7c7c148216ef9f4966c62b2638de3e71a9348fa0e5b7deb",
+    "audit_sha256": "ffc6c2f53ea155600b30cf2b3dfab87019e99f396062957f1bdabae88818add3",
+    "readme_sha256": "313498672769f2a8e4d88e8cd22173fc9066419e04530929b81dda4b57e9cb8f",
+    "sources_sha256": "07d1a706fc5b0804fb8016d5a8f0684baf2934fefa552cb68b00d7e53a3ae044"
+  },
+  "input_identities": {
+    "btc_eth_core_spot_manifest_sha256": "c9bd05a9af9b7cb662958e7edac1e458e002567fd04f9015ce4b1d863c7b22ef",
+    "btc_eth_core_spot_content_identity": "a52f87a1007b7462c3472d25b9b3ab5887c9ade889bfff193ae8a4dedc28d7cd",
+    "btc_eth_archives": 156,
+    "btc_eth_backfill_records": 0,
+    "trx_paxg_development_manifest_sha256": "69c3ca778b1e9d31fa8cdb420a2e50d187582e2153e6f28752fa6cc5d5ab4996",
+    "trx_paxg_evaluation_manifest_sha256": "0f817d595ca084aa96c7dc7d4b0819576a1c2ac4fd4d91aa0fbb85cc10f2ba5d",
+    "trx_paxg_confirmation_manifest_sha256": "875cd3a7ac299f6c645da21bcdc85549ea70e86a14b2c04cac113300c476bb7d"
+  },
+  "maintain_parent_support_checks": [
+    "twelve_trial_dsr_at_least_0p80",
+    "rebalancing_total_return_increment_positive",
+    "bootstrap_probability_beats_buy_hold_at_least_0p60",
+    "not_strictly_dominated_by_fixed_alternatives",
+    "trx_variance_contribution_at_most_0p80",
+    "bootstrap_probability_above_4pct_hurdle_at_least_0p80",
+    "broad_external_mechanism_support_with_no_exact_trx_rule_support"
+  ],
+  "falsification": "Any failed maintain-parent-support check downgrades the parent research conclusion to INSUFFICIENT_EVIDENCE and pauses Demo consideration. Audit comparators cannot be promoted as replacement candidates.",
+  "allowed_fixes": "Integrity, parser, timestamp-unit and deterministic calculation fixes that do not depend on comparison outcomes; record before rerun.",
+  "product_effects": "NONE"
+}

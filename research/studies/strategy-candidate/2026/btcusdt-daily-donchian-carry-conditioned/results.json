@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "question": "Can prior completed UTC-day realized funding sign improve a fixed BTCUSDT daily Donchian long-short state machine enough for sequential product consideration?",
+  "phase_reached": "development_selection",
+  "evaluation_authorized": false,
+  "confirmation_authorized": false,
+  "candidate_count": 3,
+  "carry_diagnostics_development": {
+    "positive_day_fraction": 0.8821917808219178,
+    "negative_day_fraction": 0.1178082191780822,
+    "next_day_sign_persistence_nonzero": 0.8775137111517367,
+    "nonzero_sign_comparisons": 1094
+  },
+  "benchmarks_base": {
+    "pure_long_short": {
+      "total_return": 0.08587873981469651,
+      "sharpe": 0.39407515056640985,
+      "calmar": 0.24478471614526562,
+      "max_drawdown": -0.11382699877677427,
+      "funding_pnl_on_initial_equity": -0.03968252811282736
+    },
+    "pure_long_only": {
+      "total_return": 0.08379323414288598,
+      "sharpe": 0.4731166216753555,
+      "calmar": 0.3217328354954409,
+      "max_drawdown": -0.08455527843013522,
+      "funding_pnl_on_initial_equity": -0.047189172757739865
+    },
+    "continuous_vol_target_long": {
+      "total_return": 0.13916917798050266,
+      "sharpe": 0.469100694765545,
+      "calmar": 0.23839707455745865,
+      "max_drawdown": -0.18633265166041402,
+      "funding_pnl_on_initial_equity": -0.06899422127460517
+    }
+  },
+  "candidates": [
+    {
+      "candidate_id": "CARRY_BOTH_SIDES",
+      "base_total_return": 0.04292881653933822,
+      "stress_total_return": 0.03369836318998254,
+      "base_sharpe": 0.3402704091102724,
+      "base_calmar": 0.14982804405855393,
+      "base_max_drawdown": -0.09423683531455618,
+      "funding_pnl_on_initial_equity": 0.006081627372383999,
+      "deflated_sharpe_probability": 0.5434280686236197,
+      "passed": false
+    },
+    {
+      "candidate_id": "CARRY_LONG_SIDE_ONLY",
+      "base_total_return": -0.006289215799249348,
+      "stress_total_return": -0.010267909359367056,
+      "base_sharpe": -0.015586496341273593,
+      "base_calmar": -0.018434967511831497,
+      "base_max_drawdown": -0.11403616534265659,
+      "funding_pnl_on_initial_equity": 0.005508948846571496,
+      "deflated_sharpe_probability": 0.305598781592504,
+      "passed": false
+    },
+    {
+      "candidate_id": "CARRY_SHORT_SIDE_ONLY",
+      "base_total_return": 0.13966180806928996,
+      "stress_total_return": 0.12827733195666324,
+      "base_sharpe": 0.635655147446245,
+      "base_calmar": 0.4589744229836618,
+      "base_max_drawdown": -0.0971117134970444,
+      "funding_pnl_on_initial_equity": -0.03998141915442425,
+      "deflated_sharpe_probability": 0.735271749133241,
+      "annual_base_returns": {
+        "2021": 0.06260872150639152,
+        "2022": 0.007424288008651914,
+        "2023": 0.06460916699902453
+      },
+      "passed": false
+    }
+  ],
+  "strongest_support": "Short-side-only conditioning was positive in all three development years, returned 13.97% base and 12.83% stress, and improved Sharpe, Calmar and drawdown versus both pure Donchian direction baselines.",
+  "strongest_counterevidence": "It did not improve total funding PnL versus pure long-short after the full equity path, and its three-candidate Deflated Sharpe probability was 0.735 rather than the fixed 0.80; no candidate passed every development check.",
+  "interpretation": "The useful development pattern is more consistent with avoiding some crypto short exposure and preserving positive drift than with harvesting carry. Positive funding occurred on 88.2% of days, so conditioning longs on carry removed too much long beta.",
+  "artifacts": {
+    "development_sha256": "d1a0393535497453030c818cde14a58c804094bef94c0ed0180f9ac48c3be5d0",
+    "selection_sha256": "6602e8e2040a4dc6067824b0ccca6a9c57eb863302c8a7c5b80fc53d78710859",
+    "development_csv_sha256": "6cf45b2e424a8d5e2e76ec0f485004a6d827e8dd6ee1b1b9224d076b078c0226",
+    "development_daily_returns_sha256": "27555e2b0ae34630e98e36c0f55351f222c8e109e5767732c0ea535b0ebf9c89"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-daily-donchian-carry-conditioned-replay",
+    "csv_byte_identical": true,
+    "daily_returns_byte_identical": true,
+    "json_semantic_equal_ignoring_generated_at": true
+  },
+  "evaluation_read": false,
+  "confirmation_read": false,
+  "product_effects": "NONE"
+}

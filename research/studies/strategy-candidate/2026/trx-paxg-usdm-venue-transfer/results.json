@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "venue_transfer_conclusion_at_completion": "SUPPORTS_DEMO_CANDIDATE_WITH_LIMITS",
+  "superseded_by": "../trx-paxg-overfit-logic-audit/results.json",
+  "current_demo_qualification": "WITHDRAWN_PENDING_NEW_INDEPENDENT_EVIDENCE",
+  "candidate_id": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH",
+  "scope": "Binance USD-M monthly 25% TRXUSDT long plus 25% PAXGUSDT long, 50% cash, maximum target gross 0.5",
+  "period": [
+    "2025-04-01T00:00:00Z",
+    "2026-07-01T00:00:00Z"
+  ],
+  "base": {
+    "total_return": 0.14715739545679374,
+    "cagr": 0.11623913815100706,
+    "sharpe": 1.0973293456639686,
+    "calmar": 1.719909980039118,
+    "max_drawdown": -0.06758443145283877,
+    "annual_returns": {
+      "2025": 0.12643352540811859,
+      "2026": 0.018397774552356694
+    },
+    "turnover": 1.3185436724371982,
+    "active_days": 456
+  },
+  "stress": {
+    "total_return": 0.14262604883156405,
+    "cagr": 0.11270602259035511,
+    "sharpe": 1.0660534488333206,
+    "calmar": 1.634343191642129,
+    "max_drawdown": -0.06896105002102537,
+    "annual_returns": {
+      "2025": 0.124101332622641,
+      "2026": 0.0164795785498264
+    },
+    "return_after_4pct_annual_hurdle": 0.08802450915059801
+  },
+  "base_pnl_decomposition_on_initial_equity": {
+    "price_pnl": 0.15548316138517587,
+    "funding_pnl": -0.004017220538435229,
+    "fee_cost": 0.0005744727186597885,
+    "slippage_cost": 0.003734072671288625,
+    "funding_drag_fraction_of_price_pnl": 0.025837013491663157
+  },
+  "single_leg_diagnostics": {
+    "trx_half_long": {
+      "total_return": 0.18164732719723764,
+      "sharpe": 0.967051215169328,
+      "calmar": 1.078368019027116,
+      "max_drawdown": -0.13264587692012497
+    },
+    "paxg_half_long": {
+      "total_return": 0.10245458506192495,
+      "sharpe": 0.6245024490733686,
+      "calmar": 0.5111905555238198,
+      "max_drawdown": -0.15896338156440493
+    }
+  },
+  "robustness": {
+    "weight_neighbor_returns_after_4pct_hurdle": {
+      "trx_0.20_paxg_0.30": 0.080331458554461,
+      "trx_0.25_paxg_0.25": 0.08802450915059801,
+      "trx_0.30_paxg_0.20": 0.0953721891058179
+    },
+    "doubled_positive_funding_return_after_4pct_hurdle": 0.054739073125703586,
+    "without_best_month_return_after_4pct_hurdle": 0.05155308775741152,
+    "bootstrap_probability_total_positive": 0.92095,
+    "bootstrap_probability_above_4pct_hurdle": 0.81995,
+    "bootstrap_total_return_p05": -0.022446515878876323,
+    "bootstrap_max_drawdown_p05": -0.13911139003448084
+  },
+  "evidence_limits": [
+    "PAXGUSDT perpetual has only 456 complete transfer days in scope.",
+    "The same underlying price interval was already observed in the spot confirmation, so this is venue-specific transfer evidence rather than a virgin price holdout.",
+    "2026H1 stress return is positive but only 1.65%.",
+    "The 5th-percentile block-bootstrap total return is negative; forward Demo evidence remains mandatory."
+  ],
+  "artifacts": {
+    "transfer_sha256": "2b615b5c7c6f06039cc45cbe445f16863bb3abfaa80146edb7b304696a74f77d",
+    "transfer_gate_sha256": "44843d0318304ad3042ce51bb12c5f290c1c9f98f917764c1999f6e3e19d0a05",
+    "transfer_csv_sha256": "dec94e14480d93169c942b867d7925107d175395d2dcb5b204480104026309a6",
+    "transfer_daily_returns_sha256": "e6cc3410be9fa71785af8a496535d9e47c36fa2d5fb4dc17d82a567534015015",
+    "robustness_sha256": "3ceff5de0774f40dcd184c7942ce640c133a1383878b036bde244d5b4d01d265",
+    "trx_manifest_sha256": "781a1058ce1155c65e36322350dd568c0caedb20038c72c79795bc255c92dedf",
+    "paxg_manifest_sha256": "38cebab4e419115c9588be6a7c40462c40c6ea0cb18577536e8342e614aa7eaf"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/trx-paxg-usdm-venue-transfer-replay",
+    "transfer_json_semantic_equal_ignoring_generated_at": true,
+    "gate_semantic_equal_ignoring_generated_at_and_source_hash": true,
+    "transfer_csv_byte_identical": true,
+    "daily_returns_byte_identical": true,
+    "robustness_json_semantic_equal_ignoring_generated_at": true
+  },
+  "research_supports_demo_candidate": false,
+  "product_effects": "NONE"
+}

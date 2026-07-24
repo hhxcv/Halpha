@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "amended_at": "2026-07-22T10:39:00+08:00",
+  "status": "PRE_ANALYSIS_INTEGRITY_FIX",
+  "integrity_evidence": {
+    "monthly_daily_rows": 2354,
+    "duplicates": 0,
+    "missing_dates": [
+      "2022-02-26",
+      "2022-02-27",
+      "2022-02-28",
+      "2022-04-01",
+      "2022-04-02"
+    ],
+    "outcomes_or_prices_viewed": false
+  },
+  "change": "Add checksum-verified Binance official daily 1d kline and daily 8h mark-price archives only for the five timestamps absent from the monthly archives.",
+  "policy": "No interpolation, forward fill, alternate venue, synthetic bar, or non-official price is allowed.",
+  "unchanged": [
+    "candidate",
+    "volatility calculation",
+    "weights",
+    "periods",
+    "costs",
+    "funding economics",
+    "sequential gates",
+    "benchmarks"
+  ],
+  "outcomes_viewed_before_change": false,
+  "old_prepare_data_sha256": "36e1f920c6c5442bb531f4b8ae2ecf5e00d18a449b5764d1d903cafdf1b2e4ab",
+  "new_prepare_data_sha256": "8b0dc2f5265bc7e43e575530b9bc5bcf500e64c4e470ac4b82715fb4367bcbd8",
+  "study_sha256_unchanged": "21b35064832caf9c20b045bf00564dca0c151e4cd8aca3a19598035875c65801",
+  "product_effects": "NONE"
+}

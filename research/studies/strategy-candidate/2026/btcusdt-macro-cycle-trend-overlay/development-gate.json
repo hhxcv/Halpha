@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T03:41:53.836900+00:00",
+  "source_sha256": "06cac7a1a08fab6d1277830aebb1d0e8edc1d402f76b649a3c34052292490dea",
+  "checks": {
+    "both_development_bull_legs_beat_buy_hold_base_and_stress": false,
+    "development_base_beats_buy_hold": true,
+    "development_stress_beats_buy_hold": false,
+    "development_drawdown_shallower_than_buy_hold": true,
+    "complete_bear_leg_beats_buy_hold": true,
+    "both_entry_lags_at_most_180d": true,
+    "first_exit_lag_at_most_120d": true,
+    "not_strictly_dominated_by_simple_sma200": true,
+    "twenty_trial_dsr_at_least_0p80": true,
+    "bootstrap_probability_beats_buy_hold_at_least_0p80": false
+  },
+  "failed_checks": [
+    "both_development_bull_legs_beat_buy_hold_base_and_stress",
+    "development_stress_beats_buy_hold",
+    "bootstrap_probability_beats_buy_hold_at_least_0p80"
+  ],
+  "confirmation_authorized": false
+}

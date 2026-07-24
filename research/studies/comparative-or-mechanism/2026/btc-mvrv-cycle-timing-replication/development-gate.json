@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T03:54:32.697863+00:00",
+  "source_sha256": "56a8919b042d6a849c43662ec70789c7b76fecfed26868e7a3af14b9b4962acb",
+  "checks": {
+    "at_least_two_variants_beat_same_start_buy_hold_and_drawdown": true,
+    "all_variants_enter_both_bottoms_within_180d": true,
+    "at_least_two_variants_exit_both_peaks_within_180d": false,
+    "threshold_direction_consistent": true
+  },
+  "failed_checks": [
+    "at_least_two_variants_exit_both_peaks_within_180d"
+  ],
+  "confirmation_authorized": false
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "question": "Does the exact BTC-selected short-side carry-conditioned 20/30/60/90-day Donchian rule transfer to ETHUSDT perpetual with stable realistic-cost profitability?",
+  "phase_reached": "development_selection",
+  "evaluation_authorized": false,
+  "confirmation_authorized": false,
+  "candidate": {
+    "candidate_id": "ETH_SHORT_CARRY_ONLY",
+    "base_total_return": 0.16668936476301233,
+    "stress_total_return": 0.1557351734399237,
+    "base_cagr": 0.05277048213563784,
+    "stress_cagr": 0.04946299148520095,
+    "base_sharpe": 0.7318374262868619,
+    "base_calmar": 0.7472567932891034,
+    "base_max_drawdown": -0.07061893931183261,
+    "deflated_sharpe_probability": 0.7520865103191778,
+    "related_trial_count": 11,
+    "active_days": 921,
+    "annual_base_returns": {
+      "2021": 0.097294252835471,
+      "2022": 0.07183617786944074,
+      "2023": -0.008018157821018224
+    },
+    "funding_pnl_on_initial_equity": -0.043376592130096106
+  },
+  "benchmarks_base": {
+    "pure_long_short": {
+      "total_return": 0.0903369217843597,
+      "sharpe": 0.39939399916425117,
+      "calmar": 0.23580852364428767,
+      "max_drawdown": -0.12412111157315775
+    },
+    "pure_long_only": {
+      "total_return": 0.16702747615479585,
+      "sharpe": 0.8175545943338353,
+      "calmar": 0.9973479405214051,
+      "max_drawdown": -0.05301283423252112
+    },
+    "continuous_vol_target_long": {
+      "total_return": 0.19093215745180347,
+      "sharpe": 0.6174067552949247,
+      "calmar": 0.3668312070295952,
+      "max_drawdown": -0.1636104363921791
+    }
+  },
+  "failed_checks": [
+    "eleven_trial_dsr_at_least_0p80",
+    "sharpe_exceeds_both_pure_trends",
+    "calmar_exceeds_both_pure_trends"
+  ],
+  "strongest_support": "The fixed BTC-selected rule stayed profitable after realistic costs on ETH, returned 16.67% base and 15.57% stress, had only a 7.06% maximum drawdown, and was positive in two of three development years.",
+  "strongest_counterevidence": "Its eleven-trial Deflated Sharpe probability was 0.752 rather than 0.80, and both Sharpe and Calmar were lower than the simpler ETH pure long-only Donchian benchmark.",
+  "interpretation": "The short-side funding filter transfers some absolute profitability but does not establish incremental value over a simpler long-only trend rule. Continuing to tune funding-sign filters would reuse the same weak mechanism and increase selection bias.",
+  "artifacts": {
+    "development_sha256": "4602b076b92deb56aed43b62c0fcf088c08a2938b4edda26a3c7b5d11ea1c463",
+    "selection_sha256": "c881445bb054ca9e8332efa793ad251406110532fc5b287c16eb6b7003ef9b23",
+    "development_csv_sha256": "4ca4c38a8148deb3f1fa7860d6c073c831d9683f4cac76c8f3739c62c91ef0ad",
+    "development_daily_returns_sha256": "f0f38225bdd0bc0c2263b99c572e1696cb9b7d6d67a5e38cf0243e7b0fda0274"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/ethusdt-daily-donchian-short-carry-transfer-replay",
+    "csv_byte_identical": true,
+    "daily_returns_byte_identical": true,
+    "json_semantic_equal_ignoring_generated_at": true,
+    "selection_semantic_equal_ignoring_generated_at_and_source_hash": true
+  },
+  "evaluation_read": false,
+  "confirmation_read": false,
+  "product_effects": "NONE"
+}

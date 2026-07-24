@@ -4,12 +4,20 @@ import argparse
 import csv
 import hashlib
 import json
+import sys
 import urllib.request
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+
+
+RESEARCH_ROOT = Path(__file__).resolve().parent.parent
+if str(RESEARCH_ROOT) not in sys.path:
+    sys.path.insert(0, str(RESEARCH_ROOT))
+
+from halpha_research_data import data_root  # noqa: E402 - research-root local helper
 
 
 USER_AGENT = "HalphaResearchMarketUniverse/1.0"
@@ -105,11 +113,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Refresh the point-in-time Binance research instrument universe."
     )
-    source_group = parser.add_mutually_exclusive_group(required=True)
+    source_group = parser.add_mutually_exclusive_group()
     source_group.add_argument(
         "--cache-root",
         type=Path,
-        help="Git-external directory for immutable raw public endpoint responses.",
+        help=(
+            "Git-external directory for immutable raw public endpoint responses; "
+            "defaults to <HALPHA_RESEARCH_DATA_ROOT>/market-universe."
+        ),
     )
     source_group.add_argument(
         "--raw-cache-dir",
@@ -122,7 +133,10 @@ def parse_args() -> argparse.Namespace:
         default=Path(__file__).resolve().parent,
         help="Directory for the normalized CSV, summary and source manifest.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.cache_root is None and args.raw_cache_dir is None:
+        args.cache_root = data_root() / "market-universe"
+    return args
 
 
 def sha256(data: bytes) -> str:

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T09:33:27.7053096+08:00",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Can a fixed monthly 90-day ETH/BTC relative-momentum rule with 25% long and 25% short USD-M legs deliver stable low-common-beta profitability after actual funding and realistic costs?",
+  "intended_claim": "Demo consideration using the two existing BTCUSDT-PERP and ETHUSDT-PERP instruments only after all sequential gates",
+  "known_exposure": "BTC and ETH histories have been viewed by other rules, and 90-day spot top-1 momentum failed. This exact perpetual long-short relative rule has not been run. Evidence is a new fixed mechanism with thirteen-trial correction and sequential time gates, not virgin-data discovery.",
+  "mechanism_choice": {
+    "selected": "relative momentum of the ETH/BTC ratio",
+    "rejected": "static ratio mean reversion",
+    "reason": "Positive crypto pairs research requires dynamic cointegration, pair selection and quote-level execution; strong crypto time-series momentum has a simpler mature prior. The study will not run both and choose the winner."
+  },
+  "data_boundary": {
+    "venue": "Binance USD-M",
+    "instruments": ["BTCUSDT perpetual", "ETHUSDT perpetual"],
+    "interval": "1d",
+    "timezone": "UTC",
+    "warmup": ["2020-01-01T00:00:00Z", "2021-01-01T00:00:00Z"],
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "data_quality_before_outcomes": {
+    "bars_per_instrument": 2373,
+    "first_open_time_ms": 1577836800000,
+    "last_open_time_ms": 1782777600000,
+    "timelines_identical": true,
+    "continuous_daily": true,
+    "valid_ohlc": true,
+    "duplicate_bars": 0,
+    "official_archive_checksums_verified": true,
+    "actual_funding_included": true
+  },
+  "input_identity": {
+    "btc_cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-daily-donchian-ensemble",
+    "eth_cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/ethusdt-daily-donchian-short-carry-transfer",
+    "btc_manifest_sha256": "2e0de6c4396e48c00fc64b87dee7dedf509be8cc0ea56f0fc970f89218eb3e3d",
+    "eth_manifest_sha256": "8cda57c6811bd79305e9b982dfe54ea048aee9854320dace5a410f4aeb508f7c",
+    "btc_loaded_data_identity": "e7347b8226e6d27525c2b21bb3332a18e46e1e6af1b3457b11afe0ab01480723",
+    "eth_loaded_data_identity": "dafc57814e2ae12b9fdf09a1c33680433d7e84944725a3273bb5dbe3e72e433f",
+    "study_sha256": "df77dd89e285fdce325fd967297b3b596c50336d4cb20ae44d92be32b2b7d26c",
+    "base_study_sha256": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+    "prior_donchian_returns_sha256": "629675bbb8827e14c7e7aad2d2c468f1b5fcf9dcf008ac378d102b0df195ca9a",
+    "prior_carry_returns_sha256": "27555e2b0ae34630e98e36c0f55351f222c8e109e5767732c0ea535b0ebf9c89",
+    "prior_spot_returns_sha256": "28553e60b4a423d95210dc400e65fc6d515e28b3d76138b1132213c88ef56bdd",
+    "prior_eth_returns_sha256": "f0f38225bdd0bc0c2263b99c572e1696cb9b7d6d67a5e38cf0243e7b0fda0274",
+    "prior_8h_returns_sha256": "7de9cf5e253fb96994573acf2c8fb3e70510e64975f67095877bc456d835daa1"
+  },
+  "fixed_candidate": {
+    "candidate_id": "BTC_ETH_RELATIVE_MOMENTUM_90D",
+    "signal": "at each first UTC day of month, compare prior-day ETH/BTC close ratio with the ratio 90 days earlier",
+    "positive_ratio_trend": {"BTCUSDT": -0.25, "ETHUSDT": 0.25},
+    "negative_or_flat_ratio_trend": {"BTCUSDT": 0.25, "ETHUSDT": -0.25},
+    "monthly_signal_hold": true,
+    "relative_weight_rebalance_tolerance": 0.2,
+    "target_gross": 0.5,
+    "target_net": 0.0,
+    "action_time": "same first UTC day open using only prior closes"
+  },
+  "costs_per_unit_turnover": {
+    "favorable": {"fee": 0.0004, "slippage": 0.0002},
+    "base": {"fee": 0.0004, "slippage": 0.001},
+    "stress": {"fee": 0.0004, "slippage": 0.0015}
+  },
+  "benchmarks": [
+    "static long ETH 25% and short BTC 25%",
+    "static long BTC 25% and short ETH 25%",
+    "long BTC 25% and long ETH 25% common-beta diagnostic"
+  ],
+  "selection_bias": {
+    "related_trial_count": 13,
+    "columns": "six BTC daily Donchian, three BTC carry-conditioned, one BTC Spot transfer, one ETH transfer, one BTC 8h transfer, one BTC/ETH relative-momentum candidate",
+    "development_threshold": "Deflated Sharpe probability at least 0.80"
+  },
+  "development_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "base Sharpe at least 0.75",
+    "thirteen-trial DSR at least 0.80",
+    "base max drawdown greater than -15%",
+    "at least two of 2021/2022/2023 positive and worst year at least -5%",
+    "at least 1000 active days",
+    "base turnover no more than 25",
+    "base Sharpe and Calmar both exceed both static relative directions"
+  ],
+  "evaluation_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "2024 and 2025 base returns each positive",
+    "base Sharpe at least 0.75",
+    "base max drawdown greater than -15%",
+    "at least 650 active days",
+    "base turnover no more than 20",
+    "base Sharpe and Calmar both exceed both static relative directions"
+  ],
+  "confirmation_gate": [
+    "base and stress total returns non-negative",
+    "base max drawdown greater than -8%",
+    "at least 150 active days",
+    "evaluation plus confirmation base and stress CAGR above 4%"
+  ],
+  "allowed_fixes_after_checkpoint": "Only code, serialization, data-integrity or documentation corrections that preserve the fixed rule, periods, costs, related-trial accounting and gates. Record fixes and refresh code hash before opening another phase.",
+  "opening_rule": "Run development only. Evaluation requires evaluation_authorized=true; confirmation requires confirmation_authorized=true.",
+  "product_effects": "NONE"
+}

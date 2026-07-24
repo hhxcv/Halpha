@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T08:43:45+08:00",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Can prior completed UTC-day realized funding sign condition a fixed 20/30/60/90-day BTCUSDT perpetual Donchian long-short state machine so that realistic-cost risk-adjusted performance and funding PnL improve sufficiently for sequential product consideration?",
+  "intended_claim": "product consideration only after every sequential gate",
+  "data_boundary": {
+    "instrument": "BTCUSDT USD-M perpetual",
+    "venue": "Binance",
+    "timezone": "UTC",
+    "bar_interval": "1d",
+    "warmup_available_from": "2020-01-01T00:00:00Z",
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"],
+    "known_exposure": "BTC market history through 2026H1 has been viewed by other questions; carry-conditioned strategy outcomes have not been run. Isolation is method-level, not virgin-market-data-level."
+  },
+  "input_identity": {
+    "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-daily-donchian-ensemble",
+    "manifest_sha256": "2e0de6c4396e48c00fc64b87dee7dedf509be8cc0ea56f0fc970f89218eb3e3d",
+    "base_study_sha256": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+    "study_sha256": "ef1243d2f618e37360562528c003c56451080d37255f6a21d76bdcb7c0f9ee64"
+  },
+  "fixed_strategy": {
+    "donchian_lookbacks_days": [20, 30, 60, 90],
+    "direction_source": "equal mean of stateful LONG_SHORT components",
+    "exit": "component midpoint trailing exit that never moves against the position",
+    "carry_signal": "sign of the prior completed UTC day's realized funding cashflow per unit; positive means long pays and short receives; zero is neutral",
+    "target_annual_volatility": 0.1,
+    "maximum_absolute_weight": 0.5,
+    "volatility_window_days": 90,
+    "rebalance_relative_tolerance": 0.2,
+    "action_time": "next UTC day open"
+  },
+  "candidate_family": [
+    {"candidate_id": "CARRY_BOTH_SIDES", "condition_long": true, "condition_short": true},
+    {"candidate_id": "CARRY_LONG_SIDE_ONLY", "condition_long": true, "condition_short": false},
+    {"candidate_id": "CARRY_SHORT_SIDE_ONLY", "condition_long": false, "condition_short": true}
+  ],
+  "trial_count": 3,
+  "costs_per_unit_turnover": {
+    "favorable": {"fee": 0.0004, "slippage": 0.0002},
+    "base": {"fee": 0.0004, "slippage": 0.001},
+    "stress": {"fee": 0.0004, "slippage": 0.0015}
+  },
+  "development_gate": [
+    "base and stress total return positive",
+    "base Sharpe at least 0.50",
+    "base max drawdown greater than -15%",
+    "at least two of 2021/2022/2023 positive",
+    "at least 180 active days",
+    "base Sharpe and Calmar both exceed pure long-short and pure long-only Donchian benchmarks",
+    "base funding PnL improves the pure long-short benchmark",
+    "three-candidate Deflated Sharpe probability at least 0.80"
+  ],
+  "selection_rule": "select at most one passer by highest worst annual base return, then stress Sharpe, then base Sharpe, then candidate_id",
+  "evaluation_gate": [
+    "base and stress total return positive",
+    "2024 and 2025 base returns each positive",
+    "base Sharpe at least 0.50",
+    "base max drawdown greater than -15%",
+    "at least 120 active days",
+    "base Sharpe and Calmar both exceed pure long-short and pure long-only Donchian benchmarks",
+    "base funding PnL improves the pure long-short benchmark"
+  ],
+  "confirmation_gate": [
+    "base and stress total return non-negative",
+    "base max drawdown greater than -10%",
+    "at least 15 active days",
+    "base funding PnL no worse than pure long-short benchmark",
+    "evaluation plus confirmation compound base and stress returns positive"
+  ],
+  "allowed_fixes_after_checkpoint": "Only implementation, serialization, data-integrity or documentation corrections that preserve the economic rule, candidates, periods, costs, gates and selection order. Every fix must be recorded and the method hash updated before opening a new phase.",
+  "opening_rule": "Run development only. Evaluation requires selection.json evaluation_authorized=true. Confirmation requires evaluation_gate.json confirmation_authorized=true.",
+  "product_effects": "NONE"
+}

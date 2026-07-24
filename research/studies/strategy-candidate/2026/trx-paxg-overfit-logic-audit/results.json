@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-07-22",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "parent_candidate": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH",
+  "parent_demo_qualification": "WITHDRAWN_PENDING_NEW_INDEPENDENT_EVIDENCE",
+  "product_effects": "NONE",
+  "demo_action": "PAUSED",
+  "claim": "Broad crypto-gold diversification is supported, but the exposed history does not establish that fixed monthly 25% TRX plus 25% PAXG has a stable, transportable profit mechanism.",
+  "primary_evidence": {
+    "full_period_days": 2007,
+    "candidate_total_return": 1.727914192094441,
+    "candidate_cagr": 0.20037233210196326,
+    "candidate_sharpe": 0.915398181243718,
+    "candidate_max_drawdown": -0.23891919805873274,
+    "buy_hold_total_return": 2.9453696953066917,
+    "buy_hold_sharpe": 0.7350843270357171,
+    "buy_hold_max_drawdown": -0.4723686649593465,
+    "rebalancing_total_return_increment": -1.2174555032122507,
+    "trx_variance_contribution": 0.9463439025064326,
+    "candidate_12_trial_dsr": 0.8335198235217594,
+    "candidate_33_trial_dsr": 0.7453680758550787,
+    "probability_backtest_overfit": 0.28438228438228436,
+    "candidate_in_sample_selection_fraction": 0.0009324009324009324,
+    "bootstrap_probability_positive": 0.9968,
+    "bootstrap_probability_above_4pct_hurdle": 0.983,
+    "bootstrap_probability_beats_buy_hold": 0.1791
+  },
+  "failed_pre_registered_checks": [
+    "rebalancing_total_return_increment_positive",
+    "bootstrap_probability_beats_buy_hold_at_least_0p60",
+    "trx_variance_contribution_at_most_0p80"
+  ],
+  "interpretation": {
+    "overfit_proven": false,
+    "material_selection_bias_risk": true,
+    "broad_external_mechanism_support": true,
+    "exact_trx_fixed_weight_rule_external_support": false,
+    "comparator_may_be_promoted_from_this_audit": false
+  },
+  "replay": {
+    "semantic_json_equal_excluding_generated_at": true,
+    "full_daily_returns_byte_equal": true,
+    "common_daily_returns_byte_equal": true,
+    "full_daily_returns_sha256": "ea87b1d359c69655a66160a1e14585b488ec6f4585a4748e16a599da31907f44",
+    "common_daily_returns_sha256": "a0320dc21ac0a8ff78ae9130f3cea192be5a67d99d9a13110b2071bee4a1b2c5"
+  },
+  "evidence_boundary": "All price history is exposed. This audit can downgrade the parent claim but cannot validate a replacement or prove future returns."
+}

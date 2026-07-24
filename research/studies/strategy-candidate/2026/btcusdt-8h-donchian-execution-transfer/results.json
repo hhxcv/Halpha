@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "phase_reached": "development_selection",
+  "evaluation_authorized": false,
+  "confirmation_authorized": false,
+  "candidate": {
+    "candidate_id": "BTC_8H_LONG_BALANCED_4",
+    "base_total_return": 0.10943691474299477,
+    "stress_total_return": 0.10622663240334762,
+    "base_cagr": 0.03524824152095163,
+    "stress_cagr": 0.034248056269136073,
+    "base_sharpe": 0.5878269986628352,
+    "base_calmar": 0.45635448569857756,
+    "base_max_drawdown": -0.07723873134936843,
+    "deflated_sharpe_probability": 0.665353999309414,
+    "annual_base_returns": {
+      "2021": 0.026388441776916904,
+      "2022": -0.04514420259540275,
+      "2023": 0.1320173161996563
+    }
+  },
+  "daily_execution_same_rule_base": {
+    "total_return": 0.08379314826294038,
+    "sharpe": 0.4731163009437028,
+    "calmar": 0.32173096356212577,
+    "max_drawdown": -0.08455568601079289
+  },
+  "failed_checks": [
+    "stress_cagr_above_4pct",
+    "base_sharpe_at_least_0p75",
+    "twelve_trial_dsr_at_least_0p80",
+    "worst_year_at_least_minus_3pct"
+  ],
+  "interpretation": "Native 8h updates are a real incremental improvement over daily execution, but they do not repair the weak risk-adjusted edge or the 2022 loss. Frequency scanning should stop; the remaining published advantage depends on other mechanisms or broad portfolio construction.",
+  "artifacts": {
+    "development_sha256": "7c75d4a74703f663f37312df7c03dc4aefc187d94c4a1b6412ba68322a633f53",
+    "selection_sha256": "9fe634b8c861a91844dbd3effcc214eba43dd93d7b2031244e6265e7313487df",
+    "development_csv_sha256": "4cd38f63718f71cc3fa82c0d03c2852417206c0e77b0ea484c9d018c92db1efe",
+    "development_daily_returns_sha256": "7de9cf5e253fb96994573acf2c8fb3e70510e64975f67095877bc456d835daa1"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-8h-donchian-execution-transfer-replay",
+    "csv_byte_identical": true,
+    "daily_returns_byte_identical": true,
+    "json_semantic_equal_ignoring_generated_at": true,
+    "selection_semantic_equal_ignoring_generated_at_and_source_hash": true
+  },
+  "evaluation_read": false,
+  "confirmation_read": false,
+  "product_effects": "NONE"
+}
