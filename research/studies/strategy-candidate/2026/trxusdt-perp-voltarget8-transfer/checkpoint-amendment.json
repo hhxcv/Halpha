@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "amended_at": "2026-07-22T10:34:00+08:00",
+  "status": "PRE_ANALYSIS_DATA_ACQUISITION_FIX",
+  "reason": "The Binance fundingRate REST endpoint returned HTTP 403 during long-history pagination. Binance Public Data provides checksum-verified monthly fundingRate archives for the same instrument and period.",
+  "change": "Replace REST pagination only with official monthly fundingRate archives, normalize calc_time and last_funding_rate into the existing immutable funding snapshot, and continue using official 8h mark-price archives for settlement marks.",
+  "unchanged": [
+    "candidate",
+    "volatility calculation",
+    "weights",
+    "periods",
+    "costs",
+    "funding economics",
+    "sequential gates",
+    "benchmarks"
+  ],
+  "outcomes_viewed_before_change": false,
+  "old_prepare_data_sha256": "500838302a541aac3fdaffb35952cf33d2d698d5a48bb15988feaaeae75c0306",
+  "new_prepare_data_sha256": "36e1f920c6c5442bb531f4b8ae2ecf5e00d18a449b5764d1d903cafdf1b2e4ab",
+  "study_sha256_unchanged": "21b35064832caf9c20b045bf00564dca0c151e4cd8aca3a19598035875c65801",
+  "product_effects": "NONE"
+}

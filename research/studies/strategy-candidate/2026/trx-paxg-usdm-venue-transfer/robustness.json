@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T01:52:07.988180+00:00",
+  "phase": "venue_transfer_robustness",
+  "method_identity": {
+    "robustness_sha256": "ec92f53fe9c1ca99286efa36ef6236f569694e079d2b297d99e580679657090f",
+    "transfer_study_sha256": "4a597ef49cacc8b94aae3a10334c84ff8202d09d58de2d3b2d4e05426523e014",
+    "transfer_result_sha256": "2b615b5c7c6f06039cc45cbe445f16863bb3abfaa80146edb7b304696a74f77d",
+    "transfer_gate_sha256": "44843d0318304ad3042ce51bb12c5f290c1c9f98f917764c1999f6e3e19d0a05",
+    "candidate_id": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH"
+  },
+  "weight_neighborhood_stress_costs": {
+    "trx_0.20_paxg_0.30": {
+      "metrics": {
+        "days": 456,
+        "total_return": 0.13454692935199675,
+        "cagr": 0.10639976001890594,
+        "annualized_volatility": 0.10602094574689344,
+        "sharpe": 1.0062432527955485,
+        "max_drawdown": -0.07891902621060276,
+        "calmar": 1.3482143043043675,
+        "daily_skew": -0.9565488445591243,
+        "daily_excess_kurtosis": 6.642770336910848,
+        "positive_day_fraction": 0.5570175438596491,
+        "positive_month_fraction": 0.8,
+        "annual_returns": {
+          "2025": 0.12980471019016449,
+          "2026": 0.004197379528570577
+        },
+        "turnover": 1.3085828172716456,
+        "trade_events": 32,
+        "active_days": 456,
+        "maximum_gross_weight": 0.5419419304494605,
+        "maximum_absolute_net_weight": 0.5419419304494605,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.06684127153301393,
+          "PAXGUSDT": 0.085945978128731
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": 0.009907589390202786,
+          "PAXGUSDT": -0.019630103222701038
+        },
+        "fee_cost_on_initial_equity": 0.0005678537651496146,
+        "slippage_cost_on_initial_equity": 0.007949952712094605,
+        "terminal_liquidation": true
+      },
+      "return_after_4pct_annual_hurdle": 0.080331458554461
+    },
+    "trx_0.25_paxg_0.25": {
+      "metrics": {
+        "days": 456,
+        "total_return": 0.14262604883156405,
+        "cagr": 0.11270602259035511,
+        "annualized_volatility": 0.10532938461594679,
+        "sharpe": 1.0660534488333206,
+        "max_drawdown": -0.06896105002102537,
+        "calmar": 1.634343191642129,
+        "daily_skew": -0.7657433415558814,
+        "daily_excess_kurtosis": 4.236788749349332,
+        "positive_day_fraction": 0.5592105263157895,
+        "positive_month_fraction": 0.8,
+        "annual_returns": {
+          "2025": 0.124101332622641,
+          "2026": 0.0164795785498264
+        },
+        "turnover": 1.3178389516383044,
+        "trade_events": 32,
+        "active_days": 456,
+        "maximum_gross_weight": 0.5367174935919008,
+        "maximum_absolute_net_weight": 0.5367174935919008,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.0829959540449144,
+          "PAXGUSDT": 0.07224620328998997
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": 0.012379691680650215,
+          "PAXGUSDT": -0.016395888065264604
+        },
+        "fee_cost_on_initial_equity": 0.0005733274745818038,
+        "slippage_cost_on_initial_equity": 0.00802658464414525,
+        "terminal_liquidation": true
+      },
+      "return_after_4pct_annual_hurdle": 0.08802450915059801
+    },
+    "trx_0.30_paxg_0.20": {
+      "metrics": {
+        "days": 456,
+        "total_return": 0.1503424655526049,
+        "cagr": 0.11872089222301963,
+        "annualized_volatility": 0.10841338613719241,
+        "sharpe": 1.0884407539483978,
+        "max_drawdown": -0.0702120954190929,
+        "calmar": 1.6908894616287957,
+        "daily_skew": -0.5761191059278974,
+        "daily_excess_kurtosis": 2.582227242756384,
+        "positive_day_fraction": 0.5592105263157895,
+        "positive_month_fraction": 0.8,
+        "annual_returns": {
+          "2025": 0.1182488282195362,
+          "2026": 0.02869990696450797
+        },
+        "turnover": 1.3143863155748794,
+        "trade_events": 32,
+        "active_days": 456,
+        "maximum_gross_weight": 0.5317588479222854,
+        "maximum_absolute_net_weight": 0.5317588479222854,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.09893405127235025,
+          "PAXGUSDT": 0.05830365621273608
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": 0.01484609498632661,
+          "PAXGUSDT": -0.013145848551969049
+        },
+        "fee_cost_on_initial_equity": 0.0005730325577889413,
+        "slippage_cost_on_initial_equity": 0.00802245580904518,
+        "terminal_liquidation": true
+      },
+      "return_after_4pct_annual_hurdle": 0.0953721891058179
+    }
+  },
+  "doubled_positive_funding_stress_costs": {
+    "metrics": {
+      "days": 456,
+      "total_return": 0.10767021288403344,
+      "cagr": 0.08535599065618205,
+      "annualized_volatility": 0.10536888346612514,
+      "sharpe": 0.829609846390218,
+      "max_drawdown": -0.07030511028171593,
+      "calmar": 1.2140794646954753,
+      "daily_skew": -0.7668735636931299,
+      "daily_excess_kurtosis": 4.245287603898255,
+      "positive_day_fraction": 0.5526315789473685,
+      "positive_month_fraction": 0.8,
+      "annual_returns": {
+        "2025": 0.10064498138050904,
+        "2026": 0.006382831541840606
+      },
+      "turnover": 1.3225949867632876,
+      "trade_events": 32,
+      "active_days": 456,
+      "maximum_gross_weight": 0.5376689418131172,
+      "maximum_absolute_net_weight": 0.5376689418131172,
+      "price_pnl_on_initial_equity": {
+        "TRXUSDT": 0.08244808067186063,
+        "PAXGUSDT": 0.07187382251914205
+      },
+      "funding_pnl_on_initial_equity": {
+        "TRXUSDT": -0.0015511004629293484,
+        "PAXGUSDT": -0.03661428260530702
+      },
+      "fee_cost_on_initial_equity": 0.0005657538159150207,
+      "slippage_cost_on_initial_equity": 0.007920553422810287,
+      "terminal_liquidation": true
+    },
+    "return_after_4pct_annual_hurdle": 0.054739073125703586
+  },
+  "best_month_removal_stress_costs": {
+    "removed_month": "2025-07",
+    "removed_month_return": 0.03468338576320651,
+    "total_return": 0.10432434168132598,
+    "return_after_4pct_annual_hurdle": 0.05155308775741152
+  },
+  "circular_block_bootstrap_stress_returns": {
+    "samples": 20000,
+    "block_days": 30,
+    "seed": 20260722,
+    "probability_total_positive": 0.92095,
+    "probability_above_4pct_annual_hurdle": 0.81995,
+    "total_return_p05": -0.022446515878876323,
+    "total_return_p50": 0.14543185586740726,
+    "total_return_p95": 0.3207559376172903,
+    "max_drawdown_p05": -0.13911139003448084
+  },
+  "checks": {
+    "all_weight_neighbors_above_4pct_hurdle": true,
+    "all_weight_neighbors_drawdown_above_minus_12pct": true,
+    "doubled_positive_funding_above_4pct_hurdle": true,
+    "doubled_positive_funding_drawdown_above_minus_12pct": true,
+    "without_best_month_above_4pct_hurdle": true,
+    "bootstrap_probability_positive_at_least_0p80": true,
+    "bootstrap_probability_hurdle_at_least_0p65": true,
+    "bootstrap_drawdown_p05_above_minus_20pct": true
+  },
+  "failed_checks": [],
+  "robustness_supports_demo_candidate": true,
+  "conclusion": "SUPPORTS_ROBUSTNESS",
+  "product_effects": "NONE"
+}

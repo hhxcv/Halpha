@@ -1,0 +1,843 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T02:44:36.245309+00:00",
+  "question": "Does the TRX/PAXG candidate survive explicit selection-bias and mechanism auditing?",
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "parent_candidate": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH",
+  "periods": {
+    "full": [
+      "2021-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ],
+    "common": [
+      "2022-01-01T00:00:00Z",
+      "2026-07-01T00:00:00Z"
+    ]
+  },
+  "framework_versions": {
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6"
+  },
+  "method_identity": {
+    "audit_sha256": "ffc6c2f53ea155600b30cf2b3dfab87019e99f396062957f1bdabae88818add3",
+    "base_sha256": "89d9192cc5af59325d397028e34d5916a9e34c8ee2baa3a514e3a81475a8d67c",
+    "parent_spot_results_sha256": "d524114190f4f541c22ca4fd8eeae01bf33569be1d6cebd5df2791bb25ecb3bc",
+    "parent_perp_results_sha256": "b6b180ca0b521c61d371c6a95ca2dad7be1e822780bccca2d9caef1c76e63af0"
+  },
+  "data_identity": {
+    "pair_manifests": [
+      {
+        "path": "D:/projects/Codex/Halpha/research/studies/legacy/2026/trx-paxg-balanced-spot/source_manifest_development.json",
+        "sha256": "69c3ca778b1e9d31fa8cdb420a2e50d187582e2153e6f28752fa6cc5d5ab4996",
+        "content_identity": "062b2d56bfe9e1ac7b316efa70212133c588393d6fdebaa7a5946fd2e9201ccc"
+      },
+      {
+        "path": "D:/projects/Codex/Halpha/research/studies/legacy/2026/trx-paxg-balanced-spot/source_manifest_evaluation.json",
+        "sha256": "0f817d595ca084aa96c7dc7d4b0819576a1c2ac4fd4d91aa0fbb85cc10f2ba5d",
+        "content_identity": "9c6ef1845c9c1401d097a95ce9b42bbc62a1978c4285a92f4a0444e876914004"
+      },
+      {
+        "path": "D:/projects/Codex/Halpha/research/studies/legacy/2026/trx-paxg-balanced-spot/source_manifest_confirmation.json",
+        "sha256": "875cd3a7ac299f6c645da21bcdc85549ea70e86a14b2c04cac113300c476bb7d",
+        "content_identity": "a7b3fe1b592c9f0f48db26ea62456311388a77894ac3dc33c43e679955956f2a"
+      }
+    ],
+    "core_manifests": [
+      {
+        "path": "D:/projects/Codex/Halpha/research/studies/strategy-candidate/2026/trx-paxg-overfit-logic-audit/core-spot-manifest.json",
+        "sha256": "c9bd05a9af9b7cb662958e7edac1e458e002567fd04f9015ce4b1d863c7b22ef",
+        "content_identity": "a52f87a1007b7462c3472d25b9b3ab5887c9ade889bfff193ae8a4dedc28d7cd"
+      }
+    ]
+  },
+  "data_quality": {
+    "aligned_days": 2007,
+    "first_day": "2021-01-01",
+    "last_day": "2026-06-30",
+    "continuous": true,
+    "valid_ohlc": true
+  },
+  "full_period_variants": {
+    "TRX_PAXG_MONTHLY_25PCT_EACH": {
+      "favorable": {
+        "days": 2007,
+        "total_return": 1.745932502025028,
+        "cagr": 0.20181136925821552,
+        "annualized_volatility": 0.22659847378844544,
+        "sharpe": 0.9206974050826292,
+        "max_drawdown": -0.23854706786653945,
+        "calmar": 0.8460023049670158,
+        "turnover": 3.290454000403235,
+        "annual_returns": {
+          "2021": 0.4569286105315933,
+          "2022": -0.05095220161350933,
+          "2023": 0.22908556150480242,
+          "2024": 0.3565661678289105,
+          "2025": 0.17500590696809026,
+          "2026": 0.013678770541511565
+        },
+        "rolling_365d_positive_fraction": 0.8734023128423616,
+        "rolling_365d_above_4pct_fraction": 0.8131466828971394,
+        "rolling_365d_minimum": -0.180990361108317,
+        "rolling_365d_median": 0.20237213016752031,
+        "risk_contribution": {
+          "TRXUSDT": 0.9463441526096995,
+          "PAXGUSDT": 0.053655847390300396
+        },
+        "average_close_weights": {
+          "TRXUSDT": 0.2546285629792318,
+          "PAXGUSDT": 0.25003746249984854
+        },
+        "leg_pnl_on_initial_equity": {
+          "TRXUSDT": 1.3034527518986465,
+          "PAXGUSDT": 0.448322359339253
+        },
+        "cost_on_initial_equity": 0.005842609212911146
+      },
+      "base": {
+        "days": 2007,
+        "total_return": 1.727914192094441,
+        "cagr": 0.20037233210196326,
+        "annualized_volatility": 0.22660148528851945,
+        "sharpe": 0.915398181243718,
+        "max_drawdown": -0.23891919805873274,
+        "calmar": 0.8386614961461003,
+        "turnover": 3.290454000403235,
+        "annual_returns": {
+          "2021": 0.4531857876599701,
+          "2022": -0.051840560494917476,
+          "2023": 0.22849627356785418,
+          "2024": 0.3555941153629063,
+          "2025": 0.17427963846437744,
+          "2026": 0.012402343081864053
+        },
+        "rolling_365d_positive_fraction": 0.8721850273889227,
+        "rolling_365d_above_4pct_fraction": 0.8119293974437005,
+        "rolling_365d_minimum": -0.18168555112649387,
+        "rolling_365d_median": 0.20162630850733443,
+        "risk_contribution": {
+          "TRXUSDT": 0.9463439025064326,
+          "PAXGUSDT": 0.05365609749356702
+        },
+        "average_close_weights": {
+          "TRXUSDT": 0.2546285629792318,
+          "PAXGUSDT": 0.25003746249984854
+        },
+        "leg_pnl_on_initial_equity": {
+          "TRXUSDT": 1.2991482962256915,
+          "PAXGUSDT": 0.44622836229447865
+        },
+        "cost_on_initial_equity": 0.017462466425747933
+      },
+      "stress": {
+        "days": 2007,
+        "total_return": 1.7010953169686598,
+        "cagr": 0.19821596878758063,
+        "annualized_volatility": 0.22660977096249998,
+        "sharpe": 0.9074345190771147,
+        "max_drawdown": -0.23947720127767225,
+        "calmar": 0.8277028783117877,
+        "turnover": 3.290454000403236,
+        "annual_returns": {
+          "2021": 0.44758580388244074,
+          "2022": -0.0531717212513908,
+          "2023": 0.22761280592463895,
+          "2024": 0.3541371816814314,
+          "2025": 0.17319098698858437,
+          "2026": 0.010488983215667602
+        },
+        "rolling_365d_positive_fraction": 0.8697504564820451,
+        "rolling_365d_above_4pct_fraction": 0.808277541083384,
+        "rolling_365d_minimum": -0.18272736830903624,
+        "rolling_365d_median": 0.20061541248087678,
+        "risk_contribution": {
+          "TRXUSDT": 0.9463435275389219,
+          "PAXGUSDT": 0.05365647246107795
+        },
+        "average_close_weights": {
+          "TRXUSDT": 0.2546285629792318,
+          "PAXGUSDT": 0.25003746249984854
+        },
+        "leg_pnl_on_initial_equity": {
+          "TRXUSDT": 1.2927210772345803,
+          "PAXGUSDT": 0.4431041332206341
+        },
+        "cost_on_initial_equity": 0.03472989348659572
+      }
+    },
+    "TRX_PAXG_BUY_HOLD_25PCT_EACH": {
+      "favorable": {
+        "days": 2007,
+        "total_return": 2.9562408936360147,
+        "cagr": 0.2843941358690225,
+        "annualized_volatility": 0.479568595871605,
+        "sharpe": 0.7361354172886312,
+        "max_drawdown": -0.47236866495934327,
+        "calmar": 0.6020596982094489,
+        "turnover": 1.373790970674813,
+        "annual_returns": {
+          "2021": 0.4403122059542013,
+          "2022": -0.13654558768078684,
+          "2023": 0.4202221728317188,
+          "2024": 0.82191370173812,
+          "2025": 0.15450007688377876,
+          "2026": 0.0648994840814967
+        },
+        "rolling_365d_positive_fraction": 0.8174071819841753,
+        "rolling_365d_above_4pct_fraction": 0.7626293365794279,
+        "rolling_365d_minimum": -0.41075517835647446,
+        "rolling_365d_median": 0.2863591787720732,
+        "risk_contribution": {
+          "TRXUSDT": 0.9934927425367994,
+          "PAXGUSDT": 0.006507257463200961
+        },
+        "average_close_weights": {
+          "TRXUSDT": 0.5711948515590451,
+          "PAXGUSDT": 0.15495363786491342
+        },
+        "leg_pnl_on_initial_equity": {
+          "TRXUSDT": 2.693180192379528,
+          "PAXGUSDT": 0.26702065210091896
+        },
+        "cost_on_initial_equity": 0.0039599508444804485
+      },
+      "base": {
+        "days": 2007,
+        "total_return": 2.9453696953066917,
+        "cagr": 0.2837511158461419,
+        "annualized_volatility": 0.47957996901608474,
+        "sharpe": 0.7350843270357171,
+        "max_drawdown": -0.4723686649593465,
+        "calmar": 0.6006984308973212,
+        "turnover": 1.373790970674813,
+        "annual_returns": {
+          "2021": 0.4388711732318813,
+          "2022": -0.13654558768078562,
+          "2023": 0.42022217283172325,
+          "2024": 0.8219137017381182,
+          "2025": 0.1545000768837781,
+          "2026": 0.06303685742740983
+        },
+        "rolling_365d_positive_fraction": 0.8174071819841753,
+        "rolling_365d_above_4pct_fraction": 0.7626293365794279,
+        "rolling_365d_minimum": -0.4107551783564749,
+        "rolling_365d_median": 0.2863591787720712,
+        "risk_contribution": {
+          "TRXUSDT": 0.9934927438589184,
+          "PAXGUSDT": 0.00650725614108138
+        },
+        "average_close_weights": {
+          "TRXUSDT": 0.5711948515590451,
+          "PAXGUSDT": 0.15495363786491342
+        },
+        "leg_pnl_on_initial_equity": {
+          "TRXUSDT": 2.690485664923421,
+          "PAXGUSDT": 0.2667534978717029
+        },
+        "cost_on_initial_equity": 0.011869467488385374
+      },
+      "stress": {
+        "days": 2007,
+        "total_return": 2.929088860425494,
+        "cagr": 0.28278540553348086,
+        "annualized_volatility": 0.4795998511983171,
+        "sharpe": 0.7335034684025145,
+        "max_drawdown": -0.47236866495934626,
+        "calmar": 0.5986540312910433,
+        "turnover": 1.373790970674813,
+        "annual_returns": {
+          "2021": 0.4367096241484094,
+          "2022": -0.13654558768078684,
+          "2023": 0.42022217283172036,
+          "2024": 0.8219137017381197,
+          "2025": 0.15450007688377743,
+          "2026": 0.06024291744628196
+        },
+        "rolling_365d_positive_fraction": 0.8174071819841753,
+        "rolling_365d_above_4pct_fraction": 0.7626293365794279,
+        "rolling_365d_minimum": -0.41075517835647524,
+        "rolling_365d_median": 0.2863591787720705,
+        "risk_contribution": {
+          "TRXUSDT": 0.9934927458383678,
+          "PAXGUSDT": 0.006507254161632076
+        },
+        "average_close_weights": {
+          "TRXUSDT": 0.5711948515590451,
+          "PAXGUSDT": 0.15495363786491342
+        },
+        "leg_pnl_on_initial_equity": {
+          "TRXUSDT": 2.6864438737392593,
+          "PAXGUSDT": 0.2663527665278795
+        },
+        "cost_on_initial_equity": 0.02370777984160284
+      }
+    },
+    "BTC_PAXG_MONTHLY_25PCT_EACH": {
+      "favorable": {
+        "days": 2007,
+        "total_return": 0.7218719062906851,
+        "cagr": 0.10394981437657824,
+        "annualized_volatility": 0.15802833253858728,
+        "sharpe": 0.7048410771734694,
+        "max_drawdown": -0.28538959166010425,
+        "calmar": 0.3642382813329131,
+        "turnover": 3.244252634488827,
+        "annual_returns": {
+          "2021": 0.17764365200955146,
+          "2022": -0.1984565412204673,
+          "2023": 0.3317093789434582,
+          "2024": 0.3458247643157788,
+          "2025": 0.13154561537425002,
+          "2026": -0.10052348075554018
+        },
+        "rolling_365d_positive_fraction": 0.7309799147900182,
+        "rolling_365d_above_4pct_fraction": 0.6810712111990261,
+        "rolling_365d_minimum": -0.28433912715536913,
+        "rolling_365d_median": 0.14287486673049665,
+        "risk_contribution": {
+          "BTCUSDT": 0.8773964055034892,
+          "PAXGUSDT": 0.12260359449651097
+        },
+        "average_close_weights": {
+          "BTCUSDT": 0.2519916271340664,
+          "PAXGUSDT": 0.25088994338716625
+        },
+        "leg_pnl_on_initial_equity": {
+          "BTCUSDT": 0.39222807789344244,
+          "PAXGUSDT": 0.33400871776460533
+        },
+        "cost_on_initial_equity": 0.004364889367381844
+      },
+      "base": {
+        "days": 2007,
+        "total_return": 0.7107316813966382,
+        "cagr": 0.10264653498495391,
+        "annualized_volatility": 0.15802555901615326,
+        "sharpe": 0.697373708300376,
+        "max_drawdown": -0.285986447817801,
+        "calmar": 0.3589209760399169,
+        "turnover": 3.244252634488827,
+        "annual_returns": {
+          "2021": 0.17516075522962948,
+          "2022": -0.19919794042508765,
+          "2023": 0.3308337217535613,
+          "2024": 0.3446906076583123,
+          "2025": 0.130843078629866,
+          "2026": -0.10172166650498748
+        },
+        "rolling_365d_positive_fraction": 0.7303712720632989,
+        "rolling_365d_above_4pct_fraction": 0.6792452830188679,
+        "rolling_365d_minimum": -0.28493686068092805,
+        "rolling_365d_median": 0.14201799233612533,
+        "risk_contribution": {
+          "BTCUSDT": 0.8773960495168602,
+          "PAXGUSDT": 0.12260395048313955
+        },
+        "average_close_weights": {
+          "BTCUSDT": 0.2519916271340664,
+          "PAXGUSDT": 0.25088994338716625
+        },
+        "leg_pnl_on_initial_equity": {
+          "BTCUSDT": 0.3912691949018275,
+          "PAXGUSDT": 0.33251171639581584
+        },
+        "cost_on_initial_equity": 0.01304922990098932
+      },
+      "stress": {
+        "days": 2007,
+        "total_return": 0.694148866257041,
+        "cagr": 0.10069361657269549,
+        "annualized_volatility": 0.1580264229089462,
+        "sharpe": 0.6861503478451535,
+        "max_drawdown": -0.2868809139495304,
+        "calmar": 0.3509944777658162,
+        "turnover": 3.2442526344888276,
+        "annual_returns": {
+          "2021": 0.1714436475352521,
+          "2022": -0.2003089058204952,
+          "2023": 0.329521174693143,
+          "2024": 0.34299090276334443,
+          "2025": 0.1297899990311171,
+          "2026": -0.10351742415261733
+        },
+        "rolling_365d_positive_fraction": 0.72915398660986,
+        "rolling_365d_above_4pct_fraction": 0.6780279975654291,
+        "rolling_365d_minimum": -0.2858326416618583,
+        "rolling_365d_median": 0.14092652603824019,
+        "risk_contribution": {
+          "BTCUSDT": 0.877395515606421,
+          "PAXGUSDT": 0.12260448439357914
+        },
+        "average_close_weights": {
+          "BTCUSDT": 0.2519916271340664,
+          "PAXGUSDT": 0.2508899433871663
+        },
+        "leg_pnl_on_initial_equity": {
+          "BTCUSDT": 0.3898340550423779,
+          "PAXGUSDT": 0.33027765954809035
+        },
+        "cost_on_initial_equity": 0.02596284833344491
+      }
+    },
+    "ETH_PAXG_MONTHLY_25PCT_EACH": {
+      "favorable": {
+        "days": 2007,
+        "total_return": 0.9934567248917952,
+        "cagr": 0.13376972816175292,
+        "annualized_volatility": 0.21073271755397194,
+        "sharpe": 0.7012457474106364,
+        "max_drawdown": -0.2884081361331141,
+        "calmar": 0.4638209239007453,
+        "turnover": 3.9743424258708973,
+        "annual_returns": {
+          "2021": 0.6148314270241779,
+          "2022": -0.17983965830675563,
+          "2023": 0.22376351232104907,
+          "2024": 0.2331441357089521,
+          "2025": 0.16776585762698204,
+          "2026": -0.14589013438613418
+        },
+        "rolling_365d_positive_fraction": 0.7486305538648813,
+        "rolling_365d_above_4pct_fraction": 0.7048082775410834,
+        "rolling_365d_minimum": -0.24996817616247136,
+        "rolling_365d_median": 0.15762335763648871,
+        "risk_contribution": {
+          "ETHUSDT": 0.9263172533714527,
+          "PAXGUSDT": 0.07368274662854729
+        },
+        "average_close_weights": {
+          "ETHUSDT": 0.25279830924842633,
+          "PAXGUSDT": 0.25063683551541655
+        },
+        "leg_pnl_on_initial_equity": {
+          "ETHUSDT": 0.582607360066465,
+          "PAXGUSDT": 0.41741897124783167
+        },
+        "cost_on_initial_equity": 0.006569606422477291
+      },
+      "base": {
+        "days": 2007,
+        "total_return": 0.9776687619247861,
+        "cagr": 0.13213027771969688,
+        "annualized_volatility": 0.2107315878775204,
+        "sharpe": 0.6943793779882234,
+        "max_drawdown": -0.2890109994324498,
+        "calmar": 0.4571807923545122,
+        "turnover": 3.9743424258708973,
+        "annual_returns": {
+          "2021": 0.6110187212780187,
+          "2022": -0.18097820648483065,
+          "2023": 0.22314454972048936,
+          "2024": 0.2318439264216794,
+          "2025": 0.1663469425118096,
+          "2026": -0.14710359852593335
+        },
+        "rolling_365d_positive_fraction": 0.7480219111381619,
+        "rolling_365d_above_4pct_fraction": 0.704199634814364,
+        "rolling_365d_minimum": -0.250939691704576,
+        "rolling_365d_median": 0.15663199227718105,
+        "risk_contribution": {
+          "ETHUSDT": 0.9263169706077179,
+          "PAXGUSDT": 0.07368302939228218
+        },
+        "average_close_weights": {
+          "ETHUSDT": 0.25279830924842633,
+          "PAXGUSDT": 0.25063683551541655
+        },
+        "leg_pnl_on_initial_equity": {
+          "ETHUSDT": 0.5821279148578656,
+          "PAXGUSDT": 0.41516445614731046
+        },
+        "cost_on_initial_equity": 0.019623609080366745
+      },
+      "stress": {
+        "days": 2007,
+        "total_return": 0.954210912572264,
+        "cagr": 0.12967448943396942,
+        "annualized_volatility": 0.2107342580010517,
+        "sharpe": 0.6840655174533912,
+        "max_drawdown": -0.28991450427677756,
+        "calmar": 0.4472852772835777,
+        "turnover": 3.974342425870896,
+        "annual_returns": {
+          "2021": 0.6053127362441011,
+          "2022": -0.1826834103839725,
+          "2023": 0.22221661845793172,
+          "2024": 0.2298958310009942,
+          "2025": 0.16422141025959403,
+          "2026": -0.1489219831226828
+        },
+        "rolling_365d_positive_fraction": 0.7443700547778455,
+        "rolling_365d_above_4pct_fraction": 0.7029823493609252,
+        "rolling_365d_minimum": -0.25239489851442554,
+        "rolling_365d_median": 0.15452416439688044,
+        "risk_contribution": {
+          "ETHUSDT": 0.9263165465698562,
+          "PAXGUSDT": 0.07368345343014389
+        },
+        "average_close_weights": {
+          "ETHUSDT": 0.25279830924842633,
+          "PAXGUSDT": 0.25063683551541655
+        },
+        "leg_pnl_on_initial_equity": {
+          "ETHUSDT": 0.5814002744307378,
+          "PAXGUSDT": 0.41180385559847327
+        },
+        "cost_on_initial_equity": 0.03899321745692651
+      }
+    }
+  },
+  "common_period_base_variants": {
+    "TRX_PAXG_MONTHLY_25PCT_EACH": {
+      "days": 1642,
+      "total_return": 0.8749051289329841,
+      "cagr": 0.15006424079604552,
+      "annualized_volatility": 0.18651703317340151,
+      "sharpe": 0.8380497988672972,
+      "max_drawdown": -0.1950973465766329,
+      "calmar": 0.7691762262748217,
+      "turnover": 2.4387906294072854,
+      "annual_returns": {
+        "2022": -0.05299754100683918,
+        "2023": 0.22849627356785573,
+        "2024": 0.35559411536290764,
+        "2025": 0.17427963846437877,
+        "2026": 0.012402343081865164
+      },
+      "rolling_365d_positive_fraction": 0.9827856025039123,
+      "rolling_365d_above_4pct_fraction": 0.9233176838810642,
+      "rolling_365d_minimum": -0.055635104686291736,
+      "rolling_365d_median": 0.21662382248921153,
+      "risk_contribution": {
+        "TRXUSDT": 0.9225774454727271,
+        "PAXGUSDT": 0.07742255452727337
+      },
+      "average_close_weights": {
+        "TRXUSDT": 0.2523711739232888,
+        "PAXGUSDT": 0.2510956681799593
+      },
+      "leg_pnl_on_initial_equity": {
+        "TRXUSDT": 0.5773927024147503,
+        "PAXGUSDT": 0.30753614784502953
+      },
+      "cost_on_initial_equity": 0.010023721326802017
+    },
+    "TRX_PAXG_BUY_HOLD_25PCT_EACH": {
+      "days": 1642,
+      "total_return": 1.083642617830784,
+      "cagr": 0.17738831985746062,
+      "annualized_volatility": 0.2784930024580911,
+      "sharpe": 0.7095999241776758,
+      "max_drawdown": -0.30461914662534917,
+      "calmar": 0.5823282016991216,
+      "turnover": 1.2609425464624078,
+      "annual_returns": {
+        "2022": -0.07236582646711076,
+        "2023": 0.21996388994868354,
+        "2024": 0.5034630537311378,
+        "2025": 0.19406056204342703,
+        "2026": 0.025605642562584352
+      },
+      "rolling_365d_positive_fraction": 0.9483568075117371,
+      "rolling_365d_above_4pct_fraction": 0.8630672926447575,
+      "rolling_365d_minimum": -0.12727561499072304,
+      "rolling_365d_median": 0.24209028003644917,
+      "risk_contribution": {
+        "TRXUSDT": 0.958857856060209,
+        "PAXGUSDT": 0.04114214393979115
+      },
+      "average_close_weights": {
+        "TRXUSDT": 0.3479704232920336,
+        "PAXGUSDT": 0.2568561174737983
+      },
+      "leg_pnl_on_initial_equity": {
+        "TRXUSDT": 0.7947853304140114,
+        "PAXGUSDT": 0.2951247677111716
+      },
+      "cost_on_initial_equity": 0.006267480294375554
+    },
+    "BTC_PAXG_MONTHLY_25PCT_EACH": {
+      "days": 1642,
+      "total_return": 0.4538105641960559,
+      "cagr": 0.08679739291866229,
+      "annualized_volatility": 0.14221776756759943,
+      "sharpe": 0.6564102534168453,
+      "max_drawdown": -0.23700232925579834,
+      "calmar": 0.3662301260549268,
+      "turnover": 2.6318832551896105,
+      "annual_returns": {
+        "2022": -0.20026080130326207,
+        "2023": 0.33083372175355863,
+        "2024": 0.3446906076583076,
+        "2025": 0.13084307862986377,
+        "2026": -0.10172166650498649
+      },
+      "rolling_365d_positive_fraction": 0.8763693270735524,
+      "rolling_365d_above_4pct_fraction": 0.838810641627543,
+      "rolling_365d_minimum": -0.20467586459548492,
+      "rolling_365d_median": 0.23566773057366508,
+      "risk_contribution": {
+        "BTCUSDT": 0.8356880630720379,
+        "PAXGUSDT": 0.16431193692796225
+      },
+      "average_close_weights": {
+        "BTCUSDT": 0.2501997662700216,
+        "PAXGUSDT": 0.2517824237927025
+      },
+      "leg_pnl_on_initial_equity": {
+        "BTCUSDT": 0.174855060348944,
+        "PAXGUSDT": 0.28848483533647645
+      },
+      "cost_on_initial_equity": 0.009529331489380021
+    },
+    "ETH_PAXG_MONTHLY_25PCT_EACH": {
+      "days": 1642,
+      "total_return": 0.22597818012271076,
+      "cagr": 0.046362798043758424,
+      "annualized_volatility": 0.1835599030596678,
+      "sharpe": 0.338527060935047,
+      "max_drawdown": -0.2532664078385394,
+      "calmar": 0.18305940546728688,
+      "turnover": 3.230531920712954,
+      "annual_returns": {
+        "2022": -0.18205287094065847,
+        "2023": 0.22314454972048847,
+        "2024": 0.23184392642167673,
+        "2025": 0.16634694251180915,
+        "2026": -0.14710359852593202
+      },
+      "rolling_365d_positive_fraction": 0.8536776212832551,
+      "rolling_365d_above_4pct_fraction": 0.809076682316119,
+      "rolling_365d_minimum": -0.18613577263927694,
+      "rolling_365d_median": 0.18139807975119027,
+      "risk_contribution": {
+        "ETHUSDT": 0.8963745112467845,
+        "PAXGUSDT": 0.10362548875321516
+      },
+      "average_close_weights": {
+        "ETHUSDT": 0.24843036952451228,
+        "PAXGUSDT": 0.25240871413215715
+      },
+      "leg_pnl_on_initial_equity": {
+        "ETHUSDT": -0.025259358524395894,
+        "PAXGUSDT": 0.2620205161162195
+      },
+      "cost_on_initial_equity": 0.01078297746910201
+    },
+    "TRX_PAXG_INV_VOL360_MONTHLY_GROSS0P5": {
+      "days": 1642,
+      "total_return": 0.7896405391923103,
+      "cagr": 0.13821883617801167,
+      "annualized_volatility": 0.11790000016291106,
+      "sharpe": 1.1556566849980787,
+      "max_drawdown": -0.11525018941865961,
+      "calmar": 1.19929378750013,
+      "turnover": 2.5211923177126794,
+      "annual_returns": {
+        "2022": -0.017825937256440327,
+        "2023": 0.12912340632759656,
+        "2024": 0.263189506737147,
+        "2025": 0.2546855741959475,
+        "2026": 0.01819866548145499
+      },
+      "rolling_365d_positive_fraction": 0.9741784037558685,
+      "rolling_365d_above_4pct_fraction": 0.8740219092331768,
+      "rolling_365d_minimum": -0.04114480612441662,
+      "rolling_365d_median": 0.20783244210520702,
+      "risk_contribution": {
+        "TRXUSDT": 0.6029294731176145,
+        "PAXGUSDT": 0.3970705268823859
+      },
+      "average_close_weights": {
+        "TRXUSDT": 0.11153207133677441,
+        "PAXGUSDT": 0.3921884411000683
+      },
+      "leg_pnl_on_initial_equity": {
+        "TRXUSDT": 0.3035367466379915,
+        "PAXGUSDT": 0.49664836233721743
+      },
+      "cost_on_initial_equity": 0.010544569782890067
+    },
+    "BTC_PAXG_INV_VOL360_MONTHLY_GROSS0P5": {
+      "days": 1642,
+      "total_return": 0.4623632893149867,
+      "cagr": 0.0882163568774792,
+      "annualized_volatility": 0.09969517054779059,
+      "sharpe": 0.8979808882442762,
+      "max_drawdown": -0.1603879714669132,
+      "calmar": 0.550018533625993,
+      "turnover": 2.2120834265358624,
+      "annual_returns": {
+        "2022": -0.07441454549908233,
+        "2023": 0.16537747362722688,
+        "2024": 0.23140210562787722,
+        "2025": 0.19587868326981894,
+        "2026": -0.0793700071052128
+      },
+      "rolling_365d_positive_fraction": 0.9256651017214398,
+      "rolling_365d_above_4pct_fraction": 0.8646322378716745,
+      "rolling_365d_minimum": -0.07966030288421355,
+      "rolling_365d_median": 0.178792520672035,
+      "risk_contribution": {
+        "BTCUSDT": 0.41166107397652163,
+        "PAXGUSDT": 0.5883389260234786
+      },
+      "average_close_weights": {
+        "BTCUSDT": 0.11726835857310354,
+        "PAXGUSDT": 0.38526354273326713
+      },
+      "leg_pnl_on_initial_equity": {
+        "BTCUSDT": 0.04512334782912274,
+        "PAXGUSDT": 0.42555187738338746
+      },
+      "cost_on_initial_equity": 0.008311935897520962
+    }
+  },
+  "selection_bias": {
+    "dsr_trial_sensitivity": {
+      "3": {
+        "TRX_PAXG_MONTHLY_25PCT_EACH": 0.9366528196780703,
+        "TRX_PAXG_BUY_HOLD_25PCT_EACH": 0.9075969446151316,
+        "BTC_PAXG_MONTHLY_25PCT_EACH": 0.8151041803194008,
+        "ETH_PAXG_MONTHLY_25PCT_EACH": 0.5888675467725939,
+        "TRX_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.9879652066609392,
+        "BTC_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.917900700387114
+      },
+      "12": {
+        "TRX_PAXG_MONTHLY_25PCT_EACH": 0.8335198235217594,
+        "TRX_PAXG_BUY_HOLD_25PCT_EACH": 0.761111282978326,
+        "BTC_PAXG_MONTHLY_25PCT_EACH": 0.6655957600114005,
+        "ETH_PAXG_MONTHLY_25PCT_EACH": 0.4028949448349647,
+        "TRX_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.9567675033069467,
+        "BTC_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.8232230660073224
+      },
+      "33": {
+        "TRX_PAXG_MONTHLY_25PCT_EACH": 0.7453680758550787,
+        "TRX_PAXG_BUY_HOLD_25PCT_EACH": 0.6443880025074354,
+        "BTC_PAXG_MONTHLY_25PCT_EACH": 0.5671883309324625,
+        "ETH_PAXG_MONTHLY_25PCT_EACH": 0.30670783425893544,
+        "TRX_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.9215787329651297,
+        "BTC_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.7493041292300322
+      }
+    },
+    "candidate_12_trial_dsr": 0.8335198235217594,
+    "candidate_33_trial_dsr": 0.7453680758550787,
+    "cscv": {
+      "blocks": 16,
+      "splits": 6435,
+      "probability_backtest_overfit": 0.28438228438228436,
+      "median_selected_oos_relative_rank": 0.8,
+      "in_sample_selection_fraction": {
+        "TRX_PAXG_MONTHLY_25PCT_EACH": 0.0009324009324009324,
+        "TRX_PAXG_BUY_HOLD_25PCT_EACH": 0.041181041181041184,
+        "BTC_PAXG_MONTHLY_25PCT_EACH": 0.007303807303807304,
+        "ETH_PAXG_MONTHLY_25PCT_EACH": 0.0003108003108003108,
+        "TRX_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.7286713286713287,
+        "BTC_PAXG_INV_VOL360_MONTHLY_GROSS0P5": 0.2216006216006216
+      }
+    },
+    "trial_count_interpretation": "3 is the explicit parent choice set; 12 is the related formation-lineage sensitivity; 33 is the prior completed-question upper bound. They are not claimed independent."
+  },
+  "mechanism": {
+    "rebalancing_total_return_increment": -1.2174555032122507,
+    "candidate_full_risk_contribution": {
+      "TRXUSDT": 0.9463439025064326,
+      "PAXGUSDT": 0.05365609749356702
+    },
+    "candidate_phase_risk_contribution": {
+      "development": {
+        "TRXUSDT": 0.9657560325886837,
+        "PAXGUSDT": 0.03424396741131613
+      },
+      "evaluation": {
+        "TRXUSDT": 0.9761084991466643,
+        "PAXGUSDT": 0.023891500853335933
+      },
+      "confirmation": {
+        "TRXUSDT": 0.6236180842100133,
+        "PAXGUSDT": 0.3763819157899869
+      }
+    },
+    "candidate_leg_pnl_on_initial_equity": {
+      "TRXUSDT": 1.2991482962256915,
+      "PAXGUSDT": 0.44622836229447865
+    },
+    "candidate_cost_on_initial_equity": 0.017462466425747933,
+    "correlation": {
+      "daily_return_correlations": {
+        "full": 0.0515628238223489,
+        "2021_2022": 0.11394239977791004,
+        "2023_2024": -0.0070014619526344605,
+        "2025_2026H1": 0.06284109715854841
+      },
+      "rolling_90d_correlation": {
+        "minimum": -0.30140021424627345,
+        "median": 0.04830089469215657,
+        "maximum": 0.3977230202069736
+      },
+      "rolling_365d_correlation": {
+        "minimum": -0.08536940220571483,
+        "median": 0.030392486748511284,
+        "maximum": 0.19272865392687036
+      },
+      "trx_bottom_5pct_threshold": -0.047781113058468855,
+      "paxg_mean_return_on_trx_bottom_5pct_days": -0.002087064727404871,
+      "paxg_positive_fraction_on_trx_bottom_5pct_days": 0.39603960396039606,
+      "tail_days": 101
+    },
+    "return_concentration": {
+      "best_month": "2021-03",
+      "best_month_return": 0.2545715203459622,
+      "total_return_without_best_month": 1.174379178751142,
+      "best_year": "2021",
+      "best_year_return": 0.4531857876599701,
+      "total_return_without_best_year": 0.8771957551877212
+    },
+    "strict_dominance_by_alternative": {
+      "TRX_PAXG_BUY_HOLD_25PCT_EACH": false,
+      "BTC_PAXG_MONTHLY_25PCT_EACH": false,
+      "ETH_PAXG_MONTHLY_25PCT_EACH": false,
+      "TRX_PAXG_INV_VOL360_MONTHLY_GROSS0P5": false,
+      "BTC_PAXG_INV_VOL360_MONTHLY_GROSS0P5": false
+    }
+  },
+  "paired_block_bootstrap": {
+    "block_days": 90,
+    "replications": 20000,
+    "seed": 20260722,
+    "probability_candidate_positive": 0.9968,
+    "probability_candidate_above_4pct_hurdle": 0.983,
+    "probability_candidate_beats": {
+      "TRX_PAXG_BUY_HOLD_25PCT_EACH": 0.1791,
+      "BTC_PAXG_MONTHLY_25PCT_EACH": 0.9099,
+      "ETH_PAXG_MONTHLY_25PCT_EACH": 0.79455
+    },
+    "probability_candidate_best_of_aligned_variants": 0.1148,
+    "candidate_total_return_p05": 0.46250938335720665,
+    "candidate_total_return_median": 1.6819220814534397,
+    "candidate_total_return_p95": 4.510926376859529
+  },
+  "parent_spot_phase_replay": {
+    "development": true,
+    "evaluation": true,
+    "confirmation": true
+  },
+  "checks": {
+    "twelve_trial_dsr_at_least_0p80": true,
+    "rebalancing_total_return_increment_positive": false,
+    "bootstrap_probability_beats_buy_hold_at_least_0p60": false,
+    "not_strictly_dominated_by_fixed_alternatives": true,
+    "trx_variance_contribution_at_most_0p80": false,
+    "bootstrap_probability_above_4pct_hurdle_at_least_0p80": true,
+    "broad_external_mechanism_support_with_no_exact_trx_rule_support": true
+  },
+  "failed_checks": [
+    "rebalancing_total_return_increment_positive",
+    "bootstrap_probability_beats_buy_hold_at_least_0p60",
+    "trx_variance_contribution_at_most_0p80"
+  ],
+  "parent_research_supports_demo_after_audit": false,
+  "evidence_boundary": "All price history is exposed and no new holdout was created. The audit can downgrade but cannot strengthen the parent claim.",
+  "product_effects": "NONE"
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T00:44:33.186934+00:00",
+  "phase": "development_selection",
+  "source_sha256": "d1a0393535497453030c818cde14a58c804094bef94c0ed0180f9ac48c3be5d0",
+  "assessed_candidates": [
+    {
+      "candidate_id": "CARRY_BOTH_SIDES",
+      "passed": false,
+      "checks": {
+        "base_total_positive": true,
+        "stress_total_positive": true,
+        "base_sharpe_at_least_0p50": false,
+        "drawdown_above_minus_15pct": true,
+        "two_of_three_years_positive": true,
+        "active_days_at_least_180": true,
+        "sharpe_exceeds_both_pure_trends": false,
+        "calmar_exceeds_both_pure_trends": false,
+        "funding_pnl_improves_pure_long_short": true,
+        "dsr_at_least_0p80": false
+      },
+      "failed_checks": [
+        "base_sharpe_at_least_0p50",
+        "sharpe_exceeds_both_pure_trends",
+        "calmar_exceeds_both_pure_trends",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": -0.027256958342930182,
+      "stress_sharpe": 0.2728774725712277,
+      "base_sharpe": 0.3402704091102724
+    },
+    {
+      "candidate_id": "CARRY_LONG_SIDE_ONLY",
+      "passed": false,
+      "checks": {
+        "base_total_positive": false,
+        "stress_total_positive": false,
+        "base_sharpe_at_least_0p50": false,
+        "drawdown_above_minus_15pct": true,
+        "two_of_three_years_positive": true,
+        "active_days_at_least_180": true,
+        "sharpe_exceeds_both_pure_trends": false,
+        "calmar_exceeds_both_pure_trends": false,
+        "funding_pnl_improves_pure_long_short": true,
+        "dsr_at_least_0p80": false
+      },
+      "failed_checks": [
+        "base_total_positive",
+        "stress_total_positive",
+        "base_sharpe_at_least_0p50",
+        "sharpe_exceeds_both_pure_trends",
+        "calmar_exceeds_both_pure_trends",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": -0.031734236623227274,
+      "stress_sharpe": -0.04171974514385513,
+      "base_sharpe": -0.015586496341273593
+    },
+    {
+      "candidate_id": "CARRY_SHORT_SIDE_ONLY",
+      "passed": false,
+      "checks": {
+        "base_total_positive": true,
+        "stress_total_positive": true,
+        "base_sharpe_at_least_0p50": true,
+        "drawdown_above_minus_15pct": true,
+        "two_of_three_years_positive": true,
+        "active_days_at_least_180": true,
+        "sharpe_exceeds_both_pure_trends": true,
+        "calmar_exceeds_both_pure_trends": true,
+        "funding_pnl_improves_pure_long_short": false,
+        "dsr_at_least_0p80": false
+      },
+      "failed_checks": [
+        "funding_pnl_improves_pure_long_short",
+        "dsr_at_least_0p80"
+      ],
+      "worst_annual_base_return": 0.007424288008651914,
+      "stress_sharpe": 0.5896297515330002,
+      "base_sharpe": 0.635655147446245
+    }
+  ],
+  "selected_candidate": null,
+  "evaluation_authorized": false
+}

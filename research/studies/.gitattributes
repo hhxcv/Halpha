@@ -3,6 +3,7 @@
 /predictive/** -text whitespace=cr-at-eol,-blank-at-eof
 /strategy-candidate/** -text whitespace=cr-at-eol,-blank-at-eof
 /comparative-or-mechanism/2026/basic-data-semi-auto-candidate-frontier/** -text whitespace=cr-at-eol,-blank-at-eof
+/comparative-or-mechanism/2026/btc-mvrv-cycle-timing-replication/** -text whitespace=cr-at-eol,-blank-at-eof
 /comparative-or-mechanism/2026/btc-correlation-opportunity-frontier/** -text whitespace=cr-at-eol,-blank-at-eof
 /comparative-or-mechanism/2026/fixed-rule-forward-incubation-frontier/** -text whitespace=cr-at-eol,-blank-at-eof
 /comparative-or-mechanism/2026/ppc-forward-gate-power/** -text whitespace=cr-at-eol,-blank-at-eof

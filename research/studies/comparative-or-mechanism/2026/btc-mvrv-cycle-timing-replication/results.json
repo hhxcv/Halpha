@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "conclusion": "DOES_NOT_SUPPORT",
+  "conclusion_scope": "FIXED_MVRV_Z_RULE_AS_COMPLETE_CYCLE_TIMER",
+  "partial_mechanism_evidence": "BOTTOM_ENTRY_TIMING_SUPPORTED_IN_DEVELOPMENT_ONLY",
+  "phase_reached": "development",
+  "confirmation_authorized": false,
+  "benchmark_base": {
+    "total_return": 64.70461845335699,
+    "sharpe": 1.0614590801933914,
+    "max_drawdown": -0.8378314303412513
+  },
+  "variants": {
+    "exit_5": {
+      "base_total_return": 69.41026493715421,
+      "stress_total_return": 68.70966092910241,
+      "base_sharpe": 1.3006304525360468,
+      "base_max_drawdown": -0.6144650700282785,
+      "entry_lags_days": [-9, -20],
+      "exit_lags_days": [-205, -309],
+      "strict_bull_returns": [9.896634427800311, 9.388211026479414]
+    },
+    "exit_6": {
+      "base_total_return": 368.4120285809521,
+      "stress_total_return": 364.7362641440843,
+      "base_sharpe": 1.5856130920997793,
+      "base_max_drawdown": -0.6144650700282785,
+      "entry_lags_days": [-9, -20],
+      "exit_lags_days": [-18, -304],
+      "strict_bull_returns": [45.65779648212094, 11.728697747659218]
+    },
+    "exit_7": {
+      "base_total_return": 866.8721793931171,
+      "stress_total_return": 858.2365816162577,
+      "base_sharpe": 1.7252098224310657,
+      "base_max_drawdown": -0.6144650700282781,
+      "entry_lags_days": [-9, -20],
+      "exit_lags_days": [-9, -261],
+      "strict_bull_returns": [79.01145200912235, 16.438164924316617]
+    }
+  },
+  "strict_bull_buy_hold_returns": [91.2639129851304, 20.08424429910767],
+  "failed_checks": [
+    "at_least_two_variants_exit_both_peaks_within_180d"
+  ],
+  "strongest_support": "All fixed variants entered within 20 days before both development troughs and beat the same-start full-period buy-and-hold while reducing maximum drawdown.",
+  "strongest_counterevidence": "No fixed variant beat perfect next-day buy-and-hold in either complete development bull leg, and 2021 exits were 261 to 309 days early.",
+  "deterministic_replay": {
+    "semantic_json_equal": true,
+    "daily_returns_sha256": "b19b9b123ef39bf5fae494455de9d390017ebea93ff47784ef6dff6fec6c7357"
+  },
+  "product_effects": "NONE"
+}

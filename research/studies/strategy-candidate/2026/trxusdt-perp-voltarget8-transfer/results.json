@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "candidate_id": "TRXUSDT_PERP_VOL60_TARGET8_MONTHLY_LONG_MAX0P5X",
+  "phase_reached": "development_selection",
+  "scope": "Fixed transfer of the existing 60-day realized-volatility, 8% annual target, monthly long-only TRXUSDT rule to Binance USD-M perpetual with actual funding and maximum gross 0.5",
+  "development_period": [
+    "2021-01-01T00:00:00Z",
+    "2023-01-01T00:00:00Z"
+  ],
+  "base": {
+    "total_return": 0.08175943145490083,
+    "cagr": 0.04010463989130497,
+    "annualized_volatility": 0.10124918976460662,
+    "sharpe": 0.43860772208037835,
+    "calmar": 0.4209533547043667,
+    "max_drawdown": -0.0952709829797419,
+    "annual_returns": {
+      "2021": 0.09648485337382406,
+      "2022": -0.013429662866402126
+    },
+    "turnover": 1.0191177345842188,
+    "active_days": 730
+  },
+  "stress": {
+    "total_return": 0.07845666781167182,
+    "cagr": 0.038514545716699544,
+    "sharpe": 0.42349303060284704,
+    "max_drawdown": -0.09658359734494404,
+    "return_after_4pct_annual_hurdle": -0.0028526516708161642
+  },
+  "base_pnl_decomposition_on_initial_equity": {
+    "price_pnl": 0.09442365801017155,
+    "funding_pnl": -0.009329204458998425,
+    "fee_cost": 0.0004446696128367508,
+    "slippage_cost": 0.0028903524834388798,
+    "funding_drag_fraction_of_price_pnl": 0.0988015573172717
+  },
+  "diagnostics": {
+    "price_only_base_total_return": 0.09127978807821013,
+    "price_only_base_sharpe": 0.4807796433032853,
+    "unscaled_half_long_base_total_return": 0.5732369699408519,
+    "unscaled_half_long_base_sharpe": 0.6863387825876812,
+    "unscaled_half_long_base_max_drawdown": -0.44849259125374275,
+    "six_pct_base_total_return": 0.061914974970668,
+    "ten_pct_base_total_return": 0.10115954679824779
+  },
+  "selection": {
+    "failed_checks": [
+      "stress_after_4pct_hurdle_positive",
+      "base_sharpe_at_least_0p45"
+    ],
+    "evaluation_authorized": false,
+    "confirmation_authorized": false
+  },
+  "evidence_limits": [
+    "The fixed primary candidate failed the pre-registered development gate, so evaluation and confirmation periods remain unopened.",
+    "The underlying spot history and the post-2025-04 perpetual segment had prior exposure; the incremental evidence is a fixed full-history venue and funding transfer, not a virgin price holdout.",
+    "Three of 7076 funding events use an official daily-open mark fallback because the official 8h mark archive for 2026-06-29 was unavailable; this did not affect the development period outcome.",
+    "Positive unscaled and neighboring-target diagnostics cannot replace the failed primary candidate."
+  ],
+  "artifacts": {
+    "development_sha256": "ca1465be96eee33a0ede9a1d6a7ba7d53036e18843a80b098447d79a0846b1b2",
+    "development_selection_sha256": "ca9b2928b5147101921fb920c1e9cb00b820c4127a2afb357acf86b0e56205c9",
+    "development_csv_sha256": "08084bf4a93d94d99b5491b155fc969ad50098e02bb7a91d7ae34f64d0f731ee",
+    "development_daily_returns_sha256": "90418cecfe6b3ba46f866d3910c2aebd01337d1b9fcfec026507e9dea6ea3483",
+    "study_sha256": "21b35064832caf9c20b045bf00564dca0c151e4cd8aca3a19598035875c65801",
+    "prepare_data_sha256": "9c3b6c5670378febc5d0fb23551cf62e6dc39a050087e8bd02de4ba4c698ced3",
+    "manifest_sha256": "263fd41664e4c7732f622a58208dd2d234bdda8b9ff543b5e88183ea452bd255"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/trxusdt-perp-voltarget8-transfer-replay",
+    "development_json_semantic_equal_ignoring_generated_at": true,
+    "selection_semantic_equal_ignoring_generated_at_and_source_hash": true,
+    "development_csv_byte_identical": true,
+    "daily_returns_byte_identical": true
+  },
+  "research_supports_demo_candidate": false,
+  "product_effects": "NONE"
+}

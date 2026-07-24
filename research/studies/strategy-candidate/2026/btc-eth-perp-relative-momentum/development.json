@@ -1,0 +1,509 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T01:34:53.599421+00:00",
+  "phase": "development",
+  "period": [
+    "2021-01-01T00:00:00Z",
+    "2024-01-01T00:00:00Z"
+  ],
+  "framework_versions": {
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6"
+  },
+  "method_identity": {
+    "study_sha256": "df77dd89e285fdce325fd967297b3b596c50336d4cb20ae44d92be32b2b7d26c",
+    "base_study_sha256": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+    "btc_data_identity": "e7347b8226e6d27525c2b21bb3332a18e46e1e6af1b3457b11afe0ab01480723",
+    "eth_data_identity": "dafc57814e2ae12b9fdf09a1c33680433d7e84944725a3273bb5dbe3e72e433f",
+    "related_trial_inputs": {
+      "btcusdt-daily-donchian-ensemble": "629675bbb8827e14c7e7aad2d2c468f1b5fcf9dcf008ac378d102b0df195ca9a",
+      "btcusdt-daily-donchian-carry-conditioned": "27555e2b0ae34630e98e36c0f55351f222c8e109e5767732c0ea535b0ebf9c89",
+      "btcusdt-spot-daily-donchian": "28553e60b4a423d95210dc400e65fc6d515e28b3d76138b1132213c88ef56bdd",
+      "ethusdt-daily-donchian-short-carry-transfer": "f0f38225bdd0bc0c2263b99c572e1696cb9b7d6d67a5e38cf0243e7b0fda0274",
+      "btcusdt-8h-donchian-execution-transfer": "7de9cf5e253fb96994573acf2c8fb3e70510e64975f67095877bc456d835daa1"
+    }
+  },
+  "data_quality": {
+    "BTCUSDT": {
+      "bars": 2373,
+      "first_open_time": "2020-01-01T00:00:00+00:00",
+      "last_open_time": "2026-06-30T00:00:00+00:00",
+      "continuous_daily": true,
+      "valid_ohlc": true,
+      "duplicate_bars": 0,
+      "archives_verified": 78,
+      "archive_bytes": 161737,
+      "mark_price_archives_verified": 78,
+      "mark_price_archive_bytes": 254031,
+      "mark_price_timeline_gap_count": 6,
+      "funding_records_used": 7119,
+      "funding_source_records_without_mark_price": 4198,
+      "funding_marks_backfilled_from_official_8h_klines": 4173,
+      "funding_marks_using_daily_open_fallback": 25
+    },
+    "ETHUSDT": {
+      "bars": 2373,
+      "first_open_time": "2020-01-01T00:00:00+00:00",
+      "last_open_time": "2026-06-30T00:00:00+00:00",
+      "continuous_daily": true,
+      "valid_ohlc": true,
+      "duplicate_bars": 0,
+      "archives_verified": 78,
+      "archive_bytes": 161386,
+      "mark_price_archives_verified": 78,
+      "mark_price_archive_bytes": 243199,
+      "mark_price_timeline_gap_count": 3,
+      "funding_records_used": 7119,
+      "funding_source_records_without_mark_price": 4198,
+      "funding_marks_backfilled_from_official_8h_klines": 4191,
+      "funding_marks_using_daily_open_fallback": 7
+    }
+  },
+  "rules": {
+    "lookback_days": 90,
+    "signal": "90-day ETH/BTC ratio direction fixed at each month open using prior closes",
+    "leg_weight": 0.25,
+    "target_gross": 0.5,
+    "target_net": 0.0,
+    "rebalance_threshold": 0.2
+  },
+  "costs_per_unit_turnover": {
+    "favorable": {
+      "fee": 0.0004,
+      "slippage": 0.0002
+    },
+    "base": {
+      "fee": 0.0004,
+      "slippage": 0.001
+    },
+    "stress": {
+      "fee": 0.0004,
+      "slippage": 0.0015
+    }
+  },
+  "candidate": {
+    "candidate_id": "BTC_ETH_RELATIVE_MOMENTUM_90D",
+    "scenarios": {
+      "favorable": {
+        "days": 1095,
+        "total_return": -0.0714594817601012,
+        "cagr": -0.024427382926081154,
+        "annualized_volatility": 0.1305307641446206,
+        "sharpe": -0.12391275751782725,
+        "max_drawdown": -0.21087717305545894,
+        "calmar": -0.11583701816629036,
+        "daily_skew": -0.6250302663812107,
+        "daily_excess_kurtosis": 10.167757298975708,
+        "positive_day_fraction": 0.4968036529680365,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": 0.05256250783212968,
+          "2022": -0.15115858665960302,
+          "2023": 0.03926524365632167
+        },
+        "turnover": 12.041398277914503,
+        "trade_events": 63,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6483531143122396,
+        "maximum_absolute_net_weight": 0.08841771524748687,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": -0.042707699908770894,
+          "ETHUSDT": -0.016845248940526032
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": 0.027363273269356968,
+          "ETHUSDT": -0.03251359753973358
+        },
+        "fee_cost_on_initial_equity": 0.004504139093618769,
+        "slippage_cost_on_initial_equity": 0.0022520695468093844,
+        "terminal_liquidation": true
+      },
+      "base": {
+        "days": 1095,
+        "total_return": -0.08037391630292878,
+        "cagr": -0.027561557617649557,
+        "annualized_volatility": 0.13052243858028054,
+        "sharpe": -0.14856330752107566,
+        "max_drawdown": -0.21393573920172193,
+        "calmar": -0.1288310112209046,
+        "daily_skew": -0.624670184823601,
+        "daily_excess_kurtosis": 10.167321955146127,
+        "positive_day_fraction": 0.4958904109589041,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": 0.04996492448159695,
+          "2022": -0.15520666495174984,
+          "2023": 0.036778567652879346
+        },
+        "turnover": 12.038305971679984,
+        "trade_events": 63,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6483531143122396,
+        "maximum_absolute_net_weight": 0.08843706394051282,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": -0.043014895261268685,
+          "ETHUSDT": -0.016517398137529112
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": 0.027408757172255074,
+          "ETHUSDT": -0.03255988778443629
+        },
+        "fee_cost_on_initial_equity": 0.004482997797701511,
+        "slippage_cost_on_initial_equity": 0.011207494494253777,
+        "terminal_liquidation": true
+      },
+      "stress": {
+        "days": 1095,
+        "total_return": -0.0859023093464989,
+        "cagr": -0.0295154375008142,
+        "annualized_volatility": 0.1305246293665096,
+        "sharpe": -0.16395578049883847,
+        "max_drawdown": -0.21584129528800455,
+        "calmar": -0.13674601730605224,
+        "daily_skew": -0.6243477567827774,
+        "daily_excess_kurtosis": 10.164417541242145,
+        "positive_day_fraction": 0.4958904109589041,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": 0.04834449811219432,
+          "2022": -0.15772689302621956,
+          "2023": 0.03522715919030217
+        },
+        "turnover": 12.036374983445917,
+        "trade_events": 63,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6483531143122394,
+        "maximum_absolute_net_weight": 0.08844916191573232,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": -0.04320419221758062,
+          "ETHUSDT": -0.016314730929686133
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": 0.027436621838030677,
+          "ETHUSDT": -0.03258821254068132
+        },
+        "fee_cost_on_initial_equity": 0.004469851683491668,
+        "slippage_cost_on_initial_equity": 0.016761943813093757,
+        "terminal_liquidation": true
+      }
+    },
+    "deflated_sharpe_probability": 0.15255001508713317,
+    "related_trial_count": 13
+  },
+  "benchmarks": {
+    "static_long_eth_short_btc": {
+      "favorable": {
+        "days": 1095,
+        "total_return": 0.24752207372248192,
+        "cagr": 0.07655942742587651,
+        "annualized_volatility": 0.1322618089525972,
+        "sharpe": 0.6231210758625072,
+        "max_drawdown": -0.11837705303436874,
+        "calmar": 0.646742130027927,
+        "daily_skew": 1.2749860878708492,
+        "daily_excess_kurtosis": 10.348875281791685,
+        "positive_day_fraction": 0.4840182648401826,
+        "positive_month_fraction": 0.4722222222222222,
+        "annual_returns": {
+          "2021": 0.3113495631375094,
+          "2022": 0.03614267778140712,
+          "2023": -0.08185726817425343
+        },
+        "turnover": 4.169689258889302,
+        "trade_events": 51,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6682439207764357,
+        "maximum_absolute_net_weight": 0.10933262963158644,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": -0.32432261737603046,
+          "ETHUSDT": 0.5899470262100609
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": 0.13182783570344242,
+          "ETHUSDT": -0.14691064283748678
+        },
+        "fee_cost_on_initial_equity": 0.0020130186516744185,
+        "slippage_cost_on_initial_equity": 0.0010065093258372093,
+        "terminal_liquidation": true
+      },
+      "base": {
+        "days": 1095,
+        "total_return": 0.24338741674522724,
+        "cagr": 0.07536795057576318,
+        "annualized_volatility": 0.13227153730122243,
+        "sharpe": 0.6147174499166009,
+        "max_drawdown": -0.11857417293967554,
+        "calmar": 0.6356186065418017,
+        "daily_skew": 1.2744170798727452,
+        "daily_excess_kurtosis": 10.346473075248918,
+        "positive_day_fraction": 0.4840182648401826,
+        "positive_month_fraction": 0.4722222222222222,
+        "annual_returns": {
+          "2021": 0.3091535969861432,
+          "2022": 0.03528897740938697,
+          "2023": -0.08260942404732596
+        },
+        "turnover": 4.169714534922654,
+        "trade_events": 51,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6682625348151504,
+        "maximum_absolute_net_weight": 0.1093211264193284,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": -0.32372621517175104,
+          "ETHUSDT": 0.5892298346006274
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": 0.13163892800473312,
+          "ETHUSDT": -0.1467211770380656
+        },
+        "fee_cost_on_initial_equity": 0.002009701042947276,
+        "slippage_cost_on_initial_equity": 0.0050242526073681895,
+        "terminal_liquidation": true
+      },
+      "stress": {
+        "days": 1095,
+        "total_return": 0.24080988972959583,
+        "cagr": 0.07462385248972914,
+        "annualized_volatility": 0.1322782419045228,
+        "sharpe": 0.6094629087054274,
+        "max_drawdown": -0.11869742277235062,
+        "calmar": 0.6286897452933747,
+        "daily_skew": 1.2740318312658814,
+        "daily_excess_kurtosis": 10.34476794072044,
+        "positive_day_fraction": 0.4821917808219178,
+        "positive_month_fraction": 0.4722222222222222,
+        "annual_returns": {
+          "2021": 0.30778279115550355,
+          "2022": 0.03475594323628206,
+          "2023": -0.08307946624519902
+        },
+        "turnover": 4.169730794700089,
+        "trade_events": 51,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6682741776941825,
+        "maximum_absolute_net_weight": 0.10931394080773052,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": -0.3233543117413793,
+          "ETHUSDT": 0.5887823387965838
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": 0.13152103534751658,
+          "ETHUSDT": -0.14660292466803354
+        },
+        "fee_cost_on_initial_equity": 0.002007631158962387,
+        "slippage_cost_on_initial_equity": 0.007528616846108951,
+        "terminal_liquidation": true
+      }
+    },
+    "static_long_btc_short_eth": {
+      "favorable": {
+        "days": 1095,
+        "total_return": -0.31994626488070554,
+        "cagr": -0.12068831466129937,
+        "annualized_volatility": 0.13015974998271498,
+        "sharpe": -0.9218640595677815,
+        "max_drawdown": -0.3883154615091071,
+        "calmar": -0.31079966322296154,
+        "daily_skew": -1.2243659657311678,
+        "daily_excess_kurtosis": 11.24505330746215,
+        "positive_day_fraction": 0.5068493150684932,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": -0.315297435258041,
+          "2022": -0.07291640725840498,
+          "2023": 0.07132781453494541
+        },
+        "turnover": 4.532742794313555,
+        "trade_events": 54,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6760685390639948,
+        "maximum_absolute_net_weight": 0.08571719611024914,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": 0.18324099780684788,
+          "ETHUSDT": -0.5114153311435191
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": -0.09369657658116606,
+          "ETHUSDT": 0.10398910689723685
+        },
+        "fee_cost_on_initial_equity": 0.001376307906742453,
+        "slippage_cost_on_initial_equity": 0.0006881539533712265,
+        "terminal_liquidation": true
+      },
+      "base": {
+        "days": 1095,
+        "total_return": -0.32243831254070665,
+        "cagr": -0.12176444067021985,
+        "annualized_volatility": 0.13015208875608522,
+        "sharpe": -0.931324596005044,
+        "max_drawdown": -0.38979451829818546,
+        "calmar": -0.31238110069334624,
+        "daily_skew": -1.2253185610086181,
+        "daily_excess_kurtosis": 11.24695866850563,
+        "positive_day_fraction": 0.5068493150684932,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": -0.31652616766249597,
+          "2022": -0.07386578542304845,
+          "2023": 0.07041705576075685
+        },
+        "turnover": 4.532813845930538,
+        "trade_events": 54,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6760953673386114,
+        "maximum_absolute_net_weight": 0.08570208588338468,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": 0.18293862019524942,
+          "ETHUSDT": -0.5108602369183162
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": -0.09357473847130068,
+          "ETHUSDT": 0.10386744077304458
+        },
+        "fee_cost_on_initial_equity": 0.001374113748398039,
+        "slippage_cost_on_initial_equity": 0.0034352843709950977,
+        "terminal_liquidation": true
+      },
+      "stress": {
+        "days": 1095,
+        "total_return": -0.3239914456038133,
+        "cagr": -0.12243645566709571,
+        "annualized_volatility": 0.13014799465316731,
+        "sharpe": -0.9372332106129183,
+        "max_drawdown": -0.3907172092207054,
+        "calmar": -0.31336335533133564,
+        "daily_skew": -1.2258837307730193,
+        "daily_excess_kurtosis": 11.247903959566546,
+        "positive_day_fraction": 0.5068493150684932,
+        "positive_month_fraction": 0.4166666666666667,
+        "annual_returns": {
+          "2021": -0.31729321508312824,
+          "2022": -0.07445844118674971,
+          "2023": 0.06984792420861607
+        },
+        "turnover": 4.532858836960998,
+        "trade_events": 54,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.6761121466620541,
+        "maximum_absolute_net_weight": 0.08569263810816746,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": 0.18275013420503378,
+          "ETHUSDT": -0.5105138433984985
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": -0.09349869849007747,
+          "ETHUSDT": 0.10379150057257133
+        },
+        "fee_cost_on_initial_equity": 0.0013727449458606886,
+        "slippage_cost_on_initial_equity": 0.005147793546977582,
+        "terminal_liquidation": true
+      }
+    },
+    "long_both_common_beta": {
+      "favorable": {
+        "days": 1095,
+        "total_return": 0.4525132170384736,
+        "cagr": 0.13260127109451347,
+        "annualized_volatility": 0.35584460911630744,
+        "sharpe": 0.5279267838506635,
+        "max_drawdown": -0.4865952104526641,
+        "calmar": 0.2725083770782674,
+        "daily_skew": -0.15592464451043947,
+        "daily_excess_kurtosis": 3.1356074074314964,
+        "positive_day_fraction": 0.502283105022831,
+        "positive_month_fraction": 0.5555555555555556,
+        "annual_returns": {
+          "2021": 0.5792953616724041,
+          "2022": -0.36906305661162797,
+          "2023": 0.4577087999426983
+        },
+        "turnover": 2.2679433867797343,
+        "trade_events": 23,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.5997347935236566,
+        "maximum_absolute_net_weight": 0.5997347935236566,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": 0.24214502734496807,
+          "ETHUSDT": 0.5446193787236706
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": -0.15635590550826692,
+          "ETHUSDT": -0.17613317650535198
+        },
+        "fee_cost_on_initial_equity": 0.001174738011040494,
+        "slippage_cost_on_initial_equity": 0.000587369005520247,
+        "terminal_liquidation": true
+      },
+      "base": {
+        "days": 1095,
+        "total_return": 0.4498685972871417,
+        "cagr": 0.1319129993085999,
+        "annualized_volatility": 0.3558495981294945,
+        "sharpe": 0.5262169796201784,
+        "max_drawdown": -0.4867251428910965,
+        "calmar": 0.2710215431342841,
+        "daily_skew": -0.15590404324815832,
+        "daily_excess_kurtosis": 3.1352475975958316,
+        "positive_day_fraction": 0.5004566210045662,
+        "positive_month_fraction": 0.5555555555555556,
+        "annual_returns": {
+          "2021": 0.5777789297342997,
+          "2022": -0.3692652107121145,
+          "2023": 0.45692000153009715
+        },
+        "turnover": 2.2677967769122622,
+        "trade_events": 23,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.5997617221728839,
+        "maximum_absolute_net_weight": 0.5997617221728839,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": 0.24192482395062942,
+          "ETHUSDT": 0.5442981421530216
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": -0.1562377769777935,
+          "ETHUSDT": -0.1760085867553415
+        },
+        "fee_cost_on_initial_equity": 0.0011737157381038333,
+        "slippage_cost_on_initial_equity": 0.002934289345259583,
+        "terminal_liquidation": true
+      },
+      "stress": {
+        "days": 1095,
+        "total_return": 0.4482180195206731,
+        "cagr": 0.13148300637182442,
+        "annualized_volatility": 0.35585291303888583,
+        "sharpe": 0.5251481957765917,
+        "max_drawdown": -0.4868062935118169,
+        "calmar": 0.2700930701271485,
+        "daily_skew": -0.155890894462634,
+        "daily_excess_kurtosis": 3.1350106609752078,
+        "positive_day_fraction": 0.5004566210045662,
+        "positive_month_fraction": 0.5555555555555556,
+        "annual_returns": {
+          "2021": 0.5768318656539535,
+          "2022": -0.3693914700542019,
+          "2023": 0.45642698852054253
+        },
+        "turnover": 2.2677053316623734,
+        "trade_events": 23,
+        "active_days": 1095,
+        "maximum_gross_weight": 0.5997785599337749,
+        "maximum_absolute_net_weight": 0.5997785599337749,
+        "price_pnl_on_initial_equity": {
+          "BTCUSDT": 0.2417873883405166,
+          "ETHUSDT": 0.5440975313690493
+        },
+        "funding_pnl_on_initial_equity": {
+          "BTCUSDT": -0.1561640062211553,
+          "ETHUSDT": -0.17593077598159443
+        },
+        "fee_cost_on_initial_equity": 0.0011730774707709537,
+        "slippage_cost_on_initial_equity": 0.004399040515391075,
+        "terminal_liquidation": true
+      }
+    }
+  },
+  "product_effects": "NONE"
+}

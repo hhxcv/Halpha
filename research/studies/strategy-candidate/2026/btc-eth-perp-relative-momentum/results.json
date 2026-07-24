@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "phase_reached": "development_selection",
+  "evaluation_authorized": false,
+  "confirmation_authorized": false,
+  "candidate": {
+    "candidate_id": "BTC_ETH_RELATIVE_MOMENTUM_90D",
+    "base_total_return": -0.08037391630292878,
+    "stress_total_return": -0.0859023093464989,
+    "base_cagr": -0.027561557617649557,
+    "stress_cagr": -0.0295154375008142,
+    "base_sharpe": -0.14856330752107566,
+    "base_calmar": -0.1288310112209046,
+    "base_max_drawdown": -0.21393573920172193,
+    "deflated_sharpe_probability": 0.15255001508713317,
+    "annual_base_returns": {
+      "2021": 0.04996492448159695,
+      "2022": -0.15520666495174984,
+      "2023": 0.036778567652879346
+    }
+  },
+  "failed_checks": [
+    "base_total_positive",
+    "stress_total_positive",
+    "stress_cagr_above_4pct",
+    "base_sharpe_at_least_0p75",
+    "thirteen_trial_dsr_at_least_0p80",
+    "drawdown_above_minus_15pct",
+    "worst_year_at_least_minus_5pct",
+    "sharpe_exceeds_both_static_directions",
+    "calmar_exceeds_both_static_directions"
+  ],
+  "interpretation": "A fixed 90-day BTC/ETH relative-momentum rotation did not isolate a durable relative trend. The strategy lost money after realistic funding and costs, suffered a material 2022 loss, and was dominated by the static long-ETH/short-BTC benchmark in the development sample. Do not tune lookback, direction, weights, or rebalancing around this failure.",
+  "artifacts": {
+    "development_sha256": "e4ebd1505b1f5ac6b921b02302afd68d98d957a9c43e872ce470077481073db3",
+    "selection_sha256": "d642c30fe56e3f57bd9788fa99eb928dd619aeea6aab45a415dc0f406a3dcdf2",
+    "development_csv_sha256": "3b1645509bdaaff7dd38c4e5fd69a0eb45d0f570585bf5f6107f26d1a49d3832",
+    "development_daily_returns_sha256": "7256f91f7df426e010d3fd3ff9b01cccc913bacea3453d7a23ba1a1e06a31d72"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/btc-eth-perp-relative-momentum-replay",
+    "csv_byte_identical": true,
+    "daily_returns_byte_identical": true,
+    "all_numeric_fields_equal": true,
+    "selection_semantic_equal_ignoring_generated_at_and_source_hash": true,
+    "runtime_metadata_differs": true,
+    "original_runtime": {
+      "vectorbt": "1.1.0",
+      "pandas": "3.0.3"
+    },
+    "replay_runtime": {
+      "vectorbt": "1.0.0",
+      "pandas": "2.3.3"
+    }
+  },
+  "evaluation_read": false,
+  "confirmation_read": false,
+  "product_effects": "NONE"
+}

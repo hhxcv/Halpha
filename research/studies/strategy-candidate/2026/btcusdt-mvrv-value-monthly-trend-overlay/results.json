@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "conclusion": "DOES_NOT_SUPPORT",
+  "candidate_id": "BTC_MVRV_LT1_OR_MONTHLY_10M_TREND_1P25",
+  "phase_reached": "development",
+  "confirmation_authorized": false,
+  "binance_bridge_run": false,
+  "development": {
+    "candidate_base_total_return": 76.74731049472733,
+    "candidate_stress_total_return": 50.82763424784291,
+    "buy_hold_base_total_return": 60.302021287619695,
+    "buy_hold_stress_total_return": 59.99627173319841,
+    "candidate_base_sharpe": 1.0835901460848618,
+    "candidate_base_max_drawdown": -0.8302130381775472,
+    "buy_hold_base_max_drawdown": -0.8378314303412521,
+    "turnover": 50.173038225145284,
+    "trade_events": 42
+  },
+  "bull_legs": {
+    "2015_2017": {
+      "candidate_base": 114.81563294641678,
+      "candidate_stress": 106.77997545916237,
+      "buy_hold_base": 91.0338284140947,
+      "buy_hold_stress": 90.57480110246281,
+      "value_action_lag_days": -12,
+      "post_peak_exit_lag_days": 106
+    },
+    "2018_2021": {
+      "candidate_base": 18.295491703407162,
+      "candidate_stress": 15.75060364746238,
+      "buy_hold_base": 20.0316651362669,
+      "buy_hold_stress": 19.926767742851695,
+      "value_action_lag_days": -25,
+      "post_peak_exit_lag_days": 54
+    }
+  },
+  "bear_2017_2018": {
+    "candidate_base": -0.8795889027790156,
+    "buy_hold_base": -0.8353708364261396
+  },
+  "selection_bias": {
+    "dsr_35_trials": 0.7318711565905126,
+    "dsr_70_trials": 0.6226163878147806,
+    "bootstrap_probability_beats_buy_hold": 0.5929,
+    "bootstrap_excess_p05": -332.37873773920745,
+    "bootstrap_excess_median": 2.9607455455821707,
+    "bootstrap_excess_p95": 3128.3637906618683
+  },
+  "failed_checks": [
+    "both_development_bull_legs_beat_buy_hold_base_and_stress",
+    "development_stress_beats_buy_hold",
+    "complete_bear_leg_beats_buy_hold",
+    "thirty_five_trial_dsr_at_least_0p80",
+    "bootstrap_probability_beats_buy_hold_at_least_0p80"
+  ],
+  "deterministic_replay": {
+    "semantic_json_equal": true,
+    "daily_returns_sha256": "69acaf19a9e0bec26401893e86e3f628167ce316dee8d09f22ee889e8523f9d5"
+  },
+  "strongest_support": "The fixed rule beat buy-and-hold in the first complete bull leg and the full Base path while acting near both historical troughs.",
+  "strongest_counterevidence": "It failed the second bull leg, Stress full period, complete bear leg, 35-trial DSR and block-bootstrap relative win probability.",
+  "product_effects": "NONE"
+}

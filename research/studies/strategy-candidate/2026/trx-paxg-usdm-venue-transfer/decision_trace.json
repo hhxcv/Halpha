@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "strategy_id": "TRX_PAXG_USDM_MONTHLY_25PCT_EACH",
+  "strategy_version": "1.0.0-candidate",
+  "capital_basis": "PLAN_CAPITAL",
+  "traces": [
+    {
+      "name": "normal_initial_monthly_target",
+      "input": {
+        "cutoff": "2026-08-01T00:00:01Z",
+        "month_trigger_id": "2026-08",
+        "month_already_decided": false,
+        "plan_capital": "10000",
+        "positions_notional": {
+          "TRXUSDT-PERP": "0",
+          "PAXGUSDT-PERP": "0"
+        },
+        "both_instruments_tradeable_and_fresh": true,
+        "open_responsibilities_known": true,
+        "new_risk_allowed": true
+      },
+      "output": {
+        "result": "TARGET",
+        "target_notional": {
+          "TRXUSDT-PERP": "2500",
+          "PAXGUSDT-PERP": "2500"
+        },
+        "target_gross": "0.5",
+        "target_net": "0.5"
+      }
+    },
+    {
+      "name": "monthly_rebalance_from_drift",
+      "input": {
+        "cutoff": "2026-09-01T00:00:01Z",
+        "month_trigger_id": "2026-09",
+        "month_already_decided": false,
+        "plan_capital": "10000",
+        "positions_notional": {
+          "TRXUSDT-PERP": "2700",
+          "PAXGUSDT-PERP": "2200"
+        },
+        "both_instruments_tradeable_and_fresh": true,
+        "open_responsibilities_known": true,
+        "new_risk_allowed": true
+      },
+      "output": {
+        "result": "TARGET",
+        "target_notional": {
+          "TRXUSDT-PERP": "2500",
+          "PAXGUSDT-PERP": "2500"
+        },
+        "notional_delta_before_rounding": {
+          "TRXUSDT-PERP": "-200",
+          "PAXGUSDT-PERP": "300"
+        }
+      }
+    },
+    {
+      "name": "not_month_boundary",
+      "input": {
+        "cutoff": "2026-08-15T00:00:01Z",
+        "month_trigger_id": null,
+        "month_already_decided": false,
+        "both_instruments_tradeable_and_fresh": true,
+        "open_responsibilities_known": true,
+        "new_risk_allowed": true
+      },
+      "output": {
+        "result": "NO_TARGET",
+        "reason": "MONTHLY_TRIGGER_NOT_DUE"
+      }
+    },
+    {
+      "name": "unknown_one_leg_blocks_whole_target",
+      "input": {
+        "cutoff": "2026-08-01T00:00:01Z",
+        "month_trigger_id": "2026-08",
+        "month_already_decided": false,
+        "both_instruments_tradeable_and_fresh": false,
+        "unknown_instrument": "PAXGUSDT-PERP",
+        "open_responsibilities_known": true,
+        "new_risk_allowed": true
+      },
+      "output": {
+        "result": "UNKNOWN_NO_NEW_RISK",
+        "reason": "PORTFOLIO_INPUT_INCOMPLETE"
+      }
+    },
+    {
+      "name": "duplicate_month_trigger",
+      "input": {
+        "cutoff": "2026-08-01T00:00:02Z",
+        "month_trigger_id": "2026-08",
+        "month_already_decided": true,
+        "stored_target_digest_matches": true,
+        "both_instruments_tradeable_and_fresh": true,
+        "open_responsibilities_known": true,
+        "new_risk_allowed": true
+      },
+      "output": {
+        "result": "NO_TARGET",
+        "reason": "MONTHLY_TRIGGER_ALREADY_CONSUMED"
+      }
+    },
+    {
+      "name": "stop_new_risk",
+      "input": {
+        "cutoff": "2026-08-01T00:00:01Z",
+        "month_trigger_id": "2026-08",
+        "month_already_decided": false,
+        "both_instruments_tradeable_and_fresh": true,
+        "open_responsibilities_known": true,
+        "new_risk_allowed": false
+      },
+      "output": {
+        "result": "NO_TARGET",
+        "reason": "NEW_RISK_STOPPED"
+      }
+    }
+  ]
+}

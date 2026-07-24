@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T09:04:43+08:00",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Does the exact BTC-selected short-side carry-conditioned 20/30/60/90-day Donchian rule transfer to ETHUSDT perpetual with stable realistic-cost profitability?",
+  "intended_claim": "product consideration for an existing Demo instrument only after all sequential gates",
+  "known_exposure": "The rule was selected after BTC development outcomes. ETH prices have been viewed by other strategies, but this exact rule has not been run on ETH. Evidence is fixed-method instrument transfer plus sequential time gates, not virgin-market-data confirmation.",
+  "data_boundary": {
+    "venue": "Binance USD-M",
+    "instrument": "ETHUSDT perpetual",
+    "interval": "1d",
+    "timezone": "UTC",
+    "warmup": ["2020-01-01T00:00:00Z", "2021-01-01T00:00:00Z"],
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "data_quality_before_outcomes": {
+    "bars": 2373,
+    "continuous_daily": true,
+    "valid_ohlc": true,
+    "duplicate_bars": 0,
+    "archives_verified": 78,
+    "mark_price_archives_verified": 78,
+    "mark_price_timeline_gap_count": 3,
+    "funding_records_in_snapshot": 7223,
+    "funding_records_used": 7119,
+    "funding_marks_backfilled_from_official_8h_klines": 4191,
+    "funding_marks_using_daily_open_fallback": 7
+  },
+  "input_identity": {
+    "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/ethusdt-daily-donchian-short-carry-transfer",
+    "manifest_sha256": "8cda57c6811bd79305e9b982dfe54ea048aee9854320dace5a410f4aeb508f7c",
+    "loaded_data_identity": "dafc57814e2ae12b9fdf09a1c33680433d7e84944725a3273bb5dbe3e72e433f",
+    "prepare_data_sha256": "07e9525afde73bd6ea922fec844bd6383dec808065d37384e604ee31a07567e4",
+    "study_sha256": "d45dc91c9fda36d8e90a768e86d9dcdad4295afaa2c652a092e7b695cebfd6a8",
+    "carry_study_sha256": "ef1243d2f618e37360562528c003c56451080d37255f6a21d76bdcb7c0f9ee64",
+    "prior_donchian_returns_sha256": "629675bbb8827e14c7e7aad2d2c468f1b5fcf9dcf008ac378d102b0df195ca9a",
+    "prior_carry_returns_sha256": "27555e2b0ae34630e98e36c0f55351f222c8e109e5767732c0ea535b0ebf9c89",
+    "prior_spot_returns_sha256": "28553e60b4a423d95210dc400e65fc6d515e28b3d76138b1132213c88ef56bdd"
+  },
+  "fixed_candidate": {
+    "candidate_id": "ETH_SHORT_CARRY_ONLY",
+    "donchian_lookbacks_days": [20, 30, 60, 90],
+    "direction_source": "equal mean of stateful long-short components",
+    "condition_long": false,
+    "condition_short": true,
+    "carry_rule": "negative target becomes zero when prior completed UTC-day realized funding cashflow is negative; long target is unchanged",
+    "exit": "component midpoint trailing exit that never moves against position",
+    "target_annual_volatility": 0.1,
+    "maximum_absolute_weight": 0.5,
+    "volatility_window_days": 90,
+    "rebalance_relative_tolerance": 0.2,
+    "action_time": "next UTC day open"
+  },
+  "costs_per_unit_turnover": {
+    "favorable": {"fee": 0.0004, "slippage": 0.0002},
+    "base": {"fee": 0.0004, "slippage": 0.001},
+    "stress": {"fee": 0.0004, "slippage": 0.0015}
+  },
+  "selection_bias": {
+    "related_trial_count": 11,
+    "columns": "six BTC Donchian, three BTC carry-conditioned, one BTC Spot transfer, one ETH transfer",
+    "development_threshold": "Deflated Sharpe probability at least 0.80"
+  },
+  "development_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "base Sharpe at least 0.60",
+    "eleven-trial DSR at least 0.80",
+    "base max drawdown greater than -15%",
+    "at least two of 2021/2022/2023 positive and worst year at least -5%",
+    "at least 180 active days",
+    "base Sharpe and Calmar both exceed ETH pure long-short and pure long-only"
+  ],
+  "evaluation_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "2024 and 2025 base returns each positive",
+    "base Sharpe at least 0.60",
+    "base max drawdown greater than -15%",
+    "at least 120 active days",
+    "base Sharpe and Calmar both exceed ETH pure long-short and pure long-only"
+  ],
+  "confirmation_gate": [
+    "base and stress total returns non-negative",
+    "base max drawdown greater than -10%",
+    "at least 15 active days",
+    "evaluation plus confirmation base and stress CAGR above 4%"
+  ],
+  "allowed_fixes_after_checkpoint": "Only code, serialization, data-integrity or documentation corrections that preserve the fixed rule, periods, costs, related-trial accounting and gates. Record fixes and refresh code hash before opening another phase.",
+  "opening_rule": "Run development only. Evaluation requires evaluation_authorized=true; confirmation requires confirmation_authorized=true.",
+  "product_effects": "NONE"
+}

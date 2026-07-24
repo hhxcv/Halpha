@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "conclusion": "INSUFFICIENT_EVIDENCE",
+  "question": "Does the fixed BTCUSDT long-only balanced daily Donchian ensemble retain sufficiently stable profitability on Binance Spot after removing perpetual funding?",
+  "phase_reached": "development_selection",
+  "evaluation_authorized": false,
+  "confirmation_authorized": false,
+  "candidate": {
+    "candidate_id": "SPOT_LONG_BALANCED_4",
+    "base_total_return": 0.13558047489704061,
+    "stress_total_return": 0.13246533078238643,
+    "base_cagr": 0.04332251369960849,
+    "stress_cagr": 0.042366966112012294,
+    "base_sharpe": 0.7289812163967072,
+    "base_calmar": 0.5579913782715582,
+    "base_max_drawdown": -0.07764011306734686,
+    "active_days": 664,
+    "trade_events": 97,
+    "turnover": 5.4935943965178735,
+    "annual_base_returns": {
+      "2021": 0.0526627895493712,
+      "2022": -0.04994598573314002,
+      "2023": 0.13548224559888333
+    },
+    "deflated_sharpe_probability": 0.7676496431412556,
+    "related_trial_count": 10
+  },
+  "benchmarks_base": {
+    "continuous_vol_target_long": {
+      "total_return": 0.21309488886379513,
+      "cagr": 0.06655701954935056,
+      "sharpe": 0.677171788419899,
+      "calmar": 0.37295151867568876,
+      "max_drawdown": -0.17846024541121985
+    },
+    "half_buy_hold": {
+      "total_return": 0.4442245045810287,
+      "cagr": 0.13044130078354166,
+      "sharpe": 0.5350849940437267,
+      "calmar": 0.268244501146453,
+      "max_drawdown": -0.48627763188452033
+    }
+  },
+  "development_gate": {
+    "passed": false,
+    "failed_checks": ["ten_trial_dsr_at_least_0p80"],
+    "all_other_checks_passed": true
+  },
+  "strongest_support": "The exact transferred rule survived higher Spot costs, cleared the 4% stress CAGR, improved Sharpe and Calmar versus the continuous volatility-target long benchmark, and cut drawdown by more than 25% versus 0.5x buy-and-hold.",
+  "strongest_counterevidence": "The candidate was chosen after related Donchian research; across all ten related return columns its Deflated Sharpe probability was 0.768 rather than the fixed 0.80. Development also included a -4.99% 2022.",
+  "interpretation": "Removing perpetual funding materially repairs the economics, but the present BTC history does not provide enough selection-bias-adjusted evidence to open this method's evaluation interval under the fixed gate.",
+  "artifacts": {
+    "development_sha256": "8b0a2f592b04184699a3567230a58e3d37d4c14d2bee0dea0d022ca1f374b397",
+    "selection_sha256": "d949ed5bec0e5fd9657d925596c1f76c49795c7b49e55e11c099dd129f4da26d",
+    "development_csv_sha256": "bf51767ddf04fef4e1de626692cd78ee297ec76eed4a216f71a783da527fb94c",
+    "development_daily_returns_sha256": "28553e60b4a423d95210dc400e65fc6d515e28b3d76138b1132213c88ef56bdd"
+  },
+  "reproduction": {
+    "external_directory": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-spot-daily-donchian-replay",
+    "csv_byte_identical": true,
+    "daily_returns_byte_identical": true,
+    "json_semantic_equal_ignoring_generated_at": true
+  },
+  "evaluation_read": false,
+  "confirmation_read": false,
+  "product_effects": "NONE"
+}

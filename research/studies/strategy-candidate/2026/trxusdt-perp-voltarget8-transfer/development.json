@@ -1,0 +1,598 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T02:16:51.570754+00:00",
+  "phase": "development",
+  "period": [
+    "2021-01-01T00:00:00Z",
+    "2023-01-01T00:00:00Z"
+  ],
+  "framework_versions": {
+    "vectorbt": "1.0.0",
+    "pandas": "2.3.3",
+    "numpy": "2.4.6"
+  },
+  "method_identity": {
+    "study_sha256": "21b35064832caf9c20b045bf00564dca0c151e4cd8aca3a19598035875c65801",
+    "transfer_base_sha256": "4a597ef49cacc8b94aae3a10334c84ff8202d09d58de2d3b2d4e05426523e014",
+    "spot_results_sha256": "803b5318d961d4ef4d6c2b6384b4b243bd293ea584278f3c577943362db846d7",
+    "spot_conclusion": "SUPPORTS_WITHIN_SCOPE",
+    "data_identity": "b23bbdefe0e0dad3f42547af3fd7b350902ff8729164f05cb8cbf24c14f9289b"
+  },
+  "contract_snapshot": {
+    "symbol": "TRXUSDT",
+    "status": "TRADING",
+    "contract_type": "PERPETUAL",
+    "onboard_date": 1579075500000,
+    "sha256": "78604a5c17568ccf8eda345426e7c25783e468605d50a83adcd6cc4725582a74"
+  },
+  "data_quality": {
+    "bars": 2359,
+    "first_open_time": "2020-01-15T00:00:00+00:00",
+    "last_open_time": "2026-06-30T00:00:00+00:00",
+    "continuous_daily": true,
+    "valid_ohlc": true,
+    "duplicate_bars": 0,
+    "archives_verified": 83,
+    "archive_bytes": 144936,
+    "mark_price_archives_verified": 85,
+    "mark_price_archive_bytes": 185485,
+    "mark_price_timeline_gap_count": 1,
+    "funding_records_used": 7076,
+    "funding_source_records_without_mark_price": 7076,
+    "funding_marks_backfilled_from_official_8h_klines": 7073,
+    "funding_marks_using_daily_open_fallback": 3
+  },
+  "rules": {
+    "instrument": "TRXUSDT USD-M perpetual",
+    "volatility_lookback_days": 60,
+    "target_volatilities": [
+      0.06,
+      0.08,
+      0.1
+    ],
+    "primary_target_volatility": 0.08,
+    "maximum_gross": 0.5,
+    "direction": "always long",
+    "rebalance": "first UTC daily open monthly using prior completed close",
+    "annual_capital_hurdle": 0.04
+  },
+  "costs_per_unit_turnover": {
+    "favorable": {
+      "fee": 0.0004,
+      "slippage": 0.0006
+    },
+    "base": {
+      "fee": 0.0004,
+      "slippage": 0.0026
+    },
+    "stress": {
+      "fee": 0.0004,
+      "slippage": 0.0056
+    }
+  },
+  "candidates": {
+    "0.06": {
+      "favorable": {
+        "days": 730,
+        "total_return": 0.06354369134955551,
+        "cagr": 0.03130430513407889,
+        "annualized_volatility": 0.07618633946480137,
+        "sharpe": 0.44233530727009757,
+        "max_drawdown": -0.07113542083002045,
+        "calmar": 0.4400663518794831,
+        "daily_skew": 0.3656141140388667,
+        "daily_excess_kurtosis": 9.010686991518522,
+        "positive_day_fraction": 0.5315068493150685,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.07285123258896609,
+          "2022": -0.008675518987802167
+        },
+        "turnover": 0.7662566582590722,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.19630497402317956,
+        "maximum_absolute_net_weight": 0.19630497402317956,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.07134711953655862
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.006984408577438014
+        },
+        "fee_cost_on_initial_equity": 0.00032760784382548935,
+        "slippage_cost_on_initial_equity": 0.0004914117657382341,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.030120803845520808,
+        "monthly_target_weight_median": 0.06931040471416919,
+        "monthly_target_weight_max": 0.194884479484448
+      },
+      "base": {
+        "days": 730,
+        "total_return": 0.061914974970668,
+        "cagr": 0.0305137892969356,
+        "annualized_volatility": 0.07618714742106987,
+        "sharpe": 0.43227254830326695,
+        "max_drawdown": -0.07181204445181388,
+        "calmar": 0.4249118588652695,
+        "daily_skew": 0.36686192904894993,
+        "daily_excess_kurtosis": 9.010694458427427,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.07221091084716846,
+          "2022": -0.00960252854390653
+        },
+        "turnover": 0.7662217317715226,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.19630497402317956,
+        "maximum_absolute_net_weight": 0.19630497402317956,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.07136266453488675
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.006992499630242763
+        },
+        "fee_cost_on_initial_equity": 0.00032735865786271697,
+        "slippage_cost_on_initial_equity": 0.0021278312761076595,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.030120803845520808,
+        "monthly_target_weight_median": 0.06931040471416919,
+        "monthly_target_weight_max": 0.194884479484448
+      },
+      "stress": {
+        "days": 730,
+        "total_return": 0.05947651410746513,
+        "cagr": 0.029329121517920775,
+        "annualized_volatility": 0.07619041946440502,
+        "sharpe": 0.4171692455353013,
+        "max_drawdown": -0.07282586122754486,
+        "calmar": 0.40272948405349784,
+        "daily_skew": 0.3686880834256521,
+        "daily_excess_kurtosis": 9.009447541211738,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.0712510744148338,
+          "2022": -0.010991410499915255
+        },
+        "turnover": 0.766169428092415,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.1963049740231796,
+        "maximum_absolute_net_weight": 0.1963049740231796,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.07138590612453512
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.0070046112684915484
+        },
+        "fee_cost_on_initial_equity": 0.00032698538323865025,
+        "slippage_cost_on_initial_equity": 0.004577795365341102,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.030120803845520808,
+        "monthly_target_weight_median": 0.06931040471416919,
+        "monthly_target_weight_max": 0.194884479484448
+      }
+    },
+    "0.08": {
+      "favorable": {
+        "days": 730,
+        "total_return": 0.08396681940130568,
+        "cagr": 0.04116602049135509,
+        "annualized_volatility": 0.10124838513195514,
+        "sharpe": 0.4486782831900416,
+        "max_drawdown": -0.09439461951544392,
+        "calmar": 0.4361055821049198,
+        "daily_skew": 0.3709810199982053,
+        "daily_excess_kurtosis": 8.893682474880187,
+        "positive_day_fraction": 0.5315068493150685,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.09735196433331539,
+          "2022": -0.012197677105488247
+        },
+        "turnover": 1.0191799289153287,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.26157706681176507,
+        "maximum_absolute_net_weight": 0.26157706681176507,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.09439410773110844
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.009314486157190112
+        },
+        "fee_cost_on_initial_equity": 0.0004451208690461762,
+        "slippage_cost_on_initial_equity": 0.0006676813035692643,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.040161071794027746,
+        "monthly_target_weight_median": 0.09241387295222558,
+        "monthly_target_weight_max": 0.2598459726459307
+      },
+      "base": {
+        "days": 730,
+        "total_return": 0.08175943145490083,
+        "cagr": 0.04010463989130497,
+        "annualized_volatility": 0.10124918976460662,
+        "sharpe": 0.43860772208037835,
+        "max_drawdown": -0.0952709829797419,
+        "calmar": 0.4209533547043667,
+        "daily_skew": 0.372216015409761,
+        "daily_excess_kurtosis": 8.893761243548227,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.09648485337382406,
+          "2022": -0.013429662866402126
+        },
+        "turnover": 1.0191177345842188,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.261577066811765,
+        "maximum_absolute_net_weight": 0.261577066811765,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.09442365801017155
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.009329204458998425
+        },
+        "fee_cost_on_initial_equity": 0.0004446696128367508,
+        "slippage_cost_on_initial_equity": 0.0028903524834388798,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.040161071794027746,
+        "monthly_target_weight_median": 0.09241387295222558,
+        "monthly_target_weight_max": 0.2598459726459307
+      },
+      "stress": {
+        "days": 730,
+        "total_return": 0.07845666781167182,
+        "cagr": 0.038514545716699544,
+        "annualized_volatility": 0.10125313354167827,
+        "sharpe": 0.42349303060284704,
+        "max_drawdown": -0.09658359734494404,
+        "calmar": 0.398769012290426,
+        "daily_skew": 0.3740228363847485,
+        "daily_excess_kurtosis": 8.892633991882153,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.09518535057918553,
+          "2022": -0.015274750304747786
+        },
+        "turnover": 1.0190246480448357,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.2615770668117652,
+        "maximum_absolute_net_weight": 0.2615770668117652,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.09446779882682875
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.009351221841773338
+        },
+        "fee_cost_on_initial_equity": 0.0004439939448922591,
+        "slippage_cost_on_initial_equity": 0.006215915228491625,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.040161071794027746,
+        "monthly_target_weight_median": 0.09241387295222558,
+        "monthly_target_weight_max": 0.2598459726459307
+      }
+    },
+    "0.10": {
+      "favorable": {
+        "days": 730,
+        "total_return": 0.10396243694356189,
+        "cagr": 0.050731757428240876,
+        "annualized_volatility": 0.1261591321099122,
+        "sharpe": 0.45490992167286926,
+        "max_drawdown": -0.11741499383138987,
+        "calmar": 0.4320722232553419,
+        "daily_skew": 0.3758528203349811,
+        "daily_excess_kurtosis": 8.780658825156294,
+        "positive_day_fraction": 0.5315068493150685,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.12194413484393496,
+          "2022": -0.016027266725608835
+        },
+        "turnover": 1.2709945059779475,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.32676796362354277,
+        "maximum_absolute_net_weight": 0.32676796362354277,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.11703384562232648
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.011654436049690645
+        },
+        "fee_cost_on_initial_equity": 0.0005667890516341007,
+        "slippage_cost_on_initial_equity": 0.0008501835774511509,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.050201339742534684,
+        "monthly_target_weight_median": 0.115517341190282,
+        "monthly_target_weight_max": 0.3248074658074134
+      },
+      "base": {
+        "days": 730,
+        "total_return": 0.10115954679824779,
+        "cagr": 0.049396125665276625,
+        "annualized_volatility": 0.12615979730217558,
+        "sharpe": 0.44483154175381534,
+        "max_drawdown": -0.11847875398322838,
+        "calmar": 0.4169196923886374,
+        "daily_skew": 0.37707457016200047,
+        "daily_excess_kurtosis": 8.780803419899812,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.12084366281797165,
+          "2022": -0.017561874749090434
+        },
+        "turnover": 1.2708972234638378,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.32676796362354277,
+        "maximum_absolute_net_weight": 0.32676796362354277,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.11708302606035893
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.011677945397495941
+        },
+        "fee_cost_on_initial_equity": 0.0005660711819479266,
+        "slippage_cost_on_initial_equity": 0.003679462682661523,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.050201339742534684,
+        "monthly_target_weight_median": 0.115517341190282,
+        "monthly_target_weight_max": 0.3248074658074134
+      },
+      "stress": {
+        "days": 730,
+        "total_return": 0.09696838490547188,
+        "cagr": 0.047395782241704376,
+        "annualized_volatility": 0.1261642052837485,
+        "sharpe": 0.42970543759891655,
+        "max_drawdown": -0.12007146631214827,
+        "calmar": 0.3947297696730892,
+        "daily_skew": 0.37886142386272953,
+        "daily_excess_kurtosis": 8.779786842580986,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.11919479598035254,
+          "2022": -0.019859287368658718
+        },
+        "turnover": 1.2707517019364951,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.3267679636235428,
+        "maximum_absolute_net_weight": 0.3267679636235428,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.1171564270910298
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.01171309028436025
+        },
+        "fee_cost_on_initial_equity": 0.0005649967934135273,
+        "slippage_cost_on_initial_equity": 0.007909955107789381,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.050201339742534684,
+        "monthly_target_weight_median": 0.115517341190282,
+        "monthly_target_weight_max": 0.3248074658074134
+      }
+    }
+  },
+  "benchmarks": {
+    "price_only_primary": {
+      "favorable": {
+        "days": 730,
+        "total_return": 0.09350477868804208,
+        "cagr": 0.04573980040047476,
+        "annualized_volatility": 0.10154191802909053,
+        "sharpe": 0.49081372870222634,
+        "max_drawdown": -0.10277041167756196,
+        "calmar": 0.4450677938702975,
+        "daily_skew": 0.38323609399253233,
+        "daily_excess_kurtosis": 8.92531722332485,
+        "positive_day_fraction": 0.5315068493150685,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.12667387037599176,
+          "2022": -0.029439833975100083
+        },
+        "turnover": 1.018345083925217,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.2616062354527607,
+        "maximum_absolute_net_weight": 0.2616062354527607,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.09463417229799267
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": 0.0
+        },
+        "fee_cost_on_initial_equity": 0.00045175744398066203,
+        "slippage_cost_on_initial_equity": 0.0006776361659709928,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.040161071794027746,
+        "monthly_target_weight_median": 0.09241387295222558,
+        "monthly_target_weight_max": 0.2598459726459307
+      },
+      "base": {
+        "days": 730,
+        "total_return": 0.09127978807821013,
+        "cagr": 0.04467462915330889,
+        "annualized_volatility": 0.101542828582793,
+        "sharpe": 0.4807796433032853,
+        "max_drawdown": -0.10363734478942899,
+        "calmar": 0.4310669020330372,
+        "daily_skew": 0.3844785078850129,
+        "daily_excess_kurtosis": 8.925357460399841,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.12578767430944215,
+          "2022": -0.0306522153499299
+        },
+        "turnover": 1.018283272669961,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.2616062354527606,
+        "maximum_absolute_net_weight": 0.2616062354527606,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.09466453736309116
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": 0.0
+        },
+        "fee_cost_on_initial_equity": 0.00045129990465098103,
+        "slippage_cost_on_initial_equity": 0.002933449380231376,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.040161071794027746,
+        "monthly_target_weight_median": 0.09241387295222558,
+        "monthly_target_weight_max": 0.2598459726459307
+      },
+      "stress": {
+        "days": 730,
+        "total_return": 0.0879506758200368,
+        "cagr": 0.04307885247814314,
+        "annualized_volatility": 0.10154692672930703,
+        "sharpe": 0.46571859746751126,
+        "max_drawdown": -0.10493583798819794,
+        "calmar": 0.4105256440891832,
+        "daily_skew": 0.38629482796605524,
+        "daily_excess_kurtosis": 8.924172599987642,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.12445956700511185,
+          "2022": -0.03246794482998916
+        },
+        "turnover": 1.0181907607074554,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.2616062354527607,
+        "maximum_absolute_net_weight": 0.2616062354527607,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.09470989821088643
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": 0.0
+        },
+        "fee_cost_on_initial_equity": 0.0004506148260564065,
+        "slippage_cost_on_initial_equity": 0.00630860756478969,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.040161071794027746,
+        "monthly_target_weight_median": 0.09241387295222558,
+        "monthly_target_weight_max": 0.2598459726459307
+      }
+    },
+    "unscaled_half_long": {
+      "favorable": {
+        "days": 730,
+        "total_return": 0.580242088818592,
+        "cagr": 0.2572738084924633,
+        "annualized_volatility": 0.536904919335893,
+        "sharpe": 0.6904792582479771,
+        "max_drawdown": -0.44818974934942757,
+        "calmar": 0.5740287654189115,
+        "daily_skew": 0.9890630735471443,
+        "daily_excess_kurtosis": 11.572704293057754,
+        "positive_day_fraction": 0.5315068493150685,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.6631762109301989,
+          "2022": -0.04986490401111954
+        },
+        "turnover": 2.2205739299800435,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.6821705333970222,
+        "maximum_absolute_net_weight": 0.6821705333970222,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.7602165462699841
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.1766038861760616
+        },
+        "fee_cost_on_initial_equity": 0.001348228510134636,
+        "slippage_cost_on_initial_equity": 0.0020223427652019538,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.5,
+        "monthly_target_weight_median": 0.5,
+        "monthly_target_weight_max": 0.5
+      },
+      "base": {
+        "days": 730,
+        "total_return": 0.5732369699408519,
+        "cagr": 0.25448209471401917,
+        "annualized_volatility": 0.5369059734300147,
+        "sharpe": 0.6863387825876812,
+        "max_drawdown": -0.44849259125374275,
+        "calmar": 0.5674164962293465,
+        "daily_skew": 0.9894246630137706,
+        "daily_excess_kurtosis": 11.573439948062312,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.6589529595276415,
+          "2022": -0.051668728214687265
+        },
+        "turnover": 2.220312103036542,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.6821705333970219,
+        "maximum_absolute_net_weight": 0.6821705333970219,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.7597975347656659
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.1764704140198409
+        },
+        "fee_cost_on_initial_equity": 0.0013453534406616694,
+        "slippage_cost_on_initial_equity": 0.008744797364300852,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.5,
+        "monthly_target_weight_median": 0.5,
+        "monthly_target_weight_max": 0.5
+      },
+      "stress": {
+        "days": 730,
+        "total_return": 0.5627833563017666,
+        "cagr": 0.2503044945113504,
+        "annualized_volatility": 0.5369117730123788,
+        "sharpe": 0.6801245786269731,
+        "max_drawdown": -0.44894650187981966,
+        "calmar": 0.55753746485,
+        "daily_skew": 0.9899392535690955,
+        "daily_excess_kurtosis": 11.574103807425534,
+        "positive_day_fraction": 0.5287671232876713,
+        "positive_month_fraction": 0.5,
+        "annual_returns": {
+          "2021": 0.6526350748700798,
+          "2022": -0.05436875928303586
+        },
+        "turnover": 2.2199258233110695,
+        "trade_events": 25,
+        "active_days": 730,
+        "maximum_gross_weight": 0.6821705333970222,
+        "maximum_absolute_net_weight": 0.6821705333970222,
+        "price_pnl_on_initial_equity": {
+          "TRXUSDT": 0.7591689420150454
+        },
+        "funding_pnl_on_initial_equity": {
+          "TRXUSDT": -0.17626971175452996
+        },
+        "fee_cost_on_initial_equity": 0.001341058263916312,
+        "slippage_cost_on_initial_equity": 0.01877481569482836,
+        "terminal_liquidation": true,
+        "monthly_target_weight_min": 0.5,
+        "monthly_target_weight_median": 0.5,
+        "monthly_target_weight_max": 0.5
+      }
+    }
+  },
+  "product_effects": "NONE"
+}

@@ -7,7 +7,7 @@
 5. 放弃把 `LOW_LIQUIDITY + MEME + NEW` 命名为“操纵”：改为 `manipulation_risk_proxy`，并在每行明确 `NOT_A_FINDING`。
 6. 将 PAXG/XAUT token 与 XAU/XAG TradFi perpetual 分开；后者是现金结算衍生品，不是 token 或实物所有权。
 7. 选择 CSV + JSON + Git 外原始响应，而不是数据库或定时服务。刷新是显式命令，适合当前一人维护规模。
-8. 首次生成 `2026-07-21T063807Z` 快照后发现 stable/fiat-relative 对象落入通用未分类桶；补充独立研究桶后生成第二版，没有修改官方源数据。曾尝试在最终离线重演后清理两份分钟级中间原始响应，但递归删除被本地安全策略拒绝，未绕过；三份快照目前合计约 60 MiB，只有 `2026-07-21T064230Z` 被当前 manifest 引用。
+8. 首次生成 `2026-07-21T063807Z` 快照后发现 stable/fiat-relative 对象落入通用未分类桶；补充独立研究桶后生成第二版，没有修改官方源数据。最初在最终离线重演后清理两份分钟级中间原始响应时，递归删除被本地安全策略拒绝且未绕过。2026-07-24 全仓与 Git 外引用复核确认只有 `2026-07-21T064230Z` 被当前 manifest 引用，随后按精确目录删除前两份可重取快照，保留约 20 MiB 的正式原始证据。
 9. 复核 DOGE 发现 Spot 没有官方 subtype、USDⓈ-M 有 `Meme`，会造成同一 underlying 跨工具分类不一致。第三版保留逐 instrument 原字段，另增加带来源的 asset-level classification subtype；只有当前 USDⓈ-M 同 underlying 可核对时才继承。
 10. 第三版显示 DOGE 的继承标签为 `Meme|USDC`，说明官方 subtype 混有合约 quote 标记。最终分类过滤已知 `USDC/Cross Pair` 非经济标记，并从第三版 `2026-07-21T064230Z` 原始缓存离线重建，验证无需重新下载即可得到同一官方截面。
 11. 当时曾将 Meme 从一律 speculative 改为“流动性桶 + 正交主题风险”，DOGE 保持 liquid alt 并增加事件/拥挤反证；后续第 12–18 项复审进一步发现“liquid”本身仍超出单日数据证据，因此该中间方案已被临时 activity bucket 取代。

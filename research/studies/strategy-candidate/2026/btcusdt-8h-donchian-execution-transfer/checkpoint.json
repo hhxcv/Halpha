@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "fixed_at": "2026-07-22T09:21:11.8288068+08:00",
+  "research_kind": "STRATEGY_CANDIDATE",
+  "question": "Can the fixed 20/30/60/90-calendar-day BTCUSDT long-only Donchian rule become materially more robust when signal, trailing exit and rebalance updates move from daily to native 8h bars?",
+  "intended_claim": "product consideration for an existing Demo instrument only after all sequential gates",
+  "known_exposure": "BTC price history and the daily version of this rule have already been viewed. The 8h candidate is a literature-inspired mechanism transfer with twelve-trial correction and sealed sequential time gates, not virgin-data discovery.",
+  "external_design_basis": {
+    "donchian_ensemble": "Zarattini, Pagani and Barbon 2025",
+    "intermediate_frequency_and_trailing_exit": "Bui and Nguyen 2026 reports H6/H8 above D1 and trailing-stop importance",
+    "excluded_complexity": "No rolling optimization, RSI, Sharpe-ranked universe, market-cap filter, 150-coin portfolio or multi-million parameter search"
+  },
+  "data_boundary": {
+    "venue": "Binance USD-M",
+    "instrument": "BTCUSDT perpetual",
+    "interval": "8h",
+    "timezone": "UTC",
+    "warmup": ["2020-01-01T00:00:00Z", "2021-01-01T00:00:00Z"],
+    "development": ["2021-01-01T00:00:00Z", "2024-01-01T00:00:00Z"],
+    "evaluation": ["2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+    "confirmation": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "data_quality_before_outcomes": {
+    "bars": 7119,
+    "derived_complete_utc_days": 2373,
+    "continuous_8h": true,
+    "valid_ohlc": true,
+    "duplicate_bars": 0,
+    "archives_verified": 78,
+    "mark_price_archives_verified": 78,
+    "mark_price_timeline_gap_count": 6,
+    "funding_records_used": 7119,
+    "funding_source_records_without_mark_price": 4198,
+    "funding_marks_backfilled_from_official_8h_klines": 4173,
+    "funding_marks_using_bar_open_fallback": 25,
+    "fallback_fraction": 0.003512
+  },
+  "input_identity": {
+    "cache_root": "D:/projects/Codex/CodexHome/research-data/halpha/btcusdt-8h-donchian-execution-transfer",
+    "manifest_sha256": "446f69a62058a5eed510d70f2f3a0d634c4a5f3bbfeff9bb15512d1a07e51ffc",
+    "loaded_data_identity": "c25877017647395e064a707a96f4d689fdfc6091faeb856383544df731cc3913",
+    "prepare_data_sha256": "c3ee21f48939adad50190e1f00ca4e7a2caf6ef2cd15d1756e359cfcb4b14ba1",
+    "study_sha256": "b5a389b731325b36cd513614ca36283e54b36fe1f26e95e6259e8390aaff1565",
+    "base_study_sha256": "ea598414629c930370e7de3eff08fcb5002f9543d9719a7b635c67b0434e5019",
+    "prior_donchian_returns_sha256": "629675bbb8827e14c7e7aad2d2c468f1b5fcf9dcf008ac378d102b0df195ca9a",
+    "prior_carry_returns_sha256": "27555e2b0ae34630e98e36c0f55351f222c8e109e5767732c0ea535b0ebf9c89",
+    "prior_spot_returns_sha256": "28553e60b4a423d95210dc400e65fc6d515e28b3d76138b1132213c88ef56bdd",
+    "prior_eth_returns_sha256": "f0f38225bdd0bc0c2263b99c572e1696cb9b7d6d67a5e38cf0243e7b0fda0274"
+  },
+  "fixed_candidate": {
+    "candidate_id": "BTC_8H_LONG_BALANCED_4",
+    "donchian_lookbacks_calendar_days": [20, 30, 60, 90],
+    "donchian_lookbacks_8h_bars": [60, 90, 180, 270],
+    "direction": "LONG_ONLY",
+    "exit": "component midpoint trailing exit updated every 8h and never moved against the position",
+    "target_annual_volatility": 0.1,
+    "maximum_absolute_weight": 0.5,
+    "volatility_window_8h_bars": 270,
+    "rebalance_relative_tolerance": 0.2,
+    "action_time": "next native 8h bar open"
+  },
+  "costs_per_unit_turnover": {
+    "favorable": {"fee": 0.0004, "slippage": 0.0002},
+    "base": {"fee": 0.0004, "slippage": 0.001},
+    "stress": {"fee": 0.0004, "slippage": 0.0015}
+  },
+  "benchmarks": [
+    "same fixed long-only Donchian rule updated only daily",
+    "continuous 8h volatility-targeted long"
+  ],
+  "selection_bias": {
+    "related_trial_count": 12,
+    "columns": "six BTC daily Donchian, three BTC carry-conditioned, one BTC Spot transfer, one ETH transfer, one BTC 8h transfer",
+    "development_threshold": "Deflated Sharpe probability at least 0.80"
+  },
+  "development_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "base Sharpe at least 0.75",
+    "twelve-trial DSR at least 0.80",
+    "base max drawdown greater than -12%",
+    "at least two of 2021/2022/2023 positive and worst year at least -3%",
+    "at least 365 active days",
+    "base turnover no more than 50",
+    "base Sharpe and Calmar both exceed daily execution of the same rule"
+  ],
+  "evaluation_gate": [
+    "base and stress total returns positive",
+    "stress CAGR above 4%",
+    "2024 and 2025 base returns each positive",
+    "base Sharpe at least 0.75",
+    "base max drawdown greater than -12%",
+    "at least 240 active days",
+    "base turnover no more than 40",
+    "base Sharpe and Calmar both exceed daily execution of the same rule"
+  ],
+  "confirmation_gate": [
+    "base and stress total returns non-negative",
+    "base max drawdown greater than -8%",
+    "at least 30 active days",
+    "evaluation plus confirmation base and stress CAGR above 4%"
+  ],
+  "allowed_fixes_after_checkpoint": "Only code, serialization, data-integrity or documentation corrections that preserve the fixed rule, periods, costs, related-trial accounting and gates. Record fixes and refresh code hash before opening another phase.",
+  "opening_rule": "Run development only. Evaluation requires evaluation_authorized=true; confirmation requires confirmation_authorized=true.",
+  "product_effects": "NONE"
+}

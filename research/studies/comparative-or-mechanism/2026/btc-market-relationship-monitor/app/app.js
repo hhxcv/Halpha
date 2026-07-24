@@ -1,4 +1,4 @@
-const state = { summary: null, rows: [], filtered: [], selected: "ETHUSDT", sort: "pearson", direction: -1, page: 1 };
+const state = { summary: null, rows: [], filtered: [], selected: "ETHUSDT", sort: "pearson", direction: -1, page: 1, generation: null };
 const columns = [
   ["symbol", "对象", "symbol"], ["pearson", "Pearson", "number"], ["spearman", "Spearman", "number"],
   ["beta", "BTC β", "number"], ["r_squared", "R²", "number"], ["volatility_ratio", "波动倍数", "ratio"],
@@ -14,9 +14,15 @@ const signedClass = (value) => Number(value) > 0 ? "positive" : Number(value) < 
 
 async function api(path, options) {
   const response = await fetch(path, { cache: "no-store", ...options });
-  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+  if (!response.ok) {
+    const error = new Error(`${response.status} ${response.statusText}`);
+    error.status = response.status;
+    throw error;
+  }
   return response.json();
 }
+
+const generationQuery = () => state.generation ? `generation=${encodeURIComponent(state.generation)}` : "";
 
 function renderSummary() {
   const s = state.summary;
@@ -91,12 +97,22 @@ function plotLayout(xTitle, yTitle, options = {}) {
   };
 }
 
-async function selectSymbol(symbol) {
+async function selectSymbol(symbol, reloadOnConflict = true) {
   state.selected = symbol;
   el("selected-symbol").textContent = symbol;
   el("rolling-scope").textContent = `90 日窗口 · 至 ${utc(state.summary?.data_cutoff_utc)} · 点击散点或表格切换`;
   renderTable();
-  const detail = await api(`/api/detail?symbol=${encodeURIComponent(symbol)}`);
+  const generation = generationQuery();
+  let detail;
+  try {
+    detail = await api(`/api/detail?symbol=${encodeURIComponent(symbol)}${generation ? `&${generation}` : ""}`);
+  } catch (error) {
+    if (reloadOnConflict && error.status === 409) {
+      await load(false);
+      return;
+    }
+    throw error;
+  }
   const rolling = detail.rolling || [];
   Plotly.react("rolling", [{ type: "scatter", mode: "lines", x: rolling.map((item) => item.time), y: rolling.map((item) => item.pearson), line: { color: "#34bdd6", width: 2 }, hovertemplate: "%{x|%Y-%m-%d}<br>ρ %{y:.3f}<extra></extra>" }], plotLayout("UTC 日期", "90 日 Pearson", { x: null, y: [-1, 1], shapes: [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#54636d", dash: "dot" } }] }), { displayModeBar: false, responsive: true });
 }
@@ -137,13 +153,19 @@ function renderTable() {
   el("prev-page").disabled = state.page <= 1; el("next-page").disabled = state.page >= pages;
 }
 
-async function load() {
+async function load(retry = true) {
   try {
-    const [summary, rows] = await Promise.all([api("/api/summary"), api("/api/results")]);
+    const summary = await api("/api/summary");
+    state.generation = summary.generation_id || null;
+    const generation = generationQuery();
+    const rows = await api(`/api/results${generation ? `?${generation}` : ""}`);
     state.summary = summary; state.rows = rows; renderSummary(); renderScatter(); applyFilters();
     if (!rows.some((row) => row.symbol === state.selected && row.status === "ANALYZED")) state.selected = rows.find((row) => row.status === "ANALYZED")?.symbol || "";
-    if (state.selected) await selectSymbol(state.selected);
+    if (state.selected) await selectSymbol(state.selected, retry);
   } catch (error) {
+    if (retry && error.status === 409) {
+      return load(false);
+    }
     el("status").textContent = `页面载入失败：${error.message}`; el("status").className = "status error";
   }
 }

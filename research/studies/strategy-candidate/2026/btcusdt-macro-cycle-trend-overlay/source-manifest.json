@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T03:36:08.371936+00:00",
+  "source": "Coin Metrics Community API v4",
+  "request_url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD%2CCapMVRVCur&frequency=1d&start_time=2013-01-01&end_time=2026-07-01&page_size=10000",
+  "asset": "btc",
+  "metrics": [
+    "PriceUSD",
+    "CapMVRVCur"
+  ],
+  "frequency": "1d",
+  "requested_period": [
+    "2013-01-01",
+    "2026-07-01"
+  ],
+  "row_count": 4930,
+  "first_time": "2013-01-01T00:00:00.000000000Z",
+  "last_time": "2026-07-01T00:00:00.000000000Z",
+  "cache_root": "D:\\projects\\Codex\\CodexHome\\research-data\\halpha\\btcusdt-macro-cycle-trend-overlay",
+  "cache_relative_path": "coinmetrics-btc-2013-01-01_2026-07-01.json",
+  "raw_sha256": "a7fc7a063d6f658f1482ed3b6a3fb322fa328554f7624b618f171a680aaea69c",
+  "content_identity": "ce0a4ccde58593952a2d71cac7710c465cc890e69951df1976da46fb7c28193c"
+}

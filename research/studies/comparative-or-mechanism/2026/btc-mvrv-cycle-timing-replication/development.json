@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T03:54:25.554064+00:00",
+  "phase": "development",
+  "period": [
+    "2013-12-07",
+    "2022-01-01"
+  ],
+  "question": "Does published MVRV Z-score cycle timing survive an independent no-lookahead definition and fair same-start benchmark?",
+  "framework_versions": {
+    "vectorbt": "1.1.0",
+    "pandas": "3.0.3",
+    "numpy": "2.4.6"
+  },
+  "method_identity": {
+    "study_sha256": "21c25689ceb67664800cd61e0cec1a7d62a780004e19848a1fd06d93664dcd92",
+    "source_manifest_sha256": "230452826a5fe28835ed63049db5a3e9f9a3dc8268c9a2634488b87aa0690231",
+    "source_content_identity": "2d6bc1c6aaa9343f81226b1c604668987eb2a53db106058d8255248d7aaa6995"
+  },
+  "data_quality": {
+    "rows": 5828,
+    "first_time": "2010-07-18T00:00:00+00:00",
+    "last_time": "2026-07-01T00:00:00+00:00",
+    "continuous_daily": true,
+    "valid_expanding_z_observations": 3821
+  },
+  "definition": {
+    "entry_threshold": -0.2,
+    "exit_thresholds": [
+      5.0,
+      6.0,
+      7.0
+    ],
+    "z_score": "(market cap - market cap / MVRV) / expanding std(market cap), min 365 days",
+    "action_time": "next daily PriceUSD observation",
+    "costs_per_order": {
+      "base": 0.0025,
+      "stress": 0.005
+    }
+  },
+  "benchmark": {
+    "base": {
+      "days": 2947,
+      "total_return": 64.70461845335699,
+      "cagr": 0.6798562045885093,
+      "annualized_volatility": 0.7704206601818215,
+      "sharpe": 1.0614590801933914,
+      "max_drawdown": -0.8378314303412513,
+      "annual_returns": {
+        "2013": 0.034088691510803626,
+        "2014": -0.5604702154151733,
+        "2015": 0.339967843091314,
+        "2016": 1.2551131455534423,
+        "2017": 13.367289042889993,
+        "2018": -0.7351431191077172,
+        "2019": 0.9438585298047708,
+        "2020": 3.0492635317777887,
+        "2021": 0.5972036712689117
+      }
+    },
+    "stress": {
+      "days": 2947,
+      "total_return": 64.54117412884632,
+      "cagr": 0.6793377271753385,
+      "annualized_volatility": 0.7704230442678109,
+      "sharpe": 1.061056887231417,
+      "max_drawdown": -0.8378314303412511,
+      "annual_returns": {
+        "2013": 0.03151633158167266,
+        "2014": -0.5604702154151741,
+        "2015": 0.3399678430913129,
+        "2016": 1.2551131455534383,
+        "2017": 13.367289042890022,
+        "2018": -0.7351431191077173,
+        "2019": 0.9438585298047741,
+        "2020": 3.0492635317777905,
+        "2021": 0.5972036712689104
+      }
+    }
+  },
+  "variants": {
+    "5": {
+      "entry_dates": [
+        "2011-09-10",
+        "2015-01-05",
+        "2018-11-25"
+      ],
+      "exit_dates": [
+        "2013-03-10",
+        "2017-05-25",
+        "2021-01-03"
+      ],
+      "position_at_cutoff": 0.0,
+      "scenarios": {
+        "base": {
+          "days": 2947,
+          "total_return": 69.41026493715421,
+          "cagr": 0.694319321242858,
+          "annualized_volatility": 0.5060282522959406,
+          "sharpe": 1.3006304525360468,
+          "max_drawdown": -0.6144650700282785,
+          "annual_returns": {
+            "2013": 0.0,
+            "2014": 0.0,
+            "2015": 0.5585441327707754,
+            "2016": 1.255113145553437,
+            "2017": 1.3878974061116205,
+            "2018": -0.06811657068578791,
+            "2019": 0.9438585298047684,
+            "2020": 3.049263531777794,
+            "2021": 0.1437486317122132
+          }
+        },
+        "stress": {
+          "days": 2947,
+          "total_return": 68.70966092910241,
+          "cagr": 0.692220658860258,
+          "annualized_volatility": 0.5060400740965102,
+          "sharpe": 1.298161853587772,
+          "max_drawdown": -0.6144650700282793,
+          "annual_returns": {
+            "2013": 0.0,
+            "2014": 0.0,
+            "2015": 0.5546671573161246,
+            "2016": 1.2551131455534401,
+            "2017": 1.381912700833141,
+            "2018": -0.07043468866915659,
+            "2019": 0.9438585298047695,
+            "2020": 3.049263531777795,
+            "2021": 0.1408820937881221
+          }
+        }
+      },
+      "cycles": {
+        "cycle_2015_2017": {
+          "endpoints": {
+            "bottom_date": "2015-01-14",
+            "bottom_price": 175.637640561075,
+            "peak_date": "2017-12-16",
+            "peak_price": 19640.5138834015
+          },
+          "base": {
+            "candidate_total_return": 9.896634427800311,
+            "perfect_next_day_buy_hold_return": 91.2639129851304
+          },
+          "stress": {
+            "candidate_total_return": 9.869324567078952,
+            "perfect_next_day_buy_hold_return": 91.03267510797468
+          },
+          "entry_lag_from_bottom_days": -9,
+          "exit_lag_from_peak_days": -205
+        },
+        "cycle_2018_2021": {
+          "endpoints": {
+            "bottom_date": "2018-12-15",
+            "bottom_price": 3185.07404383402,
+            "peak_date": "2021-11-08",
+            "peak_price": 67541.7555081824
+          },
+          "base": {
+            "candidate_total_return": 9.388211026479414,
+            "perfect_next_day_buy_hold_return": 20.08424429910767
+          },
+          "stress": {
+            "candidate_total_return": 9.362175409871684,
+            "perfect_next_day_buy_hold_return": 20.031401581566048
+          },
+          "entry_lag_from_bottom_days": -20,
+          "exit_lag_from_peak_days": -309
+        }
+      }
+    },
+    "6": {
+      "entry_dates": [
+        "2011-09-10",
+        "2015-01-05",
+        "2018-11-25"
+      ],
+      "exit_dates": [
+        "2013-03-22",
+        "2017-11-28",
+        "2021-01-08"
+      ],
+      "position_at_cutoff": 0.0,
+      "scenarios": {
+        "base": {
+          "days": 2947,
+          "total_return": 368.4120285809521,
+          "cagr": 1.0807326851332753,
+          "annualized_volatility": 0.5638405313178843,
+          "sharpe": 1.5856130920997793,
+          "max_drawdown": -0.6144650700282785,
+          "annual_returns": {
+            "2013": 0.0,
+            "2014": 0.0,
+            "2015": 0.5585441327707805,
+            "2016": 1.2551131455534383,
+            "2017": 9.224627790604123,
+            "2018": -0.06811657068578858,
+            "2019": 0.9438585298047679,
+            "2020": 3.0492635317777967,
+            "2021": 0.40143770618967345
+          }
+        },
+        "stress": {
+          "days": 2947,
+          "total_return": 364.7362641440843,
+          "cagr": 1.0781553932616736,
+          "annualized_volatility": 0.5638200888881492,
+          "sharpe": 1.5834488512844862,
+          "max_drawdown": -0.6144650700282794,
+          "annual_returns": {
+            "2013": 0.0,
+            "2014": 0.0,
+            "2015": 0.5546671573161268,
+            "2016": 1.2551131455534383,
+            "2017": 9.199002157043696,
+            "2018": -0.07043468866915703,
+            "2019": 0.9438585298047644,
+            "2020": 3.049263531777793,
+            "2021": 0.3979253309861903
+          }
+        }
+      },
+      "cycles": {
+        "cycle_2015_2017": {
+          "endpoints": {
+            "bottom_date": "2015-01-14",
+            "bottom_price": 175.637640561075,
+            "peak_date": "2017-12-16",
+            "peak_price": 19640.5138834015
+          },
+          "base": {
+            "candidate_total_return": 45.65779648212094,
+            "perfect_next_day_buy_hold_return": 91.2639129851304
+          },
+          "stress": {
+            "candidate_total_return": 45.540859648832246,
+            "perfect_next_day_buy_hold_return": 91.03267510797468
+          },
+          "entry_lag_from_bottom_days": -9,
+          "exit_lag_from_peak_days": -18
+        },
+        "cycle_2018_2021": {
+          "endpoints": {
+            "bottom_date": "2018-12-15",
+            "bottom_price": 3185.07404383402,
+            "peak_date": "2021-11-08",
+            "peak_price": 67541.7555081824
+          },
+          "base": {
+            "candidate_total_return": 11.728697747659218,
+            "perfect_next_day_buy_hold_return": 20.08424429910767
+          },
+          "stress": {
+            "candidate_total_return": 11.696796249544768,
+            "perfect_next_day_buy_hold_return": 20.031401581566048
+          },
+          "entry_lag_from_bottom_days": -20,
+          "exit_lag_from_peak_days": -304
+        }
+      }
+    },
+    "7": {
+      "entry_dates": [
+        "2011-09-10",
+        "2015-01-05",
+        "2018-11-25"
+      ],
+      "exit_dates": [
+        "2013-03-28",
+        "2017-12-07",
+        "2021-02-20"
+      ],
+      "position_at_cutoff": 0.0,
+      "scenarios": {
+        "base": {
+          "days": 2947,
+          "total_return": 866.8721793931171,
+          "cagr": 1.3130820114078752,
+          "annualized_volatility": 0.5869060590618289,
+          "sharpe": 1.7252098224310657,
+          "max_drawdown": -0.6144650700282781,
+          "annual_returns": {
+            "2013": 0.0,
+            "2014": 0.0,
+            "2015": 0.5585441327707752,
+            "2016": 1.2551131455534374,
+            "2017": 16.533775220022463,
+            "2018": -0.06811657068578791,
+            "2019": 0.9438585298047719,
+            "2020": 3.0492635317777923,
+            "2021": 0.9199530333875363
+          }
+        },
+        "stress": {
+          "days": 2947,
+          "total_return": 858.2365816162577,
+          "cagr": 1.3102169208996415,
+          "annualized_volatility": 0.5867810479198476,
+          "sharpe": 1.72335944634868,
+          "max_drawdown": -0.614465070028279,
+          "annual_returns": {
+            "2013": 0.0,
+            "2014": 0.0,
+            "2015": 0.5546671573161257,
+            "2016": 1.2551131455534312,
+            "2017": 16.489830921225405,
+            "2018": -0.07043468866915692,
+            "2019": 0.9438585298047717,
+            "2020": 3.0492635317777905,
+            "2021": 0.9151411210231553
+          }
+        }
+      },
+      "cycles": {
+        "cycle_2015_2017": {
+          "endpoints": {
+            "bottom_date": "2015-01-14",
+            "bottom_price": 175.637640561075,
+            "peak_date": "2017-12-16",
+            "peak_price": 19640.5138834015
+          },
+          "base": {
+            "candidate_total_return": 79.01145200912235,
+            "perfect_next_day_buy_hold_return": 91.2639129851304
+          },
+          "stress": {
+            "candidate_total_return": 78.81092205421224,
+            "perfect_next_day_buy_hold_return": 91.03267510797468
+          },
+          "entry_lag_from_bottom_days": -9,
+          "exit_lag_from_peak_days": -9
+        },
+        "cycle_2018_2021": {
+          "endpoints": {
+            "bottom_date": "2018-12-15",
+            "bottom_price": 3185.07404383402,
+            "peak_date": "2021-11-08",
+            "peak_price": 67541.7555081824
+          },
+          "base": {
+            "candidate_total_return": 16.438164924316617,
+            "perfect_next_day_buy_hold_return": 20.08424429910767
+          },
+          "stress": {
+            "candidate_total_return": 16.39446025032084,
+            "perfect_next_day_buy_hold_return": 20.031401581566048
+          },
+          "entry_lag_from_bottom_days": -20,
+          "exit_lag_from_peak_days": -261
+        }
+      }
+    }
+  },
+  "z_diagnostics": {
+    "phase_min_expanding": -0.5982295754295321,
+    "phase_max_expanding": 10.084137594963199,
+    "cutoff_expanding": 1.6289329265086794,
+    "cutoff_full_sample_lookahead_diagnostic": 0.6819321150235155,
+    "cutoff_mvrv": 1.893385603418
+  },
+  "product_effects": "NONE",
+  "development_checks": {
+    "at_least_two_variants_beat_same_start_buy_hold_and_drawdown": true,
+    "all_variants_enter_both_bottoms_within_180d": true,
+    "at_least_two_variants_exit_both_peaks_within_180d": false,
+    "threshold_direction_consistent": true
+  }
+}

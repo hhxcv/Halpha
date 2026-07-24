@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "conclusion": "DOES_NOT_SUPPORT",
+  "candidate_id": "BTC_MACRO_SCORE_3_MAX_1P5",
+  "phase_reached": "development",
+  "confirmation_authorized": false,
+  "binance_bridge_run": false,
+  "development": {
+    "candidate_base_total_return": 66.1920560040816,
+    "buy_hold_base_total_return": 60.302021287619695,
+    "candidate_stress_total_return": 43.45919226404207,
+    "buy_hold_stress_total_return": 59.99627173319841,
+    "candidate_base_sharpe": 1.0487597735726018,
+    "buy_hold_base_sharpe": 1.0636484863000488,
+    "candidate_base_max_drawdown": -0.8320519177181633,
+    "buy_hold_base_max_drawdown": -0.8378314303412521,
+    "candidate_turnover": 81.55707604539285,
+    "candidate_trade_events": 159
+  },
+  "bull_legs": {
+    "2015_2017": {
+      "candidate_base": 143.87633872491745,
+      "buy_hold_base": 91.0338284140947,
+      "candidate_stress": 134.3937967249766,
+      "buy_hold_stress": 90.57480110246281,
+      "entry_lag_days": 167,
+      "exit_lag_days": 85
+    },
+    "2018_2021": {
+      "candidate_base": 10.736628539123885,
+      "buy_hold_base": 20.0316651362669,
+      "candidate_stress": 8.648818573908837,
+      "buy_hold_stress": 19.926767742851695,
+      "entry_lag_days": 109,
+      "exit_lag_days": 51
+    }
+  },
+  "selection_bias": {
+    "dsr_3_trials": 0.9979504836646197,
+    "dsr_20_trials": 0.9970305272127834,
+    "dsr_40_trials": 0.9967186516966251,
+    "bootstrap_probability_beats_buy_hold": 0.52435
+  },
+  "deterministic_replay": {
+    "semantic_json_equal": true,
+    "daily_returns_sha256": "c7056b724d2fd048c2a597b72c396045f2e0eb6e4c06f61eedab70b6c280a733"
+  },
+  "failed_checks": [
+    "both_development_bull_legs_beat_buy_hold_base_and_stress",
+    "development_stress_beats_buy_hold",
+    "bootstrap_probability_beats_buy_hold_at_least_0p80"
+  ],
+  "strongest_support": "The fixed rule beat buy-and-hold over the full development Base period and in the 2015-2017 bull leg.",
+  "strongest_counterevidence": "It substantially lagged buy-and-hold in the 2018-2021 bull leg, failed the full-period stress comparison, retained an 83% drawdown, and had only a 52.44% block-bootstrap probability of beating buy-and-hold.",
+  "product_effects": "NONE"
+}

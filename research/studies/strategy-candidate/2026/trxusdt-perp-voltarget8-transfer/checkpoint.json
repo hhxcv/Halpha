@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "checkpoint_at": "2026-07-22T10:28:00+08:00",
+  "status": "PRE_REGISTERED_BEFORE_PERPETUAL_ANALYSIS",
+  "candidate_id": "TRXUSDT_PERP_VOL60_TARGET8_MONTHLY_LONG_MAX0P5X",
+  "fixed_rule": {
+    "instrument": "TRXUSDT USD-M perpetual",
+    "direction": "always long",
+    "volatility_lookback_days": 60,
+    "primary_target_volatility": 0.08,
+    "diagnostic_target_volatilities": [0.06, 0.1],
+    "maximum_gross": 0.5,
+    "rebalance": "first UTC daily open monthly using 60 log returns ending at the prior close",
+    "costs_per_unit_turnover": {
+      "favorable": 0.001,
+      "base": 0.003,
+      "stress": 0.006
+    },
+    "actual_funding": true,
+    "annual_capital_hurdle": 0.04
+  },
+  "periods": {
+    "development": ["2021-01-01T00:00:00Z", "2023-01-01T00:00:00Z"],
+    "evaluation": ["2023-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+    "confirmation": ["2025-01-01T00:00:00Z", "2026-07-01T00:00:00Z"]
+  },
+  "sequential_rule": "Evaluation opens only after every development gate passes. Confirmation opens only after every evaluation gate passes. A failed gate stops the study without changing target, lookback, costs, period, or benchmark.",
+  "known_exposure": "All underlying TRX spot periods were viewed in the prior spot study. TRX perpetual from 2025-04 onward was also viewed as an unscaled diagnostic in the TRX/PAXG transfer. This study claims fixed venue-transfer evidence, not a virgin price holdout.",
+  "hashes": {
+    "study_sha256": "21b35064832caf9c20b045bf00564dca0c151e4cd8aca3a19598035875c65801",
+    "prepare_data_sha256": "500838302a541aac3fdaffb35952cf33d2d698d5a48bb15988feaaeae75c0306",
+    "readme_sha256": "af4e964aa3dea90f2e5f5db49a3397718ceb24f64b63d1173738f6e2a8811f7f",
+    "sources_sha256": "841f53185ea626a772957d6647dc24a4a476263982822c84b7f8620b3e5b83f4",
+    "attempts_sha256": "54f44d92384573a205d98019af1313faa5d59e0773d0e2795717b5ac9e3eca52",
+    "spot_results_sha256": "803b5318d961d4ef4d6c2b6384b4b243bd293ea584278f3c577943362db846d7",
+    "transfer_base_sha256": "4a597ef49cacc8b94aae3a10334c84ff8202d09d58de2d3b2d4e05426523e014"
+  },
+  "product_effects": "NONE"
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T04:13:00.966939+00:00",
+  "source_sha256": "3a8f6dd31458386d7259ae7db43d605c5fc1369be67133118e1fc5d831b7a9fa",
+  "checks": {
+    "both_development_bull_legs_beat_buy_hold_base_and_stress": false,
+    "development_base_beats_buy_hold": true,
+    "development_stress_beats_buy_hold": false,
+    "development_drawdown_shallower_than_buy_hold": true,
+    "complete_bear_leg_beats_buy_hold": false,
+    "both_value_actions_within_90d_and_peak_weight_at_least_1x": true,
+    "both_post_peak_exits_within_180d": true,
+    "not_strictly_dominated_by_any_diagnostic": true,
+    "thirty_five_trial_dsr_at_least_0p80": false,
+    "bootstrap_probability_beats_buy_hold_at_least_0p80": false
+  },
+  "failed_checks": [
+    "both_development_bull_legs_beat_buy_hold_base_and_stress",
+    "development_stress_beats_buy_hold",
+    "complete_bear_leg_beats_buy_hold",
+    "thirty_five_trial_dsr_at_least_0p80",
+    "bootstrap_probability_beats_buy_hold_at_least_0p80"
+  ],
+  "confirmation_authorized": false
+}

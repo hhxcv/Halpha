@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T01:07:38.845308+00:00",
+  "phase": "development_selection",
+  "source_sha256": "4602b076b92deb56aed43b62c0fcf088c08a2938b4edda26a3c7b5d11ea1c463",
+  "candidate_id": "ETH_SHORT_CARRY_ONLY",
+  "checks": {
+    "base_total_positive": true,
+    "stress_total_positive": true,
+    "stress_cagr_above_4pct": true,
+    "base_sharpe_at_least_0p60": true,
+    "eleven_trial_dsr_at_least_0p80": false,
+    "drawdown_above_minus_15pct": true,
+    "two_of_three_years_positive": true,
+    "worst_year_at_least_minus_5pct": true,
+    "active_days_at_least_180": true,
+    "sharpe_exceeds_both_pure_trends": false,
+    "calmar_exceeds_both_pure_trends": false
+  },
+  "failed_checks": [
+    "eleven_trial_dsr_at_least_0p80",
+    "sharpe_exceeds_both_pure_trends",
+    "calmar_exceeds_both_pure_trends"
+  ],
+  "evaluation_authorized": false
+}

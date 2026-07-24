@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-07-21",
+  "classification": "DESCRIPTIVE_ONLY_NOT_A_TRADING_SIGNAL_OR_BOTTOM_CALL",
+  "binance_spot_btcusdt": {
+    "completed_daily_close": 66556.16,
+    "peak_in_last_1000_days": 124658.54,
+    "peak_date": "2025-10-06",
+    "drawdown_from_peak": -0.46609225489084016,
+    "sma50": 63151.060600000004,
+    "sma100": 70210.73679999998,
+    "sma200": 72853.61310000002,
+    "distance_above_sma50": 0.053919908353843214,
+    "distance_above_sma200": -0.08643981859013677,
+    "sma200_30d_slope": -0.050938834537437194,
+    "return_90d": -0.14866120657886461,
+    "return_180d": -0.25685121439147773,
+    "low_365d": 58624.71,
+    "low_365d_date": "2026-06-30",
+    "rebound_from_365d_low": 0.1352919272436488,
+    "realized_volatility_90d": 0.34586323066125096,
+    "source": "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=1000"
+  },
+  "coin_metrics": {
+    "CapMVRVCur": 1.2553791423473126,
+    "last_365d_minimum": 1.1027805682008867,
+    "last_365d_minimum_date": "2026-06-30",
+    "prior_cycle_point_values": {
+      "2015-01-14": 0.56357972,
+      "2018-12-15": 0.69048064,
+      "2020-03-16": 0.9005596,
+      "2022-11-21": 0.777592696604
+    },
+    "source": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics"
+  },
+  "interpretation": "The market has rebounded above SMA50 after a deep drawdown, but remains below a falling SMA200 with negative 90/180-day momentum. MVRV is above prior capitulation-region cycle points. A bear-ending hypothesis is plausible but not confirmed by these fixed descriptive measures.",
+  "product_effects": "NONE"
+}

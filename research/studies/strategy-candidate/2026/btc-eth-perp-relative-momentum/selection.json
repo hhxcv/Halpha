@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T01:34:57.209669+00:00",
+  "phase": "development_selection",
+  "source_sha256": "e4ebd1505b1f5ac6b921b02302afd68d98d957a9c43e872ce470077481073db3",
+  "candidate_id": "BTC_ETH_RELATIVE_MOMENTUM_90D",
+  "checks": {
+    "base_total_positive": false,
+    "stress_total_positive": false,
+    "stress_cagr_above_4pct": false,
+    "base_sharpe_at_least_0p75": false,
+    "thirteen_trial_dsr_at_least_0p80": false,
+    "drawdown_above_minus_15pct": false,
+    "two_of_three_years_positive": true,
+    "worst_year_at_least_minus_5pct": false,
+    "active_days_at_least_1000": true,
+    "turnover_at_most_25": true,
+    "sharpe_exceeds_both_static_directions": false,
+    "calmar_exceeds_both_static_directions": false
+  },
+  "failed_checks": [
+    "base_total_positive",
+    "stress_total_positive",
+    "stress_cagr_above_4pct",
+    "base_sharpe_at_least_0p75",
+    "thirteen_trial_dsr_at_least_0p80",
+    "drawdown_above_minus_15pct",
+    "worst_year_at_least_minus_5pct",
+    "sharpe_exceeds_both_static_directions",
+    "calmar_exceeds_both_static_directions"
+  ],
+  "evaluation_authorized": false
+}
