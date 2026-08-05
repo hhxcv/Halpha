@@ -1,0 +1,1 @@
+"""halpha-executor composition root."""

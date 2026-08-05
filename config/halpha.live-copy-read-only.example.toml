@@ -1,0 +1,128 @@
+# Non-secret Copy Trading lead-account shape. Synthetic SIDs and unprovisioned
+# references make this file unsuitable for deployment.
+schema_version = 2
+
+[release]
+environment_id = "binance-live-copy-primary"
+account_id = "binance-usdm-copy-lead-primary"
+venue_account_type = "USDM_COPY_LEAD"
+profile = "BINANCE_LIVE_READ_ONLY"
+authority_class = "NO_TRADING_AUTHORITY"
+database_name = "halpha_live_copy"
+
+[app]
+bind = "127.0.0.1"
+port = 8766
+workers = 1
+reload = false
+database_role_name = "halpha_live_copy_app_reader"
+
+[[app.trading_contexts]]
+venue_account_type = "USDM_DEMO"
+environment_id = "binance-demo-primary"
+account_id = "binance-usdm-demo-owner-primary"
+url = "http://127.0.0.1:8765"
+
+[[app.trading_contexts]]
+venue_account_type = "USDM_COPY_LEAD"
+environment_id = "binance-live-copy-primary"
+account_id = "binance-usdm-copy-lead-primary"
+url = "http://127.0.0.1:8766"
+
+[[app.trading_contexts]]
+venue_account_type = "USDM_PERSONAL"
+environment_id = "binance-live-personal-primary"
+account_id = "binance-usdm-personal-primary"
+url = "http://127.0.0.1:8767"
+
+[app.database_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE_COPY/AppReader"
+account = "scram_password"
+
+[app.csrf_signing_reference]
+service = "Halpha/Web/BINANCE_LIVE_COPY"
+account = "csrf_signing"
+
+[app.smtp_credential_reference]
+service = "Halpha/SMTP/BINANCE_LIVE_COPY"
+account = "password"
+
+[executor]
+mutex_name = "Global\\Halpha.Executor.BINANCE_LIVE_COPY.WriteOwner"
+
+[executor.database_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE_COPY/Executor"
+account = "scram_password"
+
+# Optional for public forward observation. When this exact pair is projected,
+# Executor switches to private account observation: it appends complete account
+# facts but still has no execution client or venue-write capability.
+[executor.binance_api_key_reference]
+service = "Halpha/Binance/BINANCE_LIVE_COPY"
+account = "api_key"
+
+[executor.binance_api_secret_reference]
+service = "Halpha/Binance/BINANCE_LIVE_COPY"
+account = "api_secret"
+
+[executor.runtime_proxy_reference]
+service = "Halpha/Network/BINANCE_LIVE_COPY_READ_ONLY"
+account = "proxy_url"
+
+[maintenance]
+postgresql_bin_directory = "C:/Program Files/PostgreSQL/17/bin"
+log_root = "logs"
+backup_root = "backups/postgresql"
+temporary_root = "tmp/backup"
+backup_retention_count = 14
+backup_schedule_local = "02:30"
+
+[maintenance.demo]
+environment_kind = "DEMO"
+venue_account_type = "USDM_DEMO"
+database_name = "halpha_demo"
+backup_role_name = "halpha_demo_backup"
+migration_role_name = "halpha_demo_migration"
+[maintenance.demo.backup_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_DEMO/Backup"
+account = "scram_password"
+[maintenance.demo.migration_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_DEMO/Migration"
+account = "scram_password"
+
+[maintenance.live_copy]
+environment_kind = "LIVE"
+venue_account_type = "USDM_COPY_LEAD"
+database_name = "halpha_live_copy"
+backup_role_name = "halpha_live_copy_backup"
+migration_role_name = "halpha_live_copy_migration"
+[maintenance.live_copy.backup_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE_COPY/Backup"
+account = "scram_password"
+[maintenance.live_copy.migration_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE_COPY/Migration"
+account = "scram_password"
+
+[maintenance.live_personal]
+environment_kind = "LIVE"
+venue_account_type = "USDM_PERSONAL"
+database_name = "halpha_live_personal"
+backup_role_name = "halpha_live_personal_backup"
+migration_role_name = "halpha_live_personal_migration"
+[maintenance.live_personal.backup_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE_PERSONAL/Backup"
+account = "scram_password"
+[maintenance.live_personal.migration_credential_reference]
+service = "Halpha/PostgreSQL/BINANCE_LIVE_PERSONAL/Migration"
+account = "scram_password"
+
+[email]
+delivery_enabled = false
+
+[windows]
+app_task_sid = "S-1-5-21-0-0-0-1201"
+executor_task_sid = "S-1-5-21-0-0-0-1202"
+backup_task_sid = "S-1-5-21-0-0-0-1104"
+maintenance_sid = "S-1-5-21-0-0-0-1103"
+app_stop_event = "Global\\Halpha.App.BINANCE_LIVE_COPY.Stop"
+executor_stop_event = "Global\\Halpha.Executor.BINANCE_LIVE_COPY.Stop"

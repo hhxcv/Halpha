@@ -1,0 +1,1 @@
+"""halpha-app composition root."""

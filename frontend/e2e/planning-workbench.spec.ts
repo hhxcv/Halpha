@@ -1,0 +1,3491 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+
+async function assertAccessible(page: Page, testInfo: TestInfo, name: string) {
+  const result = await new AxeBuilder({ page }).analyze();
+  const violations = result.violations.map(({ id, impact, nodes }) => ({
+    id,
+    impact,
+    nodeCount: nodes.length,
+    nodes: nodes.map((node) => ({
+      target: node.target,
+      html: node.html,
+      failureSummary: node.failureSummary,
+    })),
+  }));
+  await testInfo.attach(`${name}-axe.json`, {
+    body: Buffer.from(JSON.stringify({ url: page.url(), violations }, null, 2)),
+    contentType: "application/json",
+  });
+  expect(violations).toEqual([]);
+}
+
+type TestViewport = {
+  name: string;
+  width: number;
+  height: number;
+};
+
+type LayoutRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+const directExecutionViewports = {
+  desktop: [
+    { name: "desktop-1440x1000", width: 1440, height: 1000 },
+    { name: "desktop-1123x920", width: 1123, height: 920 },
+    { name: "desktop-1024x768", width: 1024, height: 768 },
+    { name: "desktop-768x900", width: 768, height: 900 },
+  ],
+  narrow: [
+    { name: "narrow-390x844", width: 390, height: 844 },
+  ],
+} satisfies Record<string, TestViewport[]>;
+
+function syntheticDirectDraft(planId: string, draftVersion: number, planName: string) {
+  return {
+    plan_id: planId,
+    environment_id: "demo",
+    draft_version: draftVersion,
+    content: {
+      plan_name: planName,
+      created_at: "2026-07-23T10:00:00.000Z",
+      creator_kind: "HUMAN",
+      decision_basis: {
+        kind: "DIRECT_EXECUTION",
+        decision_basis_ref: "DIRECT_EXECUTION@1",
+        parameters: {},
+      },
+      order_schedule_spec: {
+        entry_program: {
+          kind: "ONE_TIME",
+          slice_count: 1,
+          first_slice_delay_seconds: 0,
+          slice_interval_seconds: 0,
+        },
+        price_distribution: {
+          kind: "SINGLE",
+          limit_price: "65000",
+        },
+        amount_distribution: {
+          mode: "FIXED",
+          direction: "LOW_TO_HIGH",
+          base_notional: "500",
+          linear_step: "0",
+          exponential_ratio: "2",
+          custom_notionals: [],
+        },
+        venue_policy: {
+          order_type: "LIMIT",
+          time_in_force: "GTC",
+          post_only: false,
+          price_match: null,
+          expire_at: null,
+        },
+        submission_mode: "SERIAL_PROTECTED",
+        submission_order: "HIGH_TO_LOW",
+        entry_conditions: {
+          operator: "ALL",
+          items: [{ kind: "DECISION_BASIS_READY" }],
+        },
+        protection_policy: {
+          initial_stop: {
+            distance_bps: "100",
+            trigger_source: "MARK_PRICE",
+            coverage: "EACH_CONFIRMED_FILL",
+          },
+          take_profit_ladder: {
+            levels: [{ trigger_r: "2", quantity_fraction: "1" }],
+          },
+          time_exit_seconds: null,
+        },
+        dynamic_rules: [],
+      },
+      venue_ref: "BINANCE_USDM",
+      instrument_ref: "BTCUSDT-PERP",
+      direction: "LONG",
+      target_exposure: "500",
+      requested_limits: {
+        max_margin: "500",
+        max_notional: "500",
+        max_allowed_loss: "500",
+      },
+      valid_from: "2026-07-23T10:00:00.000Z",
+      valid_until: "2026-07-23T11:00:00.000Z",
+    },
+    content_digest: String(draftVersion).repeat(64),
+    updated_at: "2026-07-23T10:00:00.000Z",
+  };
+}
+
+async function routeCurrentDemoMarketStream(page: Page) {
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    const sendCurrentFrames = () => {
+      const timestamp = new Date(Date.now() + 4_000).toISOString();
+      socket.send(JSON.stringify({
+        type: "status",
+        state: "LIVE",
+        source: "BINANCE_DEMO_PUBLIC",
+        observed_at: timestamp,
+        reason: null,
+      }));
+      socket.send(JSON.stringify({
+        type: "quote",
+        instrument_ref: "BTCUSDT-PERP",
+        source: "BINANCE_DEMO_PUBLIC",
+        source_cutoff: timestamp,
+        received_at: timestamp,
+        bid_price: "65000",
+        ask_price: "65002",
+        reference_price: "65001",
+      }));
+      socket.send(JSON.stringify({
+        type: "bar",
+        instrument_ref: "BTCUSDT-PERP",
+        interval: "15m",
+        source: "BINANCE_DEMO_PUBLIC",
+        source_cutoff: timestamp,
+        received_at: timestamp,
+        closed: false,
+        bar: {
+          open_at: "2026-07-23T11:30:00.000Z",
+          close_at: "2026-07-23T11:45:00.000Z",
+          open: "65000",
+          high: "65005",
+          low: "64995",
+          close: "65001",
+          volume: "10",
+        },
+      }));
+    };
+    sendCurrentFrames();
+    const timer = setInterval(sendCurrentFrames, 1_000);
+    socket.onClose(() => clearInterval(timer));
+  });
+}
+
+async function routeReadyDemoExecutor(
+  page: Page,
+  {
+    executorStatus = "READY",
+    productBuildConsistent = true,
+    statusOverrides = {},
+  }: {
+    executorStatus?: string;
+    productBuildConsistent?: boolean;
+    statusOverrides?: Record<string, unknown>;
+  } = {},
+) {
+  await page.route("**/api/v1/settings/status", async (route) => {
+    const now = new Date().toISOString();
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        environment_kind: "DEMO",
+        environment_id: "binance-demo-primary",
+        account_id: "binance-usdm-demo-owner-primary",
+        venue_account_type: "USDM_DEMO",
+        profile: "BINANCE_DEMO",
+        authority_class: "DEMO_SIMULATION",
+        bind: "127.0.0.1",
+        port: 8765,
+        trading_contexts: [
+          {
+            venue_account_type: "USDM_DEMO",
+            environment_id: "binance-demo-primary",
+            account_id: "binance-usdm-demo-owner-primary",
+            url: "http://127.0.0.1:8765/overview",
+          },
+          {
+            venue_account_type: "USDM_COPY_LEAD",
+            environment_id: "binance-live-copy-primary",
+            account_id: "binance-usdm-copy-lead-primary",
+            url: "http://127.0.0.1:8766/overview",
+          },
+          {
+            venue_account_type: "USDM_PERSONAL",
+            environment_id: "binance-live-personal-primary",
+            account_id: "binance-usdm-personal-primary",
+            url: "http://127.0.0.1:8767/overview",
+          },
+        ],
+        database_name: "halpha_demo",
+        database_available: true,
+        database_reason_code: null,
+        server_fact_cutoff: now,
+        product_build_id: "a".repeat(64),
+        executor_status: executorStatus,
+        app_executor_product_build_consistent: productBuildConsistent,
+        executor_status_checked_at: now,
+        configured_runtime_real_write_gate: "CLOSED",
+        runtime_real_write_gate: "CLOSED",
+        live_write_gate_violations: [],
+        authorized_activation_ids: [],
+        email_delivery_enabled: false,
+        email_configuration_status: "DISABLED",
+        view_retrieved_at: now,
+        ...statusOverrides,
+      },
+    });
+  });
+}
+
+async function routeValidOrderSchedulePreview(page: Page) {
+  await page.route("**/api/v1/order-schedules/preview", async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    const payload = request.postDataJSON() as {
+      direction: "LONG" | "SHORT";
+      instrument_ref: string;
+      max_notional: string;
+      reference_price?: string | null;
+      schedule_ref: string;
+      spec: {
+        amount_distribution: { base_notional: string };
+        price_distribution:
+          | { kind: "SINGLE"; limit_price?: string | null }
+          | {
+            kind: "LADDER";
+            lower_price: string;
+            upper_price: string;
+            level_count: number;
+          };
+      };
+      venue_ref: "BINANCE_USDM";
+    };
+    const referencePrice = Number(payload.reference_price ?? "65001");
+    const distribution = payload.spec.price_distribution;
+    const prices = distribution.kind === "SINGLE"
+      ? [Number(distribution.limit_price ?? referencePrice)]
+      : Array.from({ length: distribution.level_count }, (_, index) => {
+        const lower = Number(distribution.lower_price);
+        const upper = Number(distribution.upper_price);
+        return lower + (upper - lower) * index / (distribution.level_count - 1);
+      });
+    const requestedNotional = Number(payload.spec.amount_distribution.base_notional);
+    const normalizedLegs = prices.map((price, index) => ({
+      leg_index: index,
+      leg_count: prices.length,
+      release_after_seconds: 0,
+      raw_price: price.toFixed(1),
+      price: price.toFixed(1),
+      sizing_price: price.toFixed(1),
+      requested_notional: requestedNotional.toFixed(1),
+      quantity: (requestedNotional / price).toFixed(4),
+      effective_notional: requestedNotional.toFixed(1),
+    }));
+    const totalNotional = (requestedNotional * prices.length).toFixed(1);
+    const sourceCutoff = new Date().toISOString();
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        valid: true,
+        compiler_version: "e2e-preview-v1",
+        schedule_ref: payload.schedule_ref,
+        schedule_digest: "1".repeat(64),
+        schedule_spec: payload.spec,
+        preprotected_parallel_supported: true,
+        venue_ref: payload.venue_ref,
+        instrument_ref: payload.instrument_ref,
+        direction: payload.direction,
+        max_notional: payload.max_notional,
+        reference_price: String(referencePrice),
+        instrument_rules: {
+          source: "E2E_DETERMINISTIC_RULES",
+          min_price: "0.1",
+          max_price: "1000000",
+          price_tick_size: "0.1",
+          limit_quantity_step: "0.0001",
+          min_limit_quantity: "0.0001",
+          max_limit_quantity: "1000",
+          market_quantity_step: "0.0001",
+          min_market_quantity: "0.0001",
+          max_market_quantity: "1000",
+          min_notional: "5",
+          source_cutoff: sourceCutoff,
+        },
+        instrument_rules_digest: "2".repeat(64),
+        source_cutoff: sourceCutoff,
+        requested_total_notional: totalNotional,
+        effective_total_notional: totalNotional,
+        normalized_legs: normalizedLegs,
+        legs: normalizedLegs,
+        issues: [],
+      },
+    });
+  });
+}
+
+async function routeCurrentDemoMarketWindow(page: Page) {
+  await page.route("**/api/v1/market-window?**", async (route) => {
+    const url = new URL(route.request().url());
+    const interval = url.searchParams.get("interval") ?? "15m";
+    const intervalMs = interval === "1m"
+      ? 60_000
+      : interval === "5m"
+        ? 5 * 60_000
+        : interval === "15m"
+          ? 15 * 60_000
+          : interval === "1h"
+            ? 60 * 60_000
+            : interval === "4h"
+              ? 4 * 60 * 60_000
+              : 24 * 60 * 60_000;
+    const endAt = Date.now();
+    const bars = Array.from({ length: 48 }, (_value, index) => {
+      const openAt = endAt - (48 - index) * intervalMs;
+      const open = 64_950 + index;
+      return {
+        open_at: new Date(openAt).toISOString(),
+        close_at: new Date(openAt + intervalMs).toISOString(),
+        open: String(open),
+        high: String(open + 8),
+        low: String(open - 6),
+        close: String(open + 2),
+        volume: String(10 + index),
+      };
+    });
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        instrument_ref: "BTCUSDT-PERP",
+        interval,
+        source: "BINANCE_DEMO_PUBLIC",
+        source_cutoff: new Date(endAt).toISOString(),
+        bars,
+      },
+    });
+  });
+}
+
+async function routeCurrentDemoMarketContext(page: Page) {
+  await page.route("**/api/v1/market-context?**", async (route) => {
+    const sourceCutoff = new Date().toISOString();
+    const stopReferenceInterval = new URL(route.request().url()).searchParams
+      .get("stop_reference_interval") ?? "15m";
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        instrument_ref: "BTCUSDT-PERP",
+        source: "BINANCE_DEMO_PUBLIC",
+        source_cutoff: sourceCutoff,
+        bid_price: "65000",
+        ask_price: "65002",
+        reference_price: "65001",
+        latest_close_1m: "65001",
+        latest_closed_1m_at: sourceCutoff,
+        latest_volume_1m: "100",
+        latest_trade_count_1m: 50,
+        latest_close_15m: "65000",
+        latest_closed_15m_at: sourceCutoff,
+        latest_closed_stop_reference_at: sourceCutoff,
+        channel_lookback_15m: 20,
+        stop_reference_interval: stopReferenceInterval,
+        channel_upper: "65100",
+        channel_lower: "64900",
+        atr_14: "100",
+        stop_reference_atr_14: "100",
+        long_breakout_gap_pct: "0.1538",
+        short_breakout_gap_pct: "0.1554",
+        stop_references: [
+          {
+            kind: "SWING_OBV",
+            side: "LOWER",
+            price: "64900",
+            interval: stopReferenceInterval,
+            lookback_bars: 20,
+            atr_buffer_multiple: "0.2",
+            volume_bias: "POSITIVE",
+            trend_slope: null,
+            trend_r_squared: null,
+            method_version: "STOP_REFERENCE_MULTI_INTERVAL_V1",
+          },
+          {
+            kind: "STRUCTURE_ATR",
+            side: "LOWER",
+            price: "64800",
+            interval: stopReferenceInterval,
+            lookback_bars: 20,
+            atr_buffer_multiple: "0.2",
+            volume_bias: null,
+            trend_slope: null,
+            trend_r_squared: null,
+            method_version: "STOP_REFERENCE_MULTI_INTERVAL_V1",
+          },
+          {
+            kind: "TREND_ATR",
+            side: "LOWER",
+            price: "64700",
+            interval: stopReferenceInterval,
+            lookback_bars: 20,
+            atr_buffer_multiple: "0.8",
+            volume_bias: null,
+            trend_slope: "12.5",
+            trend_r_squared: "0.82",
+            method_version: "STOP_REFERENCE_MULTI_INTERVAL_V1",
+          },
+          {
+            kind: "STRUCTURE_ATR",
+            side: "UPPER",
+            price: "65200",
+            interval: stopReferenceInterval,
+            lookback_bars: 20,
+            atr_buffer_multiple: "0.2",
+            volume_bias: null,
+            trend_slope: null,
+            trend_r_squared: null,
+            method_version: "STOP_REFERENCE_MULTI_INTERVAL_V1",
+          },
+        ],
+      },
+    });
+  });
+}
+
+async function addBrowserScopedCsrfCookie(page: Page) {
+  const browserBaseUrl = new URL(
+    process.env.HALPHA_BROWSER_BASE_URL ?? "http://127.0.0.1:8765",
+  );
+  const browserPort = browserBaseUrl.port
+    || (browserBaseUrl.protocol === "https:" ? "443" : "80");
+  await page.context().addCookies([{
+    name: `halpha_csrf_${browserPort}`,
+    value: "e2e-planning-token",
+    url: `${browserBaseUrl.origin}/`,
+  }]);
+}
+
+async function openDirectMilestone(
+  page: Page,
+  milestone: "1 入场" | "2 保护" | "3 退出" | "4 核对",
+) {
+  const navigation = page.getByRole("navigation", { name: "计划创建步骤" });
+  await expect(navigation).toBeVisible({ timeout: 15_000 });
+  const milestoneLabel = milestone.replace(/^\d+\s+/, "");
+  const button = navigation.getByRole("button", {
+    name: new RegExp(`${milestoneLabel}$`),
+  });
+  for (let step = 0; step < 4 && !await button.isEnabled(); step += 1) {
+    const nextButton = page.getByRole("button", { name: "下一步", exact: true });
+    await expect(nextButton).toBeEnabled({ timeout: 20_000 });
+    await nextButton.click();
+  }
+  await expect(button).toBeEnabled();
+  await button.click();
+  await expect(button).toHaveAttribute("aria-current", "step");
+}
+
+async function openDirectReview(page: Page) {
+  await openDirectMilestone(page, "4 核对");
+  await expect(page.getByRole("heading", { name: "计划概要" })).toBeVisible();
+}
+
+function rectsIntersect(left: LayoutRect, right: LayoutRect, tolerance = 0.5) {
+  return left.x < right.x + right.width - tolerance
+    && left.x + left.width > right.x + tolerance
+    && left.y < right.y + right.height - tolerance
+    && left.y + left.height > right.y + tolerance;
+}
+
+async function expectNoOverlap(
+  left: Locator,
+  right: Locator,
+  message: string,
+) {
+  await expect(left).toBeVisible();
+  await expect(right).toBeVisible();
+  const [leftBox, rightBox] = await Promise.all([left.boundingBox(), right.boundingBox()]);
+  expect(leftBox, `${message}：左侧元素缺少布局框`).not.toBeNull();
+  expect(rightBox, `${message}：右侧元素缺少布局框`).not.toBeNull();
+  expect(
+    rectsIntersect(leftBox!, rightBox!),
+    `${message}：${JSON.stringify({ left: leftBox, right: rightBox })}`,
+  ).toBe(false);
+}
+
+async function assertEditorSectionHeadingClear(
+  page: Page,
+  headingName: string,
+  firstFieldLabel: string,
+) {
+  const heading = page.getByRole("heading", { name: headingName, exact: true });
+  const section = heading.locator("xpath=ancestor::section[1]");
+  const field = section.getByLabel(firstFieldLabel, { exact: true });
+  const formControl = field.locator(
+    "xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' MuiFormControl-root ')][1]",
+  );
+  const fieldLabel = formControl.locator(".MuiInputLabel-root").first();
+  const fieldOutline = formControl.locator("fieldset").first();
+  await heading.scrollIntoViewIfNeeded();
+  await expectNoOverlap(heading, fieldLabel, `${headingName}标题不得覆盖首个字段标签`);
+  await expectNoOverlap(heading, fieldOutline, `${headingName}标题不得覆盖首个字段边框`);
+}
+
+async function assertChartHeaderClear(chartRegion: Locator) {
+  const subtitle = chartRegion.getByText(/输入线可拖动/).first();
+  const toolButtons = chartRegion.getByRole("button", {
+    name: /^(拖动选择区间|支撑 \/ 阻力|趋势线|清除分析线)$/,
+  });
+  await subtitle.scrollIntoViewIfNeeded();
+  await expect(toolButtons).toHaveCount(4);
+  for (let index = 0; index < await toolButtons.count(); index += 1) {
+    const toolButton = toolButtons.nth(index);
+    await expectNoOverlap(
+      subtitle,
+      toolButton,
+      `图表副标题不得覆盖工具栏第 ${index + 1} 个按钮`,
+    );
+  }
+}
+
+async function assertLastChartDetailReachable(
+  chartRegion: Locator,
+  testInfo: TestInfo,
+  viewportName: string,
+) {
+  const detailSection = chartRegion.locator("details").filter({
+    hasText: /图线、操作点与等价数值/,
+  }).first();
+  const detailItems = chartRegion.locator([
+    '[aria-label="图中价格标注及等价数值"] > li',
+    '[aria-label="图中相对和动态价格规则"] > li',
+    '[aria-label="图中分析绘图及锚点"] > li',
+  ].join(", "));
+  await expect(detailSection).toBeVisible();
+  if (!await detailSection.evaluate((element) => (
+    (element as HTMLDetailsElement).open
+  ))) {
+    await detailSection.locator("summary").click();
+  }
+  await expect.poll(async () => detailSection.evaluate((element) => (
+    (element as HTMLDetailsElement).open
+  )), {
+    timeout: 10_000,
+  }).toBe(true);
+  await expect.poll(async () => detailItems.count(), {
+    timeout: 10_000,
+  }).toBeGreaterThan(0);
+  const lastDetail = detailItems.last();
+  const scrollTarget = await lastDetail.evaluate((element) => {
+    const scrollingElement = document.scrollingElement as HTMLElement | null;
+    let current = element.parentElement;
+    while (current && current !== document.body && current !== document.documentElement) {
+      const style = window.getComputedStyle(current);
+      if (
+        /^(auto|scroll|overlay)$/.test(style.overflowY)
+        && current.scrollHeight > current.clientHeight + 1
+      ) {
+        return {
+          kind: "element",
+          tag: current.tagName,
+          testId: current.dataset.testid ?? null,
+          overflowY: style.overflowY,
+        };
+      }
+      current = current.parentElement;
+    }
+    return {
+      kind: "document",
+      tag: scrollingElement?.tagName ?? null,
+      testId: null,
+      overflowY: scrollingElement ? window.getComputedStyle(scrollingElement).overflowY : null,
+    };
+  });
+
+  await lastDetail.scrollIntoViewIfNeeded();
+  const visibility = await lastDetail.evaluate((element) => {
+    const elementRect = element.getBoundingClientRect();
+    const clippingAncestors: Array<{
+      tag: string;
+      testId: string | null;
+      overflowY: string;
+      top: number;
+      bottom: number;
+    }> = [];
+    let visibleTop = 0;
+    let visibleBottom = window.innerHeight;
+    let current = element.parentElement;
+    while (current && current !== document.documentElement) {
+      const style = window.getComputedStyle(current);
+      if (/^(auto|scroll|overlay|hidden|clip)$/.test(style.overflowY)) {
+        const bounds = current.getBoundingClientRect();
+        visibleTop = Math.max(visibleTop, bounds.top);
+        visibleBottom = Math.min(visibleBottom, bounds.bottom);
+        clippingAncestors.push({
+          tag: current.tagName,
+          testId: current.dataset.testid ?? null,
+          overflowY: style.overflowY,
+          top: bounds.top,
+          bottom: bounds.bottom,
+        });
+      }
+      current = current.parentElement;
+    }
+    return {
+      element: {
+        top: elementRect.top,
+        bottom: elementRect.bottom,
+        height: elementRect.height,
+      },
+      visibleTop,
+      visibleBottom,
+      clippingAncestors,
+      fullyVisible: elementRect.height > 0
+        && elementRect.top >= visibleTop - 1
+        && elementRect.bottom <= visibleBottom + 1,
+    };
+  });
+  await testInfo.attach(`${viewportName}-chart-detail-scroll.json`, {
+    body: Buffer.from(JSON.stringify({ scrollTarget, visibility }, null, 2)),
+    contentType: "application/json",
+  });
+  expect(
+    scrollTarget.kind === "document"
+      || /^(auto|scroll|overlay)$/.test(scrollTarget.overflowY ?? ""),
+    `图表详情必须由文档或显式纵向滚动容器承载：${JSON.stringify(scrollTarget)}`,
+  ).toBe(true);
+  expect(
+    visibility.fullyVisible,
+    `展开详情的最后一条等价值/分析项被 overflow 永久裁剪：${JSON.stringify(visibility)}`,
+  ).toBe(true);
+}
+
+async function assertNoDocumentHorizontalOverflow(
+  page: Page,
+  testInfo: TestInfo,
+  viewportName: string,
+) {
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    offenders: [...document.querySelectorAll<HTMLElement>("body *")]
+      .filter((element) => !element.classList.contains("MuiSwitch-input"))
+      .filter((element) => {
+        const drawer = element.closest<HTMLElement>(".MuiDrawer-paper");
+        if (!drawer) return true;
+        const bounds = drawer.getBoundingClientRect();
+        return bounds.right > 0 && bounds.left < document.documentElement.clientWidth;
+      })
+      .map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          testId: element.dataset.testid ?? null,
+          left: bounds.left,
+          right: bounds.right,
+          text: element.textContent?.trim().slice(0, 100) ?? "",
+        };
+      })
+      .filter(({ left, right }) => left < -0.5 || right > document.documentElement.clientWidth + 0.5),
+  }));
+  await testInfo.attach(`${viewportName}-horizontal-overflow.json`, {
+    body: Buffer.from(JSON.stringify(layout, null, 2)),
+    contentType: "application/json",
+  });
+  expect(
+    layout.scrollWidth,
+    `文档出现横向溢出：${JSON.stringify(layout.offenders.slice(0, 10))}`,
+  ).toBe(layout.clientWidth);
+}
+
+test("direct execution layout stays usable without overlap or clipped chart details", async ({ page }, testInfo) => {
+  const attemptedTradingWrites: string[] = [];
+  await routeCurrentDemoMarketStream(page);
+  await routeCurrentDemoMarketWindow(page);
+  await routeCurrentDemoMarketContext(page);
+  await routeReadyDemoExecutor(page);
+  await routeValidOrderSchedulePreview(page);
+  await page.route(/\/api\/v1\/plans(?:\/[^/?#]+\/activate)?(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      attemptedTradingWrites.push(request.url());
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  await page.route(/\/api\/v1\/activations(?:\/.*)?(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "GET" && request.method() !== "HEAD") {
+      attemptedTradingWrites.push(request.url());
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+
+  const viewports = testInfo.project.name === "chromium-narrow"
+    ? directExecutionViewports.narrow
+    : directExecutionViewports.desktop;
+  await page.setViewportSize(viewports[0]!);
+  await page.goto("/plans/new?mode=direct");
+  const chartRegion = page.locator('section[aria-labelledby="order-schedule-chart-title"]');
+  await expect(chartRegion).toBeVisible({ timeout: 15_000 });
+  await chartRegion.getByText(/图线、操作点与等价数值/).click();
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
+
+    await openDirectMilestone(page, "1 入场");
+    await assertChartHeaderClear(chartRegion);
+    await assertEditorSectionHeadingClear(page, "下单金额", "下单额模式");
+    await openDirectMilestone(page, "2 保护");
+    await assertEditorSectionHeadingClear(page, "成交后立即保护", "初始止损距离（bps）");
+    await openDirectMilestone(page, "3 退出");
+    await expect(page.getByRole("heading", { name: "自动退出", exact: true })).toBeVisible();
+    await openDirectReview(page);
+    await expect(page.getByText(/^技术预览可保存 ·/)).toBeVisible({ timeout: 15_000 });
+    await assertLastChartDetailReachable(chartRegion, testInfo, viewport.name);
+    await assertNoDocumentHorizontalOverflow(page, testInfo, viewport.name);
+  }
+
+  expect(attemptedTradingWrites, "布局回归只允许读取行情和生成安全预览").toEqual([]);
+  await expect(page).toHaveURL(/\/plans\/new\?mode=direct$/);
+});
+
+test("direct shortcut reaches a launch-ready workspace without strategy or naming detours", async ({ page }) => {
+  const attemptedTradingWrites: string[] = [];
+  await routeCurrentDemoMarketStream(page);
+  await routeCurrentDemoMarketWindow(page);
+  await routeCurrentDemoMarketContext(page);
+  await routeReadyDemoExecutor(page);
+  await routeValidOrderSchedulePreview(page);
+  await page.route(/\/api\/v1\/plans(?:\/.*)?(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "GET" && request.method() !== "HEAD") {
+      attemptedTradingWrites.push(request.url());
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  await page.route(/\/api\/v1\/activations(?:\/.*)?(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "GET" && request.method() !== "HEAD") {
+      attemptedTradingWrites.push(request.url());
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/plans");
+  await page.getByRole("button", { name: "直接执行", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/plans\/new\?mode=direct$/);
+  await expect(page.getByRole("heading", { name: "选择执行依据" })).toHaveCount(0);
+  await openDirectReview(page);
+  await expect(page.getByLabel("计划名称")).toHaveValue(/^BTCUSDT 直接执行 .+/);
+  await expect(page.getByLabel("计划有效分钟")).toHaveValue("60");
+  await expect(page.getByRole("button", {
+    name: "创建并启动 Demo",
+    exact: true,
+  })).toBeEnabled({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "计划概要" }).locator(".."))
+    .toContainText("TP1 2R / 100%");
+  expect(attemptedTradingWrites).toEqual([]);
+});
+
+test("protection milestone offers explainable stop references without silently changing the plan", async ({ page }, testInfo) => {
+  const attemptedTradingWrites: string[] = [];
+  await addBrowserScopedCsrfCookie(page);
+  await routeCurrentDemoMarketStream(page);
+  await routeCurrentDemoMarketWindow(page);
+  await routeCurrentDemoMarketContext(page);
+  await routeReadyDemoExecutor(page);
+  await routeValidOrderSchedulePreview(page);
+  page.on("request", (request) => {
+    const pathname = new URL(request.url()).pathname;
+    if (
+      request.method() !== "GET"
+      && request.method() !== "HEAD"
+      && (pathname === "/api/v1/plans" || pathname === "/api/v1/activations")
+    ) {
+      attemptedTradingWrites.push(`${request.method()} ${pathname}`);
+    }
+  });
+
+  await page.goto("/plans/new?mode=direct");
+  const chartRegion = page.locator('section[aria-labelledby="order-schedule-chart-title"]');
+  const limitPrice = page.getByRole("spinbutton", { name: "限价（USDT）" });
+  await expect(limitPrice).toHaveValue("65001");
+  const initialLimitPrice = await limitPrice.inputValue();
+  const expectChartIntervalUnchanged = async () => {
+    if (testInfo.project.name === "chromium-narrow") {
+      await expect(page.getByRole("combobox", { name: "K 线周期" })).toHaveText("15m");
+      return;
+    }
+    await expect(chartRegion.getByRole("button", { name: "15m" }))
+      .toHaveAttribute("aria-pressed", "true");
+  };
+  await expectChartIntervalUnchanged();
+  await openDirectMilestone(page, "2 保护");
+
+  const recommendations = page.getByTestId("initial-stop-recommendations");
+  await expect(recommendations.getByText("推荐止损位置", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("initial-stop-recommendation-swing_obv"))
+    .toContainText("量价摆动位");
+  await expect(page.getByTestId("initial-stop-recommendation-structure_atr"))
+    .toContainText("近期结构位");
+  await expect(page.getByTestId("initial-stop-recommendation-trend_atr"))
+    .toContainText("趋势波动带");
+  await expect(recommendations).toContainText("当前未接入可信清算分布");
+
+  await page.getByRole("button", { name: "1h止损参考" }).click();
+  await expect(recommendations).toContainText("1h 截止");
+  await expect(page.getByTestId("initial-stop-recommendation-swing_obv"))
+    .toContainText("1h");
+  await expectChartIntervalUnchanged();
+
+  const stopDistance = page.getByRole("spinbutton", { name: "初始止损距离（bps）" });
+  const before = await stopDistance.inputValue();
+  const adoptSwing = page.getByRole("button", {
+    name: /采用量价摆动位 64,900\.0 USDT/,
+  });
+  await adoptSwing.click();
+  await expect(stopDistance).not.toHaveValue(before);
+  await expect(adoptSwing).toBeDisabled();
+  await expect(page.getByTestId("initial-stop-projection"))
+    .toContainText("预计价差亏损（全成交）");
+
+  await chartRegion.getByText(/图线、操作点与等价数值/).click();
+  const chartPrices = chartRegion.getByLabel("图中价格标注及等价数值");
+  await expect(chartPrices).toContainText("量价摆动位");
+  await expect(chartPrices).toContainText("近期结构位");
+  await expect(chartPrices).toContainText("趋势波动带");
+  await expect(chartPrices).toContainText("行情事实 / 点线");
+
+  await page.getByRole("button", { name: "＋ 添加成交后动态止损" }).click();
+  await page.getByRole("button", {
+    name: "盈亏平衡止损 · 盈利 1R 后移到入场价",
+  }).click();
+  await expect(page.getByText("1R→0R", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "＋ 添加成交后动态止损" }).click();
+  await page.getByRole("button", {
+    name: "保底盈利止损 · 盈利 1R 后至少保住 0.5R",
+  }).click();
+  await expect(page.getByText("1R→0.5R", { exact: true })).toBeVisible();
+
+  await expect.poll(async () => recommendations.evaluate(
+    (element) => element.scrollWidth <= element.clientWidth,
+  )).toBe(true);
+  await assertNoDocumentHorizontalOverflow(page, testInfo, `stop-recommendations-${testInfo.project.name}`);
+  await testInfo.attach(`stop-recommendations-${testInfo.project.name}.png`, {
+    body: await recommendations.screenshot(),
+    contentType: "image/png",
+  });
+
+  await openDirectMilestone(page, "1 入场");
+  await expect(limitPrice).toHaveValue(initialLimitPrice);
+  await expect(chartPrices).not.toContainText("量价摆动位");
+  expect(attemptedTradingWrites, "止损推荐仅允许安全预览，不得保存或启动计划").toEqual([]);
+});
+
+test("direct review blocks launch when the live price has already crossed a fixed entry boundary", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  await page.goto("/plans/new?mode=direct");
+
+  await page.getByRole("button", { name: "＋ 添加入场条件或管理规则" }).click();
+  await page.getByRole("button", { name: /行情失效/ }).click();
+  await page.getByRole("spinbutton", { name: "失效价（USDT）" }).fill("65100");
+  await openDirectReview(page);
+
+  const boundaryAlert = page.getByTestId("entry-boundary-breach");
+  await expect(boundaryAlert).toContainText(
+    "当前标记价 65,001.0 USDT 已达到或跌破入场失效价 65,100.0 USDT",
+  );
+  await expect(page.getByRole("button", {
+    name: "创建并启动 Demo",
+    exact: true,
+  })).toBeDisabled();
+  await expect(page.getByRole("button", {
+    name: "保存草稿",
+    exact: true,
+  })).toBeEnabled();
+
+  await openDirectMilestone(page, "1 入场");
+  await page.getByRole("spinbutton", { name: "失效价（USDT）" }).fill("64900");
+  await openDirectReview(page);
+
+  await expect(boundaryAlert).toHaveCount(0);
+  await expect(page.getByRole("button", {
+    name: "创建并启动 Demo",
+    exact: true,
+  })).toBeEnabled();
+});
+
+test("direct review keeps the Demo launch action visible when the executor is unavailable", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page, {
+    executorStatus: "BUILD_MISMATCH",
+    productBuildConsistent: false,
+  });
+
+  await page.goto("/plans/new?mode=direct");
+  await openDirectReview(page);
+
+  await expect(page.getByRole("button", {
+    name: "创建并启动 Demo",
+    exact: true,
+  })).toBeVisible();
+  await expect(page.getByRole("button", {
+    name: "创建并启动 Demo",
+    exact: true,
+  })).toBeDisabled();
+  await expect(page.getByText("Demo 执行暂不可用：应用与执行器版本不一致。", {
+    exact: false,
+  })).toBeVisible();
+  await expect(page.getByRole("button", {
+    name: "保存草稿",
+    exact: true,
+  })).toBeVisible();
+});
+
+test("direct plan creation does not consume or repeat review performance", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  let reviewRequestCount = 0;
+  await page.route("**/api/v1/reviews**", async (route) => {
+    reviewRequestCount += 1;
+    await route.fulfill({
+      contentType: "application/json",
+      body: "[]",
+    });
+  });
+
+  await page.goto("/plans/new?mode=direct");
+  await openDirectReview(page);
+
+  await expect(page.getByRole("heading", { name: "计划信息", exact: true })).toBeVisible();
+  await expect(page.getByLabel("计划名称")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "创建方式" })).toBeVisible();
+  await expect(page.getByLabel("计划有效分钟")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "创建方式" })).toContainText("人工创建");
+  await expect(page.getByText("近期同工具实际结果不利", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("当前样本未证明正期望", { exact: false })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "费用后收益门槛" })).toHaveCount(0);
+  await expect(page.getByText("图表只编辑计划草稿", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("快速启动会连续保存草稿", { exact: false })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "创建并启动 Demo" })).toBeEnabled();
+  expect(reviewRequestCount).toBe(0);
+});
+
+test("direct entry schemes clear incompatible fields and preserve compatible order components", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  await page.goto("/plans/new?mode=direct");
+
+  const nextButton = page.getByRole("button", { name: "下一步", exact: true });
+  const marketButton = page.getByRole("button", { name: "市价", exact: true });
+  const limitButton = page.getByRole("button", { name: "限价", exact: true });
+  const makerOnly = page.getByRole("switch", { name: "Maker only" });
+
+  await page.getByRole("radio", { name: /时间分批/ }).click();
+  await expect(marketButton).toHaveAttribute("aria-pressed", "true");
+  await expect(makerOnly).toBeDisabled();
+  await limitButton.click();
+  await page.getByText(/交易所订单选项 · IOC/).click();
+  const timeInForce = page.getByRole("combobox", { name: "有效方式" });
+  await expect(timeInForce).toContainText("IOC");
+  await timeInForce.click();
+  await expect(page.getByRole("option", { name: /GTC/ })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: /GTD/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await marketButton.click();
+
+  await page.getByRole("radio", { name: /一次性入场/ }).click();
+  await expect(marketButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("市价单不能设置限价。")).toHaveCount(0);
+  await expect(nextButton).toBeEnabled();
+
+  await page.getByRole("radio", { name: /价格区间分批/ }).click();
+  await expect(marketButton).toBeDisabled();
+  await expect(page.getByRole("button", { name: "分档限价", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(makerOnly).toBeEnabled();
+
+  await page.getByRole("radio", { name: /事件触发入场/ }).click();
+  await expect(page.getByRole("heading", { name: "入场前置条件" })).toBeVisible();
+  await expect(nextButton).toBeEnabled();
+  await page.getByRole("button", { name: "移除短时异动" }).click();
+  await expect(nextButton).toBeDisabled();
+  await expect(page.getByText("事件触发入场必须至少配置一个价格、K 线收盘或短时变动事件。"))
+    .toBeVisible();
+
+  await page.getByRole("radio", { name: /一次性入场/ }).click();
+  await limitButton.click();
+  const limitPrice = await page.getByRole("spinbutton", {
+    name: "限价（USDT）",
+  }).inputValue();
+  await page.getByRole("button", {
+    name: "＋ 添加入场条件或管理规则",
+  }).click();
+  await page.getByRole("button", {
+    name: /跟随同侧盘口/,
+  }).click();
+  await expect(page.getByRole("button", { name: "移除移动挂单" }))
+    .toBeVisible();
+
+  await page.getByRole("radio", { name: /事件触发入场/ }).click();
+  await expect(limitButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("spinbutton", { name: "限价（USDT）" }))
+    .toHaveValue(limitPrice);
+  await expect(page.getByRole("button", { name: "移除移动挂单" }))
+    .toBeVisible();
+  await expect(page.getByRole("spinbutton", { name: "触发偏离（bps）" }))
+    .toHaveValue("5");
+});
+
+test("time-sliced amount growth uses time order instead of price order", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  await page.goto("/plans/new?mode=direct");
+
+  await page.getByRole("radio", { name: /时间分批/ }).click();
+  await expect(page.getByRole("radio", { name: /时间分批/ })).toBeChecked();
+  await expect(page.getByRole("spinbutton", { name: "每笔最早间隔（秒）" }))
+    .toBeVisible();
+  await page.getByRole("combobox", { name: "下单额模式" }).click();
+  await page.getByRole("option", { name: "线性增长" }).click();
+
+  await expect(page.getByRole("spinbutton", { name: "每笔金额增量（USDT）" }))
+    .toBeVisible();
+  await expect(page.getByRole("combobox", { name: "金额增长方向" }))
+    .toHaveText("从首笔到末笔");
+  await page.getByRole("combobox", { name: "金额增长方向" }).click();
+  await expect(page.getByRole("option", { name: "从末笔到首笔" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "从低价到高价" })).toHaveCount(0);
+});
+
+test("direct milestones require protection and an automatic exit before review", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  await page.goto("/plans/new?mode=direct");
+  await openDirectMilestone(page, "3 退出");
+
+  const navigation = page.getByRole("navigation", { name: "计划创建步骤" });
+  const reviewMilestone = navigation.getByRole("button", { name: /核对$/ });
+  const nextButton = page.getByRole("button", { name: "下一步", exact: true });
+
+  await page.getByRole("button", { name: "移除分级止盈" }).click();
+  await expect(reviewMilestone).toBeDisabled();
+  await expect(nextButton).toBeDisabled();
+  await expect(navigation.locator("button").nth(0)).toContainText("✓");
+  await expect(navigation.locator("button").nth(1)).toContainText("✓");
+  await expect(navigation.locator("button").nth(1)).toBeEnabled();
+  await expect(page.getByText("必须保留至少一种自动止盈、收益锁定或时间退出方式。"))
+    .toBeVisible();
+
+  await page.getByRole("button", { name: "＋ 添加退出方式" }).click();
+  await page.getByRole("button", { name: /比例锁盈/ }).click();
+  await expect(reviewMilestone).toBeEnabled();
+  await expect(nextButton).toBeEnabled();
+
+  await nextButton.click();
+  await expect(page.getByRole("heading", { name: "计划概要" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "计划概要" }).locator(".."))
+    .toContainText("达到 1R 后锁定峰值盈利 50%");
+});
+
+test("direct exit uses attributed fees and current spread without inventing a live fee quote", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  await page.goto("/plans/new?mode=direct");
+  await openDirectMilestone(page, "3 退出");
+
+  const summary = page.getByTestId("after-cost-estimate");
+  await expect(summary).toContainText("费用后风险收益 · 按标准化名义额");
+  await expect(summary).toContainText("预计手续费");
+  await expect(summary).toContainText("0.395206 USDT");
+  await expect(summary).toContainText("当前盘口成本");
+  await expect(summary).toContainText("0.0152 USDT");
+  await expect(summary).toContainText("费用后净盈亏比");
+  await expect(summary).toContainText("1.76 : 1");
+  await expect(summary).toContainText("入场 Taker 4 bps，退出 Taker 4 bps");
+  await expect(summary).toContainText("不是当前交易所费率报价");
+  await expect(summary).toContainText("未计资金费与触发后滑点");
+
+  await openDirectMilestone(page, "1 入场");
+  await page.getByRole("switch", { name: "Maker only" }).click();
+  await openDirectMilestone(page, "3 退出");
+  await expect(summary).toContainText("入场 Maker 2 bps，退出 Taker 4 bps");
+  await expect(summary).toContainText("费用后净盈亏比");
+  await expect(summary).toContainText("1.82 : 1");
+});
+
+test("direct review exposes exact entry, invalidation, protection, and exit intent", async ({ page }) => {
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  await page.goto("/plans/new?mode=direct");
+
+  await page.getByRole("button", { name: "做空", exact: true }).click();
+  await page.getByRole("radio", { name: /事件触发入场/ }).click();
+  await page.getByRole("button", { name: "市价", exact: true }).click();
+  await page.getByRole("spinbutton", { name: "变动阈值（bps）" }).fill("10");
+  await page.getByRole("button", { name: "＋ 添加入场条件或管理规则" }).click();
+  await page.getByRole("button", { name: /到价触发/ }).click();
+  await page.getByRole("spinbutton", { name: "标记价格（USDT）" }).fill("63600");
+  await page.getByRole("button", { name: "＋ 添加入场条件或管理规则" }).click();
+  await page.getByRole("button", { name: /行情失效/ }).click();
+  await page.getByRole("spinbutton", { name: "失效价（USDT）" }).fill("63850");
+  await page.getByRole("checkbox", { name: /机会错过价/ }).check();
+  const opportunityMissedPrice = page.getByRole("spinbutton", {
+    name: "机会错过价（USDT）",
+  });
+  await expect(opportunityMissedPrice).toHaveValue(/^\d+(?:\.\d{1,8})?$/);
+  await opportunityMissedPrice.fill("63300");
+
+  await openDirectMilestone(page, "2 保护");
+  await page.getByRole("spinbutton", { name: "初始止损距离（bps）" }).fill("30");
+  await openDirectMilestone(page, "3 退出");
+  await page.getByRole("button", { name: "＋ 添加退出方式" }).click();
+  await page.getByRole("button", { name: /比例锁盈/ }).click();
+  await page.getByRole("spinbutton", { name: "开始锁定（R）" }).fill("0.75");
+  await page.getByRole("spinbutton", { name: "锁定比例（%）" }).fill("75");
+  await page.getByRole("spinbutton", { name: "最小收紧步长（R）" }).fill("0.1");
+  await page.getByRole("button", { name: "＋ 添加退出方式" }).click();
+  await page.getByRole("button", { name: /时间退出/ }).click();
+  await page.getByRole("spinbutton", {
+    name: "首笔成交后整组退出（秒）",
+  }).fill("900");
+
+  await openDirectReview(page);
+  const summary = page.getByRole("heading", { name: "计划概要" }).locator("..");
+  await expect(summary).toContainText("全部满足");
+  await expect(summary).toContainText("标记价 ≥ 63,600 USDT");
+  await expect(summary).toContainText("30 秒下跌 ≥ 10 bps");
+  await expect(summary).toContainText("标记价 ≥ 63,850 USDT 时取消");
+  await expect(summary).toContainText("标记价 ≤ 63,300 USDT 时视为错过");
+  await expect(summary).toContainText("30 秒反向上涨 ≥ 50 bps 时取消");
+  await expect(summary).toContainText(
+    "每笔确认成交后建立标记价止损 · 距离 30 bps",
+  );
+  await expect(summary).toContainText("TP1 2R / 100%");
+  await expect(summary).toContainText("首笔成交后 900 秒发起整组退出");
+  await expect(summary).toContainText(
+    "达到 0.75R 后锁定峰值盈利 75%（最小收紧 0.1R，间隔 5 秒，最多 8 次）",
+  );
+});
+
+test("an empty overview opens the recent loss evidence instead of an empty position panel", async ({ page }) => {
+  await routeReadyDemoExecutor(page);
+  await page.route(/\/api\/v1\/overview(?:\?.*)?$/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        environment_kind: "DEMO",
+        environment_id: "binance-demo-primary",
+        account_id: "binance-usdm-demo-owner-primary",
+        profile: "BINANCE_DEMO",
+        authority_class: "DEMO_VALIDATION",
+        runtime_real_write_gate: "CLOSED",
+        server_fact_cutoff: new Date().toISOString(),
+        view_retrieved_at: new Date().toISOString(),
+        open_activation_count: 0,
+        database_name: "halpha_demo",
+        account_snapshot_status: "CURRENT",
+        account_snapshot_ref: "empty-account-snapshot",
+        account_snapshot_cutoff: new Date().toISOString(),
+        account_snapshot_age_seconds: 0,
+        account_ordinary_open_order_count: 0,
+        account_algo_open_order_count: 0,
+        account_positions: [],
+        account_orders: [],
+      },
+    });
+  });
+  const adverseReviews = Array.from({ length: 3 }, (_item, index) => {
+    const closedAt = `2026-07-27T00:0${index}:00Z`;
+    return {
+      review_id: `overview-review-${index}`,
+      activation_id: `overview-loss-${index}`,
+      primary_result: "COMPLETED",
+      fact_cutoff: closedAt,
+      resolved_trade_result: {
+        closed: true,
+        calculation_complete: true,
+        commission_complete: true,
+        strategy_attribution_complete: true,
+        result_scope: "HALPHA_ATTRIBUTED_ACTIONS",
+        net_pnl: "-2",
+        commission: "0.5",
+        entry_notional: "100",
+      },
+      trade_context: {
+        instrument_ref: "BTCUSDT-PERP",
+        direction: "LONG",
+        decision_basis_ref: "DIRECT_EXECUTION@1",
+        strategy_id: null,
+        trade_amount: "120",
+        plan_name: `最近亏损计划 ${index + 1}`,
+      },
+    };
+  });
+  await page.route(/\/api\/v1\/activations(?:\?.*)?$/, async (route) => {
+    await route.fulfill({ contentType: "application/json", body: "[]" });
+  });
+  await page.route(/\/api\/v1\/activations\/overview-loss-\d+$/, async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: { code: "ACTIVATION_DETAIL_NOT_REQUIRED" } }),
+    });
+  });
+  await page.route("**/api/v1/reviews**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(adverseReviews),
+    });
+  });
+
+  await page.goto("/overview");
+
+  await expect(page.getByRole("tab", { name: "最近交易结果" }))
+    .toHaveAttribute("aria-selected", "true");
+  const recentResults = page.getByRole("region", { name: "最近交易结果" });
+  await expect(recentResults).toContainText(
+    "连续亏损 3 笔，已触发连续亏损提醒；新的完整闭合交易净结果大于或等于零时自动解除。",
+  );
+  await expect(recentResults).toContainText("合计净结果");
+  await expect(recentResults).toContainText("-6.00 USDT");
+  await expect(recentResults).toContainText("平均净结果");
+  await expect(recentResults).toContainText("-2.00 USDT");
+  await expect(recentResults).toContainText("最近亏损计划 3");
+  await expect(recentResults).toContainText("BTCUSDT-PERP · 做多 · -2.00 USDT");
+  await expect(recentResults).toContainText(
+    "直接执行订单计划 · 入场成交额 100.00 USDT · 计划上限 120.00 USDT",
+  );
+
+  await page.getByRole("tab", { name: "当前仓位（0）" }).click();
+  await expect(page.getByText("当前无持仓。"))
+    .toBeVisible();
+});
+
+test("overview previews plan-bound external position operations without creating a venue action", async ({ page }, testInfo) => {
+  await routeReadyDemoExecutor(page, {
+    statusOverrides: {
+      environment_kind: "LIVE",
+      environment_id: "binance-live-copy-primary",
+      account_id: "binance-usdm-copy-lead-primary",
+      venue_account_type: "USDM_COPY_LEAD",
+      profile: "BINANCE_LIVE_READ_ONLY",
+      authority_class: "NO_TRADING_AUTHORITY",
+      database_name: "halpha_live_copy",
+      port: 8766,
+    },
+  });
+  const browserBaseUrl = new URL(
+    process.env.HALPHA_BROWSER_BASE_URL ?? "http://127.0.0.1:8765",
+  );
+  const browserPort = browserBaseUrl.port || (browserBaseUrl.protocol === "https:" ? "443" : "80");
+  await page.context().addCookies([{
+    name: `halpha_csrf_${browserPort}`,
+    value: "e2e-position-operation-token",
+    url: `${browserBaseUrl.origin}/`,
+  }]);
+  const cutoff = new Date().toISOString();
+  const snapshotRef = "account-snapshot-sol-1";
+  const previewedOperations: string[] = [];
+  const accountOrders = Array.from({ length: 4 }, (_item, index) => ({
+    kind: index === 3 ? "ALGO" : "ORDINARY",
+    instrument_ref: "SOLUSDT-PERP",
+    symbol: "SOLUSDT",
+    order_id: String(7000 + index),
+    client_order_id: `external-order-${index}`,
+    side: "BUY",
+    position_side: "SHORT",
+    order_type: index === 3 ? "STOP_MARKET" : "LIMIT",
+    status: "NEW",
+    time_in_force: "GTC",
+    price: index === 3 ? "0" : String(150 + index),
+    trigger_price: index === 3 ? "160" : "0",
+    quantity: "0.5",
+    executed_quantity: index === 3 ? null : "0",
+    reduce_only: true,
+    close_position: false,
+    source_create_time_ms: Date.parse(cutoff) - index * 1000,
+    source_update_time_ms: Date.parse(cutoff) - index * 1000,
+    fact_cutoff: cutoff,
+    snapshot_ref: snapshotRef,
+  }));
+  await page.route(/\/api\/v1\/overview(?:\?.*)?$/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        environment_kind: "LIVE",
+        environment_id: "binance-live-copy-primary",
+        account_id: "binance-usdm-copy-lead-primary",
+        profile: "BINANCE_LIVE_READ_ONLY",
+        authority_class: "NO_TRADING_AUTHORITY",
+        runtime_real_write_gate: "CLOSED",
+        server_fact_cutoff: cutoff,
+        view_retrieved_at: cutoff,
+        open_activation_count: 0,
+        database_name: "halpha_demo",
+        account_snapshot_status: "CURRENT",
+        account_snapshot_ref: snapshotRef,
+        account_snapshot_cutoff: cutoff,
+        account_snapshot_age_seconds: 1,
+        account_ordinary_open_order_count: 3,
+        account_algo_open_order_count: 1,
+        account_positions: [{
+          snapshot_ref: snapshotRef,
+          instrument_ref: "SOLUSDT-PERP",
+          symbol: "SOLUSDT",
+          direction: "SHORT",
+          position_side: "SHORT",
+          quantity: "-2.5",
+          absolute_quantity: "2.5",
+          entry_price: "152.25",
+          break_even_price: "152.31",
+          mark_price: "154",
+          unrealized_pnl: "-4.375",
+          liquidation_price: "271.8",
+          leverage: 3,
+          margin_mode: "CROSS",
+          notional: "-385",
+          isolated_margin: "0",
+          fact_cutoff: cutoff,
+          origin: "EXTERNAL_UNMANAGED",
+          management_status: "OBSERVED_ONLY",
+          takeover_allowed: false,
+          takeover_blockers: [
+            "READ_ONLY_CREDENTIAL",
+            "OPEN_ORDERS_REQUIRE_RECONCILIATION",
+          ],
+        }],
+        account_orders: accountOrders,
+      },
+    });
+  });
+  await page.route("**/api/v1/account-position-operations/preview", async (route) => {
+    const payload = route.request().postDataJSON() as {
+      operation: "REDUCE" | "CLOSE" | "ADD";
+      requested_quantity: string | null;
+      requested_notional: string | null;
+    };
+    previewedOperations.push(payload.operation);
+    const reduction = payload.operation === "CLOSE"
+      ? "2.5"
+      : payload.operation === "REDUCE" ? payload.requested_quantity ?? "1.25" : "0";
+    const target = payload.operation === "CLOSE"
+      ? "0"
+      : payload.operation === "REDUCE" ? String(2.5 - Number(reduction)) : null;
+    const newExposure = payload.operation === "ADD";
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        operation: payload.operation,
+        snapshot_ref: snapshotRef,
+        fact_cutoff: cutoff,
+        instrument_ref: "SOLUSDT-PERP",
+        position_side: "SHORT",
+        direction: "SHORT",
+        preparation_allowed: true,
+        activation_allowed: false,
+        venue_action_created: false,
+        blockers: [
+          "READ_ONLY_CREDENTIAL",
+          "OPEN_ORDERS_REQUIRE_RECONCILIATION",
+        ],
+        plan_prefill: {
+          kind: newExposure ? "NEW_EXPOSURE" : "POSITION_DISPOSITION",
+          plan_name: newExposure ? "SOLUSDT-PERP 独立追加开仓" : `SOLUSDT-PERP ${payload.operation === "CLOSE" ? "平仓" : "减仓"}处置`,
+          instrument_ref: "SOLUSDT-PERP",
+          direction: "SHORT",
+          trade_amount: newExposure ? payload.requested_notional ?? "100" : String(Number(reduction) * 154),
+          valid_minutes: 60,
+          baseline_quantity: "2.5",
+          target_quantity_after: target,
+          position_alignment: newExposure ? null : {
+            schema_version: "HALPHA_POSITION_ALIGNMENT_V1",
+            operation: payload.operation,
+            snapshot_ref: snapshotRef,
+            fact_cutoff: cutoff,
+            account_ref: "binance-usdm-copy-lead-primary",
+            venue_ref: "BINANCE_USDM",
+            instrument_ref: "SOLUSDT-PERP",
+            direction: "SHORT",
+            position_side: "SHORT",
+            baseline_quantity: "2.5",
+            requested_reduction_quantity: reduction,
+            target_quantity_after: target,
+            baseline_entry_price: "152.25",
+            baseline_mark_price: "154",
+          },
+        },
+      },
+    });
+  });
+  await page.route(/\/api\/v1\/activations(?:\?.*)?$/, async (route) => {
+    await route.fulfill({ contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/reviews**", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/strategies", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: "[]" });
+  });
+
+  await page.goto("/overview");
+
+  await expect(page.getByRole("tab", { name: "当前仓位（1）" })).toBeVisible();
+  const accountPositions = page.getByRole("region", { name: "交易所账户当前仓位" });
+  await expect(accountPositions).toContainText("SOLUSDT-PERP");
+  await expect(accountPositions).toContainText("外部");
+  await expect(accountPositions).toContainText("未实现盈亏");
+  await expect(accountPositions).toContainText("-4.375 USDT");
+  await expect(accountPositions).toContainText("SHORT");
+  await expect(accountPositions).toContainText("3× · 全仓");
+  const ordersTab = page.getByRole("tab", { name: "当前委托（4）" });
+  await ordersTab.click();
+  const accountOrderTable = page.getByRole("region", { name: "交易所账户当前委托" });
+  await expect(accountOrderTable).toContainText("普通");
+  await expect(accountOrderTable).toContainText("条件");
+  await expect(accountOrderTable).toContainText("160");
+  await page.getByRole("tab", { name: "当前仓位（1）" }).click();
+  const operationButton = accountPositions.getByRole("button", { name: "策略调整" });
+  await expect(operationButton).toBeEnabled();
+  await operationButton.click();
+  const dialog = page.getByRole("dialog", { name: "策略计划对齐 · SOLUSDT-PERP" });
+  await expect(dialog).toContainText("做空 · SHORT");
+  await expect(dialog).toContainText("既有入场仍为外部事实，不计入 Halpha ENTRY 或策略盈亏");
+  await dialog.getByRole("button", { name: "核对计划对齐" }).click();
+  await expect(dialog).toContainText("当前 API Key 只读，不能向交易所提交订单");
+  await expect(dialog).toContainText("账户仍有未结普通或条件委托，必须先逐笔核对");
+  await expect(dialog).toContainText("本次仅完成预检；尚未创建执行动作，也未向 Binance 发出请求");
+  await expect(dialog.getByRole("button", { name: "创建处置计划草稿" })).toBeDisabled();
+  expect(previewedOperations).toEqual(["REDUCE"]);
+  await dialog.getByRole("button", { name: "平仓", exact: true }).click();
+  await expect(dialog).toContainText("目标数量为 0");
+  await dialog.getByRole("button", { name: "核对计划对齐" }).click();
+  await expect.poll(() => previewedOperations.join(",")).toBe("REDUCE,CLOSE");
+  await assertAccessible(page, testInfo, "external-position-read-only-takeover");
+  await testInfo.attach(`external-position-${testInfo.project.name}.png`, {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  await routeCurrentDemoMarketContext(page);
+  await routeCurrentDemoMarketWindow(page);
+  await routeValidOrderSchedulePreview(page);
+  await dialog.getByRole("button", { name: "追加开仓", exact: true }).click();
+  await dialog.getByRole("button", { name: "核对计划对齐" }).click();
+  await expect.poll(() => previewedOperations.join(",")).toBe("REDUCE,CLOSE,ADD");
+  await expect(dialog).toContainText("已形成独立新增风险计划预填，但当前不能激活或提交交易所");
+  await dialog.getByRole("button", { name: "查看独立开仓计划" }).click();
+  await expect(page).toHaveURL(/positionOperation=ADD/);
+  await expect(page.getByRole("heading", { name: "独立追加开仓" })).toBeVisible();
+  await expect(page.getByText("SOLUSDT-PERP", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "做空", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("textbox", { name: "资金上限（USDT）" })).toHaveValue("96.25");
+  await expect(page.getByText("这是独立的新风险计划")).toBeVisible();
+});
+
+test("overview exposes a venue-confirmed working entry order before the plan has a position", async ({ page }) => {
+  const activationId = "overview-working-entry";
+  let detailRequestCount = 0;
+  await page.route(/\/api\/v1\/activations(?:\?.*)?$/, async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify([{
+        activation_id: activationId,
+        plan_version_ref: "overview-plan-version",
+        plan_name: "Overview working Maker",
+        instrument_ref: "BTCUSDT-PERP",
+        direction: "SHORT",
+        lifecycle: "RUNNING",
+        run_state: "ACTIVE",
+        pause_reason: null,
+        protection_state: "NONE",
+        state_version: 1,
+        has_entry_fill: false,
+        rule_state: {
+          deadlines: {
+            entry_valid_until: new Date(Date.now() + 30 * 60_000).toISOString(),
+          },
+        },
+        created_at: "2026-07-28T07:45:00Z",
+        updated_at: "2026-07-28T07:45:00Z",
+        result_ref: null,
+        closure_reason_code: null,
+        primary_result: null,
+        trade_result: null,
+      }]),
+    });
+  });
+  await page.route(new RegExp(`/api/v1/activations/${activationId}(?:\\?.*)?$`), async (route) => {
+    detailRequestCount += 1;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        activation: {
+          activation_id: activationId,
+          has_entry_fill: false,
+        },
+        trade_result: {
+          position_quantity: "0",
+        },
+        execution_actions: [{
+          execution_action_id: "working-entry-action",
+          action_kind: "ENTRY",
+          state: "OPEN",
+          action_terms: {
+            price: "63570",
+            quantity: "0.0078",
+            execution_context: {
+              venue_policy: {
+                post_only: true,
+              },
+            },
+          },
+        }],
+        venue_facts: [{
+          kind: "ORDER_STATE",
+          action_ref: "working-entry-action",
+          payload: {
+            status: "WORKING",
+          },
+        }],
+      }),
+    });
+  });
+  await page.route("**/api/v1/reviews**", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: "[]" });
+  });
+
+  await page.goto("/overview");
+
+  await expect.poll(() => detailRequestCount).toBeGreaterThan(0);
+  const runningPlans = page.getByRole("heading", { name: "运行中的计划" }).locator("..");
+  await expect(runningPlans).toContainText("Overview working Maker");
+  await expect(runningPlans).toContainText("交易所工作中");
+  await expect(runningPlans).toContainText("Maker");
+  await expect(runningPlans).toContainText("63,570.00 USDT");
+  await expect(runningPlans).toContainText("0.0078 BTC");
+  await expect(runningPlans).toContainText("495.846 USDT");
+});
+
+test("running plan distinguishes the submitted order deadline from the later plan validity", async ({ page }) => {
+  const activationId = "runtime-entry-deadline";
+  const submittedAt = new Date(Date.now()).toISOString();
+  const planValidUntil = new Date(Date.now() + 60 * 60_000).toISOString();
+  await routeCurrentDemoMarketStream(page);
+  await page.route(
+    new RegExp(`/api/v1/activations/${activationId}/timeline(?:\\?.*)?$`),
+    async (route) => {
+      await route.fulfill({ contentType: "application/json", body: "[]" });
+    },
+  );
+  await page.route(
+    new RegExp(`/api/v1/activations/${activationId}(?:\\?.*)?$`),
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          activation: {
+            activation_id: activationId,
+            instrument_ref: "BTCUSDT-PERP",
+            direction: "SHORT",
+            lifecycle: "RUNNING",
+            run_state: "ACTIVE",
+            protection_state: "NONE",
+            has_entry_fill: false,
+            state_version: 1,
+            created_at: submittedAt,
+            updated_at: submittedAt,
+            rule_state: {
+              deadlines: {
+                entry_valid_until: planValidUntil,
+              },
+            },
+          },
+          plan: {
+            plan_name: "委托期限展示回归",
+            created_at: submittedAt,
+          },
+          capital: {
+            max_notional: "500",
+          },
+          decision_basis: {
+            kind: "DIRECT_EXECUTION",
+            decision_basis_ref: "DIRECT_EXECUTION@1",
+          },
+          order_schedule: {
+            valid: true,
+            schedule_spec: {
+              price_distribution: {
+                kind: "SINGLE",
+                limit_price: "63570",
+              },
+              amount_distribution: {
+                mode: "FIXED",
+                direction: "LOW_TO_HIGH",
+                base_notional: "500",
+                linear_step: "0",
+                exponential_ratio: "2",
+                custom_notionals: [],
+              },
+              venue_policy: {
+                order_type: "LIMIT",
+                time_in_force: "GTC",
+                post_only: true,
+                price_match: null,
+                expire_at: null,
+              },
+              submission_mode: "SERIAL_PROTECTED",
+              submission_order: "HIGH_TO_LOW",
+              entry_conditions: {
+                operator: "ALL",
+                items: [{ kind: "DECISION_BASIS_READY" }],
+              },
+              protection_policy: {
+                initial_stop: {
+                  distance_bps: "40",
+                  trigger_source: "MARK_PRICE",
+                  coverage: "EACH_CONFIRMED_FILL",
+                },
+                take_profit_ladder: null,
+                time_exit_seconds: 3600,
+              },
+              dynamic_rules: [{
+                kind: "EXPIRE_REMAINING",
+                after_seconds: 2700,
+              }],
+            },
+            normalized_legs: [{
+              leg_index: 0,
+              leg_count: 1,
+              raw_price: "63570",
+              price: "63570",
+              sizing_price: "63570",
+              requested_notional: "500",
+              quantity: "0.0078",
+              effective_notional: "495.846",
+            }],
+            instrument_rules: {
+              price_tick_size: "0.1",
+            },
+          },
+          trade_result: {
+            calculation_complete: false,
+            position_quantity: "0",
+            fill_count: 0,
+            fills: [],
+          },
+          position_attribution: {
+            activation_signed_position: "0",
+            venue_account_signed_position: "0",
+            attributed_account_signed_position: "0",
+            reconciliation_status: "MATCH",
+          },
+          execution_actions: [{
+            execution_action_id: "entry-deadline-action",
+            action_kind: "ENTRY",
+            state: "OPEN",
+            client_order_id: "entry-deadline-client",
+            created_at: submittedAt,
+            call_started_at: submittedAt,
+            updated_at: submittedAt,
+            action_terms: {
+              price: "63570",
+              quantity: "0.0078",
+              direction: "SHORT",
+              order_type: "LIMIT",
+              action_profile: "ENTRY_LIMIT",
+              execution_context: {
+                venue_policy: {
+                  post_only: true,
+                },
+                dynamic_rules: [{
+                  kind: "EXPIRE_REMAINING",
+                  after_seconds: 2700,
+                }],
+              },
+            },
+          }],
+          venue_facts: [{
+            kind: "ORDER_STATE",
+            action_ref: "entry-deadline-action",
+            cutoff: submittedAt,
+            payload: {
+              status: "WORKING",
+            },
+          }],
+          receipts: [],
+          stopped_categories: [],
+          stop_evidence: [],
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/activations/${activationId}`);
+
+  await expect(page.getByText("未成交委托最迟撤销", { exact: true })).toBeVisible();
+  await expect(page.getByText("剩余 45 分钟", { exact: true })).toBeVisible();
+  await expect(page.getByText("计划有效期", { exact: true })).toBeVisible();
+  await expect(page.getByText("剩余 1 小时", { exact: true })).toBeVisible();
+  await page.getByText("剩余 45 分钟", { exact: true }).hover();
+  await expect(page.getByRole("tooltip")).toContainText("提交后 2700 秒");
+});
+
+test("review summary stays compact while trade records retain classification and exit evidence", async ({ page }) => {
+  const reviews = [
+    {
+      direction: "LONG",
+      grossPnl: "1",
+      netPnl: "-1",
+      commission: "2",
+      liquidity: "MAKER",
+      exitKind: "EXIT",
+      classification: "TRADE_DECISION_ISSUE",
+    },
+    {
+      direction: "LONG",
+      grossPnl: "-1",
+      netPnl: "-2",
+      commission: "1",
+      liquidity: "MAKER",
+      exitKind: "PROTECTION",
+      classification: "TOOLING_ISSUE",
+    },
+    {
+      direction: "SHORT",
+      grossPnl: "-1",
+      netPnl: "-2",
+      commission: "1",
+      liquidity: "TAKER",
+      exitKind: "EXIT",
+      classification: "USABLE_SAMPLE",
+    },
+  ].map((item, index) => {
+    const closedAt = `2026-07-27T00:0${index}:00Z`;
+    return {
+      review_id: `attribution-review-${index}`,
+      activation_id: `attribution-activation-${index}`,
+      status: "COMPLETE",
+      primary_result: "COMPLETED",
+      fact_cutoff: closedAt,
+      evaluations: {
+        owner_conclusion: {
+          result: item.classification,
+        },
+      },
+      trade_context: {
+        instrument_ref: "BTCUSDT-PERP",
+        direction: item.direction,
+        decision_basis_ref: "DIRECT_EXECUTION@1",
+        plan_name: `Attribution ${index}`,
+      },
+      resolved_trade_result: {
+        closed: true,
+        calculation_complete: true,
+        commission_complete: true,
+        strategy_attribution_complete: true,
+        result_scope: "HALPHA_ATTRIBUTED_ACTIONS",
+        gross_pnl: item.grossPnl,
+        net_pnl: item.netPnl,
+        commission: item.commission,
+        first_fill_time: closedAt,
+        last_fill_time: closedAt,
+        fills: [
+          {
+            action_kind: "ENTRY",
+            liquidity_side: item.liquidity,
+            fill_time: closedAt,
+          },
+          {
+            action_kind: item.exitKind,
+            liquidity_side: "TAKER",
+            fill_time: closedAt,
+          },
+        ],
+      },
+    };
+  });
+  await page.route("**/api/v1/reviews**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(reviews),
+    });
+  });
+
+  await page.goto("/reviews");
+
+  await expect(page.getByText("当前闭合样本归因", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("账户累计净盈亏", { exact: true }).locator(".."))
+    .toContainText("-5.00 USDT");
+  await expect(page.getByText("账户累计手续费", { exact: true }).locator(".."))
+    .toContainText("4.00 USDT");
+  await expect(page.getByText("策略当前连亏", { exact: true }).locator(".."))
+    .toContainText("2 笔");
+  await expect(page.getByRole("tab", { name: "阶段性复盘" })).toBeVisible();
+  const records = page.getByRole("table", { name: "交易与复盘记录" });
+  await expect(records).toContainText("交易决策需改进");
+  await expect(records).toContainText("工具问题影响");
+  await expect(records).toContainText("可用交易样本");
+  await expect(records).toContainText("计划退出");
+  await expect(records).toContainText("保护止损");
+  await page.getByRole("combobox", { name: "复盘分类" }).click();
+  await expect(page.getByRole("option", { name: "待评价" })).toBeVisible();
+  await page.keyboard.press("Escape");
+});
+
+test("one Demo launch click reuses the existing save, fix, preview, and activation contracts", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Quick-start orchestration is viewport-independent and is covered once on desktop.",
+  );
+  const calls: string[] = [];
+  const idempotencyKeys: string[] = [];
+  await routeCurrentDemoMarketStream(page);
+  await routeReadyDemoExecutor(page);
+  await page.route(/\/api\/v1\/plans(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    calls.push("SAVE_DRAFT");
+    idempotencyKeys.push(await request.headerValue("idempotency-key") ?? "");
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        plan_id: "synthetic-quick-plan",
+        draft_version: 1,
+      }),
+    });
+  });
+  await page.route("**/api/v1/plans/synthetic-quick-plan/fix", async (route) => {
+    calls.push("FIX_PLAN");
+    idempotencyKeys.push(await route.request().headerValue("idempotency-key") ?? "");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        plan_version_id: "synthetic-quick-version",
+      }),
+    });
+  });
+  await page.route(
+    "**/api/v1/plan-versions/synthetic-quick-version/activation-preview",
+    async (route) => {
+      calls.push("ACTIVATION_PREVIEW");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          product_build_consistent: true,
+          executor_status: "READY",
+          order_schedule_snapshot: { valid: true },
+          expected_schedule_digest: "a".repeat(64),
+        }),
+      });
+    },
+  );
+  await page.route(/\/api\/v1\/activations(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    calls.push("CREATE_ACTIVATION");
+    idempotencyKeys.push(await request.headerValue("idempotency-key") ?? "");
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        activation: { activation_id: "synthetic-quick-activation" },
+      }),
+    });
+  });
+
+  await page.goto("/plans/new?mode=direct");
+  await openDirectReview(page);
+  const launch = page.getByRole("button", {
+    name: "创建并启动 Demo",
+    exact: true,
+  });
+  await expect(launch).toBeEnabled({ timeout: 20_000 });
+  await launch.click();
+
+  await expect(page).toHaveURL(/\/activations\/synthetic-quick-activation$/);
+  expect(calls).toEqual([
+    "SAVE_DRAFT",
+    "FIX_PLAN",
+    "ACTIVATION_PREVIEW",
+    "CREATE_ACTIVATION",
+  ]);
+  expect(idempotencyKeys).toHaveLength(3);
+  expect(idempotencyKeys.every(Boolean)).toBe(true);
+});
+
+test("direct execution milestones compose entry and exit capabilities without hidden residue", async ({ page }) => {
+  test.setTimeout(45_000);
+  const tradingWrites: string[] = [];
+  await addBrowserScopedCsrfCookie(page);
+  await routeCurrentDemoMarketStream(page);
+  await routeCurrentDemoMarketWindow(page);
+  await routeCurrentDemoMarketContext(page);
+  await routeReadyDemoExecutor(page);
+  await routeValidOrderSchedulePreview(page);
+  page.on("request", (request) => {
+    const pathname = new URL(request.url()).pathname;
+    if (
+      request.method() !== "GET"
+      && request.method() !== "HEAD"
+      && (pathname === "/api/v1/plans" || pathname === "/api/v1/activations")
+    ) {
+      tradingWrites.push(`${request.method()} ${pathname}`);
+    }
+  });
+
+  await page.goto("/plans/new?mode=direct");
+  await expect(page.getByText("65,001.00", { exact: true })).toHaveText("65,001.00", {
+    timeout: 15_000,
+  });
+  const milestones = page.getByRole("navigation", { name: "计划创建步骤" });
+  await expect(milestones.getByRole("button")).toHaveCount(4);
+  await expect(page.getByRole("radio", {
+    name: "一次性入场 条件满足后提交一笔",
+  })).toBeChecked();
+  await expect(milestones.getByRole("button", { name: "1 入场" }))
+    .toHaveAttribute("aria-current", "step");
+
+  await page.getByRole("radio", {
+    name: "事件触发入场 价格或短时异动触发",
+  }).click();
+  await expect(page.getByRole("heading", { name: "入场前置条件" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "移除短时异动" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "限价", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("switch", { name: "Maker only" })).toBeEnabled();
+
+  await page.getByRole("radio", {
+    name: "价格区间分批 多个价格档依次入场",
+  }).click();
+  await expect(page.getByRole("heading", { name: "入场前置条件" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "市价", exact: true })).toBeDisabled();
+  await expect(page.getByRole("switch", { name: "Maker only" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "＋ 添加入场条件或管理规则" }).click();
+  await expect(page.getByLabel("入场扩展目录")).toContainText("入场前置条件");
+  await expect(page.getByLabel("入场扩展目录")).toContainText("撤单与失效");
+  await page.getByRole("button", {
+    name: "到价触发 · 标记价达到指定价格",
+  }).click();
+  await expect(page.getByRole("button", { name: "移除到价触发" })).toBeVisible();
+  const markPriceInput = page.getByLabel("标记价格（USDT）");
+  await expect(markPriceInput).toBeVisible();
+  // Make the test independent from the websocket/reference-price render tick.
+  // The product must still reject a blank trigger, but this composition test
+  // is validating capability residue rather than the blank-field branch.
+  await markPriceInput.fill("65001");
+
+  await openDirectMilestone(page, "2 保护");
+  await page.getByRole("button", { name: "＋ 添加成交后动态止损" }).click();
+  const dynamicStopCatalog = page.getByLabel("动态止损目录");
+  await expect(dynamicStopCatalog).toContainText("离散触发");
+  await expect(dynamicStopCatalog).toContainText("连续收紧");
+  await page.getByRole("button", {
+    name: "峰值比例锁盈 · 达到 1R 后锁定峰值盈利的 50%",
+  }).click();
+  await expect(page.getByText("连续动态止损", { exact: true })).toBeVisible();
+
+  await openDirectMilestone(page, "3 退出");
+  await expect(milestones.getByRole("button", { name: "3 退出" }))
+    .toHaveAttribute("aria-current", "step");
+  await expect(milestones.getByRole("button", { name: "✓ 入场" })).toBeVisible();
+  await expect(milestones.getByRole("button", { name: "✓ 保护" })).toBeVisible();
+  await page.getByRole("button", { name: "＋ 添加退出方式" }).click();
+  await expect(page.getByLabel("退出方式目录")).toContainText("价格目标");
+  await expect(page.getByLabel("退出方式目录")).toContainText("时间约束");
+  await expect(page.getByText("连续收益锁定", { exact: true })).toBeVisible();
+
+  await openDirectMilestone(page, "2 保护");
+  await page.getByRole("button", { name: "＋ 添加成交后动态止损" }).click();
+  await page.getByRole("button", {
+    name: "阶梯保盈 · 1R 保本，2R 后保住 1R",
+  }).click();
+  await openDirectMilestone(page, "3 退出");
+  await expect(page.getByText("连续收益锁定", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("阶梯保盈", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 930, height: 925 });
+  await expect.poll(async () => page.getByTestId("direct-order-config-scroll")
+    .evaluate((element) => element.scrollWidth <= element.clientWidth))
+    .toBe(true);
+
+  await milestones.getByRole("button", { name: "4 核对" }).click();
+  await expect(page.getByRole("heading", { name: "计划概要" })).toBeVisible();
+  await expect(page.getByText("价格区间分批 · 5 档", { exact: true })).toBeVisible();
+  await expect(page.getByText("限价 · GTC · 高→低", { exact: true })).toBeVisible();
+  await expect(page.getByText(
+    "每笔确认成交后建立标记价止损 · 距离 100 bps",
+    { exact: true },
+  )).toBeVisible();
+  await expect(page.getByText(/TP1 2R \/ 100% · 阶梯保盈：1R → 止损 0R、2R → 止损 1R/))
+    .toBeVisible();
+  await expect(page.getByRole("heading", { name: "服务端预览" })).toBeVisible();
+  await expect(page.getByText(/预览可保存 ·/)).toBeVisible({ timeout: 20_000 });
+  expect(tradingWrites).toEqual([]);
+});
+
+test("direct execution uses one live stream while chart timeframes switch", async ({ page }, testInfo) => {
+  test.setTimeout(45_000);
+  const marketWindowIntervals: string[] = [];
+  const marketWindowPurposes: string[] = [];
+  const attemptedTradingWrites: string[] = [];
+  let websocketConnections = 0;
+  let quoteFrames = 0;
+  let barFrames = 0;
+  let previewRequests = 0;
+  const invalidPreviewRequests: unknown[] = [];
+  let streamInterval: "15m" | "1h" | "1m" = "15m";
+  let nextLiveReferencePrice = 65_001;
+  let routedSocket: {
+    send: (message: string | Buffer) => void;
+  } | null = null;
+  const sendCurrentFrames = (interval: "15m" | "1h" | "1m") => {
+    if (routedSocket === null) return;
+    const timestamp = new Date(Date.now() + 4_000).toISOString();
+    const referencePrice = nextLiveReferencePrice;
+    const intervalMilliseconds = interval === "1m"
+      ? 60_000
+      : interval === "15m"
+        ? 15 * 60_000
+        : 60 * 60_000;
+    const openAt = Date.parse("2026-07-23T11:30:00.000Z");
+    nextLiveReferencePrice += 1;
+    routedSocket.send(JSON.stringify({
+      type: "status",
+      state: "LIVE",
+      source: "BINANCE_DEMO_PUBLIC",
+      observed_at: timestamp,
+      reason: null,
+    }));
+    routedSocket.send(JSON.stringify({
+      type: "quote",
+      instrument_ref: "BTCUSDT-PERP",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: timestamp,
+      received_at: timestamp,
+      bid_price: String(referencePrice - 1),
+      ask_price: String(referencePrice + 1),
+      reference_price: String(referencePrice),
+    }));
+    routedSocket.send(JSON.stringify({
+      type: "bar",
+      instrument_ref: "BTCUSDT-PERP",
+      interval,
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: timestamp,
+      received_at: timestamp,
+      closed: false,
+      bar: {
+        open_at: new Date(openAt).toISOString(),
+        close_at: new Date(openAt + intervalMilliseconds).toISOString(),
+        open: String(referencePrice),
+        high: String(referencePrice + 5),
+        low: String(referencePrice - 5),
+        close: String(referencePrice),
+        volume: "10",
+      },
+    }));
+    quoteFrames += 1;
+    barFrames += 1;
+  };
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    websocketConnections += 1;
+    routedSocket = socket;
+    sendCurrentFrames(streamInterval);
+    const timer = setInterval(() => sendCurrentFrames(streamInterval), 1_000);
+    socket.onClose(() => clearInterval(timer));
+  });
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/v1/market-window") {
+      marketWindowIntervals.push(url.searchParams.get("interval") ?? "");
+      marketWindowPurposes.push(url.searchParams.get("purpose") ?? "");
+    }
+    if (url.pathname === "/api/v1/order-schedules/preview") {
+      previewRequests += 1;
+      const payload = request.postDataJSON() as {
+        spec?: {
+          price_distribution?: { kind?: string; limit_price?: string | null };
+          venue_policy?: { order_type?: string };
+        };
+      };
+      const pricePlan = payload.spec?.price_distribution;
+      if (
+        payload.spec?.venue_policy?.order_type === "LIMIT"
+        && pricePlan?.kind === "SINGLE"
+        && !(Number(pricePlan.limit_price) > 0)
+      ) {
+        invalidPreviewRequests.push(payload);
+      }
+    }
+  });
+  await page.route(/\/api\/v1\/plans(?:\/.*)?(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "GET" && request.method() !== "HEAD") {
+      attemptedTradingWrites.push(request.url());
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  await page.route(/\/api\/v1\/activations(?:\/.*)?(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "GET" && request.method() !== "HEAD") {
+      attemptedTradingWrites.push(request.url());
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  const chartRegion = page.locator('section[aria-labelledby="order-schedule-chart-title"]');
+  await expect(chartRegion).toBeVisible();
+  await expect(page.getByText("实时", { exact: true }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect.poll(() => quoteFrames, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+  await expect.poll(() => barFrames, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+  await expect(chartRegion.getByRole("status")).toHaveCount(0, { timeout: 15_000 });
+  await expect(chartRegion.getByTestId("order-schedule-chart-market-source"))
+    .toHaveText("Demo · Binance K线");
+  const chart = chartRegion.getByTestId("order-schedule-kline-chart");
+  const annotationScaleToggle = chartRegion.getByRole("checkbox", {
+    name: "全部价格标注纳入缩放",
+  });
+  await expect(annotationScaleToggle).not.toBeChecked();
+  await expect(chart).toHaveAttribute("data-annotations-in-scale", "false");
+  await annotationScaleToggle.check();
+  await expect(chart).toHaveAttribute("data-annotations-in-scale", "true");
+
+  const selectInterval = async (interval: "1m" | "1h") => {
+    if (testInfo.project.name === "chromium-narrow") {
+      await chartRegion.getByLabel("K 线周期").click();
+      await page.getByRole("option", { name: interval, exact: true }).click();
+    } else {
+      await chartRegion
+        .getByRole("group", { name: "K 线周期" })
+        .getByRole("button", { name: interval, exact: true })
+        .click();
+    }
+    streamInterval = interval;
+    sendCurrentFrames(interval);
+    await expect(chartRegion.getByRole("heading", {
+      name: `${interval} K 线 · 草稿投影`,
+      exact: true,
+    })).toBeVisible();
+    await expect.poll(
+      () => marketWindowIntervals.filter((value) => value === interval).length,
+      { timeout: 15_000 },
+    ).toBeGreaterThanOrEqual(1);
+    await expect(chartRegion.getByRole("status")).toHaveCount(0, { timeout: 15_000 });
+  };
+
+  await selectInterval("1h");
+  await expect(annotationScaleToggle).toBeChecked();
+  await expect(chart).toHaveAttribute("data-annotations-in-scale", "true");
+  await selectInterval("1m");
+  await annotationScaleToggle.uncheck();
+  await expect(chart).toHaveAttribute("data-annotations-in-scale", "false");
+  await openDirectReview(page);
+  const saveButton = page.getByRole("button", { name: "保存草稿", exact: true });
+  await expect(saveButton).toBeEnabled({
+    timeout: 15_000,
+  });
+  const previewBaseline = previewRequests;
+  const quoteBaseline = quoteFrames;
+  for (let index = 0; index < 3; index += 1) {
+    sendCurrentFrames(streamInterval);
+    await page.waitForTimeout(300);
+    expect(
+      previewRequests,
+      `第 ${index + 1} 个实时行情 tick 不得重发订单计划预览`,
+    ).toBe(previewBaseline);
+    await expect(saveButton).toBeEnabled();
+  }
+  await expect.poll(() => quoteFrames).toBeGreaterThanOrEqual(quoteBaseline + 3);
+  expect(
+    previewRequests,
+    "实时行情 tick 不得持续触发订单计划预览",
+  ).toBe(previewBaseline);
+  expect(websocketConnections).toBe(1);
+  expect(new Set(marketWindowPurposes)).toEqual(new Set(["EXECUTION_REVIEW"]));
+  expect(invalidPreviewRequests).toEqual([]);
+  expect(attemptedTradingWrites).toEqual([]);
+  if (testInfo.project.name === "chromium-narrow") {
+    const milestones = page.getByTestId("direct-order-milestones");
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(async () => (await milestones.boundingBox())?.y ?? -1)
+      .toBeGreaterThanOrEqual(95);
+  }
+});
+
+test("unknown plan creation reuses its request identity until the user changes the intent", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Request identity semantics are viewport-independent and are covered once on desktop.",
+  );
+  test.setTimeout(45_000);
+  const idempotencyKeys: string[] = [];
+  let createAttempts = 0;
+  await routeCurrentDemoMarketStream(page);
+
+  await page.route(/\/api\/v1\/plans(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    createAttempts += 1;
+    idempotencyKeys.push(await request.headerValue("idempotency-key") ?? "");
+    if (createAttempts === 1) {
+      await route.abort("failed");
+      return;
+    }
+    if (createAttempts === 2) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: { code: "SYNTHETIC_RESULT_UNKNOWN" } }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ plan: { plan_id: "synthetic-plan-create" } }),
+    });
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  await openDirectReview(page);
+  await expect(page.getByRole("heading", { name: "计划信息", exact: true })).toBeVisible();
+  await page.getByLabel("计划名称").fill("持久幂等身份验证");
+  const saveButton = page.getByRole("button", { name: "保存草稿", exact: true });
+  await expect(saveButton).toBeEnabled({ timeout: 20_000 });
+
+  await saveButton.click();
+  await expect(page.getByRole("alert").filter({
+    hasText: "再次提交会沿用同一请求身份核对原结果",
+  })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  await openDirectReview(page);
+  await expect(page.getByRole("heading", { name: "计划信息", exact: true })).toBeVisible();
+  await page.getByLabel("计划名称").fill("持久幂等身份验证");
+  const reloadedSaveButton = page.getByRole("button", { name: "保存草稿", exact: true });
+  await expect(reloadedSaveButton).toBeEnabled({ timeout: 20_000 });
+  await reloadedSaveButton.click();
+  await expect.poll(() => idempotencyKeys.length).toBe(2);
+  expect(idempotencyKeys[0]).toBeTruthy();
+  expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
+
+  await page.getByLabel("计划名称").fill("持久幂等身份验证-新意图");
+  await expect(reloadedSaveButton).toBeEnabled({ timeout: 20_000 });
+  await reloadedSaveButton.click();
+  await expect(page).toHaveURL(/\/plans$/);
+  expect(idempotencyKeys).toHaveLength(3);
+  expect(idempotencyKeys[2]).toBeTruthy();
+  expect(idempotencyKeys[2]).not.toBe(idempotencyKeys[0]);
+});
+
+test("an unknown draft update reloads and shows the applied server version", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Unknown-update reconciliation is viewport-independent and is covered once on desktop.",
+  );
+  const planId = "synthetic-edit-applied";
+  let serverVersion = 1;
+  let serverPlanName = "原始直接执行草稿";
+  let reads = 0;
+  await routeCurrentDemoMarketStream(page);
+  await page.route(`**/api/v1/plans/${planId}`, async (route) => {
+    const request = route.request();
+    if (request.method() === "PUT") {
+      const payload = request.postDataJSON() as { plan_name?: string };
+      serverVersion = 2;
+      serverPlanName = payload.plan_name ?? serverPlanName;
+      await route.abort("connectionreset");
+      return;
+    }
+    reads += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(syntheticDirectDraft(
+        planId,
+        serverVersion,
+        serverPlanName,
+      )),
+    });
+  });
+
+  await page.goto("/plans");
+  await page.evaluate((nextPlanId) => {
+    window.history.pushState({}, "", `/plans/${nextPlanId}/edit`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, planId);
+  await expect(page).toHaveURL(new RegExp(`/plans/${planId}/edit$`));
+  await openDirectReview(page);
+  await expect(page.getByRole("heading", { name: "计划信息", exact: true })).toBeVisible();
+  const planName = page.getByLabel("计划名称");
+  await expect(planName).toHaveValue("原始直接执行草稿");
+  await planName.fill("服务器已应用的草稿");
+  const saveButton = page.getByRole("button", { name: "保存计划修改" });
+  await expect(saveButton).toBeEnabled({ timeout: 20_000 });
+  await saveButton.click();
+
+  await expect(page.getByRole("alert").filter({
+    hasText: "服务器草稿已刷新至版本 2",
+  })).toBeVisible();
+  await expect(planName).toHaveValue("服务器已应用的草稿");
+  expect(reads).toBeGreaterThanOrEqual(2);
+});
+
+test("a failed unknown-update reload remains blocked until retry succeeds", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Unknown-update reconciliation is viewport-independent and is covered once on desktop.",
+  );
+  const planId = "synthetic-edit-retry";
+  let reads = 0;
+  let recoveryAvailable = false;
+  await routeCurrentDemoMarketStream(page);
+  await page.route(`**/api/v1/plans/${planId}`, async (route) => {
+    const request = route.request();
+    if (request.method() === "PUT") {
+      await route.abort("connectionreset");
+      return;
+    }
+    reads += 1;
+    if (reads > 1 && !recoveryAvailable) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: { code: "SYNTHETIC_PLAN_READ_FAILED" } }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(syntheticDirectDraft(
+        planId,
+        1,
+        "服务器原始草稿",
+      )),
+    });
+  });
+
+  await page.goto("/plans");
+  await page.evaluate((nextPlanId) => {
+    window.history.pushState({}, "", `/plans/${nextPlanId}/edit`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, planId);
+  await expect(page).toHaveURL(new RegExp(`/plans/${planId}/edit$`));
+  await openDirectReview(page);
+  await expect(page.getByRole("heading", { name: "计划信息", exact: true })).toBeVisible();
+  await page.getByLabel("计划名称").fill("尚未确认的本地修改");
+  const saveButton = page.getByRole("button", { name: "保存计划修改" });
+  await expect(saveButton).toBeEnabled({ timeout: 20_000 });
+  await saveButton.click();
+
+  const failedAlert = page.getByRole("alert").filter({
+    hasText: "服务器草稿读取失败",
+  });
+  await expect(failedAlert).toBeAttached({ timeout: 20_000 });
+  await failedAlert.scrollIntoViewIfNeeded();
+  await expect(failedAlert).toBeVisible();
+  await expect(saveButton).toBeDisabled();
+  recoveryAvailable = true;
+  await failedAlert.getByRole("button", { name: "重新读取草稿" }).click();
+  await expect(page.getByRole("alert").filter({
+    hasText: "服务器草稿已刷新至版本 1",
+  })).toBeVisible();
+  await expect(page.getByLabel("计划名称")).toHaveValue("服务器原始草稿");
+  await expect(saveButton).toBeEnabled({ timeout: 20_000 });
+  expect(reads).toBeGreaterThanOrEqual(3);
+});
+
+test("LIVE status with stale source timestamps blocks direct execution", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Timestamp freshness is viewport-independent and is covered once on desktop.",
+  );
+  const staleAt = new Date(Date.now() - 30_000).toISOString();
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    socket.send(JSON.stringify({
+      type: "status",
+      state: "LIVE",
+      source: "BINANCE_DEMO_PUBLIC",
+      observed_at: new Date().toISOString(),
+      reason: null,
+    }));
+    socket.send(JSON.stringify({
+      type: "quote",
+      instrument_ref: "BTCUSDT-PERP",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: staleAt,
+      received_at: new Date().toISOString(),
+      bid_price: "65000",
+      ask_price: "65002",
+      reference_price: "65001",
+    }));
+    socket.send(JSON.stringify({
+      type: "bar",
+      instrument_ref: "BTCUSDT-PERP",
+      interval: "15m",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: staleAt,
+      received_at: new Date().toISOString(),
+      closed: false,
+      bar: {
+        open_at: "2026-07-23T11:30:00.000Z",
+        close_at: "2026-07-23T11:45:00.000Z",
+        open: "65000",
+        high: "65005",
+        low: "64995",
+        close: "65001",
+        volume: "10",
+      },
+    }));
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+
+  await expect(page.getByText("已过期", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "市价", exact: true }).click();
+  await openDirectReview(page);
+  await expect(page.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+  const chart = page.getByTestId("order-schedule-kline-chart");
+  await expect(chart).not.toHaveAttribute("data-market-live-source");
+  await expect(page.getByRole("status").filter({
+    hasText: "价格预览与保存已阻断",
+  })).toBeVisible();
+});
+
+test("an invalid live bar clears the previous bar and keeps direct execution blocked", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Live-bar invalidation is viewport-independent and is covered once on desktop.",
+  );
+  test.setTimeout(60_000);
+  let routedSocket: {
+    send: (message: string | Buffer) => void;
+  } | null = null;
+  let keepCurrentFrames = true;
+  let marketWindowRequests = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/v1/market-window") {
+      marketWindowRequests += 1;
+    }
+  });
+  const currentTimestamp = () => new Date(Date.now() + 4_000).toISOString();
+  const quoteFrame = (timestamp: string) => JSON.stringify({
+    type: "quote",
+    instrument_ref: "BTCUSDT-PERP",
+    source: "BINANCE_DEMO_PUBLIC",
+    source_cutoff: timestamp,
+    received_at: timestamp,
+    bid_price: "65000",
+    ask_price: "65002",
+    reference_price: "65001",
+  });
+  const barFrame = (timestamp: string) => {
+    const observedAt = Date.parse(timestamp);
+    return JSON.stringify({
+      type: "bar",
+      instrument_ref: "BTCUSDT-PERP",
+      interval: "15m",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: timestamp,
+      received_at: timestamp,
+      closed: false,
+      bar: {
+        open_at: new Date(observedAt - 5 * 60_000).toISOString(),
+        close_at: new Date(observedAt + 10 * 60_000).toISOString(),
+        open: "65000",
+        high: "65005",
+        low: "64995",
+        close: "65001",
+        volume: "10",
+      },
+    });
+  };
+
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    routedSocket = socket;
+    const sendCurrentFrames = () => {
+      if (!keepCurrentFrames) return;
+      const timestamp = currentTimestamp();
+      socket.send(JSON.stringify({
+        type: "status",
+        state: "LIVE",
+        source: "BINANCE_DEMO_PUBLIC",
+        observed_at: timestamp,
+        reason: null,
+      }));
+      socket.send(quoteFrame(timestamp));
+      socket.send(barFrame(timestamp));
+    };
+    sendCurrentFrames();
+    const timer = setInterval(sendCurrentFrames, 1_000);
+    socket.onClose(() => clearInterval(timer));
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  const chartRegion = page.locator('section[aria-labelledby="order-schedule-chart-title"]');
+  const chart = chartRegion.getByTestId("order-schedule-kline-chart");
+  await openDirectReview(page);
+  expect(routedSocket).not.toBeNull();
+  const initialAt = currentTimestamp();
+  routedSocket!.send(quoteFrame(initialAt));
+  routedSocket!.send(barFrame(initialAt));
+  const saveButton = page.getByRole("button", { name: "保存草稿", exact: true });
+  await expect(chart).toHaveAttribute(
+    "data-market-live-source",
+    "BINANCE_DEMO_PUBLIC",
+  );
+  await expect(saveButton).toBeEnabled({ timeout: 20_000 });
+  await expect.poll(() => marketWindowRequests).toBeGreaterThanOrEqual(1);
+  const initialMarketWindowRequests = marketWindowRequests;
+
+  keepCurrentFrames = false;
+  const staleAt = new Date(Date.now() - 30_000).toISOString();
+  routedSocket!.send(barFrame(staleAt));
+
+  await expect(chart).not.toHaveAttribute("data-market-live-source");
+  await expect(chartRegion.getByRole("status")).toContainText(
+    "价格预览与保存已阻断",
+  );
+  await expect(saveButton).toBeDisabled();
+
+  keepCurrentFrames = true;
+  const recoveredAt = currentTimestamp();
+  routedSocket!.send(quoteFrame(recoveredAt));
+  routedSocket!.send(barFrame(recoveredAt));
+  await expect.poll(() => marketWindowRequests)
+    .toBeGreaterThan(initialMarketWindowRequests);
+  await expect(chart).toHaveAttribute(
+    "data-market-live-source",
+    "BINANCE_DEMO_PUBLIC",
+  );
+  await expect(saveButton).toBeEnabled({ timeout: 20_000 });
+});
+
+test("runtime environment identity change hard-reloads and discards the old planning workspace", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "The environment boundary is viewport-independent and is covered once on desktop.",
+  );
+  test.setTimeout(30_000);
+  let statusRequests = 0;
+  await page.clock.install();
+  await page.route("**/api/v1/settings/status", async (route) => {
+    const response = await route.fetch();
+    const status = await response.json() as Record<string, unknown>;
+    statusRequests += 1;
+    const switched = statusRequests > 1;
+    await route.fulfill({
+      response,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...status,
+        environment_kind: "DEMO",
+        environment_id: switched ? "e2e-demo-replacement" : "e2e-demo-primary",
+      }),
+    });
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  await expect(page.getByTestId("direct-execution-workspace")).toBeVisible();
+
+  await page.clock.fastForward(30_500);
+  await expect.poll(() => statusRequests, { timeout: 15_000 }).toBeGreaterThanOrEqual(3);
+  await expect(page.getByTestId("direct-execution-workspace")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "交易上下文" }))
+    .toContainText("Demo");
+  await expect(page).toHaveURL(/\/plans\/new$/);
+});
+
+test("the global trading-context switch discards object identity and navigates only to the selected overview", async ({ page }) => {
+  let targetRequestUrl: string | null = null;
+  await page.route("**/api/v1/settings/status", async (route) => {
+    const response = await route.fetch();
+    const status = await response.json() as Record<string, unknown>;
+    await route.fulfill({
+      response,
+      json: {
+        ...status,
+        environment_kind: "DEMO",
+        environment_id: "e2e-demo-primary",
+        account_id: "e2e-demo-account",
+        venue_account_type: "USDM_DEMO",
+        profile: "BINANCE_DEMO",
+        trading_contexts: [
+          {
+            venue_account_type: "USDM_DEMO",
+            environment_id: "e2e-demo-primary",
+            account_id: "e2e-demo-account",
+            url: "http://127.0.0.1:8765/overview",
+          },
+          {
+            venue_account_type: "USDM_COPY_LEAD",
+            environment_id: "e2e-live-copy-primary",
+            account_id: "e2e-live-copy-account",
+            url: "http://127.0.0.1:8766/plans/live-only-id?copyFrom=demo-only-id#orders",
+          },
+          {
+            venue_account_type: "USDM_PERSONAL",
+            environment_id: "e2e-live-personal-primary",
+            account_id: "e2e-live-personal-account",
+            url: "http://127.0.0.1:8767/reviews/personal-only-id",
+          },
+        ],
+      },
+    });
+  });
+  await page.route("http://127.0.0.1:8766/overview", async (route) => {
+    targetRequestUrl = route.request().url();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>Live target</title><main>Live overview target</main>",
+    });
+  });
+
+  await page.goto("/overview?activation_id=demo-only-id#facts");
+  await page.getByRole("combobox", { name: "交易上下文" }).click();
+  await Promise.all([
+    page.getByRole("option", { name: "实盘 · 带单账户" }).click(),
+    expect(page.getByRole("status")).toContainText("正在切换到实盘 · 带单账户"),
+  ]);
+  await expect.poll(() => targetRequestUrl)
+    .toBe("http://127.0.0.1:8766/overview");
+  await expect(page).toHaveURL("http://127.0.0.1:8766/overview");
+});
+
+test("an invalid trading-context target is disabled with a keyboard-readable reason", async ({ page }) => {
+  await page.route("**/api/v1/settings/status", async (route) => {
+    const response = await route.fetch();
+    const status = await response.json() as Record<string, unknown>;
+    await route.fulfill({
+      response,
+      json: {
+        ...status,
+        environment_kind: "DEMO",
+        environment_id: "e2e-demo-primary",
+        account_id: "e2e-demo-account",
+        venue_account_type: "USDM_DEMO",
+        profile: "BINANCE_DEMO",
+        trading_contexts: [
+          {
+            venue_account_type: "USDM_DEMO",
+            environment_id: "e2e-demo-primary",
+            account_id: "e2e-demo-account",
+            url: "http://127.0.0.1:8765/overview",
+          },
+          {
+            venue_account_type: "USDM_COPY_LEAD",
+            environment_id: "e2e-live-copy-primary",
+            account_id: "e2e-live-copy-account",
+            url: "https://example.com/overview",
+          },
+          {
+            venue_account_type: "USDM_PERSONAL",
+            environment_id: "e2e-live-personal-primary",
+            account_id: "e2e-live-personal-account",
+            url: "http://127.0.0.1:8767/overview",
+          },
+        ],
+      },
+    });
+  });
+
+  await page.goto("/overview");
+  await page.getByRole("combobox", { name: "交易上下文" }).click();
+  await expect(page.getByRole("option", { name: "实盘 · 带单账户" }))
+    .toBeDisabled();
+  await page.keyboard.press("Escape");
+  const reason = page.getByRole("button", {
+    name: "至少一个交易上下文入口无效；对应选项已禁用，当前上下文不变。",
+  });
+  await reason.focus();
+  await expect(page.getByRole("tooltip"))
+    .toContainText("至少一个交易上下文入口无效；对应选项已禁用，当前上下文不变。");
+});
+
+test("Demo chart rejects Live history and Live stream frames before a clean reload", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Market-source isolation is viewport-independent and is covered once on desktop.",
+  );
+  let routedSocket: {
+    send: (message: string | Buffer) => void;
+  } | null = null;
+  const marketWindowPurposes: string[] = [];
+  let serveWrongSource = true;
+
+  await page.route("**/api/v1/market-window?**", async (route) => {
+    const url = new URL(route.request().url());
+    marketWindowPurposes.push(url.searchParams.get("purpose") ?? "");
+    const interval = url.searchParams.get("interval") ?? "15m";
+    const intervalMs = interval === "1m"
+      ? 60_000
+      : interval === "5m"
+        ? 5 * 60_000
+        : interval === "15m"
+          ? 15 * 60_000
+          : interval === "1h"
+            ? 60 * 60_000
+            : interval === "4h"
+              ? 4 * 60 * 60_000
+              : 24 * 60 * 60_000;
+    const requestedStart = Date.parse(url.searchParams.get("start_at") ?? "");
+    const startAt = Number.isFinite(requestedStart)
+      ? requestedStart
+      : Date.parse("2026-07-22T00:00:00Z");
+    const bars = Array.from({ length: 12 }, (_value, index) => {
+      const openAt = startAt + index * intervalMs;
+      const open = 65_000 + index * 4;
+      const close = open + (index % 2 === 0 ? 2 : -2);
+      return {
+        open_at: new Date(openAt).toISOString(),
+        close_at: new Date(openAt + intervalMs).toISOString(),
+        open: String(open),
+        high: String(Math.max(open, close) + 3),
+        low: String(Math.min(open, close) - 3),
+        close: String(close),
+        volume: String(10 + index),
+      };
+    });
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        instrument_ref: "BTCUSDT-PERP",
+        interval,
+        source: serveWrongSource ? "BINANCE_LIVE_PUBLIC" : "BINANCE_DEMO_PUBLIC",
+        source_cutoff: url.searchParams.get("end_at") ?? "2026-07-23T10:00:00Z",
+        bars,
+      }),
+    });
+  });
+
+  const streamBar = (source: string) => {
+    const observedAt = new Date(Date.now() + 4_000).toISOString();
+    return JSON.stringify({
+      type: "bar",
+      instrument_ref: "BTCUSDT-PERP",
+      interval: "15m",
+      source,
+      source_cutoff: observedAt,
+      received_at: observedAt,
+      closed: false,
+      bar: {
+        open_at: "2026-07-23T10:00:00.000Z",
+        close_at: "2026-07-23T10:15:00.000Z",
+        open: "65050",
+        high: "65060",
+        low: "65045",
+        close: "65055",
+        volume: "20",
+      },
+    });
+  };
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    routedSocket = socket;
+    const observedAt = new Date().toISOString();
+    socket.send(JSON.stringify({
+      type: "status",
+      state: "LIVE",
+      source: "BINANCE_DEMO_PUBLIC",
+      observed_at: observedAt,
+      reason: null,
+    }));
+    socket.send(JSON.stringify({
+      type: "quote",
+      instrument_ref: "BTCUSDT-PERP",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: observedAt,
+      received_at: observedAt,
+      bid_price: "65049",
+      ask_price: "65051",
+      reference_price: "65050",
+    }));
+    socket.send(streamBar("BINANCE_LIVE_PUBLIC"));
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  const chartRegion = page.locator('section[aria-labelledby="order-schedule-chart-title"]');
+  const chart = chartRegion.getByTestId("order-schedule-kline-chart");
+  await expect(chartRegion.getByRole("status")).toContainText(
+    "K 线来源与当前环境不一致",
+  );
+  expect(new Set(marketWindowPurposes)).toEqual(new Set(["EXECUTION_REVIEW"]));
+  await expect(chart).not.toHaveAttribute("data-market-history-source");
+  await expect(chart).not.toHaveAttribute("data-market-live-source");
+  await expect(chartRegion.getByRole("status")).toContainText(
+    "K 线来源与当前环境不一致",
+  );
+
+  expect(routedSocket).not.toBeNull();
+  serveWrongSource = false;
+  const recoveredAt = new Date().toISOString();
+  routedSocket!.send(JSON.stringify({
+    type: "status",
+    state: "LIVE",
+    source: "BINANCE_DEMO_PUBLIC",
+    observed_at: recoveredAt,
+    reason: "MARKET_STREAM_SOURCE_RECOVERED",
+  }));
+  routedSocket!.send(JSON.stringify({
+    type: "quote",
+    instrument_ref: "BTCUSDT-PERP",
+    source: "BINANCE_DEMO_PUBLIC",
+    source_cutoff: recoveredAt,
+    received_at: recoveredAt,
+    bid_price: "65049",
+    ask_price: "65051",
+    reference_price: "65050",
+  }));
+  routedSocket!.send(streamBar("BINANCE_DEMO_PUBLIC"));
+  await chartRegion
+    .getByRole("button", { name: "重试 K 线" })
+    .evaluate((button: HTMLButtonElement) => button.click())
+    .catch(() => undefined);
+  await expect(chart).toHaveAttribute(
+    "data-market-history-source",
+    "BINANCE_DEMO_PUBLIC",
+  );
+  await expect(chart).toHaveAttribute(
+    "data-market-live-source",
+    "BINANCE_DEMO_PUBLIC",
+  );
+  await expect(chartRegion.getByText("Demo · Binance K线", { exact: true })).toBeVisible();
+  await expect(chartRegion.getByText("K线实时", { exact: true })).toBeVisible();
+});
+
+test("Demo K-line history remains identified while reconnecting clears realtime prices and blocks save", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Market-route independence is viewport-independent and is covered once on desktop.",
+  );
+  let marketWindowRequests = 0;
+  const marketWindowPurposes: string[] = [];
+
+  await page.route("**/api/v1/market-context?**", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: { code: "DEMO_EXECUTION_MARKET_UNAVAILABLE" } }),
+    });
+  });
+  await page.route("**/api/v1/market-window?**", async (route) => {
+    marketWindowRequests += 1;
+    const url = new URL(route.request().url());
+    marketWindowPurposes.push(url.searchParams.get("purpose") ?? "");
+    const interval = url.searchParams.get("interval") ?? "15m";
+    const intervalMs = interval === "1m"
+      ? 60_000
+      : interval === "5m"
+        ? 5 * 60_000
+        : interval === "15m"
+          ? 15 * 60_000
+          : interval === "1h"
+            ? 60 * 60_000
+            : interval === "4h"
+              ? 4 * 60 * 60_000
+              : 24 * 60 * 60_000;
+    const requestedStart = Date.parse(url.searchParams.get("start_at") ?? "");
+    const startAt = Number.isFinite(requestedStart)
+      ? requestedStart
+      : Date.parse("2026-07-22T00:00:00Z");
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        instrument_ref: "BTCUSDT-PERP",
+        interval,
+        source: "BINANCE_DEMO_PUBLIC",
+        source_cutoff: url.searchParams.get("end_at") ?? new Date().toISOString(),
+        bars: Array.from({ length: 12 }, (_value, index) => {
+          const openAt = startAt + index * intervalMs;
+          return {
+            open_at: new Date(openAt).toISOString(),
+            close_at: new Date(openAt + intervalMs).toISOString(),
+            open: String(65_000 + index),
+            high: String(65_006 + index),
+            low: String(64_996 + index),
+            close: String(65_002 + index),
+            volume: String(10 + index),
+          };
+        }),
+      }),
+    });
+  });
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    const observedAt = new Date().toISOString();
+    socket.send(JSON.stringify({
+      type: "quote",
+      instrument_ref: "BTCUSDT-PERP",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: observedAt,
+      received_at: observedAt,
+      bid_price: "12345",
+      ask_price: "12346",
+      reference_price: "12345.5",
+    }));
+    socket.send(JSON.stringify({
+      type: "status",
+      state: "RECONNECTING",
+      source: "BINANCE_DEMO_PUBLIC",
+      observed_at: observedAt,
+      reason: "MARKET_STREAM_RECONNECTED",
+    }));
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  const chartRegion = page.locator('section[aria-labelledby="order-schedule-chart-title"]');
+  const chart = chartRegion.getByTestId("order-schedule-kline-chart");
+
+  await expect.poll(() => marketWindowRequests).toBeGreaterThanOrEqual(1);
+  expect(new Set(marketWindowPurposes)).toEqual(new Set(["EXECUTION_REVIEW"]));
+  await expect(chart).toHaveAttribute(
+    "data-market-history-source",
+    "BINANCE_DEMO_PUBLIC",
+  );
+  await expect(page.getByText("重连中", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("12,345.50", { exact: true })).toHaveCount(0);
+  await expect(chartRegion.getByText("Demo · Binance K线", { exact: true })).toBeVisible();
+  await expect(chart).not.toHaveAttribute("data-market-live-source");
+  await expect(chartRegion.getByRole("status")).toContainText("价格预览与保存已阻断");
+  await page.getByRole("button", { name: "市价", exact: true }).click();
+  await openDirectReview(page);
+  await expect(page.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+});
+
+test("direct execution reconnects the local market stream and resynchronizes history", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-narrow",
+    "Transport recovery is viewport-independent and is covered once on desktop.",
+  );
+  test.setTimeout(30_000);
+  const routedSockets: Array<{
+    close: (options?: { code?: number; reason?: string }) => Promise<void>;
+    send: (message: string | Buffer) => void;
+  }> = [];
+  let marketWindowRequests = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/v1/market-window") {
+      marketWindowRequests += 1;
+    }
+  });
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    routedSockets.push(socket);
+    const connectionNumber = routedSockets.length;
+    const reference = connectionNumber === 1 ? "65000.5" : "65001.5";
+    const sendCurrentFrames = () => {
+      const observedAt = new Date(Date.now() + 4_000).toISOString();
+      socket.send(JSON.stringify({
+        type: "status",
+        state: "LIVE",
+        source: "BINANCE_DEMO_PUBLIC",
+        observed_at: observedAt,
+        reason: null,
+      }));
+      socket.send(JSON.stringify({
+        type: "quote",
+        instrument_ref: "BTCUSDT-PERP",
+        source: "BINANCE_DEMO_PUBLIC",
+        source_cutoff: observedAt,
+        received_at: observedAt,
+        bid_price: connectionNumber === 1 ? "65000" : "65001",
+        ask_price: connectionNumber === 1 ? "65001" : "65002",
+        reference_price: reference,
+      }));
+      socket.send(JSON.stringify({
+        type: "bar",
+        instrument_ref: "BTCUSDT-PERP",
+        interval: "15m",
+        source: "BINANCE_DEMO_PUBLIC",
+        source_cutoff: observedAt,
+        received_at: observedAt,
+        closed: false,
+        bar: {
+          open_at: "2026-07-23T11:30:00.000Z",
+          close_at: "2026-07-23T11:45:00.000Z",
+          open: "65000",
+          high: "65002",
+          low: "64999",
+          close: reference,
+          volume: "10",
+        },
+      }));
+    };
+    const startCurrentFrames = () => {
+      sendCurrentFrames();
+      const timer = setInterval(sendCurrentFrames, 1_000);
+      socket.onClose(() => clearInterval(timer));
+    };
+    if (connectionNumber === 1) {
+      startCurrentFrames();
+    } else {
+      setTimeout(startCurrentFrames, 1_000);
+    }
+  });
+
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  await expect(page.getByText("实时", { exact: true }).first()).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByText("65,000.50", { exact: true }).first()).toBeVisible();
+  await expect.poll(() => routedSockets.length).toBe(1);
+  await expect.poll(() => marketWindowRequests, { timeout: 10_000 })
+    .toBeGreaterThanOrEqual(1);
+  const initialMarketWindowRequests = marketWindowRequests;
+  await openDirectReview(page);
+
+  await routedSockets[0]!.close({ code: 1012, reason: "QUALIFICATION_RECONNECT" });
+  await expect(page.getByText("重连中", { exact: true }).first()).toBeVisible();
+  const chartRegion = page.locator('section[aria-labelledby="order-schedule-chart-title"]');
+  const chart = chartRegion.getByTestId("order-schedule-kline-chart");
+  await expect(chartRegion.getByRole("status")).toContainText("价格预览与保存已阻断");
+  await expect(chart).not.toHaveAttribute("data-market-live-source");
+  await expect(page.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+  await expect.poll(() => routedSockets.length, { timeout: 10_000 }).toBe(2);
+  await expect(page.getByText("实时", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("65,001.50", { exact: true }).first()).toBeVisible();
+  await expect(chart).toHaveAttribute("data-market-live-source", "BINANCE_DEMO_PUBLIC");
+  await expect(page.getByRole("button", { name: "保存草稿", exact: true })).toBeEnabled();
+  await expect.poll(() => marketWindowRequests, { timeout: 10_000 })
+    .toBeGreaterThan(initialMarketWindowRequests);
+});
+
+test("direct execution keeps the K-line chart as the primary annotated workspace", async ({ page }, testInfo) => {
+  const attemptedPlanCreates: string[] = [];
+  await routeCurrentDemoMarketStream(page);
+  await routeCurrentDemoMarketWindow(page);
+  await routeCurrentDemoMarketContext(page);
+  await routeReadyDemoExecutor(page);
+  await routeValidOrderSchedulePreview(page);
+  await page.route(/\/api\/v1\/plans(?:\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      attemptedPlanCreates.push(request.url());
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  if (testInfo.project.name === "chromium-desktop") {
+    await page.setViewportSize({ width: 1123, height: 920 });
+  }
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "直接执行" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /重新选择/ })).toHaveCount(0);
+  await expect(page.getByText("已选执行依据", { exact: true })).toHaveCount(0);
+
+  const chartRegion = page.getByRole("region", { name: "15m K 线 · 草稿投影" });
+  const chart = chartRegion.getByRole("group", {
+    name: /订单计划 15m K 线主图/,
+  });
+  const chartDetail = chartRegion.getByText(/图线、操作点与等价数值/);
+  await chartDetail.click();
+  const priceAnnotations = chartRegion.getByRole("list", {
+    name: "图中价格标注及等价数值",
+  });
+  await expect(chartRegion).toBeVisible();
+  await expect(chart).toBeVisible();
+  await expect(page.getByLabel("限价（USDT）")).not.toHaveValue("");
+  await expect(priceAnnotations).toContainText("当前计量参考价");
+  await expect(priceAnnotations).toContainText("输入限价");
+  await expect(chartRegion.getByRole("list", {
+    name: "图中相对和动态价格规则",
+  })).toContainText("每笔成交后止损 · 100 bps");
+
+  const rangeButton = chartRegion.getByRole("button", { name: "拖动选择区间" });
+  await expect(rangeButton).toBeDisabled();
+  if (testInfo.project.name === "chromium-desktop") {
+    await expect(chartRegion.getByRole("button", { name: "支撑 / 阻力" })).toBeEnabled();
+    await expect(chartRegion.getByRole("button", { name: "趋势线" })).toBeEnabled();
+  } else {
+    await expect(chartRegion.getByRole("button", { name: "支撑 / 阻力" })).toBeDisabled();
+    await expect(chartRegion.getByRole("button", { name: "趋势线" })).toBeDisabled();
+  }
+
+  await page.getByRole("radio", { name: /价格区间分批/ }).click();
+  await page.getByLabel("下限（USDT）", { exact: true }).fill("65000");
+  await page.getByLabel("上限（USDT）", { exact: true }).fill("66000");
+  await page.getByLabel("每档金额（USDT）").fill("100");
+  await expect(priceAnnotations).toContainText("区间下限");
+  await expect(priceAnnotations).toContainText("区间上限");
+  await expect(chartRegion).toContainText("标准化入场 1/5", { timeout: 15_000 });
+
+  await page.getByRole("button", { name: "＋ 添加入场条件或管理规则" }).click();
+  await page.getByRole("button", { name: /到价触发/ }).click();
+  await expect(priceAnnotations).toContainText("标记价条件 ≥");
+  await page.getByRole("button", { name: "＋ 添加入场条件或管理规则" }).click();
+  await page.getByRole("button", { name: /价差限制/ }).click();
+  await expect(chartRegion.getByRole("list", {
+    name: "图中相对和动态价格规则",
+  })).toContainText("价差 ≤ 10 bps");
+
+  if (testInfo.project.name === "chromium-desktop") {
+    await expect(rangeButton).toBeEnabled();
+    await rangeButton.click();
+    const dragLayer = chartRegion.getByTestId("order-schedule-range-drag-layer");
+    await expect(dragLayer).toBeVisible();
+    await chart.press("Escape");
+    await expect(dragLayer).toHaveCount(0);
+
+    const beforeRange = await Promise.all([
+      page.getByLabel("下限（USDT）", { exact: true }).inputValue(),
+      page.getByLabel("上限（USDT）", { exact: true }).inputValue(),
+    ]);
+    await rangeButton.click();
+    const bounds = await dragLayer.boundingBox();
+    expect(bounds).not.toBeNull();
+    await page.mouse.move(bounds!.x + bounds!.width * .45, bounds!.y + bounds!.height * .25);
+    await page.mouse.down();
+    await page.mouse.move(
+      bounds!.x + bounds!.width * .45,
+      bounds!.y + bounds!.height * .72,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+    await expect(dragLayer).toHaveCount(0);
+    await expect.poll(async () => Promise.all([
+      page.getByLabel("下限（USDT）", { exact: true }).inputValue(),
+      page.getByLabel("上限（USDT）", { exact: true }).inputValue(),
+    ])).not.toEqual(beforeRange);
+    await chart.press("Escape");
+    await expect(page.getByLabel("下限（USDT）", { exact: true })).toHaveValue(beforeRange[0]!);
+    await expect(page.getByLabel("上限（USDT）", { exact: true })).toHaveValue(beforeRange[1]!);
+  } else {
+    await expect(rangeButton).toBeDisabled();
+  }
+
+  await assertAccessible(page, testInfo, `direct-order-chart-${testInfo.project.name}`);
+  await testInfo.attach(`direct-order-chart-${testInfo.project.name}.png`, {
+    body: await chartRegion.screenshot(),
+    contentType: "image/png",
+  });
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    viewportHeight: window.innerHeight,
+    pageHeight: document.documentElement.scrollHeight,
+    configClientHeight: document.querySelector<HTMLElement>("[data-testid='direct-order-config-scroll']")?.clientHeight ?? 0,
+    configScrollHeight: document.querySelector<HTMLElement>("[data-testid='direct-order-config-scroll']")?.scrollHeight ?? 0,
+  }));
+  expect(layout.scrollWidth).toBe(layout.clientWidth);
+  if (testInfo.project.name === "chromium-desktop") {
+    expect(layout.pageHeight).toBe(layout.viewportHeight);
+    expect(layout.configScrollHeight).toBeGreaterThan(layout.configClientHeight);
+    await expect(page.getByRole("switch", { name: "Maker only" })).toBeVisible();
+    await openDirectMilestone(page, "2 保护");
+    await expect(page.getByLabel("初始止损距离（bps）")).toBeVisible();
+    await openDirectMilestone(page, "1 入场");
+  }
+
+  const capitalLimit = page.getByLabel("资金上限（USDT）");
+  await capitalLimit.fill("0");
+  await capitalLimit.press("Enter");
+  await expect(page.getByRole("button", { name: "下一步", exact: true })).toBeDisabled();
+  await expect(page.getByText("计划交易金额必须大于 0。")).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(attemptedPlanCreates).toEqual([]);
+  await expect(page).toHaveURL(/\/plans\/new$/);
+});
+
+test("direct execution chart keeps its fixed empty state when K-line history fails", async ({ page }) => {
+  await page.route("**/api/v1/market-window?**", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: { code: "MARKET_WINDOW_TEST_FAILURE" } }),
+    });
+  });
+  await page.routeWebSocket(/\/api\/v1\/market-stream/, (socket) => {
+    const observedAt = new Date().toISOString();
+    socket.send(JSON.stringify({
+      type: "status",
+      state: "LIVE",
+      source: "BINANCE_DEMO_PUBLIC",
+      observed_at: observedAt,
+      reason: null,
+    }));
+    socket.send(JSON.stringify({
+      type: "quote",
+      instrument_ref: "BTCUSDT-PERP",
+      source: "BINANCE_DEMO_PUBLIC",
+      source_cutoff: observedAt,
+      received_at: observedAt,
+      bid_price: "65000",
+      ask_price: "65002",
+      reference_price: "65001",
+    }));
+  });
+  await page.goto("/plans/new");
+  await page.getByRole("button", { name: "配置订单计划", exact: true }).click();
+
+  const chartRegion = page.getByRole("region", { name: "15m K 线 · 草稿投影" });
+  await expect(chartRegion.getByRole("group", {
+    name: /订单计划 15m K 线主图/,
+  })).toBeVisible();
+  await expect(chartRegion.getByRole("status")).toContainText("K 线窗口读取失败");
+  await expect(chartRegion.getByRole("button", { name: "重试 K 线" })).toBeVisible();
+  await expect(chartRegion.getByTestId("order-schedule-chart-market-source")).toHaveCount(0);
+  await expect(chartRegion.getByRole("status")).toContainText("价格预览与保存已阻断");
+  await openDirectReview(page);
+  await expect(page.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+  await expect(page.getByText(/^技术预览可保存 ·/)).toHaveCount(0);
+  await chartRegion.getByText(/图线、操作点与等价数值/).click();
+  await expect(chartRegion.getByText("图中价格线与等价数值")).toBeVisible();
+});
+
+test("strategy catalog failure keeps direct execution available without inventing qualification evidence", async ({ page }) => {
+  await page.route("**/api/v1/strategies", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: { code: "STRATEGY_CATALOG_TEST_FAILURE" } }),
+    });
+  });
+
+  await page.goto("/plans/new");
+
+  await expect(page.getByText(
+    "策略列表当前不可用；仍可使用上方的直接执行订单计划。",
+    { exact: true },
+  )).toBeVisible();
+  await expect(page.getByRole("button", { name: "配置订单计划", exact: true })).toBeEnabled();
+  await expect(page.getByText(
+    "当前没有通过费用后收益证据门槛的内置策略。",
+    { exact: false },
+  )).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "可用策略列表" })).toHaveCount(0);
+});
+
+test("planning and limited-control surfaces preserve authority and failure boundaries", async ({ page }, testInfo) => {
+  test.slow();
+  const planName = `[测试] E2E AI Donchian ${Date.now()}`;
+  const attemptedControlWrites: string[] = [];
+  await page.route(
+    /\/api\/v1\/activations\/[^/?#]+\/(?:exit|resume|stop-new-risk|takeover|release-system-stop)(?:\?.*)?$/,
+    async (route) => {
+      if (route.request().method() === "POST") {
+        attemptedControlWrites.push(route.request().url());
+        await route.abort();
+        return;
+      }
+      await route.continue();
+    },
+  );
+  await page.goto("/overview");
+  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page.getByRole("combobox", { name: "交易上下文" }))
+    .toContainText("Demo");
+  await expect(page.getByText("真实账户交易", { exact: false })).toHaveCount(0);
+  await expect(page.getByText(/交易所更新于|等待交易所同步/)).toBeVisible();
+  await assertAccessible(page, testInfo, "overview");
+
+  const navigation = page.getByRole("navigation", { name: "工作台导航" });
+  if (testInfo.project.name === "chromium-desktop") {
+    await expect(page.getByRole("button", { name: "展开导航" })).toBeVisible();
+    await expect(navigation.getByRole("button", { name: "总览" })).toBeVisible();
+    await expect(navigation.getByText("总览", { exact: true })).toHaveCount(0);
+    await assertAccessible(page, testInfo, "overview-navigation-collapsed");
+    await page.getByRole("button", { name: "展开导航" }).click();
+    await expect(page.getByRole("button", { name: "折叠导航" })).toBeVisible();
+    await expect(navigation.getByText("总览", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("button", { name: "折叠导航" })).toBeVisible();
+    await page.getByRole("button", { name: "折叠导航" }).click();
+    await expect(page.getByRole("button", { name: "展开导航" })).toBeVisible();
+    await expect(navigation.getByText("总览", { exact: true })).toHaveCount(0);
+  } else {
+    await expect(page.getByRole("button", { name: "打开导航" })).toBeVisible();
+    await page.getByRole("button", { name: "打开导航" }).click();
+    await expect(navigation.getByText("总览", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /折叠导航|展开导航/ })).toHaveCount(0);
+    await navigation.getByRole("button", { name: "总览" }).click();
+  }
+
+  await page.goto("/plans/new");
+  await expect(page.getByRole("heading", { name: "选择执行依据" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "交易上下文" }))
+    .toContainText("Demo");
+  await expect(page.getByLabel("筛选策略")).toBeVisible();
+  await expect(page.getByLabel("支持方向")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "排序" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "配置策略计划" })).toHaveCount(0);
+  await expect(page.getByText("当前没有通过费用后收益证据门槛的内置策略。", { exact: false })).toBeVisible();
+  await page.getByLabel("筛选策略").fill("Donchian");
+  await expect(page.getByText("单次 Donchian 突破与 ATR 风险退出", { exact: true })).toBeVisible();
+  await expect(page.getByText("仅流程验证", { exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "排序" }).click();
+  await page.getByRole("option", { name: "策略版本（新到旧）" }).click();
+  await page.getByRole("button", { name: /展开.*策略介绍/ }).click();
+  await expect(page.getByText("策略逻辑", { exact: true })).toBeVisible();
+  await assertAccessible(page, testInfo, "strategy-selection");
+  await page.getByRole("button", { name: "配置流程验证" }).click();
+  await expect(page.getByRole("heading", { name: "配置策略计划" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  let strategyChart = page.getByRole("group", {
+    name: /策略输入 15m K 线主图/,
+  });
+  await expect(strategyChart).toBeVisible();
+  await expect(page.getByText("当前策略关键价格", { exact: true })).toBeVisible();
+  await page.getByText(/策略关键价格与等价数值/).click();
+  await expect(page.getByText("做多突破线", { exact: true })).toBeVisible();
+  await expect(page.getByText("做空突破线", { exact: true })).toBeVisible();
+  await expect(page.getByText("做多最大追价", { exact: true })).toBeVisible();
+  if (testInfo.project.name === "chromium-narrow") {
+    await page.getByLabel("K 线周期").click();
+    await page.getByRole("option", { name: "4h" }).click();
+  } else {
+    await page
+      .getByRole("group", { name: "K 线周期" })
+      .getByRole("button", { name: "4h" })
+      .click();
+  }
+  strategyChart = page.getByRole("group", {
+    name: /策略输入 4h K 线主图/,
+  });
+  await expect(strategyChart).toBeVisible();
+  await expect(page.getByRole("button", { name: "保存计划" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "重新选择策略" })).toBeVisible();
+  await expect(page.getByText("收益证据未支持：", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("计划名称")).toHaveValue(/^\[测试\] /);
+  await page.getByLabel("计划名称").fill(planName);
+  await page.getByRole("combobox", { name: "创建方式" }).click();
+  await page.getByRole("option", { name: "AI 创建" }).click();
+  await expect(page.getByLabel("交易对象")).toHaveValue("BTCUSDT-PERP");
+  await expect(page.getByLabel("交易金额（USDT）")).toHaveValue("500");
+  await expect(page.getByText("高级策略参数（可保持默认）")).toBeVisible();
+  await assertAccessible(page, testInfo, "new-plan");
+  await testInfo.attach("new-plan.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  await page.getByRole("button", { name: "保存计划" }).click();
+  await expect(page).toHaveURL(/\/plans$/);
+  await expect(page.getByRole("heading", { name: "交易计划" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /当前计划/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /历史计划/ })).toBeVisible();
+  await expect(page.getByText("了解当前可用策略", { exact: false })).toHaveCount(0);
+  const planCard = page.getByRole("article", { name: `计划 ${planName}` });
+  await expect(planCard.getByRole("heading", { name: planName })).toBeVisible();
+  await expect(planCard.getByText(/AI 创建 · 创建于 .* UTC\+8/)).toBeVisible();
+  await expect(planCard.getByText("BTCUSDT-PERP", { exact: false })).toBeVisible();
+  await planCard.getByText("计划配置", { exact: true }).click();
+  await expect(planCard.getByText("交易金额", { exact: true })).toBeVisible();
+  await expect(planCard.getByText("500.00 USDT", { exact: true }).first()).toBeVisible();
+  await expect(planCard.getByText("15m 通道回看", { exact: true })).toBeVisible();
+  await expect(planCard.getByText("初始止损", { exact: true })).toBeVisible();
+  await expect(page.getByText("策略逻辑", { exact: true })).toHaveCount(0);
+  await planCard.getByRole("button", { name: "删除草稿" }).click();
+  const deleteDialog = page.getByRole("dialog", { name: "删除草稿？" });
+  await expect(deleteDialog.getByText(planName, { exact: false })).toBeVisible();
+  await deleteDialog.getByRole("button", { name: "取消" }).click();
+  await expect(planCard).toBeVisible();
+  await planCard.getByRole("button", { name: "删除草稿" }).click();
+  await deleteDialog.getByRole("button", { name: "删除草稿" }).click();
+  await expect(planCard).toHaveCount(0);
+
+  await page.goto("/operations");
+  await expect(page.getByRole("heading", { name: "故障接管" })).toBeVisible();
+  await expect(page.locator(".statusbar .env")).toHaveText("DEMO");
+  await expect(page.getByRole("link", { name: "打开 Binance 官方入口" })).toBeVisible();
+  const activation = page.locator("article.activation").filter({ hasText: "WRITER_CONTINUITY_LOST" }).first();
+  if (await activation.count() === 0) {
+    test.info().annotations.push({
+      type: "coverage-gap",
+      description: "当前运行库没有 WRITER_CONTINUITY_LOST 激活；保留计划流程结果，跳过依赖该状态的故障接管演练。",
+    });
+    return;
+  }
+  await expect(activation).toBeVisible();
+  const activationId = await activation.getAttribute("data-activation-id");
+  expect(activationId).toBeTruthy();
+  await expect(activation.getByText("自动执行已暂停", { exact: true }).first()).toBeVisible();
+  await expect(activation.getByText("恢复激活", { exact: false })).toHaveCount(0);
+  await assertAccessible(page, testInfo, "operations-before");
+
+  const stopControl = activation.locator(".control").filter({ hasText: "停止新增风险" });
+  await stopControl.getByRole("button", { name: "查看后果" }).click();
+  const dialog = page.getByRole("dialog", { name: "确认故障控制" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("停止新增风险", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("只停止新的开仓和加仓", { exact: false })).toBeVisible();
+  await assertAccessible(page, testInfo, "stop-preview");
+  await dialog.getByRole("button", { name: "取消" }).click();
+
+  const exitControl = activation.locator(".control").filter({ hasText: "退出策略" });
+  await exitControl.getByRole("button", { name: "查看后果" }).click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "确认退出策略" })).toBeVisible();
+  await dialog.getByRole("button", { name: "取消" }).click();
+  await expect(page.locator(`article.activation[data-activation-id="${activationId}"]`)).toBeVisible();
+  expect(
+    attemptedControlWrites,
+    "浏览器回归只能检查控制后果，不得操作当前 Demo 或实盘计划",
+  ).toEqual([]);
+  await assertAccessible(page, testInfo, "operations-after-preview");
+  await testInfo.attach("operations-after-preview.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    offenders: [...document.querySelectorAll<HTMLElement>("body *")]
+      .filter((element) => !element.closest(".table-scroll"))
+      .map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          className: element.className,
+          left: bounds.left,
+          right: bounds.right,
+          text: element.textContent?.trim().slice(0, 120) ?? "",
+        };
+      })
+      .filter(({ left, right }) => left < -0.5 || right > document.documentElement.clientWidth + 0.5),
+  }));
+  await testInfo.attach("operations-layout.json", {
+    body: Buffer.from(JSON.stringify(layout, null, 2)),
+    contentType: "application/json",
+  });
+  expect(layout.offenders).toEqual([]);
+  expect(layout.scrollWidth).toBe(layout.clientWidth);
+});

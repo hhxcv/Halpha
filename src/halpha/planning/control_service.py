@@ -1,0 +1,308 @@
+"""Transactional handling of the activation controls."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any
+
+from psycopg import Connection
+
+from halpha.capital.models import StopCategory, StopStateVersion
+from halpha.capital.repository import PostgreSQLCapitalRepository
+from halpha.domain_values import content_digest
+from halpha.outcomes.service import OutcomeApplicationService, review_id_for_activation
+from halpha.planning.models import PlanActivation, PlanLifecycle
+from halpha.planning.repository import PostgreSQLPlanningRepository
+from halpha.planning.transitions import (
+    ControlIntent,
+    complete_activation,
+    enter_exit,
+    enter_user_takeover,
+    resume_activation,
+)
+from halpha.user_workbench.commands import (
+    Command,
+    Receipt,
+    ReceiptState,
+    advance_receipt,
+    initial_receipt,
+)
+from halpha.user_workbench.repository import CommandConflict, PostgreSQLCommandRepository
+from halpha.venue_integration.repository import PostgreSQLExecutionActionRepository
+from halpha.venue_integration.dispatch_lock import acquire_activation_control_lock
+
+
+class ActivationControlService:
+    def __init__(self, connection: Connection[Any], environment_id: str) -> None:
+        self._connection = connection
+        self._environment_id = environment_id
+        self._planning = PostgreSQLPlanningRepository(connection, environment_id)
+        self._capital = PostgreSQLCapitalRepository(connection, environment_id)
+        self._commands = PostgreSQLCommandRepository(connection, environment_id)
+        self._execution_actions = PostgreSQLExecutionActionRepository(
+            connection,
+            environment_id,
+        )
+
+    def _complete_if_no_venue_responsibility(
+        self,
+        activation: PlanActivation,
+        *,
+        reason: str,
+        command_ref: str,
+        observed_at: datetime,
+    ) -> PlanActivation:
+        if (
+            activation.has_entry_fill
+            or activation.pending_action_digest is not None
+            or self._execution_actions.has_open_entry_responsibility(
+                activation.activation_id
+            )
+            or self._execution_actions.has_unclosed_called_responsibility(
+                activation.activation_id
+            )
+        ):
+            return activation
+        closure_digest = content_digest(
+            {
+                "environment_id": activation.environment_id,
+                "activation_id": activation.activation_id,
+                "reason": reason,
+                "command_ref": command_ref,
+                "has_entry_fill": False,
+                "execution_action_count": 0,
+                "observed_at": observed_at,
+            }
+        )
+        return complete_activation(
+            activation,
+            closure_digest=closure_digest,
+            result_ref=review_id_for_activation(
+                activation.environment_id,
+                activation.activation_id,
+            ),
+            observed_at=observed_at,
+        )
+
+    @staticmethod
+    def _active_categories(states: tuple[StopStateVersion, ...]) -> frozenset[StopCategory]:
+        return frozenset(category for state in states for category in state.stopped_categories)
+
+    @staticmethod
+    def _same_idempotent_request(existing: Command, candidate: Command) -> bool:
+        """Compare only client-stable command terms for an idempotent replay."""
+
+        def stable_terms(command: Command) -> dict[str, Any]:
+            terms = command.model_dump(
+                mode="python",
+                exclude={"content_digest", "submitted_at"},
+            )
+            scope = dict(terms["scope"])
+            # The API derives this audit cutoff from the arrival time. It must
+            # not turn a transport retry into a conflicting command.
+            scope.pop("cutoff", None)
+            terms["scope"] = scope
+            return terms
+
+        return stable_terms(existing) == stable_terms(candidate)
+
+    def _write_activation_stop_version(
+        self,
+        *,
+        stop_state_version_id: str,
+        states: tuple[StopStateVersion, ...],
+        activation: PlanActivation,
+        categories: frozenset[StopCategory],
+        reason: str,
+        observed_at: datetime,
+    ) -> StopStateVersion:
+        current = next((item for item in states if item.activation_id is not None), None)
+        fields = {
+            "stop_state_version_id": stop_state_version_id,
+            "environment_id": activation.environment_id,
+            "environment_kind": activation.environment_kind,
+            "authority_class": activation.authority_class,
+            "account_ref": activation.account_ref,
+            "activation_id": activation.activation_id,
+            "version": 1 if current is None else current.version + 1,
+            "stopped_categories": categories,
+            "reason": reason,
+            "source": "USER",
+            "started_at": observed_at,
+            "release_rules": {"user_releasable": True},
+        }
+        state = StopStateVersion(**fields, content_digest=content_digest(fields))
+        self._capital.insert_stop_state(state)
+        return state
+
+    def submit(
+        self,
+        command: Command,
+        *,
+        receipt_id: str,
+        stop_state_version_id: str,
+        reconciliation_digest: str | None = None,
+        plan_current: bool = True,
+        facts_known: bool = True,
+    ) -> Receipt:
+        # Serialize every owner lifecycle decision with the Executor's final
+        # venue-mutation boundary.  If dispatch acquired the lock first, this
+        # command becomes effective only after that call is durably normalized;
+        # if control acquired it first, dispatch must re-read the new state.
+        acquire_activation_control_lock(
+            self._connection,
+            environment_id=self._environment_id,
+            activation_id=command.target_ref,
+        )
+        existing = self._commands.find_by_idempotency(
+            command.owner_scope,
+            command.idempotency_key,
+            for_update=True,
+        )
+        if existing is not None:
+            existing_command, existing_receipt = existing
+            if not self._same_idempotent_request(existing_command, command):
+                raise CommandConflict("COMMAND_CONTENT_CONFLICT")
+            return existing_receipt
+        receipt = initial_receipt(command, receipt_id=receipt_id, processing_owner="TRADEPLAN")
+        self._commands.insert(command, receipt)
+
+        activation = self._planning.get_activation(command.target_ref, for_update=True)
+        if activation.state_version != command.expected_version:
+            updated = advance_receipt(
+                receipt,
+                state=ReceiptState.REJECTED,
+                reason_code="PLAN_VERSION_CONFLICT",
+                result=None,
+                pending_responsibility_refs=(),
+                observed_at=command.submitted_at,
+            )
+            self._commands.update_receipt(updated, expected_version=receipt.state_version)
+            return updated
+        states = self._capital.lock_current_stop_states(
+            account_ref=activation.account_ref,
+            activation_id=activation.activation_id,
+        )
+        active = self._active_categories(states)
+        intent = command.intent
+        pending: tuple[str, ...] = ()
+        reason = "CONTROL_EFFECTIVE"
+        receipt_state = ReceiptState.EFFECTIVE
+        original_activation_version = activation.state_version
+
+        if intent is ControlIntent.STOP_NEW_RISK:
+            current_activation = next(
+                (item for item in states if item.activation_id == activation.activation_id),
+                None,
+            )
+            categories = frozenset(
+                set(current_activation.stopped_categories if current_activation else ())
+                | {StopCategory.NEW_RISK}
+            )
+            self._write_activation_stop_version(
+                stop_state_version_id=stop_state_version_id,
+                states=states,
+                activation=activation,
+                categories=categories,
+                reason="USER_STOP_NEW_RISK",
+                observed_at=command.submitted_at,
+            )
+            if activation.pending_action_digest:
+                receipt_state = ReceiptState.PROCESSING
+                pending = ("OPEN_ENTRY_RESPONSIBILITIES_TERMINAL",)
+                reason = "NEW_RISK_STOPPED_LOCALLY"
+        elif intent is ControlIntent.RESUME_ACTIVATION:
+            if reconciliation_digest is None:
+                receipt_state = ReceiptState.REJECTED
+                reason = "RECONCILIATION_REQUIRED"
+            else:
+                try:
+                    activation = resume_activation(
+                        activation,
+                        command_id=command.command_id,
+                        reconciliation_digest=reconciliation_digest,
+                        observed_at=command.submitted_at,
+                        active_stop_categories=active,
+                        plan_current=plan_current,
+                        facts_known=facts_known,
+                    )
+                except ValueError as exc:
+                    receipt_state = ReceiptState.REJECTED
+                    reason = str(exc)
+        elif intent is ControlIntent.EXIT_STRATEGY:
+            activation = enter_exit(activation, observed_at=command.submitted_at)
+            current_activation = next(
+                (item for item in states if item.activation_id == activation.activation_id),
+                None,
+            )
+            categories = frozenset(
+                set(current_activation.stopped_categories if current_activation else ())
+                | {StopCategory.NEW_RISK}
+            )
+            self._write_activation_stop_version(
+                stop_state_version_id=stop_state_version_id,
+                states=states,
+                activation=activation,
+                categories=categories,
+                reason="EXIT_STRATEGY_STOP_NEW_RISK",
+                observed_at=command.submitted_at,
+            )
+            activation = self._complete_if_no_venue_responsibility(
+                activation,
+                reason="EXIT_WITHOUT_VENUE_RESPONSIBILITY",
+                command_ref=command.command_id,
+                observed_at=command.submitted_at,
+            )
+            if activation.lifecycle is PlanLifecycle.COMPLETED:
+                reason = "EXIT_WITHOUT_VENUE_RESPONSIBILITY_COMPLETED"
+            else:
+                receipt_state = ReceiptState.PROCESSING
+                pending = ("EXIT_CLOSURE_DIGEST",)
+                reason = "EXIT_RESPONSIBILITY_ACCEPTED"
+        elif intent is ControlIntent.USER_TAKEOVER:
+            activation = enter_user_takeover(
+                activation,
+                takeover_scope=command.scope,
+                observed_at=command.submitted_at,
+            )
+            activation = self._complete_if_no_venue_responsibility(
+                activation,
+                reason="USER_TAKEOVER_WITHOUT_VENUE_RESPONSIBILITY",
+                command_ref=command.command_id,
+                observed_at=command.submitted_at,
+            )
+            reason = (
+                "USER_TAKEOVER_WITHOUT_VENUE_RESPONSIBILITY_COMPLETED"
+                if activation.lifecycle is PlanLifecycle.COMPLETED
+                else "USER_TAKEOVER_PERSISTED"
+            )
+        else:  # pragma: no cover - enum is closed
+            raise ValueError("CONTROL_INTENT_UNSUPPORTED")
+
+        if activation.state_version != original_activation_version:
+            self._planning.update_activation(
+                activation,
+                expected_version=original_activation_version,
+            )
+        updated = advance_receipt(
+            receipt,
+            state=receipt_state,
+            reason_code=reason,
+            result={
+                "activation_id": activation.activation_id,
+                "activation_state_version": activation.state_version,
+            },
+            pending_responsibility_refs=pending,
+            observed_at=command.submitted_at,
+        )
+        self._commands.update_receipt(updated, expected_version=receipt.state_version)
+        if activation.lifecycle is PlanLifecycle.COMPLETED:
+            OutcomeApplicationService(
+                self._connection,
+                self._environment_id,
+            ).update_activation_review(
+                activation.activation_id,
+                fact_cutoff=command.submitted_at,
+                observed_at=command.submitted_at,
+            )
+        return updated

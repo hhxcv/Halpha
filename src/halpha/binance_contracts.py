@@ -1,0 +1,17 @@
+"""Capability-free Binance identities shared across process boundaries."""
+
+from __future__ import annotations
+
+
+FUTURES_POSITION_RISK_PATH = "/fapi/v3/positionRisk"
+FUTURES_SYMBOL_CONFIG_PATH = "/fapi/v1/symbolConfig"
+FUTURES_OPEN_ORDERS_PATH = "/fapi/v1/openOrders"
+FUTURES_OPEN_ALGO_ORDERS_PATH = "/fapi/v1/openAlgoOrders"
+
+BINANCE_USDM_ACCOUNT_SNAPSHOT_SCHEMA = "HALPHA_BINANCE_USDM_ACCOUNT_SNAPSHOT_V2"
+BINANCE_USDM_ACCOUNT_SNAPSHOT_QUERY_PATHS = (
+    FUTURES_POSITION_RISK_PATH,
+    FUTURES_SYMBOL_CONFIG_PATH,
+    FUTURES_OPEN_ORDERS_PATH,
+    FUTURES_OPEN_ALGO_ORDERS_PATH,
+)

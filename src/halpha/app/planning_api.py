@@ -1,0 +1,2109 @@
+"""App boundary for plans and activation transactions."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal
+from uuid import NAMESPACE_URL, uuid5
+
+import psycopg
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
+
+from halpha.binance_contracts import (
+    BINANCE_USDM_ACCOUNT_SNAPSHOT_QUERY_PATHS,
+    BINANCE_USDM_ACCOUNT_SNAPSHOT_SCHEMA,
+)
+from halpha.capital.models import (
+    ACCOUNT_SYSTEM_STOP_RELEASE_EVIDENCE_MAX_AGE,
+    AccountSystemStopReleaseRequest,
+    AccountSystemStopSource,
+    AuthorityClass,
+    EnvironmentKind,
+    StopCategory,
+    StopStateVersion,
+)
+from halpha.capital.repository import CapitalConflict, PostgreSQLCapitalRepository
+from halpha.capital.service import CapitalApplicationService
+from halpha.domain_values import canonical_decimal, content_digest, decimal_from_string
+from halpha.live_write_gate import (
+    GateStatusProvider,
+    LiveWriteGateError,
+    LiveWriteGateStatus,
+    closed_live_write_gate_status,
+    require_live_activation_safety_index,
+)
+from halpha.outcomes.trade_result import summarize_trade_result
+from halpha.position_attribution import (
+    account_instrument_attribution_from_rows,
+)
+from halpha.planning.models import (
+    POSITION_ALIGNMENT_ALLOWED_ACTIONS,
+    PlanCreatorKind,
+    PlanDecisionContext,
+    PositionAlignmentSpec,
+    RequestedLimits,
+    TradePlanContent,
+)
+from halpha.planning.order_schedule import (
+    OrderSchedulePreview,
+    OrderScheduleSpec,
+    direct_allowed_action_profiles,
+    validate_current_order_schedule_support,
+    validate_new_direct_execution_schedule,
+)
+from halpha.planning.control_service import ActivationControlService
+from halpha.planning.registry import (
+    DecisionBasisKind,
+    DraftDecisionBasis,
+    FixedDecisionBasis,
+    FixedStrategyPlanBasis,
+    describe_strategy,
+    list_strategies,
+    strategy_parameter_schema,
+)
+from halpha.planning.repository import (
+    PlanningConflict,
+    PostgreSQLPlanningRepository,
+    load_persisted_order_schedule_spec,
+)
+from halpha.planning.service import (
+    PlanningApplicationService,
+    plan_runtime_incompatibility,
+)
+from halpha.planning.transitions import ControlIntent
+from halpha.user_workbench.commands import build_command
+
+
+_FIXED_DECISION_BASIS_ADAPTER = TypeAdapter(FixedDecisionBasis)
+
+
+class ApiModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class PlanDraftPayload(ApiModel):
+    plan_name: str
+    decision_context: PlanDecisionContext
+    decision_basis: DraftDecisionBasis
+    order_schedule_spec: OrderScheduleSpec | None = None
+    position_alignment: PositionAlignmentSpec | None = None
+    venue_ref: Literal["BINANCE_USDM"] = "BINANCE_USDM"
+    instrument_ref: str
+    direction: str
+    target_exposure: str
+    max_margin: str
+    max_notional: str
+    max_allowed_loss: str
+    valid_minutes: int = Field(ge=15, le=10080)
+
+    @field_validator("plan_name")
+    @classmethod
+    def readable_plan_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized or len(normalized) > 80:
+            raise ValueError("PLAN_NAME_INVALID")
+        return normalized
+
+    @field_validator(
+        "target_exposure",
+        "max_margin",
+        "max_notional",
+        "max_allowed_loss",
+    )
+    @classmethod
+    def exact_positive_decimal(cls, value: str) -> str:
+        return canonical_decimal(
+            decimal_from_string(value, code="PLAN_VALUE_INVALID", positive=True)
+        )
+
+    @model_validator(mode="after")
+    def decision_basis_is_supported(self) -> PlanDraftPayload:
+        if self.position_alignment is not None:
+            if (
+                self.decision_basis.kind is not DecisionBasisKind.DIRECT_EXECUTION
+                or self.order_schedule_spec is not None
+                or self.position_alignment.instrument_ref != self.instrument_ref
+                or self.position_alignment.direction.value != self.direction
+                or self.position_alignment.venue_ref != self.venue_ref
+            ):
+                raise ValueError("POSITION_ALIGNMENT_PLAN_SHAPE_INVALID")
+            return self
+        validate_current_order_schedule_support(
+            self.decision_basis.kind,
+            self.order_schedule_spec,
+        )
+        if self.decision_basis.kind is DecisionBasisKind.DIRECT_EXECUTION:
+            validate_new_direct_execution_schedule(self.order_schedule_spec)
+        return self
+
+    def resolved_decision_basis(self) -> DraftDecisionBasis:
+        basis = self.decision_basis
+        if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL:
+            return basis.model_copy(
+                update={"parameters": {**basis.parameters, "direction": self.direction}}
+            )
+        return basis
+
+
+class PlanCreatePayload(PlanDraftPayload):
+    creator_kind: PlanCreatorKind
+
+
+class ActivationPayload(ApiModel):
+    plan_version_id: str
+    expected_schedule_digest: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+
+
+class ControlPayload(ApiModel):
+    expected_version: int = Field(gt=0)
+    takeover_scope: dict[str, Any] = Field(default_factory=dict)
+
+
+class SystemStopReleasePayload(ApiModel):
+    expected_stop_version: int = Field(gt=0)
+    confirmation: Literal["USER_CONFIRMED_SYSTEM_STOP_RELEASE"]
+
+
+class PlanningApiUnavailable(RuntimeError):
+    pass
+
+
+def _stable_id(environment_id: str, kind: str, idempotency_key: str) -> str:
+    if (
+        not isinstance(idempotency_key, str)
+        or not idempotency_key
+        or len(idempotency_key) > 160
+        or any(character.isspace() for character in idempotency_key)
+    ):
+        raise ValueError("IDEMPOTENCY_KEY_INVALID")
+    return str(
+        uuid5(NAMESPACE_URL, f"urn:halpha:{environment_id}:{kind}:{idempotency_key}")
+    )
+
+
+def _enum_value(value: Any) -> Any:
+    return value.value if hasattr(value, "value") else value
+
+
+def _iso_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
+CONTINUITY_RESUME_EVIDENCE_MAX_AGE = timedelta(seconds=30)
+
+
+def _continuity_resume_evidence(
+    current: dict[str, Any],
+    *,
+    observed_at: datetime,
+) -> dict[str, Any]:
+    """Accept only a fresh target-scoped position proof produced by EXE."""
+
+    activation = dict(current.get("activation") or {})
+    position = dict(current.get("position_attribution") or {})
+    actions = list(current.get("execution_actions") or ())
+    denial_reasons: list[str] = []
+    activation_id = str(activation.get("activation_id") or "")
+    if (
+        activation.get("run_state") != "PAUSED"
+        or activation.get("pause_reason") != "WRITER_CONTINUITY_LOST"
+    ):
+        denial_reasons.append("ACTIVATION_NOT_CONTINUITY_PAUSED")
+    if position.get("reconciliation_status") != "MATCH":
+        denial_reasons.append("POSITION_ATTRIBUTION_NOT_RECONCILED")
+    if position.get("fact_activation_id") != activation_id:
+        denial_reasons.append("POSITION_FACT_ACTIVATION_MISMATCH")
+    fact_ref = position.get("fact_ref")
+    fact_digest = position.get("fact_digest")
+    if not isinstance(fact_ref, str) or not isinstance(fact_digest, str):
+        denial_reasons.append("POSITION_FACT_IDENTITY_UNKNOWN")
+    try:
+        paused_at = datetime.fromisoformat(
+            str(activation["paused_at"]).replace("Z", "+00:00")
+        )
+        fact_cutoff = datetime.fromisoformat(
+            str(position["fact_cutoff"]).replace("Z", "+00:00")
+        )
+    except (KeyError, TypeError, ValueError):
+        paused_at = None
+        fact_cutoff = None
+        denial_reasons.append("POSITION_FACT_TIME_UNKNOWN")
+    if paused_at is not None and fact_cutoff is not None:
+        if (
+            paused_at.utcoffset() is None
+            or fact_cutoff.utcoffset() is None
+            or fact_cutoff < paused_at
+        ):
+            denial_reasons.append("POSITION_FACT_PREDATES_PAUSE")
+        elif (
+            fact_cutoff > observed_at
+            or observed_at - fact_cutoff > CONTINUITY_RESUME_EVIDENCE_MAX_AGE
+        ):
+            denial_reasons.append("POSITION_FACT_STALE")
+    action_basis: list[tuple[str, str, int, str]] = []
+    for item in actions:
+        action = dict(item)
+        action_id = str(action.get("execution_action_id") or "")
+        state = str(action.get("state") or "")
+        updated_at_text = str(action.get("updated_at") or "")
+        try:
+            state_version = int(action["state_version"])
+            action_updated_at = datetime.fromisoformat(
+                updated_at_text.replace("Z", "+00:00")
+            )
+        except (KeyError, TypeError, ValueError):
+            denial_reasons.append("ACTION_STATE_EVIDENCE_INVALID")
+            continue
+        if state in {"SUBMITTING", "UNKNOWN"}:
+            denial_reasons.append("ACTION_RESULT_UNRESOLVED")
+        if fact_cutoff is not None and action_updated_at > fact_cutoff:
+            denial_reasons.append("ACTION_STATE_NEWER_THAN_POSITION_FACT")
+        action_basis.append(
+            (action_id, state, state_version, action_updated_at.isoformat())
+        )
+    evidence_basis = {
+        "environment_id": activation.get("environment_id"),
+        "activation_id": activation_id,
+        "activation_state_version": activation.get("state_version"),
+        "paused_at": activation.get("paused_at"),
+        "position_fact_ref": fact_ref,
+        "position_fact_digest": fact_digest,
+        "position_fact_cutoff": position.get("fact_cutoff"),
+        "activation_signed_position": position.get(
+            "activation_signed_position"
+        ),
+        "attributed_account_signed_position": position.get(
+            "attributed_account_signed_position"
+        ),
+        "venue_account_signed_position": position.get(
+            "venue_account_signed_position"
+        ),
+        "actions": sorted(action_basis),
+    }
+    return {
+        "eligible": not denial_reasons,
+        "denial_reasons": sorted(set(denial_reasons)),
+        "reconciliation_digest": (
+            content_digest(evidence_basis) if not denial_reasons else None
+        ),
+        "evidence_cutoff": (
+            fact_cutoff.isoformat() if fact_cutoff is not None else None
+        ),
+    }
+
+
+def _fixed_decision_basis_projection(version: Any) -> dict[str, Any]:
+    basis = version.decision_basis
+    payload = basis.model_dump(mode="json")
+    return {
+        "model": basis,
+        "payload": payload,
+        "kind": basis.kind.value,
+        "decision_basis_ref": basis.decision_basis_ref,
+        "parameter_digest": str(basis.parameter_digest),
+        "normalized_parameters": dict(basis.normalized_parameters),
+        "product_build_id": str(basis.product_build_id),
+    }
+
+
+class PostgreSQLPlanningApi:
+    def __init__(
+        self,
+        *,
+        database_name: str,
+        database_role_name: str,
+        password: SecretStr,
+        environment_id: str,
+        environment_kind: str,
+        authority_class: str,
+        account_ref: str,
+        product_build_id: str,
+        profile: str | None = None,
+        gate_status_provider: GateStatusProvider | None = None,
+    ) -> None:
+        self._database_name = database_name
+        self._database_role_name = database_role_name
+        self._password = password
+        self._environment_id = environment_id
+        self._environment_kind = EnvironmentKind(environment_kind)
+        self._authority_class = AuthorityClass(authority_class)
+        self._account_ref = account_ref
+        self._product_build_id = product_build_id
+        self._profile = profile or (
+            "BINANCE_DEMO"
+            if self._environment_kind is EnvironmentKind.DEMO
+            else (
+                "BINANCE_LIVE_WRITE"
+                if self._authority_class is AuthorityClass.LIVE_REAL_CAPITAL
+                else "BINANCE_LIVE_READ_ONLY"
+            )
+        )
+        self._gate_status_provider = (
+            gate_status_provider or closed_live_write_gate_status
+        )
+
+    def _gate_status(self) -> LiveWriteGateStatus:
+        try:
+            return self._gate_status_provider()
+        except Exception:
+            return closed_live_write_gate_status()
+
+    def _connect(self) -> psycopg.Connection[Any]:
+        try:
+            return psycopg.connect(
+                host="127.0.0.1",
+                port=5432,
+                dbname=self._database_name,
+                user=self._database_role_name,
+                password=self._password.get_secret_value(),
+                connect_timeout=2,
+                options=(
+                    "-c default_transaction_read_only=on"
+                    if self._profile == "BINANCE_LIVE_READ_ONLY"
+                    else None
+                ),
+            )
+        except Exception as exc:
+            raise PlanningApiUnavailable(
+                f"PLANNING_DATABASE_UNAVAILABLE type={type(exc).__name__}"
+            ) from None
+
+    def _require_demo_parameter_scope(self, parameters: dict[str, Any]) -> None:
+        if (
+            parameters.get("demo_immediate_entry") is True
+            and self._profile != "BINANCE_DEMO"
+        ):
+            raise ValueError("DEMO_IMMEDIATE_ENTRY_REQUIRES_DEMO")
+
+    def _require_product_mutation_allowed(self) -> None:
+        if self._profile == "BINANCE_LIVE_READ_ONLY":
+            raise ValueError("LIVE_READ_ONLY_PRODUCT_MUTATION_FORBIDDEN")
+
+    def strategies(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "strategy_id": item.strategy_id,
+                "strategy_version": item.strategy_version,
+                "display_name": item.display_name,
+                "value_logic": item.value_logic,
+                "applicable_scenarios": item.applicable_scenarios,
+                "execution_behavior": item.execution_behavior,
+                "parameter_schema_version": item.parameter_schema_version,
+                "supported_directions": [
+                    direction.value for direction in item.supported_directions
+                ],
+                "economic_scope": item.economic_scope,
+                "plan_key_parameters": [
+                    parameter.model_dump(mode="json")
+                    for parameter in item.plan_key_parameters
+                ],
+            }
+            for item in list_strategies()
+        ]
+
+    def strategy_schema(self, strategy_id: str) -> dict[str, Any]:
+        return strategy_parameter_schema(strategy_id)
+
+    def list_plans(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT d.plan_id, d.draft_version, d.content_digest, d.updated_at,
+                       d.content, v.plan_version_id, v.fixed_at, v.content_digest,
+                       v.product_build_id, v.terms ->> 'valid_until',
+                       v.fixed_decision_basis, v.order_schedule_spec,
+                       v.order_schedule_spec_digest, v.terms -> 'allowed_actions',
+                       v.position_alignment
+                FROM halpha.trade_plan_draft d
+                LEFT JOIN LATERAL (
+                    SELECT plan_version_id, fixed_at, content_digest,
+                           product_build_id, terms, fixed_decision_basis,
+                           order_schedule_spec, order_schedule_spec_digest
+                           , position_alignment
+                    FROM halpha.trade_plan_version v
+                    WHERE v.environment_id = d.environment_id AND v.plan_id = d.plan_id
+                    ORDER BY fixed_at DESC LIMIT 1
+                ) v ON true
+                WHERE d.environment_id = %s
+                ORDER BY d.updated_at DESC
+                """,
+                (self._environment_id,),
+            ).fetchall()
+        result: list[dict[str, Any]] = []
+        for row in rows:
+            content = dict(row[4])
+            basis = DraftDecisionBasis.model_validate(content["decision_basis"])
+            requested_limits = dict(content["requested_limits"])
+            runtime_incompatibility: str | None = None
+            if row[5] is not None:
+                try:
+                    fixed_schedule_spec = load_persisted_order_schedule_spec(
+                        row[11],
+                        row[12],
+                    )
+                    runtime_incompatibility = plan_runtime_incompatibility(
+                        decision_basis=_FIXED_DECISION_BASIS_ADAPTER.validate_python(
+                            row[10]
+                        ),
+                        order_schedule_spec=fixed_schedule_spec,
+                        allowed_actions=frozenset(
+                            str(item) for item in (row[13] or ())
+                        ),
+                        position_alignment=(
+                            PositionAlignmentSpec.model_validate(row[14])
+                            if row[14] is not None
+                            else None
+                        ),
+                    )
+                except (TypeError, ValueError):
+                    runtime_incompatibility = "PLAN_FIXED_CONTENT_UNREADABLE"
+            result.append(
+                {
+                "plan_id": str(row[0]),
+                "draft_version": int(row[1]),
+                "draft_content_digest": str(row[2]),
+                "updated_at": row[3].isoformat(),
+                "plan_name": content.get("plan_name"),
+                "created_at": _iso_value(content.get("created_at")),
+                "creator_kind": _enum_value(content.get("creator_kind")),
+                "decision_context": content.get("decision_context"),
+                "decision_basis": basis.model_dump(mode="json"),
+                "decision_basis_kind": basis.kind.value,
+                "decision_basis_ref": basis.decision_basis_ref,
+                "strategy_id": (
+                    basis.decision_basis_ref
+                    if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL
+                    else None
+                ),
+                "instrument_ref": str(content["instrument_ref"]),
+                "direction": str(_enum_value(content["direction"])),
+                "parameters": dict(basis.parameters),
+                "order_schedule_spec": content.get("order_schedule_spec"),
+                "position_alignment": content.get("position_alignment"),
+                "max_notional": str(requested_limits["max_notional"]),
+                "valid_from": _iso_value(content["valid_from"]),
+                "valid_until": _iso_value(content["valid_until"]),
+                "plan_version_id": str(row[5]) if row[5] is not None else None,
+                "fixed_at": row[6].isoformat() if row[6] is not None else None,
+                "fixed_content_digest": str(row[7]) if row[7] is not None else None,
+                "fixed_product_build_id": str(row[8]) if row[8] is not None else None,
+                "fixed_valid_until": str(row[9]) if row[9] is not None else None,
+                "product_build_consistent": (
+                    str(row[8]) == self._product_build_id
+                    if row[8] is not None
+                    else None
+                ),
+                "runtime_compatible": (
+                    runtime_incompatibility is None
+                    if row[5] is not None
+                    else None
+                ),
+                "runtime_incompatibility_reason": runtime_incompatibility,
+                }
+            )
+        return result
+
+    def get_plan(self, plan_id: str) -> dict[str, Any]:
+        with self._connect() as connection, connection.transaction():
+            draft = PostgreSQLPlanningRepository(
+                connection, self._environment_id
+            ).get_draft(plan_id)
+        return draft.model_dump(mode="json")
+
+    def get_plan_version(self, plan_version_id: str) -> dict[str, Any]:
+        with self._connect() as connection, connection.transaction():
+            version = PostgreSQLPlanningRepository(
+                connection, self._environment_id
+            ).get_version(plan_version_id)
+        return version.model_dump(mode="json")
+
+    def save_new_plan(
+        self,
+        payload: PlanCreatePayload,
+        *,
+        idempotency_key: str,
+        observed_at: datetime,
+    ) -> dict[str, Any]:
+        self._require_product_mutation_allowed()
+        basis = payload.resolved_decision_basis()
+        if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL:
+            definition = describe_strategy(basis.decision_basis_ref)
+            if payload.direction not in {
+                item.value for item in definition.supported_directions
+            }:
+                raise ValueError("PARAMETER_INVALID")
+            allowed_actions = frozenset(
+                definition.allowed_action_profiles
+            )
+            self._require_demo_parameter_scope(basis.parameters)
+        else:
+            allowed_actions = (
+                POSITION_ALIGNMENT_ALLOWED_ACTIONS
+                if payload.position_alignment is not None
+                else direct_allowed_action_profiles(payload.order_schedule_spec)
+            )
+        plan_id = _stable_id(self._environment_id, "plan", idempotency_key)
+        content = TradePlanContent(
+            plan_name=payload.plan_name,
+            created_at=observed_at,
+            creator_kind=payload.creator_kind,
+            decision_context=payload.decision_context,
+            decision_basis=basis,
+            order_schedule_spec=payload.order_schedule_spec,
+            position_alignment=payload.position_alignment,
+            environment_id=self._environment_id,
+            environment_kind=self._environment_kind,
+            authority_class=self._authority_class,
+            account_ref=self._account_ref,
+            venue_ref=payload.venue_ref,
+            instrument_ref=payload.instrument_ref,
+            direction=payload.direction,
+            target_exposure=payload.target_exposure,
+            requested_limits=RequestedLimits(
+                max_margin=payload.max_margin,
+                max_notional=payload.max_notional,
+                max_allowed_loss=payload.max_allowed_loss,
+            ),
+            valid_from=observed_at,
+            valid_until=observed_at + timedelta(minutes=payload.valid_minutes),
+            allowed_actions=allowed_actions,
+            terms={
+                "one_entry_cycle": True,
+                "resume_policy": "MANUAL_PLAN_RESUME",
+            },
+        )
+        with self._connect() as connection:
+            repository = PostgreSQLPlanningRepository(connection, self._environment_id)
+            service = PlanningApplicationService(connection, self._environment_id)
+            try:
+                with connection.transaction():
+                    draft = service.create_draft(
+                        plan_id=plan_id,
+                        content=content,
+                        observed_at=observed_at,
+                    )
+            except PlanningConflict:
+                with connection.transaction():
+                    draft = repository.get_draft(plan_id)
+                request_duration = content.valid_until - content.valid_from
+                comparable = content.model_copy(
+                    update={
+                        "created_at": draft.content.created_at,
+                        "valid_from": draft.content.valid_from,
+                        "valid_until": draft.content.valid_from + request_duration,
+                    }
+                )
+                if content_digest(draft.content) != content_digest(comparable):
+                    raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
+        return draft.model_dump(mode="json")
+
+    def update_plan(
+        self,
+        plan_id: str,
+        payload: PlanDraftPayload,
+        *,
+        expected_version: int,
+        observed_at: datetime,
+    ) -> dict[str, Any]:
+        self._require_product_mutation_allowed()
+        basis = payload.resolved_decision_basis()
+        if basis.kind is DecisionBasisKind.STRATEGY_SIGNAL:
+            definition = describe_strategy(basis.decision_basis_ref)
+            if payload.direction not in {
+                item.value for item in definition.supported_directions
+            }:
+                raise ValueError("PARAMETER_INVALID")
+            allowed_actions = frozenset(
+                definition.allowed_action_profiles
+            )
+            self._require_demo_parameter_scope(basis.parameters)
+        else:
+            allowed_actions = (
+                POSITION_ALIGNMENT_ALLOWED_ACTIONS
+                if payload.position_alignment is not None
+                else direct_allowed_action_profiles(payload.order_schedule_spec)
+            )
+        content = TradePlanContent(
+            plan_name=payload.plan_name,
+            decision_context=payload.decision_context,
+            decision_basis=basis,
+            order_schedule_spec=payload.order_schedule_spec,
+            position_alignment=payload.position_alignment,
+            environment_id=self._environment_id,
+            environment_kind=self._environment_kind,
+            authority_class=self._authority_class,
+            account_ref=self._account_ref,
+            venue_ref=payload.venue_ref,
+            instrument_ref=payload.instrument_ref,
+            direction=payload.direction,
+            target_exposure=payload.target_exposure,
+            requested_limits=RequestedLimits(
+                max_margin=payload.max_margin,
+                max_notional=payload.max_notional,
+                max_allowed_loss=payload.max_allowed_loss,
+            ),
+            valid_from=observed_at,
+            valid_until=observed_at + timedelta(minutes=payload.valid_minutes),
+            allowed_actions=allowed_actions,
+            terms={"one_entry_cycle": True, "resume_policy": "MANUAL_PLAN_RESUME"},
+        )
+        with self._connect() as connection, connection.transaction():
+            draft = PlanningApplicationService(
+                connection, self._environment_id
+            ).update_draft(
+                plan_id=plan_id,
+                expected_version=expected_version,
+                content=content,
+                observed_at=observed_at,
+            )
+        return draft.model_dump(mode="json")
+
+    def delete_plan(self, plan_id: str, *, expected_version: int) -> dict[str, Any]:
+        self._require_product_mutation_allowed()
+        with self._connect() as connection, connection.transaction():
+            PlanningApplicationService(
+                connection, self._environment_id
+            ).delete_draft(
+                plan_id=plan_id,
+                expected_version=expected_version,
+            )
+        return {
+            "result": "APPLIED",
+            "plan_id": plan_id,
+            "deleted_draft_version": expected_version,
+        }
+
+    def fix_plan(
+        self,
+        plan_id: str,
+        *,
+        idempotency_key: str,
+        expected_version: int,
+        observed_at: datetime,
+    ) -> dict[str, Any]:
+        self._require_product_mutation_allowed()
+        plan_version_id = _stable_id(
+            self._environment_id, "plan-version", idempotency_key
+        )
+        with self._connect() as connection:
+            repository = PostgreSQLPlanningRepository(connection, self._environment_id)
+            try:
+                with connection.transaction():
+                    version = PlanningApplicationService(
+                        connection, self._environment_id
+                    ).fix_draft(
+                        plan_id=plan_id,
+                        expected_draft_version=expected_version,
+                        plan_version_id=plan_version_id,
+                        product_build_id=self._product_build_id,
+                        fixed_at=observed_at,
+                    )
+            except psycopg.errors.UniqueViolation:
+                connection.rollback()
+                with connection.transaction():
+                    version = repository.get_version(plan_version_id)
+                if version.plan_id != plan_id:
+                    raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
+        return version.model_dump(mode="json")
+
+    def activation_preview(self, plan_version_id: str) -> dict[str, Any]:
+        with self._connect() as connection, connection.transaction():
+            version = PostgreSQLPlanningRepository(
+                connection, self._environment_id
+            ).get_version(plan_version_id)
+            position_alignment = getattr(version, "position_alignment", None)
+            position_alignment_blocker: str | None = None
+            if position_alignment is not None:
+                try:
+                    PlanningApplicationService(
+                        connection,
+                        self._environment_id,
+                    ).require_current_position_alignment(
+                        version,
+                        observed_at=datetime.now(UTC),
+                    )
+                except ValueError as exc:
+                    position_alignment_blocker = str(exc)
+        basis = _fixed_decision_basis_projection(version)
+        gate_status = self._gate_status()
+        product_build_consistent = (
+            basis["product_build_id"] == self._product_build_id
+        )
+        runtime_incompatibility = plan_runtime_incompatibility(
+            decision_basis=version.decision_basis,
+            order_schedule_spec=version.order_schedule_spec,
+            allowed_actions=version.allowed_actions,
+            position_alignment=position_alignment,
+        )
+        runtime_compatible = runtime_incompatibility is None
+        return {
+            "plan_version_id": version.plan_version_id,
+            "plan_name": version.plan_name,
+            "created_at": (
+                version.created_at.isoformat() if version.created_at is not None else None
+            ),
+            "creator_kind": (
+                version.creator_kind.value if version.creator_kind is not None else None
+            ),
+            "decision_context": (
+                decision_context.model_dump(mode="json")
+                if (
+                    decision_context := getattr(version, "decision_context", None)
+                ) is not None
+                else None
+            ),
+            "environment_id": self._environment_id,
+            "environment_kind": self._environment_kind.value,
+            "authority_class": self._authority_class.value,
+            "account_ref": version.account_ref,
+            "venue_ref": getattr(version, "venue_ref", "BINANCE_USDM"),
+            "instrument_ref": version.instrument_ref,
+            "direction": version.direction.value,
+            "decision_basis": basis["payload"],
+            "decision_basis_kind": basis["kind"],
+            "decision_basis_ref": basis["decision_basis_ref"],
+            "strategy_ref": (
+                basis["decision_basis_ref"]
+                if basis["kind"] == DecisionBasisKind.STRATEGY_SIGNAL.value
+                else None
+            ),
+            "parameter_digest": basis["parameter_digest"],
+            "strategy_parameters": basis["normalized_parameters"],
+            "order_schedule_spec": (
+                version.order_schedule_spec.model_dump(mode="json")
+                if getattr(version, "order_schedule_spec", None) is not None
+                else None
+            ),
+            "position_alignment": (
+                position_alignment.model_dump(mode="json")
+                if position_alignment is not None
+                else None
+            ),
+            "trade_amount": version.requested_limits.max_notional,
+            "limits": version.requested_limits.model_dump(mode="json"),
+            "valid_until": version.valid_until.isoformat(),
+            "allowed_actions": sorted(version.allowed_actions),
+            "actual_account_configuration": "PRE_SUBMIT_FACT_NOT_REQUIRED_FOR_PLAN_ACTIVATION",
+            "account_mode_policy": (
+                "NEW_RISK_SUPPORTS_ONE_WAY_SINGLE_ASSET_CROSSED_OR_ISOLATED"
+            ),
+            "product_build_id": basis["product_build_id"],
+            "product_build_consistent": product_build_consistent,
+            "runtime_compatible": runtime_compatible,
+            "runtime_incompatibility_reason": runtime_incompatibility,
+            "position_alignment_ready": (
+                None
+                if position_alignment is None
+                else position_alignment_blocker is None
+            ),
+            "position_alignment_blocker": position_alignment_blocker,
+            "configured_runtime_real_write_gate": (
+                gate_status.configured_runtime_real_write_gate
+            ),
+            "runtime_real_write_gate": gate_status.runtime_real_write_gate,
+            "live_activation_eligible": (
+                self._profile == "BINANCE_LIVE_WRITE"
+                and runtime_compatible
+                and position_alignment_blocker is None
+                and gate_status.product_build_consistent is True
+                and not gate_status.violations
+                and gate_status.configured_runtime_real_write_gate == "CLOSED"
+            ),
+            "capital_notice": "计划中的交易金额就是本次边界；激活不再要求独立资金授权，也不会绕过事实、CAP 或 EXE。",
+        }
+
+    def activate(
+        self,
+        payload: ActivationPayload,
+        *,
+        idempotency_key: str,
+        observed_at: datetime,
+        order_schedule_snapshot: OrderSchedulePreview | None = None,
+    ) -> dict[str, Any]:
+        self._require_product_mutation_allowed()
+        gate_status = self._gate_status()
+        if self._profile == "BINANCE_LIVE_WRITE":
+            if gate_status.product_build_consistent is not True:
+                raise ValueError("LIVE_WRITE_PRODUCT_BUILD_MISMATCH")
+            if gate_status.violations:
+                raise ValueError("LIVE_WRITE_GATE_BINDING_INVALID_FOR_ACTIVATION")
+            if gate_status.configured_runtime_real_write_gate != "CLOSED":
+                raise ValueError("LIVE_WRITE_GATE_MUST_BE_CLOSED_FOR_ACTIVATION")
+        actual_schedule_digest = (
+            order_schedule_snapshot.schedule_digest
+            if order_schedule_snapshot is not None
+            else None
+        )
+        if payload.expected_schedule_digest != actual_schedule_digest:
+            raise ValueError("ACTIVATION_PREVIEW_STALE")
+        activation_id = _stable_id(self._environment_id, "activation", idempotency_key)
+        with self._connect() as connection:
+            planning = PostgreSQLPlanningRepository(connection, self._environment_id)
+            try:
+                with connection.transaction():
+                    if self._profile == "BINANCE_LIVE_WRITE":
+                        try:
+                            require_live_activation_safety_index(connection)
+                        except LiveWriteGateError as exc:
+                            raise ValueError(str(exc)) from None
+                    activation = PlanningApplicationService(
+                        connection, self._environment_id
+                    ).activate_version(
+                        plan_version_id=payload.plan_version_id,
+                        activation_id=activation_id,
+                        environment_kind=self._environment_kind,
+                        authority_class=self._authority_class,
+                        observed_at=observed_at,
+                        order_schedule_snapshot=order_schedule_snapshot,
+                    )
+            except psycopg.errors.UniqueViolation:
+                connection.rollback()
+                with connection.transaction():
+                    try:
+                        activation = planning.get_activation(activation_id)
+                    except PlanningConflict:
+                        raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
+                if activation.plan_version_ref != payload.plan_version_id:
+                    raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
+                persisted_digest = (
+                    activation.order_schedule_snapshot.schedule_digest
+                    if activation.order_schedule_snapshot is not None
+                    else None
+                )
+                if persisted_digest != actual_schedule_digest:
+                    raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT") from None
+        return self._activation_response(activation)
+
+    def activation_replay(
+        self,
+        payload: ActivationPayload,
+        *,
+        idempotency_key: str,
+    ) -> dict[str, Any] | None:
+        """Replay a committed activation before any rule refresh or readiness check."""
+
+        activation_id = _stable_id(self._environment_id, "activation", idempotency_key)
+        with self._connect() as connection, connection.transaction():
+            try:
+                activation = PostgreSQLPlanningRepository(
+                    connection,
+                    self._environment_id,
+                ).get_activation(activation_id)
+            except PlanningConflict as exc:
+                if str(exc) == "ACTIVATION_NOT_FOUND":
+                    return None
+                raise
+        persisted_digest = (
+            activation.order_schedule_snapshot.schedule_digest
+            if activation.order_schedule_snapshot is not None
+            else None
+        )
+        if (
+            activation.plan_version_ref != payload.plan_version_id
+            or persisted_digest != payload.expected_schedule_digest
+        ):
+            raise ValueError("IDEMPOTENCY_CONTENT_CONFLICT")
+        return self._activation_response(activation)
+
+    def _activation_response(self, activation: Any) -> dict[str, Any]:
+        return {
+            "activation": activation.model_dump(mode="json"),
+            "venue_write_created": False,
+            "runtime_real_write_gate": self._gate_status().runtime_real_write_gate,
+        }
+
+    def list_activations(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT a.activation_id,
+                       v.terms ->> 'plan_name',
+                       v.terms ->> 'created_at',
+                       v.terms ->> 'creator_kind',
+                       latest_event.reason_code,
+                       latest_event.no_action_reason,
+                       closing_action.action_kind,
+                       closing_action.action_terms ->> 'causation_ref',
+                       closing_command.intent,
+                       latest_review.primary_result,
+                       latest_review.account_result -> 'trade_result'
+                FROM halpha.plan_activation a
+                LEFT JOIN halpha.trade_plan_version v
+                  ON v.environment_id = a.environment_id
+                 AND v.plan_version_id = a.plan_version_ref
+                LEFT JOIN LATERAL (
+                    SELECT reason_code, no_action_reason
+                    FROM halpha.plan_event event
+                    WHERE event.environment_id = a.environment_id
+                      AND event.activation_id = a.activation_id
+                    ORDER BY event.created_at DESC, event.plan_event_id DESC
+                    LIMIT 1
+                ) latest_event ON true
+                LEFT JOIN LATERAL (
+                    SELECT action_kind, action_terms
+                    FROM halpha.execution_action action
+                    WHERE action.environment_id = a.environment_id
+                      AND action.activation_id = a.activation_id
+                      AND action.action_kind = 'EXIT'
+                    ORDER BY action.updated_at DESC, action.execution_action_id DESC
+                    LIMIT 1
+                ) closing_action ON true
+                LEFT JOIN LATERAL (
+                    SELECT c.intent
+                    FROM halpha.command c
+                    JOIN halpha.receipt r
+                      ON r.environment_id = c.environment_id
+                     AND r.command_id = c.command_id
+                    WHERE c.environment_id = a.environment_id
+                      AND c.target_kind = 'PLAN_ACTIVATION'
+                      AND c.target_ref = a.activation_id::text
+                      AND c.intent IN ('EXIT_STRATEGY', 'USER_TAKEOVER')
+                      AND r.state = 'EFFECTIVE'
+                    ORDER BY r.updated_at DESC, c.command_id DESC
+                    LIMIT 1
+                ) closing_command ON true
+                LEFT JOIN LATERAL (
+                    SELECT primary_result, account_result
+                    FROM halpha.review review
+                    WHERE review.environment_id = a.environment_id
+                      AND review.activation_id = a.activation_id
+                    ORDER BY review.review_version DESC
+                    LIMIT 1
+                ) latest_review ON true
+                WHERE a.environment_id = %s ORDER BY a.created_at DESC
+                """,
+                (self._environment_id,),
+            ).fetchall()
+            repository = PostgreSQLPlanningRepository(connection, self._environment_id)
+            return [
+                {
+                    **repository.get_activation(str(row[0])).model_dump(mode="json"),
+                    "plan_name": str(row[1]) if row[1] is not None else None,
+                    "plan_created_at": (
+                        str(row[2]) if row[2] is not None else None
+                    ),
+                    "plan_creator_kind": (
+                        str(row[3]) if row[3] is not None else None
+                    ),
+                    "closure_reason_code": (
+                        str(row[7])
+                        if row[7] is not None
+                        else (
+                            str(row[6])
+                            if row[6] is not None
+                            else (
+                                str(row[8])
+                                if row[8] is not None
+                                else (
+                                    str(row[5])
+                                    if row[5] is not None
+                                    else (
+                                        str(row[4])
+                                        if row[4] is not None
+                                        else None
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    "primary_result": (
+                        str(row[9]) if row[9] is not None else None
+                    ),
+                    "trade_result": (
+                        dict(row[10]) if row[10] is not None else None
+                    ),
+                }
+                for row in rows
+            ]
+
+    def activation_detail(self, activation_id: str) -> dict[str, Any]:
+        with self._connect() as connection, connection.transaction():
+            planning_repository = PostgreSQLPlanningRepository(
+                connection,
+                self._environment_id,
+            )
+            activation = planning_repository.get_activation(activation_id)
+            version = planning_repository.get_version(
+                activation.plan_version_ref
+            )
+            actions = connection.execute(
+                """
+                SELECT execution_action_id, action_kind, action_class, action_terms,
+                       client_order_id, state, state_version, unknown_reason,
+                       not_submitted_reason, protection_digest, closure_evidence_digest,
+                       created_at, updated_at, execution_profile_ref, account_ref,
+                       authority_class, cancel_target, call_started_at,
+                       call_completed_at
+                FROM halpha.execution_action
+                WHERE environment_id = %s AND activation_id = %s
+                ORDER BY created_at, execution_action_id
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+            facts = connection.execute(
+                """
+                SELECT venue_fact_id, kind, source_class, source_object_id,
+                       source_time, received_at, cutoff, payload, action_ref,
+                       attribution_class, content_digest
+                FROM halpha.venue_fact
+                WHERE environment_id = %s AND activation_ref = %s
+                ORDER BY cutoff, venue_fact_id
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+            receipts = connection.execute(
+                """
+                SELECT c.command_id, c.intent, c.submitted_at, r.receipt_id,
+                       r.state, r.state_version, r.reason_code, r.updated_at
+                FROM halpha.command c
+                JOIN halpha.receipt r
+                  ON r.environment_id = c.environment_id AND r.command_id = c.command_id
+                WHERE c.environment_id = %s AND c.target_kind = 'PLAN_ACTIVATION'
+                  AND c.target_ref = %s
+                ORDER BY c.submitted_at, c.command_id
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+            stops = connection.execute(
+                """
+                SELECT activation_id, stopped_categories, reason, source,
+                       started_at, version, stop_state_version_id
+                FROM (
+                  SELECT DISTINCT ON (
+                    CASE WHEN activation_id IS NULL THEN 'ACCOUNT'
+                         ELSE activation_id::text END
+                  ) activation_id, stopped_categories, reason, source,
+                    started_at, version, stop_state_version_id
+                  FROM halpha.stop_state_version
+                  WHERE environment_id = %s AND account_ref = %s
+                    AND (activation_id IS NULL OR activation_id = %s)
+                  ORDER BY CASE WHEN activation_id IS NULL THEN 'ACCOUNT'
+                                ELSE activation_id::text END,
+                           version DESC
+                ) current_stops
+                """,
+                (self._environment_id, self._account_ref, activation_id),
+            ).fetchall()
+            latest_position_row = connection.execute(
+                """
+                SELECT venue_fact_id, payload, cutoff, content_digest, received_at
+                FROM halpha.venue_fact
+                WHERE environment_id = %s
+                  AND account_ref = %s
+                  AND instrument_ref = %s
+                  AND kind = 'POSITION_STATE'
+                  AND source_class = 'VENUE_QUERY'
+                  AND action_ref IS NULL
+                  AND activation_ref IS NULL
+                  AND payload ->> 'activation_id' = %s
+                ORDER BY cutoff DESC, received_at DESC, venue_fact_id DESC
+                LIMIT 1
+                """,
+                (
+                    self._environment_id,
+                    activation.account_ref,
+                    activation.instrument_ref,
+                    activation.activation_id,
+                ),
+            ).fetchone()
+            scope_activations = (
+                planning_repository.list_account_instrument_activations(
+                    account_ref=activation.account_ref,
+                    instrument_ref=activation.instrument_ref,
+                )
+            )
+            scope_activation_ids = [
+                item.activation_id for item in scope_activations
+            ]
+            attribution_action_rows = connection.execute(
+                """
+                SELECT activation_id, execution_action_id, account_ref,
+                       action_kind, action_terms, client_order_id, state,
+                       created_at
+                FROM halpha.execution_action
+                WHERE environment_id = %s
+                  AND activation_id = ANY(%s::uuid[])
+                ORDER BY created_at, execution_action_id
+                """,
+                (self._environment_id, scope_activation_ids),
+            ).fetchall()
+            attribution_action_ids = [
+                str(row[1]) for row in attribution_action_rows
+            ]
+            attribution_fact_rows = (
+                connection.execute(
+                    """
+                    SELECT venue_fact_id, action_ref, activation_ref, kind,
+                           payload, source_time
+                    FROM halpha.venue_fact
+                    WHERE environment_id = %s
+                      AND action_ref = ANY(%s::uuid[])
+                    ORDER BY cutoff, received_at, venue_fact_id
+                    """,
+                    (self._environment_id, attribution_action_ids),
+                ).fetchall()
+                if attribution_action_ids
+                else []
+            )
+            try:
+                attribution = account_instrument_attribution_from_rows(
+                    activation,
+                    scope_activations,
+                    attribution_action_rows,
+                    attribution_fact_rows,
+                )
+                attribution_reason = None
+            except ValueError as exc:
+                attribution = None
+                attribution_reason = str(exc)
+            latest_position_payload = (
+                dict(latest_position_row[1])
+                if latest_position_row is not None
+                else {}
+            )
+            venue_signed_position = latest_position_payload.get(
+                "position_quantity"
+            )
+            attributed_account_position = (
+                attribution.account_signed_position
+                if attribution is not None
+                else None
+            )
+            reconciled_attributed_position = latest_position_payload.get(
+                "attributed_account_position_quantity"
+            )
+            if (
+                venue_signed_position is None
+                or reconciled_attributed_position is None
+                or attributed_account_position is None
+            ):
+                reconciliation_status = "UNKNOWN"
+            else:
+                try:
+                    venue_position = Decimal(str(venue_signed_position))
+                    fact_attributed_position = Decimal(
+                        str(reconciled_attributed_position)
+                    )
+                    current_attributed_position = Decimal(
+                        attributed_account_position
+                    )
+                    if current_attributed_position != fact_attributed_position:
+                        reconciliation_status = "STALE"
+                    elif venue_position == fact_attributed_position:
+                        reconciliation_status = "MATCH"
+                    else:
+                        reconciliation_status = "MISMATCH"
+                except (InvalidOperation, TypeError, ValueError):
+                    reconciliation_status = "UNKNOWN"
+                    attribution_reason = "POSITION_FACT_INVALID"
+        stopped_categories = {str(category) for row in stops for category in row[1]}
+        if "ALL_EXCHANGE_CHANGES" in stopped_categories:
+            stopped_categories.update(
+                {
+                    "NEW_RISK",
+                    "PROTECTION",
+                    "RISK_REDUCTION_OR_ORDER_MANAGEMENT",
+                }
+            )
+        return {
+            "activation": activation.model_dump(mode="json"),
+            "plan": {
+                "plan_version_id": version.plan_version_id,
+                "plan_id": version.plan_id,
+                "plan_name": version.plan_name,
+                "created_at": (
+                    version.created_at.isoformat()
+                    if version.created_at is not None
+                    else None
+                ),
+                "creator_kind": (
+                    version.creator_kind.value
+                    if version.creator_kind is not None
+                    else None
+                ),
+                "decision_context": (
+                    decision_context.model_dump(mode="json")
+                    if (
+                        decision_context := getattr(
+                            version,
+                            "decision_context",
+                            None,
+                        )
+                    ) is not None
+                    else None
+                ),
+            },
+            "decision_basis": version.decision_basis.model_dump(mode="json"),
+            "strategy": (
+                {
+                    "strategy_ref": version.decision_basis.decision_basis_ref,
+                    "parameters": version.decision_basis.normalized_parameters,
+                }
+                if isinstance(version.decision_basis, FixedStrategyPlanBasis)
+                else None
+            ),
+            "order_schedule": (
+                activation.order_schedule_snapshot.model_dump(mode="json")
+                if activation.order_schedule_snapshot is not None
+                else None
+            ),
+            "capital": {
+                "max_margin": version.requested_limits.max_margin,
+                "max_notional": version.requested_limits.max_notional,
+                "max_allowed_loss": version.requested_limits.max_allowed_loss,
+                "runtime_pnl_stop_supported": False,
+            },
+            "position_attribution": {
+                "activation_signed_position": (
+                    attribution.activation_signed_position
+                    if attribution is not None
+                    else None
+                ),
+                "attributed_account_signed_position": (
+                    attributed_account_position
+                ),
+                "venue_account_signed_position": (
+                    str(venue_signed_position)
+                    if venue_signed_position is not None
+                    else None
+                ),
+                "reconciled_attributed_account_signed_position": (
+                    str(reconciled_attributed_position)
+                    if reconciled_attributed_position is not None
+                    else None
+                ),
+                "reconciliation_status": reconciliation_status,
+                "reason_code": attribution_reason,
+                "activation_owned_order_identity_count": (
+                    len(attribution.activation_ordinary_client_ids)
+                    + len(attribution.activation_algo_client_ids)
+                    if attribution is not None
+                    else None
+                ),
+                "account_owned_order_identity_count": (
+                    len(attribution.account_ordinary_client_ids)
+                    + len(attribution.account_algo_client_ids)
+                    if attribution is not None
+                    else None
+                ),
+                "margin_mode": latest_position_payload.get("margin_mode"),
+                "leverage": latest_position_payload.get("leverage"),
+                "fact_cutoff": (
+                    latest_position_row[2].isoformat()
+                    if latest_position_row is not None
+                    else None
+                ),
+                "fact_received_at": (
+                    latest_position_row[4].isoformat()
+                    if latest_position_row is not None
+                    else None
+                ),
+                "fact_ref": (
+                    str(latest_position_row[0])
+                    if latest_position_row is not None
+                    else None
+                ),
+                "fact_digest": (
+                    str(latest_position_row[3])
+                    if latest_position_row is not None
+                    else None
+                ),
+                "fact_activation_id": latest_position_payload.get(
+                    "activation_id"
+                ),
+            },
+            "trade_result": summarize_trade_result(
+                direction=activation.direction.value,
+                action_kinds={str(row[0]): str(row[1]) for row in actions},
+                facts=(
+                    {
+                        "kind": str(row[1]),
+                        "payload": dict(row[7]),
+                        "action_ref": str(row[8]) if row[8] is not None else None,
+                        "source_time": row[4].isoformat() if row[4] is not None else None,
+                    }
+                    for row in facts
+                ),
+                opening_position_quantity=(
+                    activation.position_alignment.requested_reduction_quantity
+                    if activation.position_alignment is not None
+                    else None
+                ),
+            ),
+            "execution_actions": [
+                {
+                    "execution_action_id": str(row[0]),
+                    "action_kind": str(row[1]),
+                    "action_class": str(row[2]),
+                    "action_terms": dict(row[3]),
+                    "client_order_id": str(row[4]) if row[4] is not None else None,
+                    "state": str(row[5]),
+                    "state_version": int(row[6]),
+                    "unknown_reason": str(row[7]) if row[7] is not None else None,
+                    "not_submitted_reason": (
+                        str(row[8]) if row[8] is not None else None
+                    ),
+                    "protection_digest": str(row[9]) if row[9] is not None else None,
+                    "closure_evidence_digest": str(row[10])
+                    if row[10] is not None
+                    else None,
+                    "created_at": row[11].isoformat(),
+                    "updated_at": row[12].isoformat(),
+                    "execution_profile_ref": str(row[13]),
+                    "account_ref": str(row[14]),
+                    "authority_class": str(row[15]),
+                    "cancel_target": dict(row[16]) if row[16] is not None else None,
+                    "call_started_at": (
+                        row[17].isoformat() if row[17] is not None else None
+                    ),
+                    "call_completed_at": (
+                        row[18].isoformat() if row[18] is not None else None
+                    ),
+                }
+                for row in actions
+            ],
+            "venue_facts": [
+                {
+                    "venue_fact_id": str(row[0]),
+                    "kind": str(row[1]),
+                    "source_class": str(row[2]),
+                    "source_object_id": str(row[3]) if row[3] is not None else None,
+                    "source_time": row[4].isoformat() if row[4] is not None else None,
+                    "received_at": row[5].isoformat(),
+                    "cutoff": row[6].isoformat(),
+                    "payload": dict(row[7]),
+                    "action_ref": str(row[8]) if row[8] is not None else None,
+                    "attribution_class": str(row[9]) if row[9] is not None else None,
+                    "content_digest": str(row[10]),
+                }
+                for row in facts
+            ],
+            "receipts": [
+                {
+                    "command_id": str(row[0]),
+                    "intent": str(row[1]),
+                    "submitted_at": row[2].isoformat(),
+                    "receipt_id": str(row[3]),
+                    "state": str(row[4]),
+                    "state_version": int(row[5]),
+                    "reason_code": str(row[6]) if row[6] is not None else None,
+                    "updated_at": row[7].isoformat(),
+                }
+                for row in receipts
+            ],
+            "stopped_categories": sorted(stopped_categories),
+            "stop_evidence": [
+                {
+                    "scope": "ACCOUNT" if row[0] is None else "ACTIVATION",
+                    "activation_id": str(row[0]) if row[0] is not None else None,
+                    "categories": list(row[1]),
+                    "reason": str(row[2]),
+                    "source": str(row[3]),
+                    "started_at": row[4].isoformat(),
+                    "version": int(row[5]),
+                    "stop_state_version_id": str(row[6]),
+                }
+                for row in stops
+            ],
+            "runtime_real_write_gate": self._gate_status().runtime_real_write_gate,
+        }
+
+    def activation_timeline(self, activation_id: str) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            activation_rows = connection.execute(
+                """
+                SELECT created_at, plan_version_ref
+                FROM halpha.plan_activation
+                WHERE environment_id = %s AND activation_id = %s
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+            event_rows = connection.execute(
+                """
+                SELECT plan_event_id, rule_id, source_identity, source_cutoff,
+                       reason_code, no_action_reason, capital_decision, created_at
+                FROM halpha.plan_event
+                WHERE environment_id = %s AND activation_id = %s
+                ORDER BY created_at, plan_event_id
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+            action_rows = connection.execute(
+                """
+                SELECT execution_action_id, action_kind, state, state_version,
+                       client_order_id, unknown_reason, created_at, updated_at,
+                       execution_profile_ref, account_ref, authority_class
+                FROM halpha.execution_action
+                WHERE environment_id = %s AND activation_id = %s
+                ORDER BY created_at, execution_action_id
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+            fact_rows = connection.execute(
+                """
+                SELECT venue_fact_id, kind, source_class, source_object_id,
+                       action_ref, cutoff, content_digest
+                FROM halpha.venue_fact
+                WHERE environment_id = %s AND activation_ref = %s
+                ORDER BY cutoff, venue_fact_id
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+            command_rows = connection.execute(
+                """
+                SELECT c.command_id, c.intent, c.submitted_at, r.receipt_id,
+                       r.state, r.reason_code, r.updated_at
+                FROM halpha.command c
+                JOIN halpha.receipt r
+                  ON r.environment_id = c.environment_id
+                 AND r.command_id = c.command_id
+                WHERE c.environment_id = %s
+                  AND c.target_kind = 'PLAN_ACTIVATION'
+                  AND c.target_ref = %s
+                ORDER BY c.submitted_at, c.command_id
+                """,
+                (self._environment_id, activation_id),
+            ).fetchall()
+        timeline = [
+            {
+                "source": "ACTIVATION",
+                "source_ref": activation_id,
+                "stage_order": 0,
+                "at": row[0].isoformat(),
+                "status": "STARTED",
+                "detail": {
+                    "plan_version_ref": str(row[1]),
+                },
+            }
+            for row in activation_rows
+        ]
+        timeline.extend(
+            {
+                "source": "PLAN_EVENT",
+                "source_ref": str(row[0]),
+                "stage_order": 1,
+                "at": row[7].isoformat(),
+                "status": str(row[4]),
+                "detail": {
+                    "rule_id": str(row[1]),
+                    "source_identity": str(row[2]),
+                    "source_cutoff": row[3].isoformat(),
+                    "no_action_reason": str(row[5]) if row[5] is not None else None,
+                    "capital_decision": dict(row[6]),
+                },
+            }
+            for row in event_rows
+        )
+        timeline.extend(
+            {
+                "source": "EXECUTION_ACTION",
+                "source_ref": str(row[0]),
+                "stage_order": 2,
+                "at": row[7].isoformat(),
+                "status": str(row[2]),
+                "detail": {
+                    "action_kind": str(row[1]),
+                    "state_version": int(row[3]),
+                    "client_order_id": str(row[4]) if row[4] is not None else None,
+                    "unknown_reason": str(row[5]) if row[5] is not None else None,
+                    "created_at": row[6].isoformat(),
+                    "environment_id": self._environment_id,
+                    "execution_profile_ref": str(row[8]),
+                    "account_ref": str(row[9]),
+                    "authority_class": str(row[10]),
+                },
+            }
+            for row in action_rows
+        )
+        timeline.extend(
+            {
+                "source": "VENUE_FACT",
+                "source_ref": str(row[0]),
+                "stage_order": 3,
+                "at": row[5].isoformat(),
+                "status": str(row[1]),
+                "detail": {
+                    "source_class": str(row[2]),
+                    "source_object_id": str(row[3]) if row[3] is not None else None,
+                    "action_ref": str(row[4]) if row[4] is not None else None,
+                    "content_digest": str(row[6]),
+                },
+            }
+            for row in fact_rows
+        )
+        timeline.extend(
+            {
+                "source": "CONTROL_COMMAND",
+                "source_ref": str(row[0]),
+                "stage_order": 4,
+                "at": row[6].isoformat(),
+                "status": str(row[4]),
+                "detail": {
+                    "intent": str(row[1]),
+                    "submitted_at": row[2].isoformat(),
+                    "receipt_id": str(row[3]),
+                    "reason_code": (
+                        str(row[5]) if row[5] is not None else None
+                    ),
+                },
+            }
+            for row in command_rows
+        )
+        return sorted(
+            timeline,
+            key=lambda item: (item["at"], item["stage_order"], item["source_ref"]),
+        )
+
+    def _system_stop_release_evidence(
+        self,
+        connection: psycopg.Connection[Any],
+        *,
+        activation_id: str,
+        current_stop: StopStateVersion | None,
+        observed_at: datetime,
+    ) -> dict[str, Any]:
+        consequence = (
+            "仅解除账户级系统新增风险停止；不会启动计划、下单、撤单、"
+            "修改保护或改变持仓。后续任何新风险仍需重新通过当前计划、事实和资本检查。"
+        )
+        if current_stop is None:
+            return {
+                "eligible": False,
+                "denial_reasons": ["ACCOUNT_SYSTEM_STOP_NOT_ACTIVE"],
+                "consequence": consequence,
+                "stop": None,
+                "evidence_cutoff": None,
+            }
+        stop_projection = {
+            "stop_state_version_id": current_stop.stop_state_version_id,
+            "version": current_stop.version,
+            "source": current_stop.source,
+            "started_at": current_stop.started_at.isoformat(),
+        }
+        denial_reasons: list[str] = []
+        if (
+            StopCategory.NEW_RISK not in current_stop.stopped_categories
+            or current_stop.source
+            not in {source.value for source in AccountSystemStopSource}
+        ):
+            denial_reasons.append("ACCOUNT_SYSTEM_STOP_NOT_ACTIVE")
+
+        try:
+            activation = PostgreSQLPlanningRepository(
+                connection,
+                self._environment_id,
+            ).get_activation(activation_id)
+        except PlanningConflict as exc:
+            if str(exc) != "ACTIVATION_NOT_FOUND":
+                raise
+            return {
+                "eligible": False,
+                "denial_reasons": [
+                    "SYSTEM_STOP_RELEASE_CONTEXT_ACTIVATION_NOT_FOUND"
+                ],
+                "consequence": consequence,
+                "stop": stop_projection,
+                "evidence_cutoff": None,
+            }
+        if activation.account_ref != self._account_ref:
+            denial_reasons.append("SYSTEM_STOP_RELEASE_ACCOUNT_MISMATCH")
+        if (
+            activation.lifecycle.value != "COMPLETED"
+            or activation.responsibility_owner != "USER"
+            or not activation.takeover_scope
+            or not activation.closure_digest
+        ):
+            denial_reasons.append("USER_TAKEOVER_CLOSURE_REQUIRED")
+        elif activation.updated_at < current_stop.started_at:
+            denial_reasons.append("SYSTEM_STOP_RELEASE_CLOSURE_PREDATES_STOP")
+        if denial_reasons:
+            return {
+                "eligible": False,
+                "denial_reasons": denial_reasons,
+                "consequence": consequence,
+                "stop": stop_projection,
+                "evidence_cutoff": None,
+            }
+
+        account_row = connection.execute(
+            """
+            SELECT venue_fact_id, received_at, cutoff, payload, content_digest
+            FROM halpha.venue_fact
+            WHERE environment_id = %s
+              AND account_ref = %s
+              AND venue_ref = 'BINANCE_USDM'
+              AND instrument_ref IS NULL
+              AND kind = 'ACCOUNT_STATE'
+              AND source_class = 'VENUE_QUERY'
+              AND received_at >= %s
+            ORDER BY received_at DESC, venue_fact_id DESC
+            LIMIT 1
+            """,
+            (
+                self._environment_id,
+                self._account_ref,
+                current_stop.started_at,
+            ),
+        ).fetchone()
+        if account_row is None:
+            denial_reasons.append("SYSTEM_STOP_RELEASE_ACCOUNT_SNAPSHOT_MISSING")
+            return {
+                "eligible": False,
+                "denial_reasons": denial_reasons,
+                "consequence": consequence,
+                "stop": stop_projection,
+                "evidence_cutoff": None,
+            }
+
+        account_fact_id = str(account_row[0])
+        received_at = account_row[1]
+        cutoff = account_row[2]
+        payload = dict(account_row[3])
+        account_content_digest = str(account_row[4])
+        query_paths = payload.get("query_paths")
+        positions = payload.get("positions")
+        ordinary_orders = payload.get("ordinary_open_orders")
+        algo_orders = payload.get("algo_open_orders")
+        required_query_paths = set(BINANCE_USDM_ACCOUNT_SNAPSHOT_QUERY_PATHS)
+        snapshot_shape_valid = (
+            payload.get("schema") == BINANCE_USDM_ACCOUNT_SNAPSHOT_SCHEMA
+            and payload.get("read_only") is True
+            and payload.get("snapshot_complete") is True
+            and payload.get("management_authority") == "NONE"
+            and isinstance(query_paths, list)
+            and all(isinstance(item, str) for item in query_paths)
+            and required_query_paths.issubset(query_paths)
+            and isinstance(positions, list)
+            and all(isinstance(item, dict) for item in positions)
+            and isinstance(ordinary_orders, list)
+            and all(isinstance(item, dict) for item in ordinary_orders)
+            and isinstance(algo_orders, list)
+            and all(isinstance(item, dict) for item in algo_orders)
+            and type(payload.get("open_position_count")) is int
+            and payload["open_position_count"] == len(positions)
+            and type(payload.get("ordinary_open_order_count")) is int
+            and payload["ordinary_open_order_count"] == len(ordinary_orders)
+            and type(payload.get("algo_open_order_count")) is int
+            and payload["algo_open_order_count"] == len(algo_orders)
+            and received_at == cutoff
+        )
+        if not snapshot_shape_valid:
+            denial_reasons.append("SYSTEM_STOP_RELEASE_ACCOUNT_SNAPSHOT_INVALID")
+        else:
+            if positions:
+                denial_reasons.append("SYSTEM_STOP_RELEASE_ACCOUNT_NOT_FLAT")
+            if ordinary_orders or algo_orders:
+                denial_reasons.append("SYSTEM_STOP_RELEASE_OPEN_ORDERS_REMAIN")
+        if (
+            received_at > observed_at
+            or observed_at - received_at
+            > ACCOUNT_SYSTEM_STOP_RELEASE_EVIDENCE_MAX_AGE
+        ):
+            denial_reasons.append("SYSTEM_STOP_RELEASE_EVIDENCE_STALE")
+        if received_at < current_stop.started_at:
+            denial_reasons.append(
+                "SYSTEM_STOP_RELEASE_EVIDENCE_PREDATES_STOP"
+            )
+
+        open_activation_rows = connection.execute(
+            """
+            SELECT activation_id, lifecycle
+            FROM halpha.plan_activation
+            WHERE environment_id = %s
+              AND account_ref = %s
+              AND lifecycle <> 'COMPLETED'
+            ORDER BY activation_id
+            """,
+            (self._environment_id, self._account_ref),
+        ).fetchall()
+        if open_activation_rows:
+            denial_reasons.append("SYSTEM_STOP_RELEASE_ACCOUNT_ACTIVATIONS_OPEN")
+
+        open_action_rows = connection.execute(
+            """
+            SELECT execution_action_id, state, client_order_id
+            FROM halpha.execution_action
+            WHERE environment_id = %s
+              AND account_ref = %s
+              AND state NOT IN ('CLOSED', 'NOT_SUBMITTED', 'HANDED_OVER')
+            ORDER BY execution_action_id
+            """,
+            (self._environment_id, self._account_ref),
+        ).fetchall()
+        if open_action_rows:
+            denial_reasons.append("SYSTEM_STOP_RELEASE_ACCOUNT_ACTIONS_OPEN")
+
+        later_account_fact_rows = connection.execute(
+            """
+            SELECT venue_fact_id, kind, content_digest
+            FROM halpha.venue_fact
+            WHERE environment_id = %s
+              AND account_ref = %s
+              AND received_at > %s
+            ORDER BY received_at, venue_fact_id
+            """,
+            (
+                self._environment_id,
+                self._account_ref,
+                received_at,
+            ),
+        ).fetchall()
+        if later_account_fact_rows:
+            denial_reasons.append("SYSTEM_STOP_RELEASE_NEW_UNCLAIMED_FACT")
+
+        resolution_evidence = {
+            "environment_id": self._environment_id,
+            "account_ref": self._account_ref,
+            "activation_id": activation.activation_id,
+            "activation_state_version": activation.state_version,
+            "activation_lifecycle": activation.lifecycle.value,
+            "responsibility_owner": activation.responsibility_owner,
+            "closure_digest": activation.closure_digest,
+            "takeover_command_ref": (
+                activation.takeover_scope.get("command_ref")
+                if isinstance(activation.takeover_scope, dict)
+                else None
+            ),
+            "stop_state_version_id": current_stop.stop_state_version_id,
+            "stop_content_digest": current_stop.content_digest,
+            "account_fact_id": account_fact_id,
+            "account_fact_content_digest": account_content_digest,
+            "account_fact_cutoff": cutoff,
+            "open_activations": tuple(
+                (str(row[0]), str(row[1]))
+                for row in open_activation_rows
+            ),
+            "open_actions": tuple(
+                (
+                    str(row[0]),
+                    str(row[1]),
+                    str(row[2]) if row[2] is not None else None,
+                )
+                for row in open_action_rows
+            ),
+            "later_account_facts": tuple(
+                (str(row[0]), str(row[1]), str(row[2]))
+                for row in later_account_fact_rows
+            ),
+        }
+        reconciliation = {
+            "resolution_evidence_digest": content_digest(resolution_evidence),
+            "account_fact_id": account_fact_id,
+            "account_fact_content_digest": account_content_digest,
+            "position_count": len(positions) if isinstance(positions, list) else None,
+            "ordinary_open_order_count": (
+                len(ordinary_orders) if isinstance(ordinary_orders, list) else None
+            ),
+            "algo_open_order_count": (
+                len(algo_orders) if isinstance(algo_orders, list) else None
+            ),
+            "observed_at": received_at,
+        }
+        return {
+            "eligible": not denial_reasons,
+            "denial_reasons": denial_reasons,
+            "consequence": consequence,
+            "stop": stop_projection,
+            "evidence_cutoff": received_at.isoformat(),
+            "_reconciliation_digest": content_digest(reconciliation),
+            "_resolution_evidence_digest": content_digest(resolution_evidence),
+            "_reconciliation_observed_at": received_at,
+        }
+
+    @staticmethod
+    def _public_system_stop_release_preview(
+        evidence: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            key: value
+            for key, value in evidence.items()
+            if not key.startswith("_")
+        }
+
+    def system_stop_release_preview(
+        self,
+        activation_id: str,
+        *,
+        observed_at: datetime,
+    ) -> dict[str, Any]:
+        with self._connect() as connection, connection.transaction():
+            current_stop = PostgreSQLCapitalRepository(
+                connection,
+                self._environment_id,
+            ).get_current_account_stop_state(account_ref=self._account_ref)
+            evidence = self._system_stop_release_evidence(
+                connection,
+                activation_id=activation_id,
+                current_stop=current_stop,
+                observed_at=observed_at,
+            )
+        return self._public_system_stop_release_preview(evidence)
+
+    def release_system_stop(
+        self,
+        activation_id: str,
+        payload: SystemStopReleasePayload,
+        *,
+        idempotency_key: str,
+        observed_at: datetime,
+    ) -> dict[str, Any]:
+        self._require_product_mutation_allowed()
+        stop_state_version_id = _stable_id(
+            self._environment_id,
+            "system-stop-release",
+            idempotency_key,
+        )
+        with self._connect() as connection, connection.transaction():
+            repository = PostgreSQLCapitalRepository(
+                connection,
+                self._environment_id,
+            )
+            existing = repository.find_stop_state(stop_state_version_id)
+            if existing is not None:
+                release = existing.release_rules.get("system_stop_release")
+                if (
+                    existing.account_ref != self._account_ref
+                    or existing.source != "USER_SYSTEM_STOP_RELEASE"
+                    or not isinstance(release, dict)
+                    or release.get("resolution_activation_id") != activation_id
+                    or release.get("released_stop_version")
+                    != payload.expected_stop_version
+                ):
+                    raise CapitalConflict("SYSTEM_STOP_RELEASE_IDENTITY_CONFLICT")
+                return {
+                    "effective": True,
+                    "replayed": True,
+                    "stop_state": existing.model_dump(mode="json"),
+                }
+
+            current_stop = repository.lock_current_account_stop_state(
+                account_ref=self._account_ref,
+            )
+            if (
+                current_stop is None
+                or current_stop.version != payload.expected_stop_version
+            ):
+                raise CapitalConflict("SYSTEM_STOP_VERSION_CONFLICT")
+            evidence = self._system_stop_release_evidence(
+                connection,
+                activation_id=activation_id,
+                current_stop=current_stop,
+                observed_at=observed_at,
+            )
+            denial_reasons = evidence["denial_reasons"]
+            if denial_reasons:
+                raise CapitalConflict(str(denial_reasons[0]))
+            request = AccountSystemStopReleaseRequest(
+                new_stop_state_version_id=stop_state_version_id,
+                environment_id=self._environment_id,
+                environment_kind=self._environment_kind,
+                authority_class=self._authority_class,
+                account_ref=self._account_ref,
+                resolution_activation_id=activation_id,
+                expected_version=current_stop.version,
+                expected_stop_content_digest=current_stop.content_digest,
+                expected_source=AccountSystemStopSource(current_stop.source),
+                reconciliation_digest=evidence["_reconciliation_digest"],
+                resolution_evidence_digest=evidence[
+                    "_resolution_evidence_digest"
+                ],
+                reconciliation_observed_at=evidence[
+                    "_reconciliation_observed_at"
+                ],
+                submitted_at=observed_at,
+                resolution_status="NO_UNRESOLVED_ACCOUNT_STOP_CAUSE",
+                confirmation=payload.confirmation,
+            )
+            released = CapitalApplicationService(
+                connection,
+                self._environment_id,
+            ).release_account_system_stop(request)
+        return {
+            "effective": True,
+            "replayed": False,
+            "stop_state": released.model_dump(mode="json"),
+        }
+
+    def control_preview(
+        self,
+        activation_id: str,
+        intent: ControlIntent,
+        *,
+        observed_at: datetime | None = None,
+    ) -> dict[str, Any]:
+        previewed_at = observed_at or datetime.now(UTC)
+        current = self.activation_detail(activation_id)
+        consequences = {
+            ControlIntent.STOP_NEW_RISK: "立即阻止新风险；已有查询、保护、撤单和减险责任继续。",
+            ControlIntent.RESUME_ACTIVATION: "仅解除执行者连续性暂停；当前计划、事实和安全停止仍需通过。",
+            ControlIntent.EXIT_STRATEGY: "进入 EXITING，停止增险并等待执行与闭合责任。",
+            ControlIntent.USER_TAKEOVER: "先持久化责任转移，再停止自动发起交易所变更请求；不会自动撤单或平仓。",
+        }
+        activation = current["activation"]
+        capital = current["capital"]
+        preview_basis = {
+            "activation_id": activation_id,
+            "intent": intent.value,
+            "activation_state_version": activation["state_version"],
+            "lifecycle": activation["lifecycle"],
+            "run_state": activation["run_state"],
+            "pause_reason": activation["pause_reason"],
+            "protection_state": activation["protection_state"],
+            "runtime_pnl_stop_supported": bool(
+                capital.get("runtime_pnl_stop_supported")
+            ),
+        }
+        resume_evidence = (
+            _continuity_resume_evidence(
+                current,
+                observed_at=previewed_at,
+            )
+            if intent is ControlIntent.RESUME_ACTIVATION
+            else {
+                "eligible": False,
+                "denial_reasons": [],
+                "reconciliation_digest": None,
+                "evidence_cutoff": None,
+            }
+        )
+        return {
+            **current,
+            "intent": intent.value,
+            "consequence": consequences[intent],
+            "preview_digest": content_digest(preview_basis),
+            "previewed_at": previewed_at.isoformat(),
+            "resume_eligible": (
+                resume_evidence["eligible"]
+                if intent is ControlIntent.RESUME_ACTIVATION
+                else None
+            ),
+            "resume_denial_reasons": (
+                resume_evidence["denial_reasons"]
+                if intent is ControlIntent.RESUME_ACTIVATION
+                else []
+            ),
+            "reconciliation_digest": resume_evidence[
+                "reconciliation_digest"
+            ],
+            "reconciliation_evidence_cutoff": resume_evidence[
+                "evidence_cutoff"
+            ],
+            "venue_write_created_by_preview": False,
+        }
+
+    def submit_control(
+        self,
+        activation_id: str,
+        intent: ControlIntent,
+        payload: ControlPayload,
+        *,
+        idempotency_key: str,
+        observed_at: datetime,
+    ) -> dict[str, Any]:
+        self._require_product_mutation_allowed()
+        resume_evidence = (
+            self.control_preview(
+                activation_id,
+                intent,
+                observed_at=observed_at,
+            )
+            if intent is ControlIntent.RESUME_ACTIVATION
+            else None
+        )
+        command_id = _stable_id(self._environment_id, "command", idempotency_key)
+        receipt_id = _stable_id(self._environment_id, "receipt", idempotency_key)
+        stop_id = _stable_id(self._environment_id, "stop-state", idempotency_key)
+        scope = {
+            **payload.takeover_scope,
+            "activation_id": activation_id,
+            "cutoff": observed_at.isoformat(),
+        }
+        if intent is ControlIntent.USER_TAKEOVER:
+            # EXE closure attributes the post-handover boundary to this exact
+            # immutable command. User-provided scope must not be able to
+            # replace that identity.
+            scope["command_ref"] = command_id
+        command = build_command(
+            command_id=command_id,
+            environment_id=self._environment_id,
+            owner_scope="local-owner",
+            idempotency_key=idempotency_key,
+            activation_id=activation_id,
+            expected_version=payload.expected_version,
+            intent=intent,
+            scope=scope,
+            parameters={},
+            submitted_at=observed_at,
+        )
+        with self._connect() as connection, connection.transaction():
+            receipt = ActivationControlService(connection, self._environment_id).submit(
+                command,
+                receipt_id=receipt_id,
+                stop_state_version_id=stop_id,
+                # The user never supplies this digest. It is derived from the
+                # latest target-scoped EXE position fact immediately before the
+                # command transaction.
+                reconciliation_digest=(
+                    resume_evidence["reconciliation_digest"]
+                    if resume_evidence is not None
+                    and resume_evidence["resume_eligible"] is True
+                    else None
+                ),
+                facts_known=(
+                    resume_evidence is None
+                    or resume_evidence["resume_eligible"] is True
+                ),
+            )
+        # The persisted model carries its database partition key, while the
+        # public receipt contract intentionally does not expose it. Keep the
+        # immediate submission response identical to GET /receipts/{id}.
+        public_receipt = receipt.model_dump(mode="json")
+        public_receipt.pop("environment_id", None)
+        return public_receipt
+
+    def receipt(self, receipt_id: str) -> dict[str, Any]:
+        query = """
+                SELECT r.receipt_id, r.command_id, r.processing_owner, r.state,
+                       r.state_version, r.reason_code, r.result,
+                       r.pending_responsibility_refs, r.content_digest,
+                       r.created_at, r.updated_at, c.target_ref
+                FROM halpha.receipt r
+                JOIN halpha.command c
+                  ON c.environment_id = r.environment_id
+                 AND c.command_id = r.command_id
+                WHERE r.environment_id = %s AND r.receipt_id = %s
+                """
+        with self._connect() as connection, connection.transaction():
+            row = connection.execute(
+                query,
+                (self._environment_id, receipt_id),
+            ).fetchone()
+        if row is None:
+            raise ValueError("RECEIPT_NOT_FOUND")
+        return {
+            "receipt_id": str(row[0]),
+            "command_id": str(row[1]),
+            "processing_owner": str(row[2]),
+            "state": str(row[3]),
+            "state_version": int(row[4]),
+            "reason_code": str(row[5]) if row[5] is not None else None,
+            "result": dict(row[6]) if row[6] is not None else None,
+            "pending_responsibility_refs": list(row[7]),
+            "content_digest": str(row[8]),
+            "created_at": row[9].isoformat(),
+            "updated_at": row[10].isoformat(),
+        }

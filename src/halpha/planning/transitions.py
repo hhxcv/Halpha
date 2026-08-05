@@ -1,0 +1,1200 @@
+"""Pure TRADEPLAN identities, idempotency, and lifecycle transitions."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_DOWN, ROUND_UP
+from enum import StrEnum
+from typing import Iterable
+
+from halpha.capital.models import StopCategory
+from halpha.domain_values import canonical_decimal, content_digest, decimal_from_string
+from halpha.planning.models import (
+    PlanActivation,
+    PlanEvent,
+    PlanLifecycle,
+    ProposedAction,
+    ProposedActionKind,
+    ProtectionState,
+    RunState,
+)
+from halpha.planning.order_policies import (
+    ProtectionPolicy,
+    RuntimeConditionState,
+    compile_protection_targets,
+)
+from halpha.planning.registry import ONE_SHOT_STRATEGY_ID
+from halpha.planning.strategies.one_shot import (
+    EntryRiskContext,
+    RiskDirection,
+    StrategyProposal,
+)
+
+
+class ControlIntent(StrEnum):
+    STOP_NEW_RISK = "STOP_NEW_RISK"
+    RESUME_ACTIVATION = "RESUME_ACTIVATION"
+    EXIT_STRATEGY = "EXIT_STRATEGY"
+    USER_TAKEOVER = "USER_TAKEOVER"
+
+
+class EventConflict(ValueError):
+    pass
+
+
+def _fixed_venue_policy(order_type: str) -> dict[str, object]:
+    """Persist the complete neutral venue policy for non-limit order profiles."""
+
+    return {
+        "order_type": order_type,
+        "time_in_force": None,
+        "post_only": False,
+        "price_match": None,
+        "expire_at": None,
+    }
+
+
+def deadline_source_identity(
+    *, activation_id: str, rule_id: str, deadline: datetime
+) -> str:
+    return f"{activation_id}:DEADLINE:{rule_id}:{deadline.isoformat()}"
+
+
+def venue_source_identity(
+    *,
+    activation_id: str,
+    rule_id: str,
+    source_class: str,
+    source_object_id: str,
+    source_sequence_or_version: str,
+) -> str:
+    return (
+        f"{activation_id}:VENUE:{rule_id}:{source_class}:"
+        f"{source_object_id}:{source_sequence_or_version}"
+    )
+
+
+def proposed_action_from_strategy_proposal(
+    activation: PlanActivation,
+    proposal: StrategyProposal,
+) -> ProposedAction:
+    """Normalize the one-shot strategy proposal without granting execution authority."""
+
+    proposal_basis = proposal.model_dump(
+        mode="python",
+        exclude={"proposal_digest"},
+        exclude_none=True,
+    )
+    if content_digest(proposal_basis) != proposal.proposal_digest:
+        raise EventConflict("FACT_CONFLICT")
+    if (
+        proposal.strategy_id != ONE_SHOT_STRATEGY_ID
+        or proposal.strategy_id != activation.strategy_id
+        or proposal.activation_id != activation.activation_id
+        or proposal.direction is not activation.direction
+    ):
+        raise ValueError("PLAN_BOUNDARY_MISMATCH")
+    if proposal.instrument_id != f"{activation.instrument_ref}.BINANCE":
+        raise ValueError("ATTRIBUTION_AMBIGUOUS")
+    if (
+        proposal.action_profile != "ENTRY_MARKET"
+        or proposal.risk_direction is not RiskDirection.INCREASE
+    ):
+        raise ValueError("STRATEGY_PROPOSAL_UNSUPPORTED")
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.ENTRY,
+        action_profile=proposal.action_profile,
+        instrument_ref=activation.instrument_ref,
+        direction=proposal.direction,
+        quantity=proposal.quantity,
+        close_position=False,
+        order_type="MARKET",
+        price=None,
+        trigger_price=None,
+        valid_until=proposal.valid_until,
+        reduce_only=False,
+        source_responsibility="HALPHA_MONITORED",
+        causation_ref=proposal.proposal_digest,
+        execution_context={
+            "reference_price": proposal.reference_price,
+            "reference_source": proposal.reference_source,
+            "venue_policy": _fixed_venue_policy("MARKET"),
+            "entry_risk_context": (
+                proposal.entry_risk_context.model_dump(mode="json")
+                if proposal.entry_risk_context is not None
+                else None
+            ),
+        },
+    )
+
+
+def resolve_existing_event(
+    existing: PlanEvent | None,
+    *,
+    source_identity: str,
+    input_digest: str,
+) -> PlanEvent | None:
+    if existing is None:
+        return None
+    if existing.source_identity != source_identity:
+        raise EventConflict("PLAN_EVENT_IDENTITY_MISMATCH")
+    if existing.input_digest != input_digest:
+        raise EventConflict("FACT_CONFLICT")
+    return existing
+
+
+def build_plan_event(
+    *,
+    plan_event_id: str,
+    activation: PlanActivation,
+    rule_id: str,
+    source_identity: str,
+    source_cutoff: datetime,
+    input_digest: str,
+    reason_code: str,
+    proposed_action: ProposedAction | None,
+    no_action_reason: str | None,
+    condition_judgement: object | None,
+    capital_decision: dict[str, object],
+    created_at: datetime,
+) -> PlanEvent:
+    capital_digest = content_digest(capital_decision)
+    fields = {
+        "plan_event_id": plan_event_id,
+        "environment_id": activation.environment_id,
+        "activation_id": activation.activation_id,
+        "rule_id": rule_id,
+        "source_identity": source_identity,
+        "source_cutoff": source_cutoff,
+        "input_digest": input_digest,
+        "reason_code": reason_code,
+        "condition_judgement": condition_judgement,
+        "proposed_action": proposed_action,
+        "no_action_reason": no_action_reason,
+        "capital_decision": capital_decision,
+        "capital_decision_digest": capital_digest,
+        "created_at": created_at,
+    }
+    return PlanEvent(**fields, content_digest=content_digest(fields))
+
+
+def resume_activation(
+    activation: PlanActivation,
+    *,
+    command_id: str,
+    reconciliation_digest: str,
+    observed_at: datetime,
+    active_stop_categories: Iterable[StopCategory],
+    plan_current: bool,
+    facts_known: bool,
+) -> PlanActivation:
+    if activation.run_state is RunState.ACTIVE:
+        return activation
+    if activation.lifecycle in {
+        PlanLifecycle.EXITING,
+        PlanLifecycle.USER_TAKEOVER,
+        PlanLifecycle.COMPLETED,
+        PlanLifecycle.UNKNOWN,
+    }:
+        raise ValueError("RESUME_BLOCKED_BY_LIFECYCLE")
+    stops = frozenset(active_stop_categories)
+    if StopCategory.ALL_EXCHANGE_CHANGES in stops:
+        raise ValueError("ALL_EXCHANGE_CHANGES_STOPPED")
+    if not plan_current:
+        raise ValueError("PLAN_EXPIRED")
+    if not facts_known:
+        raise ValueError("FACT_UNKNOWN")
+    return activation.model_copy(
+        update={
+            "run_state": RunState.ACTIVE,
+            "pause_reason": None,
+            "paused_at": None,
+            "reconciliation_digest": reconciliation_digest,
+            "current_resume_command_ref": command_id,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+
+
+def enter_exit(activation: PlanActivation, *, observed_at: datetime) -> PlanActivation:
+    if activation.lifecycle is PlanLifecycle.USER_TAKEOVER:
+        raise ValueError("TAKEOVER_ACTIVE")
+    if activation.lifecycle is PlanLifecycle.COMPLETED:
+        raise ValueError("CLOSURE_ALREADY_COMPLETED")
+    if activation.lifecycle is PlanLifecycle.EXITING:
+        return activation
+    return activation.model_copy(
+        update={
+            "lifecycle": PlanLifecycle.EXITING,
+            "entry_opportunity_consumed": True,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+
+
+def enter_user_takeover(
+    activation: PlanActivation,
+    *,
+    takeover_scope: dict[str, object],
+    observed_at: datetime,
+) -> PlanActivation:
+    if activation.lifecycle is PlanLifecycle.COMPLETED:
+        raise ValueError("CLOSURE_ALREADY_COMPLETED")
+    if activation.lifecycle is PlanLifecycle.USER_TAKEOVER:
+        return activation
+    return activation.model_copy(
+        update={
+            "lifecycle": PlanLifecycle.USER_TAKEOVER,
+            "responsibility_owner": "USER",
+            "entry_opportunity_consumed": True,
+            "takeover_scope": takeover_scope,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+
+
+def consume_entry_opportunity(
+    activation: PlanActivation,
+    *,
+    observed_at: datetime,
+) -> PlanActivation:
+    if activation.entry_opportunity_consumed:
+        return activation
+    return activation.model_copy(
+        update={
+            "entry_opportunity_consumed": True,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+
+
+def record_runtime_condition_state(
+    activation: PlanActivation,
+    *,
+    state_key: str,
+    state: RuntimeConditionState,
+    minimum_refresh_seconds: int = 5,
+) -> PlanActivation:
+    """Persist the latest Executor judgement without writing every market tick."""
+
+    if (
+        not state_key
+        or len(state_key) > 64
+        or minimum_refresh_seconds < 1
+        or activation.lifecycle is PlanLifecycle.COMPLETED
+    ):
+        if activation.lifecycle is PlanLifecycle.COMPLETED:
+            return activation
+        raise ValueError("RUNTIME_CONDITION_STATE_INVALID")
+    rule_state = dict(activation.rule_state)
+    raw_judgements = rule_state.get("condition_judgements")
+    judgements = dict(raw_judgements) if isinstance(raw_judgements, dict) else {}
+    existing_raw = judgements.get(state_key)
+    existing: RuntimeConditionState | None = None
+    if isinstance(existing_raw, dict):
+        try:
+            existing = RuntimeConditionState.model_validate(existing_raw)
+        except ValueError:
+            existing = None
+    if existing is not None:
+        semantic_fields = (
+            "result",
+            "item_results",
+            "phase",
+            "submission_ready",
+            "blocking_reason",
+        )
+        unchanged = all(
+            getattr(existing, field) == getattr(state, field)
+            for field in semantic_fields
+        )
+        age_seconds = (state.evaluated_at - existing.evaluated_at).total_seconds()
+        if unchanged and 0 <= age_seconds < minimum_refresh_seconds:
+            return activation
+    judgements[state_key] = state.model_dump(mode="json")
+    rule_state["condition_judgements"] = judgements
+    return activation.model_copy(
+        update={
+            "rule_state": rule_state,
+            "state_version": activation.state_version + 1,
+            "updated_at": state.evaluated_at,
+        }
+    )
+
+
+def update_protection_projection(
+    activation: PlanActivation,
+    *,
+    protection_state: ProtectionState,
+    pending_action_digest: str | None,
+    observed_at: datetime,
+) -> PlanActivation:
+    allowed = {
+        ProtectionState.NONE: {ProtectionState.UNKNOWN, ProtectionState.GAP},
+        ProtectionState.UNKNOWN: {
+            ProtectionState.WORKING,
+            ProtectionState.GAP,
+            ProtectionState.CLOSED,
+        },
+        # GAP is aggregate evidence that at least one confirmed fill is not
+        # protected.  A later WORKING fact for a different protection must not
+        # erase it; only flat-position closure can resolve the projection.
+        ProtectionState.GAP: {ProtectionState.CLOSED},
+        ProtectionState.WORKING: {
+            ProtectionState.UNKNOWN,
+            ProtectionState.GAP,
+            ProtectionState.CLOSED,
+        },
+        ProtectionState.CLOSED: set(),
+    }
+    if protection_state is activation.protection_state:
+        return activation
+    if protection_state not in allowed[activation.protection_state]:
+        raise ValueError("PROTECTION_STATE_INVALID")
+    return activation.model_copy(
+        update={
+            "protection_state": protection_state,
+            "pending_action_digest": pending_action_digest,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+
+
+def record_first_fill(
+    activation: PlanActivation,
+    *,
+    entry_action_ref: str,
+    fill_fact_ref: str,
+    fill_price: str,
+    fill_time: datetime,
+    entry_risk_context: dict[str, object],
+    observed_at: datetime,
+) -> PlanActivation:
+    """Freeze the first-fill R values once inside PlanActivation.rule_state."""
+
+    context = EntryRiskContext.model_validate(entry_risk_context)
+    price = decimal_from_string(fill_price, code="FILL_VALUE_INVALID", positive=True)
+    stop_distance = Decimal(context.trigger_atr) * Decimal(
+        context.initial_stop_atr_multiple
+    )
+    frozen = {
+        "entry_action_ref": entry_action_ref,
+        "first_fill_fact_ref": fill_fact_ref,
+        "first_fill_price": canonical_decimal(price),
+        "first_fill_time": fill_time.isoformat(),
+        "trigger_atr": context.trigger_atr,
+        "R": canonical_decimal(stop_distance),
+        "time_exit_due_at": (
+            fill_time + timedelta(minutes=15 * context.max_hold_bars_15m)
+        ).isoformat(),
+        "entry_risk_context": context.model_dump(mode="json"),
+    }
+    rule_state = dict(activation.rule_state)
+    existing = rule_state.get("first_fill")
+    if existing is not None:
+        if not isinstance(existing, dict) or content_digest(existing) != content_digest(
+            frozen
+        ):
+            # Later partial fills legitimately have different fact/price/time. They
+            # must reuse the already frozen first-fill context, not overwrite it.
+            if (
+                not isinstance(existing, dict)
+                or existing.get("entry_action_ref") != entry_action_ref
+                or existing.get("entry_risk_context") != context.model_dump(mode="json")
+            ):
+                raise EventConflict("FACT_CONFLICT")
+        return activation
+    rule_state["first_fill"] = frozen
+    return activation.model_copy(
+        update={
+            "has_entry_fill": True,
+            "entry_opportunity_consumed": True,
+            "rule_state": rule_state,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+
+
+def record_direct_fill(
+    activation: PlanActivation,
+    *,
+    entry_action_ref: str,
+    fill_fact_ref: str,
+    fill_price: str,
+    fill_quantity: str,
+    fill_time: datetime,
+    protection_policy: dict[str, object],
+    price_tick_size: str,
+    quantity_step: str,
+    observed_at: datetime,
+) -> PlanActivation:
+    """Append one direct-schedule fill without reusing strategy ATR state."""
+
+    policy = ProtectionPolicy.model_validate(protection_policy)
+    quantity = canonical_decimal(
+        decimal_from_string(
+            fill_quantity,
+            code="FILL_VALUE_INVALID",
+            positive=True,
+        )
+    )
+    protection_error: str | None = None
+    try:
+        targets = compile_protection_targets(
+            policy,
+            direction=activation.direction.value,
+            fill_price=fill_price,
+            price_tick_size=price_tick_size,
+        )
+    except ValueError as exc:
+        if str(exc) != "PROTECTION_PRICE_INVALID":
+            raise
+        # MARKET and price-match entries cannot preflight a fill-relative
+        # target.  Preserve the confirmed fill and the exact failure so the
+        # runtime can durably project GAP and form an attributed exit.
+        targets = None
+        protection_error = str(exc)
+    fill_state = {
+        "entry_action_ref": entry_action_ref,
+        "fill_fact_ref": fill_fact_ref,
+        "fill_price": canonical_decimal(
+            decimal_from_string(
+                fill_price,
+                code="FILL_VALUE_INVALID",
+                positive=True,
+            )
+        ),
+        "fill_quantity": quantity,
+        "fill_time": fill_time.isoformat(),
+        "price_tick_size": canonical_decimal(
+            decimal_from_string(
+                price_tick_size,
+                code="INSTRUMENT_RULE_INVALID",
+                positive=True,
+            )
+        ),
+        "quantity_step": canonical_decimal(
+            decimal_from_string(
+                quantity_step,
+                code="INSTRUMENT_RULE_INVALID",
+                positive=True,
+            )
+        ),
+        "protection_policy": policy.model_dump(mode="json"),
+        "targets": targets.model_dump(mode="json") if targets is not None else None,
+        "protection_error": protection_error,
+    }
+    rule_state = dict(activation.rule_state)
+    protection_state = rule_state.get("direct_protection")
+    if protection_state is None:
+        protection_state = {
+            "anchor_fill_ref": fill_fact_ref,
+            "anchor_price": fill_state["fill_price"],
+            "anchor_r": targets.risk_distance if targets is not None else None,
+            "fills": {},
+            "applied_step_index": None,
+            "pending_replacement_action_ref": None,
+        }
+    if not isinstance(protection_state, dict):
+        raise EventConflict("FACT_CONFLICT")
+    fills = protection_state.get("fills")
+    if not isinstance(fills, dict):
+        raise EventConflict("FACT_CONFLICT")
+    existing = fills.get(fill_fact_ref)
+    if existing is not None:
+        if not isinstance(existing, dict) or content_digest(existing) != content_digest(
+            fill_state
+        ):
+            raise EventConflict("FACT_CONFLICT")
+        return activation
+    if any(
+        isinstance(item, dict)
+        and item.get("fill_fact_ref") == fill_fact_ref
+        and content_digest(item) != content_digest(fill_state)
+        for item in fills.values()
+    ):
+        raise EventConflict("FACT_CONFLICT")
+    updated_fills = dict(fills)
+    updated_fills[fill_fact_ref] = fill_state
+    updated_protection = dict(protection_state)
+    updated_protection["fills"] = updated_fills
+    rule_state["direct_protection"] = updated_protection
+    snapshot = activation.order_schedule_snapshot
+    scheduled_leg_count = (
+        len(snapshot.normalized_legs)
+        if snapshot is not None and snapshot.normalized_legs
+        else 1
+    )
+    filled_entry_action_refs = {
+        item.get("entry_action_ref")
+        for item in updated_fills.values()
+        if isinstance(item, dict) and isinstance(item.get("entry_action_ref"), str)
+    }
+    return activation.model_copy(
+        update={
+            "has_entry_fill": True,
+            # One fill consumes a one-shot entry, but a direct multi-leg
+            # schedule must keep releasing its remaining persisted legs.
+            "entry_opportunity_consumed": (
+                activation.entry_opportunity_consumed
+                or len(filled_entry_action_refs) >= scheduled_leg_count
+            ),
+            "rule_state": rule_state,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )
+
+
+def proposed_direct_protection_from_fill(
+    activation: PlanActivation,
+    *,
+    entry_action_ref: str,
+    fill_fact_ref: str,
+    fill_source_identity: str,
+) -> ProposedAction:
+    """Form one exact-quantity direct protection from persisted fill state."""
+
+    state = activation.rule_state.get("direct_protection")
+    if not isinstance(state, dict) or not isinstance(state.get("fills"), dict):
+        raise ValueError("PROTECTION_UNKNOWN")
+    fill = state["fills"].get(fill_fact_ref)
+    if isinstance(fill, dict) and fill.get("protection_error") == (
+        "PROTECTION_PRICE_INVALID"
+    ):
+        raise ValueError("PROTECTION_PRICE_INVALID")
+    if (
+        not isinstance(fill, dict)
+        or fill.get("entry_action_ref") != entry_action_ref
+        or not isinstance(fill.get("targets"), dict)
+    ):
+        raise ValueError("PROTECTION_UNKNOWN")
+    target = fill["targets"].get("initial_stop_price")
+    quantity = fill.get("fill_quantity")
+    policy = fill.get("protection_policy")
+    if (
+        not isinstance(target, str)
+        or not isinstance(quantity, str)
+        or not isinstance(policy, dict)
+        or not isinstance(policy.get("initial_stop"), dict)
+    ):
+        raise ValueError("PROTECTION_UNKNOWN")
+    trigger_source = policy["initial_stop"].get("trigger_source")
+    if not isinstance(trigger_source, str):
+        raise ValueError("PROTECTION_UNKNOWN")
+    causation = content_digest(
+        {
+            "entry_action_ref": entry_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "fill": fill,
+            "responsibility": "DIRECT_PROTECTION",
+        }
+    )
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.PROTECTION,
+        action_profile="PROTECTIVE_STOP_REDUCE_ONLY",
+        instrument_ref=activation.instrument_ref,
+        direction=activation.direction,
+        quantity=quantity,
+        close_position=False,
+        order_type="STOP_MARKET",
+        trigger_price=target,
+        valid_until=None,
+        reduce_only=True,
+        source_responsibility="NONE",
+        causation_ref=causation,
+        execution_context={
+            "entry_action_ref": entry_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "direct_fill": fill,
+            "trigger_source": trigger_source,
+            "venue_policy": _fixed_venue_policy("STOP_MARKET"),
+        },
+    )
+
+
+def proposed_direct_protection_replacement(
+    activation: PlanActivation,
+    *,
+    predecessor_action_ref: str,
+    predecessor_trigger_price: str,
+    entry_action_ref: str,
+    fill_fact_ref: str,
+    fill_source_identity: str,
+    fill_quantity: str,
+    target_trigger_price: str,
+    step_index: int,
+) -> ProposedAction:
+    """Form one bounded tighter stop while preserving the original protection."""
+
+    if step_index < 0:
+        raise ValueError("DYNAMIC_PROTECTION_STEP_INVALID")
+    predecessor = decimal_from_string(
+        predecessor_trigger_price,
+        code="DYNAMIC_PROTECTION_PRICE_INVALID",
+        positive=True,
+    )
+    target = decimal_from_string(
+        target_trigger_price,
+        code="DYNAMIC_PROTECTION_PRICE_INVALID",
+        positive=True,
+    )
+    if (activation.direction.value == "LONG" and target <= predecessor) or (
+        activation.direction.value == "SHORT" and target >= predecessor
+    ):
+        raise ValueError("DYNAMIC_PROTECTION_NOT_TIGHTER")
+    state = activation.rule_state.get("direct_protection")
+    fills = state.get("fills") if isinstance(state, dict) else None
+    fill = fills.get(fill_fact_ref) if isinstance(fills, dict) else None
+    if (
+        not isinstance(fill, dict)
+        or fill.get("entry_action_ref") != entry_action_ref
+        or fill.get("fill_quantity") != fill_quantity
+        or not isinstance(fill.get("protection_policy"), dict)
+    ):
+        raise ValueError("PROTECTION_UNKNOWN")
+    policy = ProtectionPolicy.model_validate(fill["protection_policy"])
+    target_value = canonical_decimal(target)
+    replacement = {
+        "step_index": step_index,
+        "predecessor_action_ref": predecessor_action_ref,
+        "trigger_price": target_value,
+    }
+    causation = content_digest(
+        {
+            "entry_action_ref": entry_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "fill_digest": content_digest(fill),
+            "replacement": replacement,
+            "responsibility": "DIRECT_STEPPED_PROTECTION",
+        }
+    )
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.PROTECTION,
+        action_profile="PROTECTIVE_STOP_REDUCE_ONLY",
+        instrument_ref=activation.instrument_ref,
+        direction=activation.direction,
+        quantity=fill_quantity,
+        close_position=False,
+        order_type="STOP_MARKET",
+        trigger_price=target_value,
+        valid_until=None,
+        reduce_only=True,
+        source_responsibility="NONE",
+        causation_ref=causation,
+        execution_context={
+            "entry_action_ref": entry_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "direct_fill": fill,
+            "trigger_source": policy.initial_stop.trigger_source.value,
+            "venue_policy": _fixed_venue_policy("STOP_MARKET"),
+            "protection_replacement": replacement,
+        },
+    )
+
+
+def proposed_direct_take_profits_from_fill(
+    activation: PlanActivation,
+    *,
+    entry_action_ref: str,
+    protection_action_ref: str,
+    fill_fact_ref: str,
+    fill_source_identity: str,
+) -> tuple[ProposedAction, ...]:
+    """Form the fixed direct-schedule TP ladder for one confirmed fill."""
+
+    state = activation.rule_state.get("direct_protection")
+    if not isinstance(state, dict) or not isinstance(state.get("fills"), dict):
+        raise ValueError("TAKE_PROFIT_UNKNOWN")
+    fill = state["fills"].get(fill_fact_ref)
+    if (
+        not isinstance(fill, dict)
+        or fill.get("entry_action_ref") != entry_action_ref
+        or not isinstance(fill.get("targets"), dict)
+        or not isinstance(fill.get("protection_policy"), dict)
+    ):
+        raise ValueError("TAKE_PROFIT_UNKNOWN")
+
+    policy = ProtectionPolicy.model_validate(fill["protection_policy"])
+    ladder = policy.take_profit_ladder
+    if ladder is None:
+        return ()
+    targets = fill["targets"].get("take_profit_prices")
+    fill_quantity = fill.get("fill_quantity")
+    quantity_step = fill.get("quantity_step")
+    fill_time_value = fill.get("fill_time")
+    if (
+        not isinstance(targets, (list, tuple))
+        or len(targets) != len(ladder.levels)
+        or not all(isinstance(item, str) for item in targets)
+        or not isinstance(fill_quantity, str)
+        or not isinstance(quantity_step, str)
+        or not isinstance(fill_time_value, str)
+    ):
+        raise ValueError("TAKE_PROFIT_UNKNOWN")
+
+    quantity = decimal_from_string(
+        fill_quantity,
+        code="FILL_VALUE_INVALID",
+        positive=True,
+    )
+    step = decimal_from_string(
+        quantity_step,
+        code="INSTRUMENT_RULE_INVALID",
+        positive=True,
+    )
+    quantities = _allocate_take_profit_quantities(
+        quantity,
+        step,
+        tuple(Decimal(level.quantity_fraction) for level in ladder.levels),
+    )
+    if sum(quantities, Decimal(0)) > quantity:
+        raise ValueError("TAKE_PROFIT_SPLIT_INVALID")
+
+    valid_until = None
+    if policy.time_exit_seconds is not None:
+        try:
+            fill_time = datetime.fromisoformat(fill_time_value)
+        except ValueError:
+            raise ValueError("TAKE_PROFIT_UNKNOWN") from None
+        valid_until = fill_time + timedelta(seconds=policy.time_exit_seconds)
+
+    results = []
+    for level_index, (level, target, level_quantity) in enumerate(
+        zip(ladder.levels, targets, quantities, strict=True)
+    ):
+        # A minimum-step partial fill can be smaller than the configured
+        # ladder. Deterministic largest-remainder allocation keeps the complete
+        # fill assigned while omitting only zero-quantity venue actions.
+        if level_quantity == 0:
+            continue
+        trigger = canonical_decimal(
+            decimal_from_string(
+                target,
+                code="PROTECTION_FACT_INVALID",
+                positive=True,
+            )
+        )
+        normalized_quantity = canonical_decimal(level_quantity)
+        level_context = {
+            "level_index": level_index,
+            "trigger_r": level.trigger_r,
+            "quantity_fraction": level.quantity_fraction,
+            "trigger_price": trigger,
+            "quantity": normalized_quantity,
+        }
+        causation = content_digest(
+            {
+                "entry_action_ref": entry_action_ref,
+                "protection_action_ref": protection_action_ref,
+                "fill_fact_ref": fill_fact_ref,
+                "fill_source_identity": fill_source_identity,
+                "fill_digest": content_digest(fill),
+                "direct_take_profit": level_context,
+                "responsibility": "DIRECT_TAKE_PROFIT",
+            }
+        )
+        results.append(
+            ProposedAction(
+                environment_id=activation.environment_id,
+                action_kind=ProposedActionKind.TAKE_PROFIT,
+                # The direct ladder ordinal lives in the immutable context. Reuse
+                # the two already-qualified, shape-identical venue profiles rather
+                # than silently introducing an unqualified execution capability.
+                action_profile=(
+                    "TAKE_PROFIT_1" if level_index == 0 else "TAKE_PROFIT_2"
+                ),
+                instrument_ref=activation.instrument_ref,
+                direction=activation.direction,
+                quantity=normalized_quantity,
+                close_position=False,
+                order_type="MARKET_IF_TOUCHED",
+                trigger_price=trigger,
+                valid_until=valid_until,
+                reduce_only=True,
+                source_responsibility="NONE",
+                causation_ref=causation,
+                execution_context={
+                    "entry_action_ref": entry_action_ref,
+                    "protection_action_ref": protection_action_ref,
+                    "fill_fact_ref": fill_fact_ref,
+                    "fill_source_identity": fill_source_identity,
+                    "direct_fill": fill,
+                    "direct_take_profit": level_context,
+                    "trigger_source": policy.initial_stop.trigger_source.value,
+                    "venue_policy": _fixed_venue_policy("MARKET_IF_TOUCHED"),
+                },
+            )
+        )
+    return tuple(results)
+
+
+def _allocate_take_profit_quantities(
+    quantity: Decimal,
+    step: Decimal,
+    fractions: tuple[Decimal, ...],
+) -> tuple[Decimal, ...]:
+    """Allocate exact venue quantity steps with deterministic largest remainder."""
+
+    if quantity <= 0 or step <= 0 or not fractions:
+        raise ValueError("TAKE_PROFIT_SPLIT_INVALID")
+    if any(fraction <= 0 for fraction in fractions):
+        raise ValueError("TAKE_PROFIT_SPLIT_INVALID")
+    total_fraction = sum(fractions, Decimal(0))
+    if total_fraction > 1:
+        raise ValueError("TAKE_PROFIT_SPLIT_INVALID")
+
+    available_steps = int((quantity / step).to_integral_value(rounding=ROUND_DOWN))
+    target_steps = int(
+        (Decimal(available_steps) * total_fraction).to_integral_value(
+            rounding=ROUND_DOWN
+        )
+    )
+    if available_steps <= 0 or target_steps <= 0:
+        raise ValueError("TAKE_PROFIT_SPLIT_INVALID")
+
+    exact_steps = tuple(Decimal(available_steps) * fraction for fraction in fractions)
+    allocated_steps = [
+        int(value.to_integral_value(rounding=ROUND_DOWN)) for value in exact_steps
+    ]
+    remaining = target_steps - sum(allocated_steps)
+    remainder_order = sorted(
+        range(len(fractions)),
+        key=lambda index: (
+            -(exact_steps[index] - Decimal(allocated_steps[index])),
+            index,
+        ),
+    )
+    for index in remainder_order[:remaining]:
+        allocated_steps[index] += 1
+    return tuple(Decimal(item) * step for item in allocated_steps)
+
+
+def proposed_protection_from_fill(
+    activation: PlanActivation,
+    *,
+    entry_action_ref: str,
+    fill_fact_ref: str,
+    fill_source_identity: str,
+    fill_quantity: str,
+) -> ProposedAction:
+    """Form one explicit-quantity protection responsibility for one confirmed fill."""
+
+    frozen = _first_fill_context(activation, entry_action_ref)
+    context = EntryRiskContext.model_validate(frozen["entry_risk_context"])
+    quantity = decimal_from_string(
+        fill_quantity,
+        code="FILL_VALUE_INVALID",
+        positive=True,
+    )
+    first_price = Decimal(str(frozen["first_fill_price"]))
+    risk_distance = Decimal(str(frozen["R"]))
+    tick = Decimal(context.price_tick_size)
+    raw_stop = (
+        first_price - risk_distance
+        if activation.direction.value == "LONG"
+        else first_price + risk_distance
+    )
+    stop = _quantize_price(
+        raw_stop,
+        tick,
+        round_up=activation.direction.value == "SHORT",
+    )
+    if stop <= 0:
+        raise ValueError("PROTECTION_GAP")
+    causation = content_digest(
+        {
+            "entry_action_ref": entry_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "fill_quantity": quantity,
+            "first_fill_digest": content_digest(frozen),
+            "responsibility": "PROTECTION",
+        }
+    )
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.PROTECTION,
+        action_profile="PROTECTIVE_STOP_REDUCE_ONLY",
+        instrument_ref=activation.instrument_ref,
+        direction=activation.direction,
+        quantity=canonical_decimal(quantity),
+        close_position=False,
+        order_type="STOP_MARKET",
+        trigger_price=canonical_decimal(stop),
+        valid_until=None,
+        reduce_only=True,
+        source_responsibility="NONE",
+        causation_ref=causation,
+        execution_context={
+            "entry_action_ref": entry_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "first_fill": frozen,
+            "venue_policy": _fixed_venue_policy("STOP_MARKET"),
+        },
+    )
+
+
+def proposed_take_profits_from_fill(
+    activation: PlanActivation,
+    *,
+    entry_action_ref: str,
+    protection_action_ref: str,
+    fill_fact_ref: str,
+    fill_source_identity: str,
+    fill_quantity: str,
+) -> tuple[ProposedAction, ProposedAction]:
+    """Form the two fixed reduce-only TP responsibilities after protection works."""
+
+    frozen = _first_fill_context(activation, entry_action_ref)
+    context = EntryRiskContext.model_validate(frozen["entry_risk_context"])
+    quantity = decimal_from_string(
+        fill_quantity, code="FILL_VALUE_INVALID", positive=True
+    )
+    step = Decimal(context.quantity_step)
+    tp1_quantity = _floor_to_step(
+        quantity * Decimal(context.take_profit_1_fraction),
+        step,
+    )
+    tp2_quantity = _floor_to_step(quantity - tp1_quantity, step)
+    if (
+        tp1_quantity <= 0
+        or tp2_quantity <= 0
+        or tp1_quantity + tp2_quantity != quantity
+    ):
+        raise ValueError("TAKE_PROFIT_SPLIT_INVALID")
+    first_price = Decimal(str(frozen["first_fill_price"]))
+    risk_distance = Decimal(str(frozen["R"]))
+    tick = Decimal(context.price_tick_size)
+    direction_sign = (
+        Decimal("1") if activation.direction.value == "LONG" else Decimal("-1")
+    )
+    prices = (
+        first_price + direction_sign * risk_distance * Decimal(context.take_profit_1_r),
+        first_price + direction_sign * risk_distance * Decimal(context.take_profit_2_r),
+    )
+    triggers = tuple(
+        _quantize_price(
+            price,
+            tick,
+            round_up=activation.direction.value == "SHORT",
+        )
+        for price in prices
+    )
+    if any(price <= 0 for price in triggers):
+        raise ValueError("TAKE_PROFIT_SPLIT_INVALID")
+    results = []
+    for profile, tp_quantity, trigger in zip(
+        ("TAKE_PROFIT_1", "TAKE_PROFIT_2"),
+        (tp1_quantity, tp2_quantity),
+        triggers,
+        strict=True,
+    ):
+        causation = content_digest(
+            {
+                "entry_action_ref": entry_action_ref,
+                "protection_action_ref": protection_action_ref,
+                "fill_fact_ref": fill_fact_ref,
+                "fill_source_identity": fill_source_identity,
+                "profile": profile,
+                "quantity": tp_quantity,
+                "trigger": trigger,
+            }
+        )
+        results.append(
+            ProposedAction(
+                environment_id=activation.environment_id,
+                action_kind=ProposedActionKind.TAKE_PROFIT,
+                action_profile=profile,
+                instrument_ref=activation.instrument_ref,
+                direction=activation.direction,
+                quantity=canonical_decimal(tp_quantity),
+                close_position=False,
+                order_type="MARKET_IF_TOUCHED",
+                trigger_price=canonical_decimal(trigger),
+                valid_until=datetime.fromisoformat(str(frozen["time_exit_due_at"])),
+                reduce_only=True,
+                source_responsibility="NONE",
+                causation_ref=causation,
+                execution_context={
+                    "entry_action_ref": entry_action_ref,
+                    "protection_action_ref": protection_action_ref,
+                    "fill_fact_ref": fill_fact_ref,
+                    "fill_source_identity": fill_source_identity,
+                    "first_fill": frozen,
+                    "venue_policy": _fixed_venue_policy("MARKET_IF_TOUCHED"),
+                },
+            )
+        )
+    return results[0], results[1]
+
+
+def proposed_cancel_for_action(
+    activation: PlanActivation,
+    *,
+    target_client_order_id: str,
+    target_endpoint: str,
+    causation_ref: str,
+) -> ProposedAction:
+    """Form one stable cancel responsibility for an already persisted identity."""
+
+    if len(target_client_order_id) != 32 or any(
+        character not in "0123456789abcdef" for character in target_client_order_id
+    ):
+        raise ValueError("CANCEL_TARGET_INVALID")
+    if target_endpoint not in {"ORDINARY", "ALGO"}:
+        raise ValueError("CANCEL_TARGET_INVALID")
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.CANCEL,
+        action_profile="CANCEL_ORDER",
+        instrument_ref=activation.instrument_ref,
+        direction=activation.direction,
+        quantity=None,
+        close_position=False,
+        order_type="CANCEL",
+        reduce_only=False,
+        source_responsibility="NONE",
+        causation_ref=causation_ref,
+        cancel_target={
+            "client_order_id": target_client_order_id,
+            "endpoint": target_endpoint,
+        },
+    )
+
+
+def proposed_take_profit_market_reduction(
+    activation: PlanActivation,
+    *,
+    quantity: str,
+    causation_ref: str,
+    position_fact_ref: str,
+    rejected_take_profit_action_ref: str,
+    rejection_fact_ref: str,
+) -> ProposedAction:
+    """Replace a TP whose trigger was already crossed with one market reduction."""
+
+    reduction_quantity = decimal_from_string(
+        quantity,
+        code="POSITION_UNKNOWN",
+        positive=True,
+    )
+    alignment = getattr(activation, "position_alignment", None)
+    position_side = alignment.position_side if alignment is not None else "BOTH"
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.RISK_REDUCTION,
+        action_profile="REDUCE_OR_CLOSE_MARKET",
+        instrument_ref=activation.instrument_ref,
+        direction=activation.direction,
+        quantity=canonical_decimal(reduction_quantity),
+        close_position=False,
+        order_type="MARKET",
+        reduce_only=True,
+        source_responsibility="NONE",
+        causation_ref=causation_ref,
+        execution_context={
+            "position_fact_ref": position_fact_ref,
+            "position_side": position_side,
+            "rejected_take_profit_action_ref": rejected_take_profit_action_ref,
+            "rejection_fact_ref": rejection_fact_ref,
+            "venue_policy": _fixed_venue_policy("MARKET"),
+        },
+    )
+
+
+def proposed_reduce_or_close_position(
+    activation: PlanActivation,
+    *,
+    position_quantity: str,
+    causation_ref: str,
+    position_fact_ref: str,
+) -> ProposedAction:
+    """Form the explicit-quantity reduce-only market exit responsibility."""
+
+    quantity = decimal_from_string(
+        position_quantity,
+        code="POSITION_UNKNOWN",
+        positive=True,
+    )
+    alignment = getattr(activation, "position_alignment", None)
+    position_side = alignment.position_side if alignment is not None else "BOTH"
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.EXIT,
+        action_profile="REDUCE_OR_CLOSE_MARKET",
+        instrument_ref=activation.instrument_ref,
+        direction=activation.direction,
+        quantity=canonical_decimal(quantity),
+        close_position=False,
+        order_type="MARKET",
+        reduce_only=True,
+        source_responsibility="NONE",
+        causation_ref=causation_ref,
+        execution_context={
+            "position_fact_ref": position_fact_ref,
+            "position_side": position_side,
+            "venue_policy": _fixed_venue_policy("MARKET"),
+        },
+    )
+
+
+def _first_fill_context(
+    activation: PlanActivation,
+    entry_action_ref: str,
+) -> dict[str, object]:
+    frozen = activation.rule_state.get("first_fill")
+    if (
+        not isinstance(frozen, dict)
+        or frozen.get("entry_action_ref") != entry_action_ref
+    ):
+        raise ValueError("PROTECTION_UNKNOWN")
+    return frozen
+
+
+def _floor_to_step(value: Decimal, step: Decimal) -> Decimal:
+    return (value / step).to_integral_value(rounding=ROUND_DOWN) * step
+
+
+def _quantize_price(value: Decimal, tick: Decimal, *, round_up: bool) -> Decimal:
+    return (value / tick).to_integral_value(
+        rounding=ROUND_UP if round_up else ROUND_DOWN
+    ) * tick
+
+
+def complete_activation(
+    activation: PlanActivation,
+    *,
+    closure_digest: str,
+    result_ref: str,
+    observed_at: datetime,
+) -> PlanActivation:
+    if not closure_digest:
+        raise ValueError("CLOSURE_UNPROVEN")
+    return activation.model_copy(
+        update={
+            "lifecycle": PlanLifecycle.COMPLETED,
+            "run_state": RunState.ACTIVE,
+            "pause_reason": None,
+            "paused_at": None,
+            "entry_opportunity_consumed": True,
+            "closure_digest": closure_digest,
+            "result_ref": result_ref,
+            "state_version": activation.state_version + 1,
+            "updated_at": observed_at,
+        }
+    )

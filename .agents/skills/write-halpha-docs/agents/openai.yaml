@@ -1,0 +1,4 @@
+interface:
+  display_name: "Halpha 设计与文档"
+  short_description: "按影响与语义所有者编写、评审并校验 Halpha L0–L4"
+  default_prompt: "使用 $write-halpha-docs 按任务影响和语义所有者路由读取、起草或评审，并验证 Halpha L0–L4 文档。"
