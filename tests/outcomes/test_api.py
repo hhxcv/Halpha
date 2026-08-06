@@ -221,8 +221,8 @@ def test_live_read_only_outcomes_reject_mutation_before_database_access(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     api = PostgreSQLOutcomesApi(
-        database_name="halpha_live",
-        database_role_name="halpha_live_app_reader",
+        database_name="halpha_live_copy",
+        database_role_name="halpha_live_copy_app_reader",
         password=SecretStr("secret-password"),
         environment_id="live-main",
         read_only=True,
@@ -270,8 +270,8 @@ def test_live_read_only_outcomes_connections_force_transactions_read_only(
 
     monkeypatch.setattr(psycopg, "connect", capture_connect)
     api = PostgreSQLOutcomesApi(
-        database_name="halpha_live",
-        database_role_name="halpha_live_app_reader",
+        database_name="halpha_live_copy",
+        database_role_name="halpha_live_copy_app_reader",
         password=SecretStr("secret-password"),
         environment_id="live-main",
         read_only=True,
@@ -280,7 +280,7 @@ def test_live_read_only_outcomes_connections_force_transactions_read_only(
     api._connect()
 
     assert observed["options"] == "-c default_transaction_read_only=on"
-    assert observed["user"] == "halpha_live_app_reader"
+    assert observed["user"] == "halpha_live_copy_app_reader"
 
 
 def test_review_completion_contract_excludes_historical_classifications() -> None:

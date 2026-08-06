@@ -52,6 +52,7 @@ from halpha.planning.transitions import (
     proposed_cancel_for_action,
     proposed_direct_protection_from_fill,
     proposed_direct_protection_replacement,
+    proposed_direct_take_profit_replacement,
     proposed_direct_take_profits_from_fill,
     proposed_protection_from_fill,
     proposed_reduce_or_close_position,
@@ -63,6 +64,7 @@ from halpha.venue_integration.facts import (
     action_quantity_conflict,
     build_activation_allocation_fact,
     build_venue_fact,
+    collapse_synthetic_reconciliation_fills,
     order_is_working,
     terminal_fills_complete,
     terminal_order_status,
@@ -2126,13 +2128,14 @@ class HalphaCoordinator:
         predecessor_action_id: str,
         target_trigger_price: str,
         step_index: int,
+        replacement_kind: str,
         plan_event_id: str,
         execution_action_id: str,
         action_check: ActionCheckInput,
         observed_at: datetime,
         client_order_id: str,
     ) -> CoordinatedProposalResult:
-        """Persist a tighter stop before the older stop is cancelled."""
+        """Persist one typed stop replacement with its safe hand-off metadata."""
 
         with self._connection.transaction():
             activation = self._planning.get_activation(
@@ -2181,16 +2184,17 @@ class HalphaCoordinator:
                 fill_quantity=quantity,
                 target_trigger_price=target_trigger_price,
                 step_index=step_index,
+                replacement_kind=replacement_kind,
             )
             source_identity = (
-                f"{activation.activation_id}:DIRECT_STEPPED_PROTECTION:"
+                f"{activation.activation_id}:{replacement_kind}:"
                 f"{context['fill_fact_ref']}:{step_index}"
             )
             event, action = self._record_proposed_action(
                 plan_event_id=plan_event_id,
                 execution_action_id=execution_action_id,
                 activation_id=activation.activation_id,
-                rule_id="DIRECT_STEPPED_PROTECTION",
+                rule_id=replacement_kind,
                 source_identity=source_identity,
                 source_cutoff=observed_at,
                 input_digest=proposed.causation_ref,
@@ -2390,6 +2394,136 @@ class HalphaCoordinator:
                 )
                 results.append(CoordinatedProposalResult(event, action))
             return tuple(results)
+
+    def create_direct_take_profit_replacement(
+        self,
+        *,
+        activation_id: str,
+        predecessor_action_id: str,
+        target_trigger_price: str,
+        aggregate_revision: int,
+        plan_event_id: str,
+        execution_action_id: str,
+        action_check: ActionCheckInput,
+        observed_at: datetime,
+        client_order_id: str,
+    ) -> CoordinatedProposalResult | None:
+        """Replace one cancelled aggregate TP using its proven remainder."""
+
+        with self._connection.transaction():
+            activation = self._planning.get_activation(
+                activation_id,
+                for_update=True,
+            )
+            predecessor = self._action_repository.get(
+                predecessor_action_id,
+                for_update=True,
+            )
+            facts = self._fact_repository.list_for_action(
+                predecessor.execution_action_id
+            )
+            definitely_not_submitted = (
+                predecessor.state is ExecutionActionState.NOT_SUBMITTED
+                and predecessor.not_submitted_reason is not None
+            )
+            venue_terminal = (
+                predecessor.state is ExecutionActionState.CLOSED
+                and terminal_order_status(facts) in {"CANCELLED", "EXPIRED"}
+                and terminal_fills_complete(predecessor, facts)
+            )
+            if (
+                predecessor.activation_id != activation.activation_id
+                or predecessor.action_kind is not ExecutionActionKind.TAKE_PROFIT
+                or not (definitely_not_submitted or venue_terminal)
+            ):
+                raise ValueError("TAKE_PROFIT_REPLACEMENT_PREDECESSOR_UNRESOLVED")
+            try:
+                requested = Decimal(str(predecessor.action_terms["quantity"]))
+                filled = (
+                    Decimal(0)
+                    if definitely_not_submitted
+                    else sum(
+                        (
+                            Decimal(str(fact.payload["last_quantity"]))
+                            for fact in collapse_synthetic_reconciliation_fills(facts)
+                            if fact.kind is VenueFactKind.FILL
+                        ),
+                        Decimal(0),
+                    )
+                )
+            except (KeyError, TypeError, ValueError):
+                raise ValueError("TAKE_PROFIT_REPLACEMENT_QUANTITY_INVALID") from None
+            remaining = requested - filled
+            if remaining < 0:
+                raise ValueError("TAKE_PROFIT_REPLACEMENT_QUANTITY_INVALID")
+            if remaining == 0:
+                return None
+            normalized_remaining = canonical_decimal(remaining)
+            if Decimal(action_check.quantized_quantity) != remaining:
+                raise ValueError("TAKE_PROFIT_REPLACEMENT_CHECK_MISMATCH")
+            context = predecessor.action_terms.get("execution_context")
+            level_context = (
+                context.get("direct_take_profit")
+                if isinstance(context, dict)
+                else None
+            )
+            if (
+                not isinstance(context, dict)
+                or not isinstance(level_context, dict)
+                or not isinstance(level_context.get("level_index"), int)
+                or not all(
+                    isinstance(context.get(key), str)
+                    for key in (
+                        "entry_action_ref",
+                        "protection_action_ref",
+                        "fill_fact_ref",
+                        "fill_source_identity",
+                    )
+                )
+            ):
+                raise ValueError("TAKE_PROFIT_UNKNOWN")
+            valid_until_value = predecessor.action_terms.get("valid_until")
+            if isinstance(valid_until_value, str):
+                try:
+                    valid_until = datetime.fromisoformat(valid_until_value)
+                except ValueError:
+                    raise ValueError("TAKE_PROFIT_UNKNOWN") from None
+            elif isinstance(valid_until_value, datetime) or valid_until_value is None:
+                valid_until = valid_until_value
+            else:
+                raise ValueError("TAKE_PROFIT_UNKNOWN")
+            proposed = proposed_direct_take_profit_replacement(
+                activation,
+                predecessor_action_ref=predecessor.execution_action_id,
+                protection_action_ref=str(context["protection_action_ref"]),
+                entry_action_ref=str(context["entry_action_ref"]),
+                fill_fact_ref=str(context["fill_fact_ref"]),
+                fill_source_identity=str(context["fill_source_identity"]),
+                level_index=int(level_context["level_index"]),
+                remaining_quantity=normalized_remaining,
+                target_trigger_price=target_trigger_price,
+                aggregate_revision=aggregate_revision,
+                valid_until=valid_until,
+            )
+            source_identity = (
+                f"{activation.activation_id}:ENTRY_AGGREGATE_TAKE_PROFIT_REBALANCE:"
+                f"{context['fill_fact_ref']}:{level_context['level_index']}:"
+                f"{aggregate_revision}"
+            )
+            event, action = self._record_proposed_action(
+                plan_event_id=plan_event_id,
+                execution_action_id=execution_action_id,
+                activation_id=activation.activation_id,
+                rule_id="ENTRY_AGGREGATE_TAKE_PROFIT_REBALANCE",
+                source_identity=source_identity,
+                source_cutoff=observed_at,
+                input_digest=proposed.causation_ref,
+                proposed_action=proposed,
+                action_check=action_check,
+                observed_at=observed_at,
+                client_order_id=client_order_id,
+            )
+            return CoordinatedProposalResult(event, action)
 
     def create_cancel_for_action(
         self,

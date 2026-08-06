@@ -66,7 +66,6 @@ def _role_prefix() -> tuple[str, str]:
     if database_name == "halpha_demo":
         return "halpha_demo", "DEMO"
     if database_name in {
-        "halpha_live",
         "halpha_live_copy",
         "halpha_live_personal",
     }:

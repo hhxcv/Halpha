@@ -151,7 +151,16 @@ def test_external_position_alignment_starts_from_only_its_reduction_scope() -> N
     assert after.fill_fact_refs == ("alignment-fill",)
 
 
-def test_real_binance_trade_replaces_framework_reconciliation_placeholder() -> None:
+@pytest.mark.parametrize(
+    "placeholder_trade_id",
+    (
+        "c3dbbc0b-8835-5ed6-a7bd-a93fc9be7912",
+        "S-18c897945fc371ff-d9fd8ca4",
+    ),
+)
+def test_real_binance_trade_replaces_framework_reconciliation_placeholder(
+    placeholder_trade_id: str,
+) -> None:
     activation = _activation("activation-1")
     entry = _action(
         activation.activation_id,
@@ -185,7 +194,7 @@ def test_real_binance_trade_replaces_framework_reconciliation_placeholder() -> N
         source_time=NOW,
         payload={
             **common,
-            "trade_id": "c3dbbc0b-8835-5ed6-a7bd-a93fc9be7912",
+            "trade_id": placeholder_trade_id,
             "event_type": "OrderFilled",
         },
     )

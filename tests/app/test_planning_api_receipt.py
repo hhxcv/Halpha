@@ -56,6 +56,12 @@ def _continuity_current() -> dict[str, object]:
             "run_state": "PAUSED",
             "pause_reason": "WRITER_CONTINUITY_LOST",
             "paused_at": (NOW - timedelta(seconds=60)).isoformat(),
+            "entry_opportunity_consumed": False,
+            "rule_state": {
+                "deadlines": {
+                    "entry_valid_until": (NOW + timedelta(minutes=10)).isoformat()
+                }
+            },
         },
         "position_attribution": {
             "reconciliation_status": "MATCH",
@@ -119,6 +125,18 @@ def test_continuity_resume_accepts_only_fresh_target_scoped_exe_evidence() -> No
                 {"state": "UNKNOWN"}
             ),
             "ACTION_RESULT_UNRESOLVED",
+        ),
+        (
+            lambda current: current["activation"].update(
+                {"entry_opportunity_consumed": True}
+            ),
+            "ENTRY_OPPORTUNITY_CONSUMED",
+        ),
+        (
+            lambda current: current["activation"]["rule_state"]["deadlines"].update(
+                {"entry_valid_until": (NOW - timedelta(seconds=1)).isoformat()}
+            ),
+            "ENTRY_WINDOW_EXPIRED",
         ),
     ),
 )

@@ -36,6 +36,9 @@ export type OrderScheduleDynamicRule = OrderScheduleSpec["dynamic_rules"][number
 export type OrderSchedulePreviewPayload = components["schemas"]["OrderSchedulePreviewPayload"];
 export type OrderSchedulePreview = components["schemas"]["OrderSchedulePreview"];
 export type OrderSchedulePreviewLeg = OrderSchedulePreview["normalized_legs"][number];
+export type OrderScheduleFullFillProtectionEstimate = NonNullable<
+  OrderSchedulePreview["full_fill_protection_estimate"]
+>;
 export type OrderSchedulePreviewIssue = OrderSchedulePreview["issues"][number];
 
 export type PlanKeyParameterDefinition = components["schemas"]["PlanKeyParameterDefinition"];

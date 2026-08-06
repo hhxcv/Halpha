@@ -1,6 +1,7 @@
 import type {
   MarketInterval,
   OrderScheduleDirection,
+  OrderScheduleFullFillProtectionEstimate,
   OrderSchedulePreviewLeg,
   OrderScheduleSpec,
 } from "../api/client";
@@ -238,7 +239,12 @@ export type OrderChartRelativeRuleAnnotation = {
   id: string;
   label: string;
   detail: string;
-  base: "VENUE_DECIDES" | "TOP_OF_BOOK" | "MARK_WINDOW" | "CONFIRMED_FILL";
+  base:
+    | "VENUE_DECIDES"
+    | "TOP_OF_BOOK"
+    | "MARK_WINDOW"
+    | "CONFIRMED_FILL"
+    | "PLAN_POSITION";
 };
 
 export type OrderScheduleChartAnnotations = {
@@ -275,6 +281,7 @@ type BuildOrderScheduleChartAnnotationsInput = {
   previewLegs: OrderSchedulePreviewLeg[];
   previewState: OrderChartProjectionState;
   priceTickSize?: string | null;
+  fullFillProtectionEstimate?: OrderScheduleFullFillProtectionEstimate | null;
 };
 
 function finitePositivePrice(value: string | null | undefined): number | null {
@@ -311,13 +318,35 @@ export function projectOrderScheduleProtectionPrices(
   direction: OrderScheduleDirection,
   spec: OrderScheduleSpec,
   previewLegs: OrderSchedulePreviewLeg[],
+  fullFillProtectionEstimate: OrderScheduleFullFillProtectionEstimate | null = null,
 ): OrderScheduleProtectionProjection | null {
   const entryPrices = previewLegs.flatMap((leg) => {
     const price = finitePositivePrice(leg.price)
       ?? finitePositivePrice(leg.sizing_price);
     return price === null ? [] : [price];
   });
-  const entry = priceBand(entryPrices);
+  const weighted = previewLegs.reduce(
+    (state, leg) => {
+      const price = finitePositivePrice(leg.price)
+        ?? finitePositivePrice(leg.sizing_price);
+      const quantity = finitePositivePrice(leg.quantity);
+      if (price === null || quantity === null) return state;
+      return {
+        notional: state.notional + price * quantity,
+        quantity: state.quantity + quantity,
+      };
+    },
+    { notional: 0, quantity: 0 },
+  );
+  const compiledAverageEntry = finitePositivePrice(
+    fullFillProtectionEstimate?.average_entry_price,
+  );
+  const averageEntry = compiledAverageEntry ?? (weighted.quantity > 0
+    ? weighted.notional / weighted.quantity
+    : entryPrices.length > 0
+      ? entryPrices.reduce((total, price) => total + price, 0) / entryPrices.length
+      : null);
+  const entry = averageEntry === null ? null : priceBand([averageEntry]);
   const stopDistanceBps = Number(
     spec.protection_policy.initial_stop.distance_bps,
   );
@@ -330,11 +359,16 @@ export function projectOrderScheduleProtectionPrices(
   }
 
   const adverseFraction = stopDistanceBps / 10_000;
-  const projectedStopPrices = entryPrices.map((entryPrice) => (
-    direction === "LONG"
-      ? entryPrice * (1 - adverseFraction)
-      : entryPrice * (1 + adverseFraction)
-  ));
+  const compiledStop = finitePositivePrice(fullFillProtectionEstimate?.stop_price);
+  const projectedStopPrices = compiledStop === null
+    ? [averageEntry].flatMap((entryPrice) => entryPrice === null
+      ? []
+      : [
+        direction === "LONG"
+          ? entryPrice * (1 - adverseFraction)
+          : entryPrice * (1 + adverseFraction),
+      ])
+    : [compiledStop];
   const stop = priceBand(projectedStopPrices);
   if (stop === null || stop.lower <= 0) return null;
 
@@ -343,11 +377,12 @@ export function projectOrderScheduleProtectionPrices(
   ).flatMap((level, levelIndex) => {
     const triggerR = Number(level.trigger_r);
     if (!Number.isFinite(triggerR) || triggerR <= 0) return [];
-    const projectedPrices = entryPrices.map((entryPrice) => {
+    const projectedPrices = [averageEntry].flatMap((entryPrice) => {
+      if (entryPrice === null) return [];
       const movement = entryPrice * adverseFraction * triggerR;
-      return direction === "LONG"
+      return [direction === "LONG"
         ? entryPrice + movement
-        : entryPrice - movement;
+        : entryPrice - movement];
     });
     const projectedPrice = priceBand(projectedPrices);
     return projectedPrice === null || projectedPrice.lower <= 0
@@ -416,6 +451,7 @@ export function buildOrderScheduleChartAnnotations({
   previewLegs,
   previewState,
   priceTickSize,
+  fullFillProtectionEstimate = null,
 }: BuildOrderScheduleChartAnnotationsInput): OrderScheduleChartAnnotations {
   const priceAnnotations: OrderChartPriceAnnotation[] = [];
   const relativeRules: OrderChartRelativeRuleAnnotation[] = [];
@@ -546,17 +582,15 @@ export function buildOrderScheduleChartAnnotations({
       direction,
       spec,
       previewLegs,
+      fullFillProtectionEstimate,
     );
     if (protectionProjection !== null) {
-      const projectedBasis = protectionProjection.entry.lower
-        === protectionProjection.entry.upper
-        ? "服务端标准化入场预览价"
-        : "服务端标准化入场预览区间";
+      const projectedBasis = "全部标准化档位的预计加权入场价";
       appendProjectedPriceBand(priceAnnotations, {
         id: "halpha-preview-stop",
         role: "PROTECTION",
         label: "预计止损触发价",
-        detail: `按${projectedBasis}和当前止损距离估算；实际保护价按每笔确认成交计算，并以交易所工作中事实为准`,
+        detail: `按${projectedBasis}和当前止损距离估算；实际按本计划已成交数量与平均成本重算，并以交易所工作中事实为准`,
         band: protectionProjection.stop,
       });
       protectionProjection.takeProfits.forEach((level) => {
@@ -564,7 +598,7 @@ export function buildOrderScheduleChartAnnotations({
           id: `halpha-preview-take-profit-${level.levelIndex}`,
           role: "TAKE_PROFIT",
           label: `预计止盈 ${level.levelIndex + 1} · ${compactDecimal(level.triggerR)}R`,
-          detail: `按${projectedBasis}、当前止损距离和 ${compactDecimal(level.triggerR)}R 估算；实际只减仓委托以每笔成交后的交易所事实为准`,
+          detail: `按${projectedBasis}、当前止损距离和 ${compactDecimal(level.triggerR)}R 估算；实际只减仓委托以本计划成交与交易所事实为准`,
           band: level.price,
         });
       });
@@ -609,16 +643,16 @@ export function buildOrderScheduleChartAnnotations({
   const stopDistance = spec.protection_policy.initial_stop.distance_bps;
   relativeRules.push({
     id: "halpha-initial-stop",
-    label: `每笔成交后止损 · ${stopDistance ? compactDecimal(stopDistance) : "未填写"} bps`,
-    detail: "相对每笔已确认成交价建立；只有场所确认后才是保护事实",
-    base: "CONFIRMED_FILL",
+    label: `当前仓位止损 · ${stopDistance ? compactDecimal(stopDistance) : "未填写"} bps`,
+    detail: "分批成交后按本计划当前平均成本重算，并受创建时费用后最大预计亏损约束；只有场所确认后才是保护事实",
+    base: "PLAN_POSITION",
   });
   spec.protection_policy.take_profit_ladder?.levels.forEach((level, index) => {
     relativeRules.push({
       id: `halpha-take-profit-${index}`,
-      label: `成交后止盈 ${index + 1} · ${level.trigger_r ? compactDecimal(level.trigger_r) : "未填写"}R`,
-      detail: `${level.quantity_fraction ? compactDecimal(level.quantity_fraction) : "未填写"} 仓位；相对该笔成交的初始风险计算`,
-      base: "CONFIRMED_FILL",
+      label: `当前仓位止盈 ${index + 1} · ${level.trigger_r ? compactDecimal(level.trigger_r) : "未填写"}R`,
+      detail: `${level.quantity_fraction ? compactDecimal(level.quantity_fraction) : "未填写"} 仓位；相对本计划当前平均成本与初始风险计算`,
+      base: "PLAN_POSITION",
     });
   });
   const steppedProtection = spec.dynamic_rules.find(

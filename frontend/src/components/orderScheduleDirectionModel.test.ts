@@ -42,6 +42,7 @@ function eventSchedule(): OrderScheduleSpec {
       ],
     },
     protection_policy: {
+      full_fill_loss_budget: null,
       initial_stop: {
         distance_bps: "100",
         trigger_source: "MARK_PRICE",

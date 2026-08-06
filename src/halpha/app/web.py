@@ -782,6 +782,8 @@ def create_app(
             yield
         finally:
             await public_market_stream.close()
+            if isinstance(public_market_context, BinancePublicMarketContext):
+                await public_market_context.close()
 
     app = FastAPI(
         title="Halpha local owner API",

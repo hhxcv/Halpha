@@ -30,7 +30,6 @@ def _revision_module():
     ("database_name", "expected"),
     (
         ("halpha_demo", ("halpha_demo", False)),
-        ("halpha_live", ("halpha_live", True)),
         ("halpha_live_copy", ("halpha_live_copy", True)),
         ("halpha_live_personal", ("halpha_live_personal", True)),
         ("halpha_workbench_fixture_12", ("halpha_demo", False)),
@@ -58,13 +57,17 @@ def test_runtime_schema_guard_resolves_only_supported_databases(
     assert revision._role_prefix() == expected
 
 
-def test_runtime_schema_guard_rejects_unrelated_database(monkeypatch) -> None:
+@pytest.mark.parametrize("database_name", ("halpha_live", "postgres"))
+def test_runtime_schema_guard_rejects_unrelated_database(
+    monkeypatch,
+    database_name: str,
+) -> None:
     revision = _revision_module()
 
     class Result:
         @staticmethod
         def scalar_one():
-            return "postgres"
+            return database_name
 
     class Connection:
         @staticmethod
@@ -84,15 +87,6 @@ def test_runtime_schema_guard_rejects_unrelated_database(monkeypatch) -> None:
             "halpha_demo",
             False,
             {"halpha_demo_app", "halpha_demo_executor"},
-        ),
-        (
-            "halpha_live",
-            True,
-            {
-                "halpha_live_app",
-                "halpha_live_app_reader",
-                "halpha_live_executor",
-            },
         ),
         (
             "halpha_live_copy",

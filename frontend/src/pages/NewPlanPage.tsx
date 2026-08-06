@@ -48,7 +48,10 @@ import {
 import PageHeader from "../components/PageHeader";
 import FactGrid from "../components/FactGrid";
 import OrderScheduleEditor, { createDefaultOrderScheduleSpec } from "../components/OrderScheduleEditor";
-import { hydrateOrderScheduleSpec } from "../components/orderScheduleEditorModel";
+import {
+  hydrateOrderScheduleSpec,
+  isPositive,
+} from "../components/orderScheduleEditorModel";
 import OrderScheduleChart from "../components/OrderScheduleChart";
 import { currentEntryBoundaryBreach } from "../components/orderScheduleDecisionAid";
 import { retargetGeneratedEventCondition } from "../components/orderScheduleDirectionModel";
@@ -577,8 +580,13 @@ export default function NewPlanPage() {
   const pendingUpdateHydrationVersionRef = useRef<number | null>(null);
   const [draftHydrationRevision, setDraftHydrationRevision] = useState(0);
   const [orderScheduleReady, setOrderScheduleReady] = useState(false);
+  const [directMaximumProjectedLoss, setDirectMaximumProjectedLoss] =
+    useState<string | null>(null);
   const handleOrderScheduleValidation = useCallback((ready: boolean) => {
     setOrderScheduleReady(ready);
+  }, []);
+  const handleMaximumProjectedLoss = useCallback((value: string | null) => {
+    setDirectMaximumProjectedLoss(value);
   }, []);
   const handleChartMarketReadiness = useCallback((ready: boolean) => {
     setChartMarketReady(ready);
@@ -827,7 +835,9 @@ export default function NewPlanPage() {
     && takeProfitOrderValid;
   const configurationValid = planValidityValid
     && tradeAmountValid
-    && (directExecution ? orderScheduleReady : strategyParameterRangesValid);
+    && (directExecution
+      ? orderScheduleReady && isPositive(directMaximumProjectedLoss ?? "")
+      : strategyParameterRangesValid);
   const marketSourceMismatch = Boolean(
     market.data
     && !isMarketSourceForEnvironment(
@@ -1048,7 +1058,9 @@ export default function NewPlanPage() {
       target_exposure: tradeAmount,
       max_margin: tradeAmount,
       max_notional: tradeAmount,
-      max_allowed_loss: tradeAmount,
+      max_allowed_loss: directExecution
+        ? directMaximumProjectedLoss ?? tradeAmount
+        : tradeAmount,
       valid_minutes: Number(validMinutes),
     };
     return directExecution
@@ -1797,6 +1809,7 @@ export default function NewPlanPage() {
           value={orderSchedule}
           onChange={(next) => {
             setOrderScheduleReady(false);
+            setDirectMaximumProjectedLoss(null);
             setOrderSchedule(next);
           }}
           environmentId={status.environment_id}
@@ -1838,6 +1851,7 @@ export default function NewPlanPage() {
           planOptions={planOptions}
           footerControls={footerControls}
           onValidationChange={handleOrderScheduleValidation}
+          onMaximumProjectedLossChange={handleMaximumProjectedLoss}
           onMarketReadinessChange={handleChartMarketReadiness}
         />
       </Box>

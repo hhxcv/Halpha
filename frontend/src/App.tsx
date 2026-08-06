@@ -54,6 +54,7 @@ import ReviewsOutlined from "@mui/icons-material/ReviewsOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Link,
   Navigate,
   Outlet,
   Route,
@@ -91,6 +92,7 @@ import {
   releaseSystemStop,
   sendTestEmail,
   type ControlIntent,
+  type ActivationDetail,
   type ActivationSummary,
   type MarketInterval,
   type OrderSchedulePreview,
@@ -133,12 +135,14 @@ import {
   orderScheduleIntent,
   planWorkbenchSections,
 } from "./planListModel";
+import { buildPlanPnlTrend } from "./planPnlTrend";
 import {
   basisPoints,
   closedBarBreakoutGapPercent,
   entryExtensionBoundary,
   estimateImmediateExit,
   estimateMarkedNetResult,
+  formatCompactUserVisibleTime,
   formatUserVisibleTime,
   gapPercent,
   latestUtc,
@@ -161,6 +165,7 @@ import {
   applyMarketColorScheme,
   DEFAULT_MARKET_COLOR_SCHEME,
   MarketToneText,
+  marketToneClassName,
   marketToneForDirection,
   marketToneForSignedValue,
   readMarketColorScheme,
@@ -249,6 +254,7 @@ function currentFundingDirectionText(value: string, direction: string): string {
 }
 const OrderScheduleChart = lazy(() => import("./components/OrderScheduleChart"));
 const ReviewPriceChart = lazy(() => import("./components/ReviewCharts").then((module) => ({ default: module.ReviewPriceChart })));
+const PlanPnlChart = lazy(() => import("./components/ReviewCharts").then((module) => ({ default: module.PlanPnlChart })));
 const ReviewPerformanceOverview = lazy(() => import("./components/ReviewPerformanceOverview"));
 const StageReviewPanel = lazy(() => import("./components/StageReviewPanel"));
 const visuallyHiddenSx = {
@@ -361,6 +367,7 @@ const RUNTIME_CHART_FALLBACK_SPEC: OrderScheduleSpec = {
       trigger_source: "MARK_PRICE",
       coverage: "EACH_CONFIRMED_FILL",
     },
+    full_fill_loss_budget: null,
     take_profit_ladder: null,
     time_exit_seconds: null,
   },
@@ -801,6 +808,205 @@ function signedUsdt(value: unknown): string {
   }).format(normalized)} USDT`;
 }
 
+function signedSettledUsdt(value: unknown): string {
+  const amount = finiteNumber(value);
+  if (amount === null) return "未知";
+  const normalized = Math.abs(amount) < 0.000000005 ? 0 : amount;
+  const absolute = quoteAmount(String(Math.abs(normalized)));
+  return `${normalized > 0 ? "+" : normalized < 0 ? "-" : ""}${absolute} USDT`;
+}
+
+function PlanPnlPanel({
+  activation,
+  activationDetail,
+  environmentKind,
+  environmentScope,
+  marketColorScheme,
+  positionDisposition = false,
+}: {
+  activation: ActivationSummary;
+  activationDetail?: ActivationDetail;
+  environmentKind: string;
+  environmentScope: string;
+  marketColorScheme: MarketColorScheme;
+  positionDisposition?: boolean;
+}) {
+  const startedAt = activation.created_at ?? "";
+  const startMs = Date.parse(startedAt);
+  const completed = activation.lifecycle === "COMPLETED";
+  const endedAt = completed ? activation.updated_at : null;
+  const endMs = completed ? Date.parse(endedAt ?? "") : Date.now();
+  const interval = defaultExecutionWindowInterval(startMs, endMs);
+  const summaryTradeResult = recordOf(activation.trade_result);
+  const hasAttributedFill = activation.has_entry_fill
+    || recordsOf(summaryTradeResult.fills).length > 0;
+  const expectedMarketSource = expectedMarketSourceForEnvironment(environmentKind);
+  const detailQuery = useQuery({
+    queryKey: ["plan-card-activation", environmentScope, activation.activation_id],
+    queryFn: () => getActivation(activation.activation_id),
+    enabled: hasAttributedFill && !positionDisposition && !activationDetail,
+    refetchInterval: completed ? false : 30_000,
+    staleTime: completed ? 5 * 60_000 : 15_000,
+  });
+  const marketWindowQuery = useQuery({
+    queryKey: [
+      "plan-card-pnl-window",
+      environmentScope,
+      activation.activation_id,
+      activation.instrument_ref,
+      interval,
+      startedAt,
+      endedAt,
+    ],
+    queryFn: () => getMarketWindow(
+      activation.instrument_ref,
+      startedAt,
+      endedAt ?? new Date().toISOString(),
+      interval,
+      "EXECUTION_REVIEW",
+    ),
+    enabled: Boolean(
+      hasAttributedFill
+      && !positionDisposition
+      && expectedMarketSource
+      && Number.isFinite(startMs)
+      && Number.isFinite(endMs),
+    ),
+    refetchInterval: completed ? false : 30_000,
+    staleTime: completed ? 30 * 60_000 : 15_000,
+  });
+  const sourceMismatch = Boolean(
+    marketWindowQuery.data
+    && !isMarketSourceForEnvironment(marketWindowQuery.data.source, environmentKind),
+  );
+  const marketWindow = sourceMismatch ? undefined : marketWindowQuery.data;
+  const detail = activationDetail ?? detailQuery.data;
+  const tradeResult = recordOf(detail?.trade_result);
+  const authoritativeNetPnl = completed
+    && !positionDisposition
+    && tradeResult.calculation_complete === true
+    && tradeResult.closed === true
+    ? finiteNumber(tradeResult.net_pnl)
+    : null;
+  const points = useMemo(() => {
+    return buildPlanPnlTrend({
+      bars: marketWindow?.bars ? Array.from(marketWindow.bars) : [],
+      direction: activation.direction,
+      fills: recordsOf(tradeResult.fills),
+      fundingFacts: recordsOf(detail?.venue_facts),
+      settledAt: typeof tradeResult.last_fill_time === "string"
+        ? tradeResult.last_fill_time
+        : endedAt ?? undefined,
+      settledNetPnl: authoritativeNetPnl ?? undefined,
+      sourceCutoff: marketWindow?.source_cutoff ?? "",
+      startedAt,
+    });
+  }, [
+    activation.direction,
+    authoritativeNetPnl,
+    detail?.trade_result,
+    detail?.venue_facts,
+    endedAt,
+    marketWindow,
+    startedAt,
+  ]);
+  const displayedPnl = completed
+    ? authoritativeNetPnl
+    : points.at(-1)?.value;
+  const settlementPending = completed && authoritativeNetPnl === null;
+  const costAccountingComplete = (
+    tradeResult.commission_complete === true
+    && tradeResult.funding_complete === true
+    && tradeResult.funding_included === true
+  );
+  const pnlExplanation = positionDisposition
+    ? "该计划处置的是账户既有外部持仓，不把账户盈亏归属为本计划收益。"
+    : completed
+    ? settlementPending
+      ? "本计划归属的交易所结算事实尚未完整核对，因此不显示历史盈亏曲线和最终值。"
+      : "曲线中间过程按本计划归属成交、手续费、已归属资金费和同期行情重算；末点直接采用本计划交易所事实结算净盈亏。"
+    : costAccountingComplete
+      ? "已计入本计划归属成交、全部已确认手续费和已发生资金费；未平仓部分按最新行情估值，不含未来退出滑点。"
+      : "已计入当前已归属成交、已取得手续费和资金费；部分费用记录尚未确认完整，未平仓部分按最新行情估值。";
+  const loading = hasAttributedFill
+    && ((!activationDetail && detailQuery.isPending) || marketWindowQuery.isPending);
+  const unavailable = hasAttributedFill
+    && ((!activationDetail && detailQuery.isError) || marketWindowQuery.isError || sourceMismatch);
+
+  return (
+    <Box
+      aria-label={completed ? "历史费用后盈亏走势" : "费用后盈亏估算走势"}
+      sx={{
+        minWidth: 0,
+        borderTop: { xs: 1, md: 0 },
+        borderLeft: { xs: 0, md: 1 },
+        borderColor: "divider",
+        pt: { xs: 1.25, md: 0 },
+        pl: { xs: 0, md: 2 },
+      }}
+    >
+      <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", justifyContent: "space-between", mb: 0.25 }}>
+        <Tooltip arrow title={pnlExplanation}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 700, cursor: "help", textDecoration: "underline dotted", textUnderlineOffset: 2 }}
+          >
+            {completed ? "历史费用后盈亏" : "费用后盈亏估算"}
+          </Typography>
+        </Tooltip>
+        {displayedPnl !== undefined && displayedPnl !== null && (
+          <Typography className="mono" variant="body2" sx={{ fontWeight: 750 }}>
+            <MarketToneText tone={marketToneForSignedValue(displayedPnl)}>
+              {completed ? signedSettledUsdt(tradeResult.net_pnl) : signedUsdt(displayedPnl)}
+            </MarketToneText>
+          </Typography>
+        )}
+      </Stack>
+      {positionDisposition
+        ? <Typography variant="body2" color="text.secondary" sx={{ py: 5, textAlign: "center" }}>外部持仓处置不归属本计划盈亏</Typography>
+        : loading
+        ? <LinearProgress aria-label="正在读取费用后盈亏估算走势" sx={{ my: 6 }} />
+        : settlementPending
+          ? <Typography variant="body2" color="text.secondary" sx={{ py: 5, textAlign: "center" }}>最终结算待核对，暂不显示历史盈亏曲线</Typography>
+        : unavailable
+          ? <Typography variant="body2" color="text.secondary" sx={{ py: 5, textAlign: "center" }}>盈亏曲线暂不可用</Typography>
+          : points.length < 2
+            ? <Typography variant="body2" color="text.secondary" sx={{ py: 5, textAlign: "center" }}>{completed ? "未形成交易，无盈亏曲线" : "尚未成交，无持仓盈亏"}</Typography>
+            : (
+              <Suspense fallback={<LinearProgress aria-label="正在绘制费用后盈亏估算曲线" sx={{ my: 6 }} />}>
+                <PlanPnlChart points={points} marketColorScheme={marketColorScheme} />
+              </Suspense>
+            )}
+      {points.length >= 2 && marketWindow && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+          {formatCompactUserVisibleTime(startedAt)} → {formatCompactUserVisibleTime(endedAt ?? marketWindow.source_cutoff)}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+function EmptyHistoricalPnlPanel() {
+  return (
+    <Box
+      aria-label="历史费用后盈亏走势"
+      sx={{
+        minWidth: 0,
+        borderTop: { xs: 1, md: 0 },
+        borderLeft: { xs: 0, md: 1 },
+        borderColor: "divider",
+        pt: { xs: 1.25, md: 0 },
+        pl: { xs: 0, md: 2 },
+      }}
+    >
+      <Typography variant="body2" sx={{ fontWeight: 700 }}>历史费用后盈亏</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ py: 5, textAlign: "center" }}>
+        计划未运行，无盈亏曲线
+      </Typography>
+    </Box>
+  );
+}
+
 function usdt(value: unknown): string {
   const amount = finiteNumber(value);
   if (amount === null) return "未知";
@@ -1054,7 +1260,7 @@ const executorStatusLabels: Record<string, string> = {
 };
 
 const lifecycleLabels: Record<string, string> = {
-  RUNNING: "运行中",
+  RUNNING: "计划运行中",
   EXITING: "正在退出",
   USER_TAKEOVER: "用户已接管",
   COMPLETED: "已闭合",
@@ -1062,13 +1268,23 @@ const lifecycleLabels: Record<string, string> = {
 };
 
 const runStateLabels: Record<string, string> = {
-  ACTIVE: "运行中",
-  PAUSED: "已暂停",
+  ACTIVE: "执行正常",
+  PAUSED: "新增入场暂停",
 };
 
 const pauseReasonLabels: Record<string, string> = {
   WRITER_CONTINUITY_LOST: "执行连续性中断",
 };
+
+function activationEntryPhaseClosed(activationValue: unknown, nowMs: number): boolean {
+  const activation = recordOf(activationValue);
+  if (activation.entry_opportunity_consumed === true) return true;
+  const ruleState = recordOf(activation.rule_state);
+  const deadlines = recordOf(ruleState.deadlines);
+  const entryValidUntil = valueOf(deadlines, "entry_valid_until", "");
+  const entryDeadlineMs = Date.parse(entryValidUntil);
+  return Number.isFinite(entryDeadlineMs) && entryDeadlineMs <= nowMs;
+}
 
 const systemStopReleaseDenialLabels: Record<string, string> = {
   ACCOUNT_SYSTEM_STOP_NOT_ACTIVE: "当前没有可释放的账户级系统停止。",
@@ -1330,7 +1546,7 @@ function runtimeTimelinePresentation(
     const intent = valueOf(detail, "intent");
     const label = {
       STOP_NEW_RISK: "停止新增风险",
-      RESUME_ACTIVATION: "恢复连续性暂停",
+      RESUME_ACTIVATION: "恢复新增入场",
       EXIT_STRATEGY: "退出计划",
       USER_TAKEOVER: "用户接管",
     }[intent] ?? "计划控制";
@@ -2304,9 +2520,10 @@ function AccountPositionOperationDialog({
 
 function OverviewPage() {
   const navigate = useNavigate();
-  const { status } = useOutletContext<FrameContext>();
+  const { status, marketColorScheme } = useOutletContext<FrameContext>();
   const [activeTab, setActiveTab] = useState<"POSITIONS" | "ORDERS" | "TRADES" | null>(null);
   const [positionOperationTarget, setPositionOperationTarget] = useState<AccountPosition | null>(null);
+  const environmentScope = `${status.environment_kind}:${status.environment_id}`;
   const query = useQuery({ queryKey: ["overview"], queryFn: getOverview, refetchInterval: 5_000 });
   const activationsQuery = useQuery({ queryKey: ["activations"], queryFn: getActivations, refetchInterval: 30_000 });
   const reviewsQuery = useQuery({ queryKey: ["reviews"], queryFn: getReviews, refetchInterval: 30_000 });
@@ -2360,7 +2577,12 @@ function OverviewPage() {
   const positionRows = openActivations.flatMap((summary, index) => {
     const detail = activationDetailQueries[index]?.data;
     const result = recordOf(detail?.trade_result);
-    const quantity = Number(result.position_quantity);
+    const attribution = recordOf(detail?.position_attribution);
+    const attributedQuantity = Number(attribution.activation_signed_position);
+    const resultQuantity = Number(result.position_quantity);
+    const quantity = Number.isFinite(attributedQuantity)
+      ? attributedQuantity
+      : resultQuantity;
     if (!detail || !Number.isFinite(quantity) || quantity === 0) return [];
     const entryPrice = Number(result.average_entry_price);
     const decisionBasis = recordOf(detail.decision_basis);
@@ -2487,12 +2709,6 @@ function OverviewPage() {
               <Tab value="TRADES" label="最近交易结果" />
             </Tabs>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }} aria-live="polite">
-              <Chip
-                size="small"
-                variant="outlined"
-                color={accountSnapshotStatus === "CURRENT" ? "success" : accountSnapshotStatus === "STALE" ? "warning" : "default"}
-                label={accountSnapshotStatus === "CURRENT" ? "账户数据实时" : accountSnapshotStatus === "STALE" ? "账户数据延迟" : "账户数据不可用"}
-              />
               <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
                 {data.account_snapshot_cutoff
                   ? `交易所更新于 ${formatUserVisibleTime(data.account_snapshot_cutoff)} · 每 30 秒同步`
@@ -2519,7 +2735,7 @@ function OverviewPage() {
                   role="region"
                   aria-label="交易所账户当前仓位"
                   tabIndex={0}
-                  sx={{ ...surfaceFrameSx, overflowX: "auto", mb: positionRows.length > 0 ? 3 : 0 }}
+                  sx={{ ...surfaceFrameSx, overflowX: "auto", mb: positionRows.length > 0 ? 2 : 0 }}
                 >
                   <Table size="small" sx={{ minWidth: 940 }}>
                     <TableHead>
@@ -2542,12 +2758,43 @@ function OverviewPage() {
                         const unrealizedPnl = Number(position.unrealized_pnl);
                         const liquidationPrice = Number(position.liquidation_price);
                         const baseAsset = position.symbol.replace(/USDT$/, "") || position.symbol;
+                        const attributedPlans = positionRows.filter((candidate) => (
+                          candidate.summary.instrument_ref === position.instrument_ref
+                          && candidate.summary.direction === position.direction
+                        ));
                         return (
                           <TableRow key={`${position.symbol}-${position.position_side}`} hover>
-                            <TableCell sx={{ whiteSpace: "nowrap" }}>
-                              <Stack direction="row" spacing={.75} sx={{ alignItems: "center" }}>
+                            <TableCell sx={{ minWidth: 210 }}>
+                              <Stack spacing={.5} sx={{ alignItems: "flex-start" }}>
                                 <Typography component="span" sx={{ fontWeight: 800, fontSize: "inherit" }}>{position.instrument_ref}</Typography>
-                                <Chip size="small" variant="outlined" color={external ? "warning" : "default"} label={external ? "外部 · 未接管" : "含 Halpha 归属"} />
+                                {external ? (
+                                  <Chip size="small" variant="outlined" color="warning" label="外部 · 未接管" />
+                                ) : attributedPlans.length > 0 ? (
+                                  <Stack spacing={.25} sx={{ alignItems: "flex-start" }}>
+                                    {attributedPlans.map((candidate) => (
+                                      <Typography
+                                        component={Link}
+                                        key={candidate.summary.activation_id}
+                                        to={`/activations/${candidate.summary.activation_id}`}
+                                        aria-label={`查看计划 ${candidate.planName || candidate.summary.activation_id}`}
+                                        variant="caption"
+                                        sx={{
+                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          lineHeight: 1.25,
+                                          textDecoration: "underline",
+                                          textUnderlineOffset: 2,
+                                          "&:visited": { color: "text.primary" },
+                                          "&:hover": { color: "text.secondary" },
+                                        }}
+                                      >
+                                        {candidate.planName || candidate.strategyName}
+                                      </Typography>
+                                    ))}
+                                  </Stack>
+                                ) : (
+                                  <Typography variant="caption" color="warning.main">计划归属待核对</Typography>
+                                )}
                               </Stack>
                             </TableCell>
                             <TableCell sx={{ whiteSpace: "nowrap" }}>
@@ -2583,16 +2830,37 @@ function OverviewPage() {
                   </Table>
                 </TableContainer>
               )}
-              {positionRows.length > 0 && <Typography variant="h2" sx={{ mb: 1.25 }}>Halpha 已归属计划仓位</Typography>}
+              {positionRows.length > 0 && (
+                <Typography variant="h2" sx={{ mb: 1 }}>
+                  Halpha 计划仓位（{positionRows.length}）
+                </Typography>
+              )}
               <ExpandableList
                 items={positionRows}
                 initialCount={4}
                 step={4}
+                spacing={1}
                 renderItem={(position) => {
                   const instrument = position.summary.instrument_ref;
                   const direction = position.quantity > 0 ? "做多" : "做空";
+                  const directionTone = marketToneForDirection(position.quantity > 0 ? "LONG" : "SHORT");
+                  const baseAsset = instrument.replace(/USDT(?:-PERP)?$/, "") || instrument;
+                  const protectionColor = position.summary.protection_state === "GAP"
+                    ? "error"
+                    : position.summary.protection_state === "UNKNOWN"
+                      ? "warning"
+                      : position.summary.protection_state === "WORKING" || position.summary.protection_state === "CLOSED"
+                        ? "success"
+                        : "default";
+                  const matchedAccountPosition = accountPositions.find((candidate) => (
+                    candidate.instrument_ref === instrument
+                    && candidate.direction === position.summary.direction
+                  ));
+                  const accountMarkPrice = Number(matchedAccountPosition?.mark_price);
                   const parsedCurrentPrice = Number(overviewReferencePrice);
-                  const currentPrice = instrument === overviewInstrumentRef
+                  const currentPrice = Number.isFinite(accountMarkPrice) && accountMarkPrice > 0
+                    ? accountMarkPrice
+                    : instrument === overviewInstrumentRef
                     && Number.isFinite(parsedCurrentPrice)
                     && parsedCurrentPrice > 0
                       ? parsedCurrentPrice
@@ -2600,35 +2868,132 @@ function OverviewPage() {
                   const notional = Number.isFinite(currentPrice)
                     ? Math.abs(position.quantity * currentPrice)
                     : null;
-                  const unrealizedPnl = Number.isFinite(currentPrice)
-                    && Number.isFinite(position.entryPrice)
-                      ? (currentPrice - position.entryPrice) * position.quantity
-                      : null;
-                  const marketAge = overviewMarketCutoff
-                    ? relativeAgeLabel(overviewMarketCutoff, Date.now())
+                  const priceCutoff = matchedAccountPosition?.fact_cutoff
+                    ?? overviewMarketCutoff;
+                  const marketAge = priceCutoff
+                    ? relativeAgeLabel(priceCutoff, Date.now())
                     : "等待行情";
                   return (
-                    <Box key={position.summary.activation_id} sx={{ ...surfaceFrameSx, overflow: "hidden" }}>
-                      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ p: 2, justifyContent: "space-between", alignItems: { md: "center" } }}>
+                    <Box
+                      component={Link}
+                      to={`/activations/${position.summary.activation_id}`}
+                      aria-label={`查看计划详情 ${position.planName || position.strategyName}`}
+                      key={position.summary.activation_id}
+                      sx={{
+                        ...surfaceFrameSx,
+                        p: { xs: 1.5, md: 2 },
+                        color: "inherit",
+                        cursor: "pointer",
+                        textDecoration: "none",
+                        transition: "border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease",
+                        "&:hover": {
+                          borderColor: "primary.main",
+                          boxShadow: "0 5px 16px rgba(16, 24, 32, 0.08)",
+                          transform: "translateY(-1px)",
+                        },
+                        "&:focus-visible": {
+                          borderColor: "primary.main",
+                          outline: "3px solid",
+                          outlineColor: "primary.light",
+                          outlineOffset: 2,
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(300px, 360px)" },
+                          gap: 2,
+                          alignItems: "stretch",
+                        }}
+                      >
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="overline" color="text.secondary">{position.strategyName}</Typography>
-                          {position.decisionBasisRef && <Typography variant="caption" color="text.secondary" className="mono" sx={{ display: "block" }}>{position.decisionBasisRef}</Typography>}
-                          {position.planName && <Typography variant="h2" sx={{ mt: .25 }}>{position.planName}</Typography>}
-                          <Typography sx={{ mt: position.planName ? .25 : 0, fontWeight: 750 }}>
-                            {instrument} · <MarketToneText tone={marketToneForDirection(position.quantity > 0 ? "LONG" : "SHORT")}>{direction}</MarketToneText>
+                          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+                            <Typography
+                              component="div"
+                              className="mono"
+                              sx={{ fontSize: { xs: "1.1rem", sm: "1.2rem" }, fontWeight: 850, lineHeight: 1.2 }}
+                            >
+                              <MarketToneText tone={directionTone}>{instrument}</MarketToneText>
+                            </Typography>
+                            <Box
+                              component="span"
+                              className={marketToneClassName(directionTone)}
+                              sx={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                px: 0.9,
+                                py: 0.2,
+                                border: "1px solid currentColor",
+                                borderRadius: 999,
+                                bgcolor: "action.hover",
+                                fontSize: "0.8125rem",
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              {direction}
+                            </Box>
+                          </Stack>
+                          <Typography component="h3" variant="body1" sx={{ mt: 0.5, fontWeight: 750, lineHeight: 1.35 }}>
+                            {position.planName || position.strategyName}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">保护 {translatedLabel(protectionStateLabels, position.summary.protection_state)}</Typography>
+                          <Stack direction="row" spacing={0.75} sx={{ mt: 0.9, alignItems: "center", flexWrap: "wrap", rowGap: 0.75 }}>
+                            <Chip size="small" color="success" variant="outlined" label="计划运行中" />
+                            <Chip
+                              size="small"
+                              color={protectionColor}
+                              variant="outlined"
+                              label={position.summary.protection_state === "WORKING"
+                                ? "保护有效"
+                                : `保护 ${translatedLabel(protectionStateLabels, position.summary.protection_state)}`}
+                            />
+                            <Typography variant="caption" color="text.secondary">
+                              {position.strategyName}
+                            </Typography>
+                          </Stack>
+                          <Box
+                            aria-label="计划仓位摘要"
+                            sx={{
+                              mt: 1.1,
+                              display: "grid",
+                              gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(3, minmax(0, 1fr))" },
+                              gap: 0,
+                              p: 0.4,
+                              bgcolor: "action.hover",
+                              borderRadius: 1.25,
+                            }}
+                          >
+                            {[
+                              ["持仓", `${marketVolume(String(Math.abs(position.quantity)))} ${baseAsset}`],
+                              ["入场均价", Number.isFinite(position.entryPrice) ? marketPrice(String(position.entryPrice)) : "待成交事实"],
+                              [matchedAccountPosition ? "标记价" : "参考价", Number.isFinite(currentPrice) ? marketPrice(String(currentPrice)) : "等待行情"],
+                              ["名义金额", notional === null ? "等待行情" : usdt(notional)],
+                              ["归属手续费", usdt(position.result.commission)],
+                            ].map(([label, value]) => (
+                              <Box key={label} sx={{ minWidth: 0, px: 1, py: 0.65 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.2 }}>
+                                  {label}
+                                </Typography>
+                                <Typography className="mono" variant="body2" sx={{ mt: 0.25, fontWeight: 750, lineHeight: 1.3 }}>
+                                  {value}
+                                </Typography>
+                                {label === (matchedAccountPosition ? "标记价" : "参考价") && (
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.15, lineHeight: 1.2 }}>
+                                    {marketAge}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ))}
+                          </Box>
                         </Box>
-                        <Button variant="outlined" onClick={() => navigate(`/activations/${position.summary.activation_id}`)}>查看运行与控制</Button>
-                      </Stack>
-                      <FactGrid facts={[
-                        { label: "持仓数量", value: `${marketVolume(String(Math.abs(position.quantity)))} BTC`, note: direction },
-                        { label: "持仓名义金额", value: notional === null ? "等待行情" : usdt(notional) },
-                        { label: "平均入场价", value: Number.isFinite(position.entryPrice) ? `${marketPrice(String(position.entryPrice))} USDT` : "待成交事实" },
-                        { label: "实时中间价", value: Number.isFinite(currentPrice) ? `${marketPrice(String(currentPrice))} USDT` : "等待行情", note: `行情 ${marketAge}` },
-                        { label: "本计划浮动盈亏", value: unrealizedPnl === null ? "等待行情" : signedUsdt(unrealizedPnl), tone: unrealizedPnl === null ? undefined : marketToneForSignedValue(unrealizedPnl) },
-                        { label: "已归属手续费", value: usdt(position.result.commission) },
-                      ]} />
+                        <PlanPnlPanel
+                          activation={position.summary}
+                          activationDetail={position.detail}
+                          environmentKind={status.environment_kind}
+                          environmentScope={environmentScope}
+                          marketColorScheme={marketColorScheme}
+                        />
+                      </Box>
                     </Box>
                   );
                 }}
@@ -2980,7 +3345,7 @@ function SettingsPage() {
 function PlansPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { status } = useOutletContext<FrameContext>();
+  const { status, marketColorScheme } = useOutletContext<FrameContext>();
   const liveReadOnly = status.profile === "BINANCE_LIVE_READ_ONLY";
   const environmentScope = `${status.environment_kind}:${status.environment_id}`;
   const [activeTab, setActiveTab] = useState<"CURRENT" | "HISTORY">("CURRENT");
@@ -3070,12 +3435,18 @@ function PlansPage() {
     });
   };
   const renderActiveActivation = (activation: ActivationSummary) => {
-    const pausedReason = activation.pause_reason
-      ? translatedLabel(pauseReasonLabels, activation.pause_reason)
-      : null;
     const planName = activation.plan_name?.trim()
       || `运行计划 · ${shortDigest(activation.activation_id)}`;
-    const isPaused = activation.run_state === "PAUSED";
+    const entryPhaseClosed = activationEntryPhaseClosed(activation, Date.now());
+    const isPaused = activation.run_state === "PAUSED" && !entryPhaseClosed;
+    const directionTone = marketToneForDirection(activation.direction);
+    const protectionColor = activation.protection_state === "GAP"
+      ? "error"
+      : activation.protection_state === "UNKNOWN"
+        ? "warning"
+        : activation.protection_state === "WORKING" || activation.protection_state === "CLOSED"
+          ? "success"
+          : "default";
     const sourcePlan = plansByVersion.get(activation.plan_version_ref);
     const positionAlignment = sourcePlan?.position_alignment
       ?? activation.position_alignment;
@@ -3087,68 +3458,165 @@ function PlansPage() {
       );
     return (
       <Box
-        component="article"
-        aria-label={`运行计划 ${planName}`}
+        component={Link}
+        to={`/activations/${activation.activation_id}`}
+        aria-label={`查看计划详情 ${planName}`}
         key={activation.activation_id}
         sx={{
           ...surfaceFrameSx,
           p: 2.5,
           borderColor: isPaused ? "warning.main" : "divider",
+          color: "inherit",
+          cursor: "pointer",
+          textDecoration: "none",
+          transition: "border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease",
+          "&:hover": {
+            borderColor: isPaused ? "warning.dark" : "primary.main",
+            boxShadow: "0 5px 16px rgba(16, 24, 32, 0.08)",
+            transform: "translateY(-1px)",
+          },
+          "&:focus-visible": {
+            borderColor: "primary.main",
+            outline: "3px solid",
+            outlineColor: "primary.light",
+            outlineOffset: 2,
+          },
         }}
       >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={2}
-          sx={{ justifyContent: "space-between", alignItems: { md: "center" } }}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(300px, 360px)" },
+            gap: 2,
+            alignItems: "stretch",
+          }}
         >
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+              <Typography
+                component="div"
+                className="mono"
+                sx={{
+                  mr: 0.25,
+                  fontSize: { xs: "1.2rem", sm: "1.35rem" },
+                  fontWeight: 850,
+                  letterSpacing: "-0.025em",
+                  lineHeight: 1.2,
+                }}
+              >
+                <MarketToneText tone={directionTone}>{activation.instrument_ref}</MarketToneText>
+              </Typography>
+              <Box
+                component="span"
+                className={marketToneClassName(directionTone)}
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  px: 1,
+                  py: 0.25,
+                  border: "1px solid currentColor",
+                  borderRadius: 999,
+                  bgcolor: "action.hover",
+                  fontSize: "0.8125rem",
+                  lineHeight: 1.35,
+                }}
+              >
+                {activation.direction === "LONG" ? "做多" : "做空"}
+              </Box>
+            </Stack>
+            <Typography
+              component="h2"
+              variant="body1"
+              sx={{ mt: 0.6, fontWeight: 750, lineHeight: 1.35, color: "text.primary" }}
+            >
+              {planName}
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{ mt: 1.25, alignItems: "center", flexWrap: "wrap", rowGap: 0.75 }}
+            >
               <Chip
                 size="small"
-                color={isPaused ? "warning" : "primary"}
+                color={activation.lifecycle === "RUNNING" ? "success" : "warning"}
+                variant="outlined"
                 label={translatedLabel(lifecycleLabels, activation.lifecycle)}
               />
+              <Tooltip
+                arrow
+                title={entryPhaseClosed
+                  ? "入场阶段已按原计划结束；已有持仓继续执行保护和退出。再次开放入场属于计划变更，不会由连续性恢复代替。"
+                  : isPaused
+                    ? "执行器连接曾中断，系统暂停本计划继续开仓、加仓和入场重挂；已有保护、撤单、减仓和退出继续。"
+                    : "计划执行链正常，可按已确认条件继续处理入场、保护和退出。"}
+              >
+                <Chip
+                  size="small"
+                  color={entryPhaseClosed ? "default" : isPaused ? "warning" : "success"}
+                  variant="outlined"
+                  label={entryPhaseClosed
+                    ? "入场已结束"
+                    : translatedLabel(runStateLabels, activation.run_state)}
+                />
+              </Tooltip>
               <Chip
                 size="small"
+                color={protectionColor}
                 variant="outlined"
-                label={translatedLabel(runStateLabels, activation.run_state)}
+                label={activation.protection_state === "WORKING"
+                  ? "保护有效"
+                  : `保护 ${translatedLabel(protectionStateLabels, activation.protection_state)}`}
               />
-              <Chip
-                size="small"
-                variant="outlined"
-                label={`保护 ${translatedLabel(protectionStateLabels, activation.protection_state)}`}
-              />
-            </Stack>
-            <Typography variant="h2" sx={{ mt: 1 }}>{planName}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              <Box component="span" className="mono">{activation.instrument_ref}</Box>
-              {" · "}
-              <MarketToneText tone={marketToneForDirection(activation.direction)}>
-                {activation.direction === "LONG" ? "做多" : "做空"}
-              </MarketToneText>
-              {" · "}
-              更新于 {formatUserVisibleTime(activation.updated_at)}
-            </Typography>
-            {sourcePlan && (
-              <Typography variant="body2" sx={{ mt: .75, fontWeight: 700 }}>
-                {orderIntent ?? "订单意图不可读"}
-                {" · "}
-                {positionDisposition ? "处置边界" : "计划金额"} <Box component="span" className="mono">{quoteCurrencyAmount(sourcePlan.max_notional)} USDT</Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ ml: { sm: "auto !important" }, whiteSpace: "nowrap" }}
+              >
+                更新 {formatCompactUserVisibleTime(activation.updated_at)}
               </Typography>
+            </Stack>
+            {sourcePlan && (
+              <Box
+                sx={{
+                  mt: 1.25,
+                  p: 1.25,
+                  display: "grid",
+                  gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "minmax(0, 2fr) minmax(130px, 0.8fr)" },
+                  gap: 1.25,
+                  bgcolor: "action.hover",
+                  borderRadius: 1.5,
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="caption" color="text.secondary">计划结构</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.2, fontWeight: 700, lineHeight: 1.4 }}>
+                    {orderIntent ?? "订单意图不可读"}
+                  </Typography>
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {positionDisposition ? "处置边界" : "计划金额"}
+                  </Typography>
+                  <Typography className="mono" variant="body2" sx={{ mt: 0.2, fontWeight: 750 }}>
+                    {quoteCurrencyAmount(sourcePlan.max_notional)} USDT
+                  </Typography>
+                </Box>
+              </Box>
             )}
-            {pausedReason && (
+            {isPaused && (
               <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
-                {pausedReason}；计划仍有交易责任，不会移入历史或从当前列表隐藏。
+                执行器连接中断后，新的入场已暂停；现有止损、止盈和退出不受影响。可在详情中恢复。
               </Typography>
             )}
           </Box>
-          <Button
-            variant="contained"
-            onClick={() => navigate(`/activations/${activation.activation_id}`)}
-          >
-            查看运行
-          </Button>
-        </Stack>
+          <PlanPnlPanel
+            activation={activation}
+            environmentKind={status.environment_kind}
+            environmentScope={environmentScope}
+            marketColorScheme={marketColorScheme}
+            positionDisposition={positionDisposition}
+          />
+        </Box>
       </Box>
     );
   };
@@ -3181,7 +3649,11 @@ function PlansPage() {
       ? latestActivationMap.get(plan.plan_version_id)
       : undefined;
     const completedActivation = latestActivation?.lifecycle === "COMPLETED";
-    const unavailable = runtimeIncompatible || expired;
+    const unavailable = runtimeIncompatible || (expired && !completedActivation);
+    const historical = Boolean(
+      plan.plan_version_id
+      && (runtimeIncompatible || expired || completedActivation),
+    );
     const planState = completedActivation
       ? "计划已结束"
       : runtimeIncompatible
@@ -3222,7 +3694,19 @@ function PlansPage() {
       );
     const openDetails = () => navigate(detailPath);
     return <Box component="article" aria-label={`计划 ${planName}`} key={plan.plan_id} sx={{ ...surfaceFrameSx, p: 2.5, borderColor: unavailable ? "warning.main" : "divider", opacity: unavailable ? .72 : 1 }}>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { md: "center" } }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            md: historical
+              ? "minmax(0, 1fr) minmax(300px, 360px)"
+              : "minmax(0, 1fr) auto",
+          },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" color={unavailable ? "warning.main" : "text.secondary"}>{planState}</Typography>
           <Button
@@ -3257,7 +3741,7 @@ function PlansPage() {
             最终结果{" "}
             {finalResult === null
               ? completedActivation ? "待核对" : "尚未结束"
-              : <MarketToneText tone={marketToneForSignedValue(finalResult)}><Box component="span" className="mono" sx={{ fontWeight: 750 }}>{signedUsdt(finalResult)}</Box></MarketToneText>}
+              : <MarketToneText tone={marketToneForSignedValue(finalResult)}><Box component="span" className="mono" sx={{ fontWeight: 750 }}>{signedSettledUsdt(primaryResult === "NO_ACTION" ? "0" : tradeResult.net_pnl)}</Box></MarketToneText>}
             {" · "}
             {closureReason}
           </Typography>
@@ -3268,16 +3752,31 @@ function PlansPage() {
           {runtimeIncompatible && <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
             {planRuntimeIncompatibilityLabels[plan.runtime_incompatibility_reason ?? ""] ?? "当前运行时无法安全消费该计划"}；仍可查看原计划或沿用参数新建。
           </Typography>}
-          {!runtimeIncompatible && expired && <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>计划有效期已结束；仍可查看原计划或沿用参数新建。</Typography>}
+          {!runtimeIncompatible && expired && !completedActivation && <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>计划有效期已结束；仍可查看原计划或沿用参数新建。</Typography>}
         </Box>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button variant="outlined" onClick={openDetails}>查看详情</Button>
-          {!plan.plan_version_id && <Button variant="outlined" color="error" disabled={liveReadOnly || deleteMutation.isPending} onClick={() => { deleteMutation.reset(); setDeleteTarget(plan); }}>删除草稿</Button>}
-          {!plan.plan_version_id && <Button variant="contained" disabled={liveReadOnly || fixMutation.isPending} onClick={() => confirmPlan(plan)}>确认计划</Button>}
-          {plan.plan_version_id && <Button variant="outlined" disabled={liveReadOnly} onClick={() => navigate(`/plans/new?copyFrom=${encodeURIComponent(plan.plan_id)}`)}>沿用参数新建</Button>}
-          {plan.plan_version_id && !unavailable && !completedActivation && <Button variant="contained" disabled={liveReadOnly} onClick={() => navigate(`/plans/${plan.plan_version_id}/activate`)}>{positionDisposition ? "启动处置计划" : directExecution ? "启动订单计划" : "启动策略"}</Button>}
+        <Stack spacing={1.25} sx={{ minWidth: 0 }}>
+          {historical && (latestActivation
+            ? <PlanPnlPanel
+                activation={latestActivation}
+                environmentKind={status.environment_kind}
+                environmentScope={environmentScope}
+                marketColorScheme={marketColorScheme}
+                positionDisposition={positionDisposition}
+              />
+            : <EmptyHistoricalPnlPanel />)}
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1}
+            sx={{ justifyContent: "flex-end", "& > *": { minWidth: 0 } }}
+          >
+            <Button variant="outlined" onClick={openDetails}>查看详情</Button>
+            {!plan.plan_version_id && <Button variant="outlined" color="error" disabled={liveReadOnly || deleteMutation.isPending} onClick={() => { deleteMutation.reset(); setDeleteTarget(plan); }}>删除草稿</Button>}
+            {!plan.plan_version_id && <Button variant="contained" disabled={liveReadOnly || fixMutation.isPending} onClick={() => confirmPlan(plan)}>确认计划</Button>}
+            {plan.plan_version_id && <Button variant="outlined" disabled={liveReadOnly} onClick={() => navigate(`/plans/new?copyFrom=${encodeURIComponent(plan.plan_id)}`)}>沿用参数新建</Button>}
+            {plan.plan_version_id && !unavailable && !completedActivation && <Button variant="contained" disabled={liveReadOnly} onClick={() => navigate(`/plans/${plan.plan_version_id}/activate`)}>{positionDisposition ? "启动处置计划" : directExecution ? "启动订单计划" : "启动策略"}</Button>}
+          </Stack>
         </Stack>
-      </Stack>
+      </Box>
       <Box component="details" sx={{ mt: 1.5, borderTop: 1, borderColor: "divider", pt: 1.25 }}>
         <Box component="summary" sx={{ display: "inline-flex", cursor: "pointer", color: "info.main", fontSize: 13, fontWeight: 700 }}>
           计划配置
@@ -3843,6 +4342,12 @@ function ActivationRoute() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["activation", activationId], queryFn: () => getActivation(activationId), enabled: Boolean(activationId), refetchInterval: 2_000 });
   const timelineQuery = useQuery({ queryKey: ["activation-timeline", activationId], queryFn: () => getActivationTimeline(activationId), enabled: Boolean(activationId), refetchInterval: 2_000 });
+  useEffect(() => {
+    if (!query.isSuccess || location.hash !== "#stability-controls") return;
+    window.requestAnimationFrame(() => {
+      document.getElementById("stability-controls")?.scrollIntoView({ block: "center" });
+    });
+  }, [location.hash, query.isSuccess]);
   const activation = query.data?.activation as Record<string, unknown> | undefined;
   const capital = recordOf(query.data?.capital);
   const tradeResult = recordOf(query.data?.trade_result);
@@ -3887,6 +4392,7 @@ function ActivationRoute() {
   const orderSchedule = recordOf(query.data?.order_schedule);
   const strategy = recordOf(query.data?.strategy);
   const plan = recordOf(query.data?.plan);
+  const planId = valueOf(plan, "plan_id", "");
   const planDecisionContext = recordOf(plan.decision_context);
   const planDecisionContextRows = [
     { label: "交易理由", value: valueOf(planDecisionContext, "rationale") },
@@ -3934,13 +4440,8 @@ function ActivationRoute() {
     runtimeChartWindowEndAt,
     status.environment_id,
   ]);
-  const [visibleRuntimeAnnotationRoles, setVisibleRuntimeAnnotationRoles] = useState(
-    () => new Set<OrderChartPriceAnnotation["role"]>([
-      "POSITION",
-      "RUNTIME_ENTRY",
-      "PROTECTION",
-      "TAKE_PROFIT",
-    ]),
+  const [hiddenRuntimeAnnotationIds, setHiddenRuntimeAnnotationIds] = useState(
+    () => new Set<string>(),
   );
   const [runtimeEventFilter, setRuntimeEventFilter] = useState<
     "ALL" | RuntimeEventCategory
@@ -3964,6 +4465,13 @@ function ActivationRoute() {
   const demoImmediateEntry = parameters.demo_immediate_entry === true;
   const stopped = Array.isArray(query.data?.stopped_categories) ? query.data.stopped_categories.map(String) : [];
   const newRiskStopped = stopped.includes("NEW_RISK");
+  const ruleState = recordOf(activation?.rule_state);
+  const deadlines = recordOf(ruleState.deadlines);
+  const entryValidUntil = valueOf(deadlines, "entry_valid_until", "");
+  const entryWindowExpired = Boolean(
+    entryValidUntil && Date.parse(entryValidUntil) <= Date.now()
+  );
+  const entryPhaseClosed = activationEntryPhaseClosed(activation, Date.now());
   const stopEvidence = recordsOf(query.data?.stop_evidence);
   const activeAccountSystemStop = currentAccountSystemStop(stopEvidence);
   const liveReadOnly = status.profile === "BINANCE_LIVE_READ_ONLY";
@@ -4079,9 +4587,9 @@ function ActivationRoute() {
     },
     {
       intent: "RESUME_ACTIVATION",
-      label: "恢复连续性暂停",
+      label: "恢复新增入场",
       description:
-        "只在唯一 Executor 已提供可信恢复证据时解除连续性暂停；不会撤销用户停止、退出或接管，也不会新建计划或订单。",
+        "仅解除因执行器连续性中断导致的开仓、加仓和入场重挂暂停；系统必须先确认执行器连接唯一且最新仓位一致。已有保护、撤单、减仓和退出始终继续。",
     },
     {
       intent: "EXIT_STRATEGY",
@@ -4098,9 +4606,16 @@ function ActivationRoute() {
         "Halpha 不再为本次激活发起新的交易所变更；你必须转到 Binance 官方入口处理持仓和挂单，已有未知动作仍会只读核对。",
     },
   ];
-  const visibleControls = positionDisposition
+  const controlsForResponsibility = positionDisposition
     ? controls.filter((control) => ["RESUME_ACTIVATION", "USER_TAKEOVER"].includes(control.intent))
     : controls;
+  const visibleControls = controlsForResponsibility.filter(
+    (control) => control.intent !== "RESUME_ACTIVATION"
+      || (
+        valueOf(activation, "run_state") === "PAUSED"
+        && !entryPhaseClosed
+      ),
+  );
   const selectedControlLabel = visibleControls.find((control) => control.intent === intent)?.label;
   const lifecycle = valueOf(activation, "lifecycle");
   const takeover = lifecycle === "USER_TAKEOVER";
@@ -4127,11 +4642,13 @@ function ActivationRoute() {
     ? "已闭合（无需运行）"
     : takeover
       ? "用户接管（机器不再运行）"
-      : newRiskStopped
-        ? `${runState} / 新增风险已停止`
-        : pauseReason
-          ? `${runState} / ${translatedLabel(pauseReasonLabels, pauseReason)}`
-          : runState;
+      : entryPhaseClosed
+        ? "入场已结束"
+        : newRiskStopped
+          ? `${runState} / 新增风险已停止`
+          : pauseReason
+            ? `${runState} / ${translatedLabel(pauseReasonLabels, pauseReason)}`
+            : runState;
   const submittedReceipt = recordOf(submit.data);
   const submittedReceiptId = valueOf(submittedReceipt, "receipt_id", "");
   const currentSubmittedReceipt = receipts.find(
@@ -4172,12 +4689,6 @@ function ActivationRoute() {
   const visibleMarketCutoff = liveQuote?.source_cutoff
     ?? currentMarket?.source_cutoff
     ?? "";
-  const ruleState = recordOf(activation?.rule_state);
-  const deadlines = recordOf(ruleState.deadlines);
-  const entryValidUntil = valueOf(deadlines, "entry_valid_until", "");
-  const entryWindowExpired = Boolean(
-    entryValidUntil && Date.parse(entryValidUntil) <= Date.now()
-  );
   const currentSpread = visibleAskPrice && visibleBidPrice
     ? subtractDecimal(visibleAskPrice, visibleBidPrice) ?? ""
     : "";
@@ -4482,7 +4993,7 @@ function ActivationRoute() {
         id: `halpha-runtime-action-${actionId}`,
         role,
         label: `${actionLabel} · ${translatedLabel(actionStateLabels, state)}`,
-        detail: `${shortDigest(actionId)} · ${terms.reduce_only === true ? "只减仓 · " : ""}数量 ${marketVolume(valueOf(terms, "quantity", ""))} ${runtimeBaseAsset}`,
+        detail: `${terms.reduce_only === true ? "只减仓 · " : ""}数量 ${marketVolume(valueOf(terms, "quantity", ""))} ${runtimeBaseAsset}`,
         price: priceValue,
         authority: "SERVER_FACT",
         lineStyle: state === "OPEN" ? "solid" : "dashed",
@@ -4499,16 +5010,51 @@ function ActivationRoute() {
     runtimeBaseAsset,
     terminal,
   ]);
-  const visibleRuntimeChartAnnotations = useMemo(
-    () => runtimeChartAnnotations.filter(
-      (annotation) => visibleRuntimeAnnotationRoles.has(annotation.role),
+  const visibleRuntimeAnnotationIds = useMemo(
+    () => new Set(
+      runtimeChartAnnotations
+        .filter((annotation) => !hiddenRuntimeAnnotationIds.has(annotation.id))
+        .map((annotation) => annotation.id),
     ),
-    [runtimeChartAnnotations, visibleRuntimeAnnotationRoles],
+    [hiddenRuntimeAnnotationIds, runtimeChartAnnotations],
   );
+  const runtimeAnnotationsByRole = useMemo(() => {
+    const result = new Map<
+      OrderChartPriceAnnotation["role"],
+      OrderChartPriceAnnotation[]
+    >();
+    runtimeChartAnnotations.forEach((annotation) => {
+      const current = result.get(annotation.role) ?? [];
+      current.push(annotation);
+      result.set(annotation.role, current);
+    });
+    return result;
+  }, [runtimeChartAnnotations]);
   const availableRuntimeAnnotationRoles = useMemo(
     () => new Set(runtimeChartAnnotations.map((annotation) => annotation.role)),
     [runtimeChartAnnotations],
   );
+  const setRuntimeAnnotationVisibility = useCallback((annotationId: string, visible: boolean) => {
+    setHiddenRuntimeAnnotationIds((current) => {
+      const next = new Set(current);
+      if (visible) next.delete(annotationId);
+      else next.add(annotationId);
+      return next;
+    });
+  }, []);
+  const setRuntimeAnnotationRoleVisibility = useCallback((
+    role: OrderChartPriceAnnotation["role"],
+    visible: boolean,
+  ) => {
+    setHiddenRuntimeAnnotationIds((current) => {
+      const next = new Set(current);
+      (runtimeAnnotationsByRole.get(role) ?? []).forEach((annotation) => {
+        if (visible) next.delete(annotation.id);
+        else next.add(annotation.id);
+      });
+      return next;
+    });
+  }, [runtimeAnnotationsByRole]);
   const actionsByRef = useMemo(
     () => new Map(actions.map((action) => [
       valueOf(action, "execution_action_id", ""),
@@ -4764,7 +5310,9 @@ function ActivationRoute() {
               displayMode="RUNTIME"
               runtimePhase={lifecycle === "COMPLETED" ? "REVIEW" : "RUNNING"}
               showPlanEntryAnnotations={showRuntimePlanEntryAnnotations}
-              additionalPriceAnnotations={visibleRuntimeChartAnnotations}
+              additionalPriceAnnotations={runtimeChartAnnotations}
+              visibleAdditionalPriceAnnotationIds={visibleRuntimeAnnotationIds}
+              onAdditionalPriceAnnotationVisibilityChange={setRuntimeAnnotationVisibility}
               operationMarkers={runtimeOperationMarkers}
               timeWindowMode={runtimeChartWindowEndAt ? "EXECUTION" : "LIVE"}
               timeWindowEndAt={runtimeChartWindowEndAt}
@@ -4918,29 +5466,37 @@ function ActivationRoute() {
                   ["TAKE_PROFIT", "止盈"],
                 ] as Array<[OrderChartPriceAnnotation["role"], string]>)
                   .filter(([role]) => availableRuntimeAnnotationRoles.has(role))
-                  .map(([role, label]) => (
-                    <FormControlLabel
-                      key={role}
-                      sx={{ m: 0 }}
-                      control={(
-                        <Checkbox
-                          size="small"
-                          checked={visibleRuntimeAnnotationRoles.has(role)}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            setVisibleRuntimeAnnotationRoles((current) => {
-                              const next = new Set(current);
-                              if (checked) next.add(role);
-                              else next.delete(role);
-                              return next;
-                            });
-                          }}
-                          slotProps={{ input: { "aria-label": `图上${label}` } }}
-                        />
-                      )}
-                      label={<Typography variant="caption">{label}</Typography>}
-                    />
-                  ))}
+                  .map(([role, label]) => {
+                    const roleAnnotations = runtimeAnnotationsByRole.get(role) ?? [];
+                    const visibleCount = roleAnnotations.filter(
+                      (annotation) => visibleRuntimeAnnotationIds.has(annotation.id),
+                    ).length;
+                    return (
+                      <FormControlLabel
+                        key={role}
+                        sx={{ m: 0 }}
+                        control={(
+                          <Checkbox
+                            size="small"
+                            checked={roleAnnotations.length > 0 && visibleCount === roleAnnotations.length}
+                            indeterminate={visibleCount > 0 && visibleCount < roleAnnotations.length}
+                            onChange={(event) => {
+                              setRuntimeAnnotationRoleVisibility(role, event.target.checked);
+                            }}
+                            slotProps={{
+                              input: {
+                                "aria-label": `图上${label}`,
+                                "aria-checked": visibleCount > 0 && visibleCount < roleAnnotations.length
+                                  ? "mixed"
+                                  : roleAnnotations.length > 0 && visibleCount === roleAnnotations.length,
+                              },
+                            }}
+                          />
+                        )}
+                        label={<Typography variant="caption">{label}</Typography>}
+                      />
+                    );
+                  })}
               </FormGroup>
             </Box>
           )}
@@ -5180,7 +5736,7 @@ function ActivationRoute() {
           </Box>}
           {!terminal && <>
             <Divider sx={{ my: 1.5 }} />
-              <Typography component="h2" variant="subtitle2" sx={{ mb: 1 }}>稳定控制</Typography>
+              <Typography id="stability-controls" component="h2" variant="subtitle2" sx={{ mb: 1 }}>稳定控制</Typography>
             {!executorCanExecute && <Alert severity="error" variant="outlined" sx={{ mb: 1.5 }}>
               Executor 当前不能确认执行；命令回执不代表交易所效果。
             </Alert>}
@@ -5200,6 +5756,26 @@ function ActivationRoute() {
                   </Button>
                 </Tooltip>
               ))}
+              {entryPhaseClosed && directExecution && !positionDisposition && (
+                <Tooltip
+                  arrow
+                  enterDelay={350}
+                  title="沿用原配置创建新的计划草稿；确认新的入场窗口后才能启动。原计划及其持仓、保护和退出保持不变。"
+                >
+                  <span>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={liveReadOnly || !planId}
+                      onClick={() => navigate(`/plans/new?copyFrom=${encodeURIComponent(planId)}`)}
+                      aria-label="重新开放入场；沿用原配置创建新计划，原计划保持不变"
+                      sx={{ minWidth: 0, width: "100%" }}
+                    >
+                      重新开放入场
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
             </Box>
           </>}
         </Box>
@@ -5220,7 +5796,7 @@ function ActivationRoute() {
             ；不会操作其他计划的订单或仓位。
           </Alert>
         )}
-        {intent === "RESUME_ACTIVATION" && !resumeEligible && <Alert severity="warning" sx={{ mb: 1.5 }}>当前没有由唯一 Executor/EXE 核对链产生的可信恢复证据；系统拒绝恢复，不能用手工摘要替代。</Alert>}
+        {intent === "RESUME_ACTIVATION" && !resumeEligible && <Alert severity="warning" sx={{ mb: 1.5 }}>尚未完成最新仓位核对，因此暂时不能恢复新增入场。保护、撤单、减仓和退出不受影响。</Alert>}
         <Stack direction="row" spacing={1}>
           <Button variant="contained" color={intent === "EXIT_STRATEGY" || intent === "USER_TAKEOVER" ? "error" : "primary"} disabled={submit.isPending || !resumeEligible} onClick={() => submit.mutate(intent)}>确认{selectedControlLabel}</Button>
           <Button onClick={() => { setIntent(null); setIdempotencyKey(null); }}>取消</Button>

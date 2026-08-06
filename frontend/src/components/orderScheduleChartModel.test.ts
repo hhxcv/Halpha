@@ -51,6 +51,7 @@ function defaultSpec(limitPrice = "65750"): OrderScheduleSpec {
       items: [{ kind: "DECISION_BASIS_READY" }],
     },
     protection_policy: {
+      full_fill_loss_budget: null,
       initial_stop: {
         distance_bps: "100",
         trigger_source: "MARK_PRICE",
@@ -404,7 +405,7 @@ describe("order schedule chart model", () => {
     });
   });
 
-  it("projects long and short stop and take-profit bands from normalized entry prices", () => {
+  it("projects one aggregate stop and take-profit set from the weighted entry price", () => {
     const spec = defaultSpec();
     spec.protection_policy.take_profit_ladder = {
       levels: [
@@ -429,16 +430,15 @@ describe("order schedule chart model", () => {
       spec,
       legs,
     );
-    expect(longProjection?.entry).toEqual({ lower: 100, upper: 110 });
-    expect(longProjection?.stop.lower).toBeCloseTo(99);
-    expect(longProjection?.stop.upper).toBeCloseTo(108.9);
+    expect(longProjection?.entry).toEqual({ lower: 105, upper: 105 });
+    expect(longProjection?.stop).toEqual({ lower: 103.95, upper: 103.95 });
     expect(longProjection?.takeProfits[0]?.price).toEqual({
-      lower: 102,
-      upper: 112.2,
+      lower: 107.1,
+      upper: 107.1,
     });
     expect(longProjection?.takeProfits[1]?.price).toEqual({
-      lower: 103,
-      upper: 113.3,
+      lower: 108.15,
+      upper: 108.15,
     });
 
     const shortProjection = projectOrderScheduleProtectionPrices(
@@ -446,10 +446,29 @@ describe("order schedule chart model", () => {
       spec,
       legs,
     );
-    expect(shortProjection?.stop.lower).toBeCloseTo(101);
-    expect(shortProjection?.stop.upper).toBeCloseTo(111.1);
-    expect(shortProjection?.takeProfits[0]?.price.lower).toBeCloseTo(98);
-    expect(shortProjection?.takeProfits[0]?.price.upper).toBeCloseTo(107.8);
+    expect(shortProjection?.stop).toEqual({ lower: 106.05, upper: 106.05 });
+    expect(shortProjection?.takeProfits[0]?.price).toEqual({
+      lower: 102.9,
+      upper: 102.9,
+    });
+
+    const compiledProjection = projectOrderScheduleProtectionPrices(
+      "LONG",
+      spec,
+      legs,
+      {
+        average_entry_price: "104.9",
+        entry_boundary_price: "100",
+        stop_price: "103.8",
+        quantity: "0.2",
+        gross_price_loss: "0.22",
+        estimated_entry_fee: "0.0042",
+        estimated_exit_fee: "0.01038",
+        maximum_projected_loss: "0.23458",
+      },
+    );
+    expect(compiledProjection?.entry).toEqual({ lower: 104.9, upper: 104.9 });
+    expect(compiledProjection?.stop).toEqual({ lower: 103.8, upper: 103.8 });
 
     spec.protection_policy.take_profit_ladder = {
       levels: [{ trigger_r: "1e308", quantity_fraction: "1" }],

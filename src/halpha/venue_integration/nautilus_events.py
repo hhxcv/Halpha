@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from nautilus_trader.model.enums import (
     LiquiditySide,
@@ -21,7 +21,11 @@ from halpha.domain_values import canonical_decimal
 from halpha.venue_integration.binance_rate_limits import (
     MAX_BINANCE_RATE_LIMIT_BACKOFF_SECONDS,
 )
-from halpha.venue_integration.facts import build_venue_fact, venue_trade_fact_id
+from halpha.venue_integration.facts import (
+    build_venue_fact,
+    synthetic_reconciliation_trade_id,
+    venue_trade_fact_id,
+)
 from halpha.venue_integration.models import (
     BINANCE_USDM_VENUE_REF,
     ExecutionAction,
@@ -439,11 +443,7 @@ def _synthetic_reconciliation_fill_event(event: object) -> bool:
     trade_id = _identifier(getattr(event, "trade_id", None))
     if trade_id is None:
         return True
-    try:
-        UUID(trade_id)
-    except ValueError:
-        return False
-    return True
+    return synthetic_reconciliation_trade_id(trade_id)
 
 
 def _source_time(event: object) -> datetime | None:

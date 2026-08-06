@@ -21,6 +21,7 @@ from halpha.configuration import load_settings
 from halpha.planning.order_policies import (
     CancelOnShockRule,
     ConditionGroup,
+    FullFillLossBudgetSpec,
     InitialStopSpec,
     NumericComparator,
     ProfitRCondition,
@@ -98,13 +99,13 @@ def _status(
 
 def _api(status: LiveWriteGateStatus) -> PostgreSQLPlanningApi:
     return PostgreSQLPlanningApi(
-        database_name="halpha_live",
-        database_role_name="halpha_live_app",
+        database_name="halpha_live_copy",
+        database_role_name="halpha_live_copy_app",
         password=SecretStr("qualification-password"),
-        environment_id="binance-live-primary",
+        environment_id="binance-live-copy-primary",
         environment_kind="LIVE",
         authority_class="LIVE_REAL_CAPITAL",
-        account_ref="binance-usdm-live-owner-primary",
+        account_ref="binance-usdm-copy-lead-primary",
         product_build_id="a" * 64,
         profile="BINANCE_LIVE_WRITE",
         gate_status_provider=lambda: status,
@@ -113,13 +114,13 @@ def _api(status: LiveWriteGateStatus) -> PostgreSQLPlanningApi:
 
 def _read_only_api() -> PostgreSQLPlanningApi:
     return PostgreSQLPlanningApi(
-        database_name="halpha_live",
-        database_role_name="halpha_live_app_reader",
+        database_name="halpha_live_copy",
+        database_role_name="halpha_live_copy_app_reader",
         password=SecretStr("qualification-password"),
-        environment_id="binance-live-primary",
+        environment_id="binance-live-copy-primary",
         environment_kind="LIVE",
         authority_class="LIVE_REAL_CAPITAL",
-        account_ref="binance-usdm-live-owner-primary",
+        account_ref="binance-usdm-copy-lead-primary",
         product_build_id="a" * 64,
         profile="BINANCE_LIVE_READ_ONLY",
         gate_status_provider=lambda: _status(),
@@ -234,6 +235,10 @@ def _direct_schedule(**updates: object) -> OrderScheduleSpec:
         "protection_policy": ProtectionPolicy(
             initial_stop=InitialStopSpec(distance_bps="100"),
             time_exit_seconds=60,
+            full_fill_loss_budget=FullFillLossBudgetSpec(
+                entry_fee_bps="2",
+                exit_fee_bps="5",
+            ),
         ),
     }
     return OrderScheduleSpec(**{**values, **updates})
@@ -339,7 +344,7 @@ def test_live_read_only_planning_connections_force_transactions_read_only(
     _read_only_api()._connect()
 
     assert observed["options"] == "-c default_transaction_read_only=on"
-    assert observed["user"] == "halpha_live_app_reader"
+    assert observed["user"] == "halpha_live_copy_app_reader"
 
 
 @pytest.mark.parametrize(

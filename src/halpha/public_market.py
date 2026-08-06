@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Literal, Protocol, TypeAlias
 
+from async_lru import alru_cache
 from nautilus_trader.adapters.binance import get_cached_binance_http_client
 from nautilus_trader.adapters.binance.common.enums import (
     BinanceAccountType,
@@ -32,6 +33,9 @@ PUBLIC_MARKET_TIMEOUT_SECONDS = 10
 PUBLIC_MARKET_MAX_SOURCE_AGE_SECONDS = 30
 PUBLIC_MARKET_MAX_FUTURE_SKEW_SECONDS = 5
 MAX_MARKET_WINDOW_BARS = 300
+PUBLIC_MARKET_CONTEXT_CACHE_TTL_SECONDS = 5
+PUBLIC_MARKET_RECENT_WINDOW_CACHE_TTL_SECONDS = 5
+PUBLIC_MARKET_HISTORICAL_WINDOW_CACHE_TTL_SECONDS = 60 * 60
 STOP_REFERENCE_METHOD_VERSION = "STOP_REFERENCE_MULTI_INTERVAL_V1"
 STOP_STRUCTURE_ATR_BUFFER = Decimal("0.2")
 STOP_SWING_ATR_BUFFER = Decimal("0.2")
@@ -443,12 +447,40 @@ class BinancePublicMarketContext:
             )
         self._market_api = market_api
         self._observed_at_provider = observed_at_provider or (lambda: datetime.now(UTC))
+        # async-lru supplies bounded TTL caching and single-flight behavior: all
+        # same-key callers await one venue request rather than multiplying it by
+        # the number of open browser windows. Keep current and immutable history
+        # separate so a live candle never inherits the longer historical TTL.
+        self._fetch_cached = alru_cache(
+            maxsize=32,
+            ttl=PUBLIC_MARKET_CONTEXT_CACHE_TTL_SECONDS,
+        )(self._fetch_uncached)
+        self._fetch_recent_window_cached = alru_cache(
+            maxsize=128,
+            ttl=PUBLIC_MARKET_RECENT_WINDOW_CACHE_TTL_SECONDS,
+        )(self._fetch_window_uncached)
+        self._fetch_historical_window_cached = alru_cache(
+            maxsize=256,
+            ttl=PUBLIC_MARKET_HISTORICAL_WINDOW_CACHE_TTL_SECONDS,
+        )(self._fetch_window_uncached)
 
     async def fetch(
         self,
         instrument_ref: str,
         lookback: int,
         stop_reference_interval: MarketInterval = "15m",
+    ) -> MarketContext:
+        return await self._fetch_cached(
+            instrument_ref,
+            lookback,
+            stop_reference_interval,
+        )
+
+    async def _fetch_uncached(
+        self,
+        instrument_ref: str,
+        lookback: int,
+        stop_reference_interval: MarketInterval,
     ) -> MarketContext:
         symbol = _INSTRUMENT_SYMBOLS.get(instrument_ref)
         if symbol is None:
@@ -689,15 +721,45 @@ class BinancePublicMarketContext:
         start_at: datetime,
         end_at: datetime,
     ) -> MarketWindow:
-        symbol = _INSTRUMENT_SYMBOLS.get(instrument_ref)
-        if symbol is None:
-            raise MarketContextUnavailable("MARKET_CONTEXT_INSTRUMENT_UNSUPPORTED")
         if start_at.utcoffset() is None or end_at.utcoffset() is None:
             raise MarketContextUnavailable("MARKET_WINDOW_TIMEZONE_REQUIRED")
         interval_ms = MARKET_INTERVAL_MILLISECONDS[interval]
-        native_interval = BINANCE_KLINE_INTERVALS[interval]
         start_ms = int(start_at.timestamp() * 1000) // interval_ms * interval_ms
         end_ms = int(end_at.timestamp() * 1000) // interval_ms * interval_ms
+        normalized_start = datetime.fromtimestamp(start_ms / 1000, tz=UTC)
+        normalized_end = datetime.fromtimestamp(end_ms / 1000, tz=UTC)
+        observed_at = self._observed_at_provider()
+        historical = (
+            observed_at.utcoffset() is not None
+            and normalized_end + timedelta(milliseconds=interval_ms)
+            <= observed_at.astimezone(UTC)
+        )
+        fetcher = (
+            self._fetch_historical_window_cached
+            if historical
+            else self._fetch_recent_window_cached
+        )
+        return await fetcher(
+            instrument_ref,
+            interval,
+            normalized_start,
+            normalized_end,
+        )
+
+    async def _fetch_window_uncached(
+        self,
+        instrument_ref: str,
+        interval: MarketInterval,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> MarketWindow:
+        symbol = _INSTRUMENT_SYMBOLS.get(instrument_ref)
+        if symbol is None:
+            raise MarketContextUnavailable("MARKET_CONTEXT_INSTRUMENT_UNSUPPORTED")
+        interval_ms = MARKET_INTERVAL_MILLISECONDS[interval]
+        native_interval = BINANCE_KLINE_INTERVALS[interval]
+        start_ms = int(start_at.timestamp() * 1000)
+        end_ms = int(end_at.timestamp() * 1000)
         count = (end_ms - start_ms) // interval_ms + 1
         if count <= 0 or count > MAX_MARKET_WINDOW_BARS:
             raise MarketContextUnavailable("MARKET_WINDOW_RANGE_INVALID")
@@ -769,3 +831,12 @@ class BinancePublicMarketContext:
             raise MarketContextUnavailable(
                 f"MARKET_WINDOW_READ_FAILED_{type(exc).__name__.upper()}"
             ) from None
+
+    async def close(self) -> None:
+        """Release cache timers and any in-flight read tasks at App shutdown."""
+
+        await asyncio.gather(
+            self._fetch_cached.cache_close(),
+            self._fetch_recent_window_cached.cache_close(),
+            self._fetch_historical_window_cached.cache_close(),
+        )

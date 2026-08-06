@@ -36,6 +36,7 @@ from halpha.planning.order_policies import (
     ConditionOperator,
     DecisionBasisReadyCondition,
     ExpireRemainingRule,
+    FullFillLossBudgetSpec,
     InitialStopSpec,
     MarkPriceCondition,
     NumericComparator,
@@ -249,6 +250,10 @@ def test_entry_reprice_requires_one_explicit_gtc_limit_order() -> None:
         entry_program=EntryProgram(kind=EntryProgramKind.ONE_TIME),
         protection_policy=ProtectionPolicy(
             initial_stop=InitialStopSpec(distance_bps="100"),
+            full_fill_loss_budget=FullFillLossBudgetSpec(
+                entry_fee_bps="2",
+                exit_fee_bps="5",
+            ),
             time_exit_seconds=3_600,
         ),
         venue_policy=VenueOrderPolicy(
@@ -345,6 +350,96 @@ def test_market_entry_defers_fill_relative_protection_to_runtime() -> None:
     assert preview.valid
 
 
+@pytest.mark.parametrize(
+    ("direction", "distance_bps", "expected_boundary"),
+    (
+        (Direction.LONG, "5000", "100"),
+        (Direction.SHORT, "5000", "150"),
+    ),
+)
+def test_full_fill_protection_estimate_uses_all_legs_and_includes_fees(
+    direction: Direction,
+    distance_bps: str,
+    expected_boundary: str,
+) -> None:
+    spec = OrderScheduleSpec(
+        entry_program=EntryProgram(kind=EntryProgramKind.PRICE_LADDER),
+        price_distribution=PriceDistribution(
+            lower_price="100",
+            upper_price="150",
+            level_count=2,
+        ),
+        amount_distribution=AmountDistribution(base_notional="150"),
+        protection_policy=ProtectionPolicy(
+            initial_stop=InitialStopSpec(distance_bps=distance_bps),
+            full_fill_loss_budget=FullFillLossBudgetSpec(
+                entry_fee_bps="10",
+                exit_fee_bps="20",
+            ),
+            time_exit_seconds=3_600,
+        ),
+    )
+
+    preview = _compile(spec, direction=direction.value, max_notional="300")
+
+    assert preview.valid
+    estimate = preview.full_fill_protection_estimate
+    assert estimate is not None
+    assert estimate.entry_boundary_price == expected_boundary
+    assert Decimal(estimate.average_entry_price) == (
+        sum(Decimal(leg.price) * Decimal(leg.quantity) for leg in preview.legs)
+        / sum(Decimal(leg.quantity) for leg in preview.legs)
+    )
+    assert Decimal(estimate.estimated_entry_fee) == Decimal("0.3")
+    expected_exit_fee = (
+        Decimal(estimate.quantity)
+        * Decimal(estimate.stop_price)
+        * Decimal("20")
+        / Decimal(10_000)
+    )
+    assert Decimal(estimate.estimated_exit_fee) == expected_exit_fee
+    assert Decimal(estimate.maximum_projected_loss) == (
+        Decimal(estimate.gross_price_loss)
+        + Decimal(estimate.estimated_entry_fee)
+        + Decimal(estimate.estimated_exit_fee)
+    )
+    if direction is Direction.LONG:
+        assert Decimal(estimate.stop_price) < Decimal(expected_boundary)
+    else:
+        assert Decimal(estimate.stop_price) > Decimal(expected_boundary)
+
+
+@pytest.mark.parametrize("direction", (Direction.LONG, Direction.SHORT))
+def test_ladder_stop_inside_planned_entry_range_is_rejected(
+    direction: Direction,
+) -> None:
+    spec = OrderScheduleSpec(
+        entry_program=EntryProgram(kind=EntryProgramKind.PRICE_LADDER),
+        price_distribution=PriceDistribution(
+            lower_price="100",
+            upper_price="150",
+            level_count=2,
+        ),
+        amount_distribution=AmountDistribution(base_notional="150"),
+        protection_policy=ProtectionPolicy(
+            initial_stop=InitialStopSpec(distance_bps="1000"),
+            full_fill_loss_budget=FullFillLossBudgetSpec(
+                entry_fee_bps="10",
+                exit_fee_bps="20",
+            ),
+            time_exit_seconds=3_600,
+        ),
+    )
+
+    preview = _compile(spec, direction=direction.value, max_notional="300")
+
+    assert not preview.valid
+    assert preview.full_fill_protection_estimate is None
+    assert {issue.code for issue in preview.issues} == {
+        "PROTECTION_INSIDE_ENTRY_RANGE"
+    }
+
+
 def test_direct_any_cannot_mix_always_true_readiness_with_market_conditions() -> None:
     spec = _protected_single_schedule(
         entry_conditions=ConditionGroup(
@@ -398,6 +493,10 @@ def test_new_direct_plan_requires_an_automatic_exit_path() -> None:
             update={
                 "protection_policy": ProtectionPolicy(
                     initial_stop=InitialStopSpec(distance_bps="100"),
+                    full_fill_loss_budget=FullFillLossBudgetSpec(
+                        entry_fee_bps="2",
+                        exit_fee_bps="5",
+                    ),
                     time_exit_seconds=3_600,
                 )
             }
@@ -409,6 +508,10 @@ def test_new_direct_plan_requires_an_explicit_entry_program() -> None:
     legacy_compatible = _protected_single_schedule(
         protection_policy=ProtectionPolicy(
             initial_stop=InitialStopSpec(distance_bps="100"),
+            full_fill_loss_budget=FullFillLossBudgetSpec(
+                entry_fee_bps="2",
+                exit_fee_bps="5",
+            ),
             time_exit_seconds=3_600,
         )
     )
@@ -430,6 +533,10 @@ def test_new_direct_plan_accepts_bounded_entry_reprice() -> None:
         ),
         protection_policy=ProtectionPolicy(
             initial_stop=InitialStopSpec(distance_bps="100"),
+            full_fill_loss_budget=FullFillLossBudgetSpec(
+                entry_fee_bps="2",
+                exit_fee_bps="5",
+            ),
             time_exit_seconds=3_600,
         ),
         dynamic_rules=(RepriceEntryRule(),),
@@ -483,6 +590,10 @@ def test_time_sliced_entry_requires_bounded_expiry_for_resting_orders() -> None:
         "amount_distribution": AmountDistribution(base_notional="20"),
         "protection_policy": ProtectionPolicy(
             initial_stop=InitialStopSpec(distance_bps="100"),
+            full_fill_loss_budget=FullFillLossBudgetSpec(
+                entry_fee_bps="2",
+                exit_fee_bps="5",
+            ),
             time_exit_seconds=3_600,
         ),
     }

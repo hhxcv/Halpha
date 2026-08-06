@@ -94,12 +94,13 @@ export function hydrateOrderScheduleSpec(
     first_slice_delay_seconds: 0,
     slice_interval_seconds: 0,
   };
-  const protectionPolicy = spec.protection_policy ?? {
+  const protectionPolicy: OrderScheduleSpec["protection_policy"] = spec.protection_policy ?? {
     initial_stop: {
       distance_bps: "100",
       trigger_source: "MARK_PRICE",
       coverage: "EACH_CONFIRMED_FILL",
     },
+    full_fill_loss_budget: null,
     take_profit_ladder: {
       levels: [{ trigger_r: "2", quantity_fraction: "1" }],
     },
@@ -108,7 +109,13 @@ export function hydrateOrderScheduleSpec(
   return {
     ...spec,
     entry_program: entryProgram,
-    protection_policy: protectionPolicy,
+    protection_policy: {
+      ...protectionPolicy,
+      full_fill_loss_budget: protectionPolicy.full_fill_loss_budget ?? {
+        entry_fee_bps: "0",
+        exit_fee_bps: "0",
+      },
+    },
   };
 }
 
@@ -257,6 +264,10 @@ export function createDefaultOrderScheduleSpec(
         distance_bps: "100",
         trigger_source: "MARK_PRICE",
         coverage: "EACH_CONFIRMED_FILL",
+      },
+      full_fill_loss_budget: {
+        entry_fee_bps: "0",
+        exit_fee_bps: "0",
       },
       take_profit_ladder: {
         levels: [{ trigger_r: "2", quantity_fraction: "1" }],

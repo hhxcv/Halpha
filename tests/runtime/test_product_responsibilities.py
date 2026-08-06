@@ -204,6 +204,7 @@ def _action(
     client_order_id: str | None = None,
     cancel_target: dict[str, object] | None = None,
     call_started_at: datetime | None = None,
+    not_submitted_reason: str | None = None,
     created_at: datetime = NOW,
 ) -> SimpleNamespace:
     normalized_terms = dict(terms)
@@ -224,6 +225,7 @@ def _action(
         cancel_target=cancel_target,
         call_started_at=call_started_at,
         request_digest=("a" * 64 if call_started_at is not None else None),
+        not_submitted_reason=not_submitted_reason,
         created_at=created_at,
     )
 
@@ -461,6 +463,7 @@ class _Coordinator:
         self.facts: dict[str, tuple[SimpleNamespace, ...]] = {}
         self.protection_checks = []
         self.protection_replacement_requests: list[dict[str, object]] = []
+        self.take_profit_replacement_requests: list[dict[str, object]] = []
         self.take_profit_checks = []
         self.exit_checks = []
         self.exit_requests: list[dict[str, object]] = []
@@ -574,6 +577,42 @@ class _Coordinator:
         self.actions[action.execution_action_id] = action
         return SimpleNamespace(execution_action=action)
 
+    def create_direct_take_profit_replacement(
+        self,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        self.take_profit_replacement_requests.append(dict(kwargs))
+        predecessor = self.actions[str(kwargs["predecessor_action_id"])]
+        predecessor_context = dict(predecessor.action_terms["execution_context"])
+        level_context = dict(predecessor_context["direct_take_profit"])
+        action = _action(
+            str(kwargs["execution_action_id"]),
+            ExecutionActionKind.TAKE_PROFIT,
+            state=ExecutionActionState.READY,
+            terms={
+                "action_profile": predecessor.action_terms["action_profile"],
+                "quantity": kwargs["action_check"].quantized_quantity,
+                "trigger_price": kwargs["target_trigger_price"],
+                "execution_context": {
+                    **predecessor_context,
+                    "direct_take_profit": {
+                        **level_context,
+                        "trigger_price": kwargs["target_trigger_price"],
+                        "quantity": kwargs["action_check"].quantized_quantity,
+                    },
+                    "take_profit_replacement": {
+                        "aggregate_revision": kwargs["aggregate_revision"],
+                        "predecessor_action_ref": predecessor.execution_action_id,
+                        "trigger_price": kwargs["target_trigger_price"],
+                    },
+                },
+            },
+            client_order_id=str(kwargs["client_order_id"]),
+            created_at=kwargs["observed_at"],
+        )
+        self.actions[action.execution_action_id] = action
+        return SimpleNamespace(execution_action=action)
+
     def create_take_profits_for_protected_fill(
         self, **kwargs: object
     ) -> tuple[SimpleNamespace, SimpleNamespace]:
@@ -609,6 +648,7 @@ class _Coordinator:
         self.rejections.append((action_id, reason_code))
         action = self.actions[action_id]
         action.state = ExecutionActionState.NOT_SUBMITTED
+        action.not_submitted_reason = reason_code
         return action
 
     def apply_venue_fact(
@@ -976,6 +1016,115 @@ def test_continuous_profit_lock_quantizes_and_only_tightens_protection() -> None
             if action.execution_action_id != original.execution_action_id
         )
         assert replacement.action_terms["trigger_price"] == "101"
+    finally:
+        boundary.close()
+        loop.close()
+
+
+def test_aggregate_take_profit_reprice_waits_for_cancel_and_uses_partial_remainder() -> None:
+    activation = _activation().model_copy(
+        update={
+            "decision_basis_ref": "DIRECT_EXECUTION@1",
+            "order_schedule_snapshot": SimpleNamespace(
+                full_fill_protection_estimate=object(),
+            ),
+            "rule_state": {
+                "direct_protection": {
+                    "fills": {"fill-fact": {}},
+                    "aggregate_revision": 2,
+                    "aggregate_target": {
+                        "initial_stop_price": "99",
+                        "take_profit_prices": ["108"],
+                    },
+                }
+            },
+        }
+    )
+    coordinator = _Coordinator(activation)
+    original = _action(
+        "take-profit-original",
+        ExecutionActionKind.TAKE_PROFIT,
+        state=ExecutionActionState.OPEN,
+        terms={
+            "action_profile": "TAKE_PROFIT_1",
+            "quantity": "0.01",
+            "trigger_price": "110",
+            "execution_context": {
+                "entry_action_ref": "entry-action",
+                "protection_action_ref": "protection-action",
+                "fill_fact_ref": "fill-fact",
+                "fill_source_identity": "trade-1:1",
+                "direct_take_profit": {
+                    "level_index": 0,
+                    "trigger_r": "2",
+                    "quantity_fraction": "1",
+                    "trigger_price": "110",
+                    "quantity": "0.01",
+                },
+            },
+        },
+        client_order_id="t" * 32,
+    )
+    coordinator.actions[original.execution_action_id] = original
+    coordinator.facts[original.execution_action_id] = (
+        _venue_fact(
+            "take-profit-working",
+            VenueFactKind.ORDER_STATE,
+            status="WORKING",
+        ),
+    )
+    loop = asyncio.new_event_loop()
+    boundary = ProductResponsibilityBoundary(
+        loop=loop,
+        coordinator=coordinator,
+        fact_provider=lambda _activation: asyncio.sleep(0, result=_facts()),
+        environment_id="demo-1",
+    )
+
+    try:
+        boundary._manage_aggregate_entry_take_profits(
+            activation,
+            _facts(),
+            coordinator.list_execution_actions("activation-1"),
+        )
+        assert len(coordinator.cancel_requests) == 1
+        assert coordinator.take_profit_replacement_requests == []
+
+        original.state = ExecutionActionState.CLOSED
+        coordinator.facts[original.execution_action_id] = (
+            _venue_fact(
+                "take-profit-partial",
+                VenueFactKind.FILL,
+                status="PARTIALLY_FILLED",
+                trade_id="tp-trade-1",
+                last_quantity="0.004",
+                leaves_quantity="0.006",
+            ),
+            _venue_fact(
+                "take-profit-cancelled",
+                VenueFactKind.ORDER_STATE,
+                status="CANCELLED",
+                cumulative_filled_quantity="0.004",
+            ),
+        )
+        boundary._manage_aggregate_entry_take_profits(
+            activation,
+            _facts(current_abs_position="0.006"),
+            coordinator.list_execution_actions("activation-1"),
+        )
+
+        assert len(coordinator.take_profit_replacement_requests) == 1
+        request = coordinator.take_profit_replacement_requests[0]
+        assert request["target_trigger_price"] == "108"
+        assert request["aggregate_revision"] == 2
+        assert request["action_check"].quantized_quantity == "0.006"
+        replacement = coordinator.actions[str(request["execution_action_id"])]
+        assert replacement.action_terms["quantity"] == "0.006"
+        assert coordinator.submissions[-1][1] == {
+            "profile": "TAKE_PROFIT_1",
+            "quantity": "0.006",
+            "trigger_price": "108",
+        }
     finally:
         boundary.close()
         loop.close()

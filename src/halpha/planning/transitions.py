@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from decimal import Decimal, ROUND_DOWN, ROUND_UP
+from decimal import Decimal, ROUND_DOWN, ROUND_UP, localcontext
 from enum import StrEnum
 from typing import Iterable
 
@@ -19,6 +19,7 @@ from halpha.planning.models import (
     RunState,
 )
 from halpha.planning.order_policies import (
+    CompiledProtectionTargets,
     ProtectionPolicy,
     RuntimeConditionState,
     compile_protection_targets,
@@ -201,6 +202,25 @@ def resume_activation(
     stops = frozenset(active_stop_categories)
     if StopCategory.ALL_EXCHANGE_CHANGES in stops:
         raise ValueError("ALL_EXCHANGE_CHANGES_STOPPED")
+    if activation.entry_opportunity_consumed:
+        raise ValueError("ENTRY_OPPORTUNITY_CONSUMED")
+    deadlines = activation.rule_state.get("deadlines")
+    entry_deadline_raw = (
+        deadlines.get("entry_valid_until")
+        if isinstance(deadlines, dict)
+        else None
+    )
+    if entry_deadline_raw:
+        try:
+            entry_deadline = datetime.fromisoformat(
+                str(entry_deadline_raw).replace("Z", "+00:00")
+            )
+        except ValueError as exc:
+            raise ValueError("ENTRY_DEADLINE_INVALID") from exc
+        if entry_deadline.utcoffset() is None:
+            raise ValueError("ENTRY_DEADLINE_INVALID")
+        if entry_deadline <= observed_at:
+            raise ValueError("ENTRY_WINDOW_EXPIRED")
     if not plan_current:
         raise ValueError("PLAN_EXPIRED")
     if not facts_known:
@@ -422,6 +442,123 @@ def record_first_fill(
     )
 
 
+def _aggregate_direct_protection_targets(
+    activation: PlanActivation,
+    *,
+    policy: ProtectionPolicy,
+    fills: dict[str, object],
+    price_tick_size: str,
+) -> CompiledProtectionTargets | None:
+    """Recalculate one shared target while preserving the frozen full-fill loss cap."""
+
+    snapshot = activation.order_schedule_snapshot
+    estimate = (
+        snapshot.full_fill_protection_estimate if snapshot is not None else None
+    )
+    budget = policy.full_fill_loss_budget
+    if estimate is None or budget is None:
+        return None
+    entry_boundary_required = len(
+        {leg.sizing_price for leg in snapshot.normalized_legs}
+    ) > 1
+    fill_values = tuple(item for item in fills.values() if isinstance(item, dict))
+    if not fill_values:
+        return None
+    with localcontext() as context:
+        context.prec = 128
+        quantity = sum(
+            (Decimal(str(item["fill_quantity"])) for item in fill_values),
+            Decimal(0),
+        )
+        cost_basis = sum(
+            (
+                Decimal(str(item["fill_price"]))
+                * Decimal(str(item["fill_quantity"]))
+                for item in fill_values
+            ),
+            Decimal(0),
+        )
+        if quantity <= 0 or cost_basis <= 0:
+            raise ValueError("PROTECTION_FACT_INVALID")
+        average = cost_basis / quantity
+        tick = Decimal(price_tick_size)
+        distance = average * Decimal(policy.initial_stop.distance_bps) / Decimal(
+            10_000
+        )
+        boundary = Decimal(estimate.entry_boundary_price)
+        if activation.direction.value == "LONG":
+            raw_stop = average - distance
+            target = (
+                raw_stop / tick
+            ).to_integral_value(rounding=ROUND_UP) * tick
+            if entry_boundary_required:
+                target = min(target, boundary - tick)
+        else:
+            raw_stop = average + distance
+            target = (
+                raw_stop / tick
+            ).to_integral_value(rounding=ROUND_DOWN) * tick
+            if entry_boundary_required:
+                target = max(target, boundary + tick)
+
+        entry_fee_rate = Decimal(budget.entry_fee_bps) / Decimal(10_000)
+        exit_fee_rate = Decimal(budget.exit_fee_bps) / Decimal(10_000)
+        entry_fee = cost_basis * entry_fee_rate
+        maximum_loss = Decimal(estimate.maximum_projected_loss)
+        if activation.direction.value == "LONG":
+            minimum_budget_stop = (
+                cost_basis + entry_fee - maximum_loss
+            ) / (quantity * (Decimal(1) - exit_fee_rate))
+            minimum_budget_stop = (
+                minimum_budget_stop / tick
+            ).to_integral_value(rounding=ROUND_UP) * tick
+            target = max(target, minimum_budget_stop)
+            if target >= average or (
+                entry_boundary_required and target >= boundary
+            ):
+                raise ValueError("PROTECTION_LOSS_BUDGET_CONFLICT")
+            sign = Decimal(1)
+            tp_rounding = ROUND_DOWN
+        else:
+            maximum_budget_stop = (
+                maximum_loss + cost_basis - entry_fee
+            ) / (quantity * (Decimal(1) + exit_fee_rate))
+            maximum_budget_stop = (
+                maximum_budget_stop / tick
+            ).to_integral_value(rounding=ROUND_DOWN) * tick
+            target = min(target, maximum_budget_stop)
+            if target <= average or (
+                entry_boundary_required and target <= boundary
+            ):
+                raise ValueError("PROTECTION_LOSS_BUDGET_CONFLICT")
+            sign = Decimal(-1)
+            tp_rounding = ROUND_UP
+        actual_risk = abs(average - target)
+        ladder = policy.take_profit_ladder
+        take_profit_prices = (
+            ()
+            if ladder is None
+            else tuple(
+                canonical_decimal(
+                    (
+                        (
+                            average
+                            + sign * actual_risk * Decimal(level.trigger_r)
+                        )
+                        / tick
+                    ).to_integral_value(rounding=tp_rounding)
+                    * tick
+                )
+                for level in ladder.levels
+            )
+        )
+    return CompiledProtectionTargets(
+        risk_distance=canonical_decimal(actual_risk),
+        initial_stop_price=canonical_decimal(target),
+        take_profit_prices=take_profit_prices,
+    )
+
+
 def record_direct_fill(
     activation: PlanActivation,
     *,
@@ -491,6 +628,24 @@ def record_direct_fill(
         "targets": targets.model_dump(mode="json") if targets is not None else None,
         "protection_error": protection_error,
     }
+
+    def immutable_fill_payload(item: dict[str, object]) -> dict[str, object]:
+        # Targets are derived protection state.  Aggregate-entry rebalancing
+        # deliberately rewrites them after later fills, so replay identity must
+        # be based only on the immutable venue fill and frozen policy inputs.
+        return {
+            key: item.get(key)
+            for key in (
+                "entry_action_ref",
+                "fill_fact_ref",
+                "fill_price",
+                "fill_quantity",
+                "fill_time",
+                "price_tick_size",
+                "quantity_step",
+                "protection_policy",
+            )
+        }
     rule_state = dict(activation.rule_state)
     protection_state = rule_state.get("direct_protection")
     if protection_state is None:
@@ -509,22 +664,65 @@ def record_direct_fill(
         raise EventConflict("FACT_CONFLICT")
     existing = fills.get(fill_fact_ref)
     if existing is not None:
-        if not isinstance(existing, dict) or content_digest(existing) != content_digest(
-            fill_state
+        if (
+            not isinstance(existing, dict)
+            or content_digest(immutable_fill_payload(existing))
+            != content_digest(immutable_fill_payload(fill_state))
         ):
             raise EventConflict("FACT_CONFLICT")
         return activation
     if any(
         isinstance(item, dict)
         and item.get("fill_fact_ref") == fill_fact_ref
-        and content_digest(item) != content_digest(fill_state)
+        and content_digest(immutable_fill_payload(item))
+        != content_digest(immutable_fill_payload(fill_state))
         for item in fills.values()
     ):
         raise EventConflict("FACT_CONFLICT")
     updated_fills = dict(fills)
     updated_fills[fill_fact_ref] = fill_state
+    aggregate_targets = _aggregate_direct_protection_targets(
+        activation,
+        policy=policy,
+        fills=updated_fills,
+        price_tick_size=fill_state["price_tick_size"],
+    )
+    if aggregate_targets is not None:
+        aggregate_payload = aggregate_targets.model_dump(mode="json")
+        updated_fills = {
+            key: {
+                **item,
+                "targets": aggregate_payload,
+                "protection_error": None,
+            }
+            if isinstance(item, dict)
+            else item
+            for key, item in updated_fills.items()
+        }
     updated_protection = dict(protection_state)
     updated_protection["fills"] = updated_fills
+    if aggregate_targets is not None:
+        fill_values = tuple(
+            item for item in updated_fills.values() if isinstance(item, dict)
+        )
+        total_quantity = sum(
+            (Decimal(str(item["fill_quantity"])) for item in fill_values),
+            Decimal(0),
+        )
+        total_notional = sum(
+            (
+                Decimal(str(item["fill_price"]))
+                * Decimal(str(item["fill_quantity"]))
+                for item in fill_values
+            ),
+            Decimal(0),
+        )
+        updated_protection.update(
+            aggregate_revision=len(updated_fills),
+            aggregate_target=aggregate_targets.model_dump(mode="json"),
+            anchor_price=canonical_decimal(total_notional / total_quantity),
+            anchor_r=aggregate_targets.risk_distance,
+        )
     rule_state["direct_protection"] = updated_protection
     snapshot = activation.order_schedule_snapshot
     scheduled_leg_count = (
@@ -634,8 +832,9 @@ def proposed_direct_protection_replacement(
     fill_quantity: str,
     target_trigger_price: str,
     step_index: int,
+    replacement_kind: str = "DYNAMIC_TIGHTEN",
 ) -> ProposedAction:
-    """Form one bounded tighter stop while preserving the original protection."""
+    """Form a dynamic tighten or a budget-bound aggregate-entry replacement."""
 
     if step_index < 0:
         raise ValueError("DYNAMIC_PROTECTION_STEP_INVALID")
@@ -649,8 +848,11 @@ def proposed_direct_protection_replacement(
         code="DYNAMIC_PROTECTION_PRICE_INVALID",
         positive=True,
     )
-    if (activation.direction.value == "LONG" and target <= predecessor) or (
-        activation.direction.value == "SHORT" and target >= predecessor
+    if replacement_kind not in {"DYNAMIC_TIGHTEN", "ENTRY_AGGREGATE_REBALANCE"}:
+        raise ValueError("DYNAMIC_PROTECTION_REPLACEMENT_KIND_INVALID")
+    if replacement_kind == "DYNAMIC_TIGHTEN" and (
+        (activation.direction.value == "LONG" and target <= predecessor)
+        or (activation.direction.value == "SHORT" and target >= predecessor)
     ):
         raise ValueError("DYNAMIC_PROTECTION_NOT_TIGHTER")
     state = activation.rule_state.get("direct_protection")
@@ -665,8 +867,18 @@ def proposed_direct_protection_replacement(
         raise ValueError("PROTECTION_UNKNOWN")
     policy = ProtectionPolicy.model_validate(fill["protection_policy"])
     target_value = canonical_decimal(target)
+    if replacement_kind == "ENTRY_AGGREGATE_REBALANCE":
+        aggregate_target = state.get("aggregate_target") if isinstance(state, dict) else None
+        revision = state.get("aggregate_revision") if isinstance(state, dict) else None
+        if (
+            not isinstance(aggregate_target, dict)
+            or aggregate_target.get("initial_stop_price") != target_value
+            or revision != step_index
+        ):
+            raise ValueError("PROTECTION_AGGREGATE_TARGET_STALE")
     replacement = {
         "step_index": step_index,
+        "kind": replacement_kind,
         "predecessor_action_ref": predecessor_action_ref,
         "trigger_price": target_value,
     }
@@ -677,7 +889,7 @@ def proposed_direct_protection_replacement(
             "fill_source_identity": fill_source_identity,
             "fill_digest": content_digest(fill),
             "replacement": replacement,
-            "responsibility": "DIRECT_STEPPED_PROTECTION",
+            "responsibility": replacement_kind,
         }
     )
     return ProposedAction(
@@ -840,6 +1052,116 @@ def proposed_direct_take_profits_from_fill(
             )
         )
     return tuple(results)
+
+
+def proposed_direct_take_profit_replacement(
+    activation: PlanActivation,
+    *,
+    predecessor_action_ref: str,
+    protection_action_ref: str,
+    entry_action_ref: str,
+    fill_fact_ref: str,
+    fill_source_identity: str,
+    level_index: int,
+    remaining_quantity: str,
+    target_trigger_price: str,
+    aggregate_revision: int,
+    valid_until: datetime | None,
+) -> ProposedAction:
+    """Replace one cancelled TP with the current aggregate target and remainder."""
+
+    if level_index < 0 or aggregate_revision < 1:
+        raise ValueError("TAKE_PROFIT_AGGREGATE_TARGET_STALE")
+    state = activation.rule_state.get("direct_protection")
+    fills = state.get("fills") if isinstance(state, dict) else None
+    fill = fills.get(fill_fact_ref) if isinstance(fills, dict) else None
+    aggregate_target = state.get("aggregate_target") if isinstance(state, dict) else None
+    targets = (
+        aggregate_target.get("take_profit_prices")
+        if isinstance(aggregate_target, dict)
+        else None
+    )
+    if (
+        not isinstance(fill, dict)
+        or fill.get("entry_action_ref") != entry_action_ref
+        or not isinstance(fill.get("protection_policy"), dict)
+        or not isinstance(targets, (list, tuple))
+        or level_index >= len(targets)
+        or state.get("aggregate_revision") != aggregate_revision
+    ):
+        raise ValueError("TAKE_PROFIT_AGGREGATE_TARGET_STALE")
+    policy = ProtectionPolicy.model_validate(fill["protection_policy"])
+    ladder = policy.take_profit_ladder
+    if ladder is None or level_index >= len(ladder.levels):
+        raise ValueError("TAKE_PROFIT_AGGREGATE_TARGET_STALE")
+    target = canonical_decimal(
+        decimal_from_string(
+            target_trigger_price,
+            code="PROTECTION_FACT_INVALID",
+            positive=True,
+        )
+    )
+    if targets[level_index] != target:
+        raise ValueError("TAKE_PROFIT_AGGREGATE_TARGET_STALE")
+    quantity = canonical_decimal(
+        decimal_from_string(
+            remaining_quantity,
+            code="TAKE_PROFIT_SPLIT_INVALID",
+            positive=True,
+        )
+    )
+    level = ladder.levels[level_index]
+    level_context = {
+        "level_index": level_index,
+        "trigger_r": level.trigger_r,
+        "quantity_fraction": level.quantity_fraction,
+        "trigger_price": target,
+        "quantity": quantity,
+    }
+    replacement = {
+        "aggregate_revision": aggregate_revision,
+        "predecessor_action_ref": predecessor_action_ref,
+        "trigger_price": target,
+        "remaining_quantity": quantity,
+    }
+    causation = content_digest(
+        {
+            "entry_action_ref": entry_action_ref,
+            "protection_action_ref": protection_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "fill_digest": content_digest(fill),
+            "direct_take_profit": level_context,
+            "replacement": replacement,
+            "responsibility": "ENTRY_AGGREGATE_TAKE_PROFIT_REBALANCE",
+        }
+    )
+    return ProposedAction(
+        environment_id=activation.environment_id,
+        action_kind=ProposedActionKind.TAKE_PROFIT,
+        action_profile="TAKE_PROFIT_1" if level_index == 0 else "TAKE_PROFIT_2",
+        instrument_ref=activation.instrument_ref,
+        direction=activation.direction,
+        quantity=quantity,
+        close_position=False,
+        order_type="MARKET_IF_TOUCHED",
+        trigger_price=target,
+        valid_until=valid_until,
+        reduce_only=True,
+        source_responsibility="NONE",
+        causation_ref=causation,
+        execution_context={
+            "entry_action_ref": entry_action_ref,
+            "protection_action_ref": protection_action_ref,
+            "fill_fact_ref": fill_fact_ref,
+            "fill_source_identity": fill_source_identity,
+            "direct_fill": fill,
+            "direct_take_profit": level_context,
+            "trigger_source": policy.initial_stop.trigger_source.value,
+            "venue_policy": _fixed_venue_policy("MARKET_IF_TOUCHED"),
+            "take_profit_replacement": replacement,
+        },
+    )
 
 
 def _allocate_take_profit_quantities(

@@ -14,7 +14,7 @@ from halpha.user_workbench.repository import (
 
 
 DEMO_ENVIRONMENT = "binance-demo-primary"
-LIVE_ENVIRONMENT = "binance-live-primary"
+LIVE_ENVIRONMENT = "binance-live-copy-primary"
 
 
 class _NoExecuteConnection:

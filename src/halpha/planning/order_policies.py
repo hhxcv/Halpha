@@ -445,6 +445,25 @@ class InitialStopSpec(PolicyModel):
         return normalized
 
 
+class FullFillLossBudgetSpec(PolicyModel):
+    """Fee assumptions frozen with a new direct plan's maximum-loss preview."""
+
+    entry_fee_bps: str
+    exit_fee_bps: str
+
+    @field_validator("entry_fee_bps", "exit_fee_bps")
+    @classmethod
+    def bounded_fee_rate(cls, value: str) -> str:
+        normalized = _decimal(
+            value,
+            code="PROTECTION_LOSS_BUDGET_INVALID",
+            non_negative=True,
+        )
+        if Decimal(normalized) > Decimal(1_000):
+            raise ValueError("PROTECTION_LOSS_BUDGET_INVALID")
+        return normalized
+
+
 class TakeProfitLevel(PolicyModel):
     trigger_r: str
     quantity_fraction: str
@@ -484,6 +503,7 @@ class TakeProfitLadderSpec(PolicyModel):
 
 class ProtectionPolicy(PolicyModel):
     initial_stop: InitialStopSpec
+    full_fill_loss_budget: FullFillLossBudgetSpec | None = None
     take_profit_ladder: TakeProfitLadderSpec | None = None
     time_exit_seconds: int | None = Field(default=None, ge=1, le=2_592_000)
 

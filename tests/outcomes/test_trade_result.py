@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from halpha.outcomes.trade_result import summarize_trade_result
 
 
@@ -332,7 +334,16 @@ def test_commission_without_a_matching_fill_keeps_result_incomplete() -> None:
     assert result["net_pnl"] is None
 
 
-def test_binance_trade_query_replaces_framework_reconciliation_placeholder() -> None:
+@pytest.mark.parametrize(
+    "placeholder_trade_id",
+    (
+        "c3dbbc0b-8835-5ed6-a7bd-a93fc9be7912",
+        "S-18c897945fc371ff-d9fd8ca4",
+    ),
+)
+def test_binance_trade_query_replaces_framework_reconciliation_placeholder(
+    placeholder_trade_id: str,
+) -> None:
     source_time = datetime(2026, 7, 29, 15, 19, 4, tzinfo=UTC)
     common = {
         "client_order_id": "client-take-profit",
@@ -364,7 +375,7 @@ def test_binance_trade_query_replaces_framework_reconciliation_placeholder() -> 
             ),
             _fact(
                 "FILL",
-                "c3dbbc0b-8835-5ed6-a7bd-a93fc9be7912",
+                placeholder_trade_id,
                 "take-profit",
                 source_time=source_time,
                 reconciliation=True,
@@ -374,7 +385,7 @@ def test_binance_trade_query_replaces_framework_reconciliation_placeholder() -> 
             ),
             _fact(
                 "COMMISSION",
-                "c3dbbc0b-8835-5ed6-a7bd-a93fc9be7912",
+                placeholder_trade_id,
                 "take-profit",
                 amount="0 USDT",
                 currency="USDT",

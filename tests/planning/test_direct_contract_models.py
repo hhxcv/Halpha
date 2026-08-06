@@ -19,6 +19,7 @@ from halpha.planning.models import (
 )
 from halpha.planning.service import PlanningApplicationService
 from halpha.planning.order_policies import (
+    FullFillLossBudgetSpec,
     InitialStopSpec,
     ProtectionPolicy,
     TakeProfitLadderSpec,
@@ -249,6 +250,57 @@ def test_same_direction_activations_share_one_account_instrument_scope() -> None
 
     assert activation.direction is Direction.LONG
     assert inserted == [activation]
+
+
+def test_activation_rejects_projected_loss_above_the_plan_limit() -> None:
+    spec = _spec().model_copy(
+        update={
+            "protection_policy": ProtectionPolicy(
+                initial_stop=InitialStopSpec(distance_bps="100"),
+                full_fill_loss_budget=FullFillLossBudgetSpec(
+                    entry_fee_bps="2",
+                    exit_fee_bps="5",
+                ),
+            )
+        }
+    )
+    snapshot = _snapshot(spec)
+    assert snapshot.full_fill_protection_estimate is not None
+    version = _fixed_version(
+        allowed_actions=direct_allowed_action_profiles(_spec()),
+    ).model_copy(
+        update={
+            "order_schedule_spec": spec,
+            "requested_limits": RequestedLimits(
+                max_margin="100",
+                max_notional="100",
+                max_allowed_loss="0.01",
+            ),
+        }
+    )
+    inserted: list[PlanActivation] = []
+    service = object.__new__(PlanningApplicationService)
+    service._environment_id = "demo"
+    service._planning = SimpleNamespace(
+        get_version=lambda _plan_version_id: version,
+        lock_and_list_open_instrument_activations=lambda **_scope: (),
+        insert_activation=inserted.append,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="ORDER_SCHEDULE_LOSS_BUDGET_EXCEEDS_PLAN_LIMIT",
+    ):
+        service.activate_version(
+            plan_version_id=version.plan_version_id,
+            activation_id="activation-loss-limit",
+            environment_kind=EnvironmentKind.DEMO,
+            authority_class=AuthorityClass.DEMO_VALIDATION,
+            observed_at=NOW + timedelta(minutes=1),
+            order_schedule_snapshot=snapshot,
+        )
+
+    assert inserted == []
 
 
 @pytest.mark.parametrize(

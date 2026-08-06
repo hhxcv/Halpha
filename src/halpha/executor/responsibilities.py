@@ -78,6 +78,8 @@ class ProductResponsibilityCoordinator(Protocol):
 
     def create_direct_take_profits_for_protected_fill(self, **kwargs: Any) -> Any: ...
 
+    def create_direct_take_profit_replacement(self, **kwargs: Any) -> Any: ...
+
     def process_execution_action(
         self, execution_action_id: str, **kwargs: Any
     ) -> Any: ...
@@ -493,6 +495,11 @@ class ProductResponsibilityBoundary:
                 # responsibility in the same process after a dropped task.
                 await self._create_take_profits(action.execution_action_id)
         actions = self._coordinator.list_execution_actions(activation_id)
+        if not protection_gap:
+            self._manage_aggregate_entry_protection(activation, facts, actions)
+            actions = self._coordinator.list_execution_actions(activation_id)
+            self._manage_aggregate_entry_take_profits(activation, facts, actions)
+            actions = self._coordinator.list_execution_actions(activation_id)
         self._resume_ready_non_entry_actions(activation, facts, actions)
         actions = self._coordinator.list_execution_actions(activation_id)
         self._ensure_crossed_take_profit_reductions(activation, facts, actions)
@@ -1615,6 +1622,395 @@ class ProductResponsibilityBoundary:
                 observed_at=facts.checked_at,
             )
 
+    def _manage_aggregate_entry_protection(
+        self,
+        activation: PlanActivation,
+        facts: ProductRiskReductionFacts,
+        actions: tuple[ExecutionAction, ...],
+    ) -> None:
+        """Reprice owned fill stops to the latest average-cost, capped target."""
+
+        snapshot = activation.order_schedule_snapshot
+        if (
+            snapshot is None
+            or snapshot.full_fill_protection_estimate is None
+            or activation.lifecycle is not PlanLifecycle.RUNNING
+        ):
+            return
+        state = activation.rule_state.get("direct_protection")
+        fills = state.get("fills") if isinstance(state, dict) else None
+        target_state = state.get("aggregate_target") if isinstance(state, dict) else None
+        revision = state.get("aggregate_revision") if isinstance(state, dict) else None
+        target_price = (
+            target_state.get("initial_stop_price")
+            if isinstance(target_state, dict)
+            else None
+        )
+        if (
+            not isinstance(fills, dict)
+            or not isinstance(target_price, str)
+            or not isinstance(revision, int)
+            or revision < 1
+        ):
+            raise ValueError("PROTECTION_AGGREGATE_TARGET_UNKNOWN")
+        protections_by_fill: dict[str, list[ExecutionAction]] = {}
+        for action in actions:
+            if action.action_kind is not ExecutionActionKind.PROTECTION:
+                continue
+            context = action.action_terms.get("execution_context")
+            fill_ref = context.get("fill_fact_ref") if isinstance(context, dict) else None
+            if isinstance(fill_ref, str):
+                protections_by_fill.setdefault(fill_ref, []).append(action)
+        for fill_ref in fills:
+            protections = protections_by_fill.get(fill_ref, [])
+            working = [
+                action
+                for action in protections
+                if action.state is ExecutionActionState.OPEN
+                and order_is_working(
+                    self._coordinator.list_venue_facts_for_action(
+                        action.execution_action_id
+                    )
+                )
+            ]
+            desired = next(
+                (
+                    action
+                    for action in protections
+                    if (
+                        action.action_terms.get("execution_context", {})
+                        .get("protection_replacement", {})
+                        .get("kind")
+                        == "ENTRY_AGGREGATE_REBALANCE"
+                        and action.action_terms["execution_context"][
+                            "protection_replacement"
+                        ].get("step_index")
+                        == revision
+                    )
+                ),
+                None,
+            )
+            if desired is not None:
+                if desired.state is ExecutionActionState.READY:
+                    if self._replacement_waits_for_predecessor_cancel(
+                        activation,
+                        facts,
+                        desired,
+                        protections,
+                    ):
+                        continue
+                    quantity = desired.action_terms.get("quantity")
+                    if isinstance(quantity, str):
+                        self._submit_ready(
+                            desired,
+                            facts.action_check(
+                                activation,
+                                action_profile="PROTECTIVE_STOP_REDUCE_ONLY",
+                                control_category=StopCategory.PROTECTION,
+                                quantity=quantity,
+                            ),
+                            observed_at=facts.checked_at,
+                        )
+                    continue
+                if desired in working:
+                    for older in working:
+                        if older.execution_action_id != desired.execution_action_id:
+                            self._ensure_cancel(
+                                activation,
+                                facts,
+                                older,
+                                target_endpoint="ALGO",
+                                reason_code=f"ENTRY_AGGREGATE_REBALANCE_{revision}",
+                            )
+                continue
+            if not working:
+                continue
+            predecessor = max(working, key=lambda item: item.created_at)
+            predecessor_trigger = predecessor.action_terms.get("trigger_price")
+            quantity = predecessor.action_terms.get("quantity")
+            if (
+                not isinstance(predecessor_trigger, str)
+                or not isinstance(quantity, str)
+                or Decimal(predecessor_trigger) == Decimal(target_price)
+            ):
+                continue
+            predecessor_replacement = (
+                predecessor.action_terms.get("execution_context", {})
+                .get("protection_replacement")
+            )
+            target_is_looser = (
+                Decimal(target_price) < Decimal(predecessor_trigger)
+                if activation.direction is Direction.LONG
+                else Decimal(target_price) > Decimal(predecessor_trigger)
+            )
+            if (
+                target_is_looser
+                and isinstance(predecessor_replacement, dict)
+                and predecessor_replacement.get("kind") == "DYNAMIC_TIGHTEN"
+            ):
+                # A later entry cannot undo an already-earned profit lock.
+                continue
+            source = (
+                f"{activation.activation_id}:ENTRY_AGGREGATE_REBALANCE:"
+                f"{fill_ref}:{revision}"
+            )
+            check = facts.action_check(
+                activation,
+                action_profile="PROTECTIVE_STOP_REDUCE_ONLY",
+                control_category=StopCategory.PROTECTION,
+                quantity=quantity,
+            )
+            result = self._coordinator.create_direct_protection_replacement(
+                activation_id=activation.activation_id,
+                predecessor_action_id=predecessor.execution_action_id,
+                target_trigger_price=target_price,
+                step_index=revision,
+                replacement_kind="ENTRY_AGGREGATE_REBALANCE",
+                plan_event_id=_stable_id(
+                    self._environment_id,
+                    "plan-event",
+                    source,
+                ),
+                execution_action_id=_stable_id(
+                    self._environment_id,
+                    "execution-action",
+                    source,
+                ),
+                action_check=check,
+                observed_at=facts.checked_at,
+                client_order_id=_stable_client_order_id(
+                    self._environment_id,
+                    source,
+                ),
+            )
+            if result.execution_action is None:
+                continue
+            if target_is_looser or _venue_position_is_shared(facts):
+                # A looser stop must never coexist with the older tighter one;
+                # shared venue positions use the same cancel-first hand-off.
+                self._ensure_cancel(
+                    activation,
+                    facts,
+                    predecessor,
+                    target_endpoint="ALGO",
+                    reason_code=f"ENTRY_AGGREGATE_REBALANCE_{revision}",
+                )
+            else:
+                self._submit_ready(
+                    result.execution_action,
+                    check,
+                    observed_at=facts.checked_at,
+                )
+
+    def _manage_aggregate_entry_take_profits(
+        self,
+        activation: PlanActivation,
+        facts: ProductRiskReductionFacts,
+        actions: tuple[ExecutionAction, ...],
+    ) -> None:
+        """Cancel stale aggregate TPs and rebuild only proven remaining quantity."""
+
+        snapshot = activation.order_schedule_snapshot
+        if (
+            snapshot is None
+            or snapshot.full_fill_protection_estimate is None
+            or activation.lifecycle is not PlanLifecycle.RUNNING
+        ):
+            return
+        state = activation.rule_state.get("direct_protection")
+        fills = state.get("fills") if isinstance(state, dict) else None
+        target_state = state.get("aggregate_target") if isinstance(state, dict) else None
+        targets = (
+            target_state.get("take_profit_prices")
+            if isinstance(target_state, dict)
+            else None
+        )
+        revision = state.get("aggregate_revision") if isinstance(state, dict) else None
+        if (
+            not isinstance(fills, dict)
+            or not isinstance(targets, (list, tuple))
+            or not all(isinstance(item, str) for item in targets)
+            or not isinstance(revision, int)
+            or revision < 1
+        ):
+            raise ValueError("TAKE_PROFIT_AGGREGATE_TARGET_UNKNOWN")
+        if not targets:
+            return
+
+        grouped: dict[tuple[str, int], list[ExecutionAction]] = {}
+        for action in actions:
+            if action.action_kind is not ExecutionActionKind.TAKE_PROFIT:
+                continue
+            context = action.action_terms.get("execution_context")
+            level = context.get("direct_take_profit") if isinstance(context, dict) else None
+            fill_ref = context.get("fill_fact_ref") if isinstance(context, dict) else None
+            level_index = level.get("level_index") if isinstance(level, dict) else None
+            if isinstance(fill_ref, str) and isinstance(level_index, int):
+                grouped.setdefault((fill_ref, level_index), []).append(action)
+
+        for fill_ref in fills:
+            for level_index, target_price in enumerate(targets):
+                candidates = grouped.get((fill_ref, level_index), [])
+                if not candidates:
+                    # Initial TP creation consumes the same persisted aggregate
+                    # target after its fill protection becomes working.
+                    continue
+                desired = next(
+                    (
+                        action
+                        for action in candidates
+                        if (
+                            action.action_terms.get("execution_context", {})
+                            .get("take_profit_replacement", {})
+                            .get("aggregate_revision")
+                            == revision
+                        )
+                    ),
+                    None,
+                )
+                if desired is not None:
+                    if desired.state is ExecutionActionState.READY:
+                        quantity = desired.action_terms.get("quantity")
+                        if isinstance(quantity, str):
+                            self._submit_ready(
+                                desired,
+                                facts.action_check(
+                                    activation,
+                                    action_profile=str(
+                                        desired.action_terms["action_profile"]
+                                    ),
+                                    control_category=(
+                                        StopCategory.RISK_REDUCTION_OR_ORDER_MANAGEMENT
+                                    ),
+                                    quantity=quantity,
+                                    confirmed_position_floor=quantity,
+                                ),
+                                observed_at=facts.checked_at,
+                            )
+                    continue
+
+                unresolved = False
+                for action in candidates:
+                    trigger = action.action_terms.get("trigger_price")
+                    if not isinstance(trigger, str) or Decimal(trigger) == Decimal(
+                        target_price
+                    ):
+                        continue
+                    if action.state is ExecutionActionState.READY:
+                        self._coordinator.reject_execution_action_before_submission(
+                            action.execution_action_id,
+                            reason_code="ENTRY_AGGREGATE_TAKE_PROFIT_SUPERSEDED",
+                            observed_at=facts.checked_at,
+                        )
+                        unresolved = True
+                    elif action.state is ExecutionActionState.OPEN and order_is_working(
+                        self._coordinator.list_venue_facts_for_action(
+                            action.execution_action_id
+                        )
+                    ):
+                        self._ensure_cancel(
+                            activation,
+                            facts,
+                            action,
+                            target_endpoint="ALGO",
+                            reason_code=(
+                                f"ENTRY_AGGREGATE_TAKE_PROFIT_REBALANCE_{revision}"
+                            ),
+                        )
+                        unresolved = True
+                if unresolved:
+                    continue
+                if any(
+                    action.state is ExecutionActionState.OPEN
+                    and Decimal(str(action.action_terms.get("trigger_price")))
+                    == Decimal(target_price)
+                    and order_is_working(
+                        self._coordinator.list_venue_facts_for_action(
+                            action.execution_action_id
+                        )
+                    )
+                    for action in candidates
+                    if action.action_terms.get("trigger_price") is not None
+                ):
+                    continue
+
+                predecessor = max(candidates, key=lambda item: item.created_at)
+                predecessor_facts = self._coordinator.list_venue_facts_for_action(
+                    predecessor.execution_action_id
+                )
+                definitely_not_submitted = (
+                    predecessor.state is ExecutionActionState.NOT_SUBMITTED
+                    and predecessor.not_submitted_reason is not None
+                )
+                if not definitely_not_submitted and not (
+                    predecessor.state is ExecutionActionState.CLOSED
+                    and terminal_order_status(predecessor_facts)
+                    in {"CANCELLED", "EXPIRED"}
+                    and terminal_fills_complete(predecessor, predecessor_facts)
+                ):
+                    continue
+                requested = Decimal(str(predecessor.action_terms["quantity"]))
+                filled = (
+                    Decimal(0)
+                    if definitely_not_submitted
+                    else sum(
+                        (
+                            Decimal(str(fact.payload["last_quantity"]))
+                            for fact in collapse_synthetic_reconciliation_fills(
+                                predecessor_facts
+                            )
+                            if fact.kind is VenueFactKind.FILL
+                        ),
+                        Decimal(0),
+                    )
+                )
+                remaining = requested - filled
+                if remaining <= 0:
+                    continue
+                quantity = canonical_decimal(remaining)
+                context = predecessor.action_terms.get("execution_context")
+                if not isinstance(context, dict):
+                    raise ValueError("TAKE_PROFIT_UNKNOWN")
+                source = (
+                    f"{activation.activation_id}:ENTRY_AGGREGATE_TAKE_PROFIT_REBALANCE:"
+                    f"{fill_ref}:{level_index}:{revision}"
+                )
+                check = facts.action_check(
+                    activation,
+                    action_profile=str(predecessor.action_terms["action_profile"]),
+                    control_category=StopCategory.RISK_REDUCTION_OR_ORDER_MANAGEMENT,
+                    quantity=quantity,
+                    confirmed_position_floor=quantity,
+                )
+                result = self._coordinator.create_direct_take_profit_replacement(
+                    activation_id=activation.activation_id,
+                    predecessor_action_id=predecessor.execution_action_id,
+                    target_trigger_price=target_price,
+                    aggregate_revision=revision,
+                    plan_event_id=_stable_id(
+                        self._environment_id,
+                        "plan-event",
+                        source,
+                    ),
+                    execution_action_id=_stable_id(
+                        self._environment_id,
+                        "execution-action",
+                        source,
+                    ),
+                    action_check=check,
+                    observed_at=facts.checked_at,
+                    client_order_id=_stable_client_order_id(
+                        self._environment_id,
+                        source,
+                    ),
+                )
+                if result is not None and result.execution_action is not None:
+                    self._submit_ready(
+                        result.execution_action,
+                        check,
+                        observed_at=facts.checked_at,
+                    )
+
     def _manage_dynamic_protection(
         self,
         activation: PlanActivation,
@@ -1652,7 +2048,14 @@ class ProductResponsibilityBoundary:
         if not isinstance(anchor, dict):
             return
         try:
-            anchor_price = Decimal(str(anchor["fill_price"]))
+            anchor_price = Decimal(
+                str(
+                    state["anchor_price"]
+                    if getattr(snapshot, "full_fill_protection_estimate", None)
+                    is not None
+                    else anchor["fill_price"]
+                )
+            )
             risk_distance = Decimal(str(state["anchor_r"]))
             price_tick = Decimal(str(anchor["price_tick_size"]))
             reference_price = Decimal(
@@ -1746,6 +2149,10 @@ class ProductResponsibilityBoundary:
                     ),
                     dict,
                 )
+                and action.action_terms["execution_context"][
+                    "protection_replacement"
+                ].get("kind", "DYNAMIC_TIGHTEN")
+                == "DYNAMIC_TIGHTEN"
             ]
             desired = next(
                 (
@@ -1858,6 +2265,7 @@ class ProductResponsibilityBoundary:
                 predecessor_action_id=predecessor.execution_action_id,
                 target_trigger_price=target_price,
                 step_index=desired_index,
+                replacement_kind="DYNAMIC_TIGHTEN",
                 plan_event_id=_stable_id(
                     self._environment_id,
                     "plan-event",
@@ -1900,14 +2308,13 @@ class ProductResponsibilityBoundary:
         replacement: ExecutionAction,
         protections: list[ExecutionAction] | tuple[ExecutionAction, ...],
     ) -> bool:
-        if not _venue_position_is_shared(facts):
-            return False
         context = replacement.action_terms.get("execution_context", {})
         replacement_context = (
             context.get("protection_replacement") if isinstance(context, dict) else None
         )
         if not isinstance(replacement_context, dict):
             return False
+        replacement_kind = replacement_context.get("kind")
         predecessor_ref = (
             replacement_context.get("predecessor_action_ref")
             if isinstance(replacement_context, dict)
@@ -1927,6 +2334,20 @@ class ProductResponsibilityBoundary:
             predecessor.execution_action_id
         )
         if terminal_order_status(predecessor_facts) is not None:
+            return False
+        replacement_trigger = replacement.action_terms.get("trigger_price")
+        predecessor_trigger = predecessor.action_terms.get("trigger_price")
+        aggregate_loosen = (
+            replacement_kind == "ENTRY_AGGREGATE_REBALANCE"
+            and isinstance(replacement_trigger, str)
+            and isinstance(predecessor_trigger, str)
+            and (
+                Decimal(replacement_trigger) < Decimal(predecessor_trigger)
+                if activation.direction is Direction.LONG
+                else Decimal(replacement_trigger) > Decimal(predecessor_trigger)
+            )
+        )
+        if not aggregate_loosen and not _venue_position_is_shared(facts):
             return False
         if (
             predecessor.state is ExecutionActionState.OPEN

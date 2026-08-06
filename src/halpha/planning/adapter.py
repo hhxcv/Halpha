@@ -1,4 +1,4 @@
-"""The single live/backtest Halpha Strategy adapter and lifecycle wrapper."""
+"""The shared Halpha Strategy adapter and lifecycle wrapper."""
 
 from __future__ import annotations
 

@@ -163,7 +163,7 @@ def test_live_read_only_accepts_only_an_exact_optional_private_read_pair() -> No
     release.update(
         profile="BINANCE_LIVE_READ_ONLY",
         authority_class="NO_TRADING_AUTHORITY",
-        database_name="halpha_live",
+        database_name="halpha_live_copy",
     )
     with pytest.raises(ConfigurationError, match="CONFIGURATION_INVALID"):
         load_settings(EXAMPLE, constructor_values={"release": release})

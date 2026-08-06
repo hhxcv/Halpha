@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import {
+  BaselineSeries,
   CandlestickSeries,
   ColorType,
   createChart,
@@ -17,6 +18,7 @@ import {
 
 import type { MarketColorScheme } from "../marketColors";
 import { marketPrice } from "../format";
+import { mergePlanPnlPoints } from "../planPnlTrend";
 
 type MarketBar = {
   open_at: string;
@@ -104,6 +106,11 @@ function chartBaseOptions(container: HTMLDivElement) {
 
 function destroyChart(chart: IChartApi | null) {
   if (chart) chart.remove();
+}
+
+function translucent(color: string, alpha: number): string {
+  if (color === "#D14343") return `rgba(209, 67, 67, ${alpha})`;
+  return `rgba(19, 138, 91, ${alpha})`;
 }
 
 export function ReviewPriceChart({
@@ -250,4 +257,99 @@ export function CumulativePnlChart({
   }, [marketColorScheme, points]);
 
   return <Box ref={containerRef} role="group" aria-label="全部已闭合交易累计净盈亏趋势" sx={{ height: { xs: 170, md: 150 }, width: "100%" }} />;
+}
+
+export function PlanPnlChart({
+  points,
+  marketColorScheme,
+}: {
+  points: TrendPoint[];
+  marketColorScheme: MarketColorScheme;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || points.length < 2) return undefined;
+    const chart = createChart(container, {
+      ...chartBaseOptions(container),
+      grid: {
+        vertLines: { visible: false },
+        horzLines: { color: "#EEF1F5" },
+      },
+      rightPriceScale: {
+        borderVisible: false,
+        scaleMargins: { top: 0.18, bottom: 0.18 },
+      },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 1,
+      },
+    });
+    const chronologicalPoints = [...points].sort(
+      (left, right) => Date.parse(left.at) - Date.parse(right.at),
+    );
+    const uniquePoints = new Map<number, number>();
+    chronologicalPoints.forEach((point) => {
+      const time = utcTimestamp(point.at);
+      if (time !== null && Number.isFinite(point.value)) uniquePoints.set(time, point.value);
+    });
+    const colors = tradingColors(marketColorScheme);
+    const series = chart.addSeries(BaselineSeries, {
+      baseValue: { type: "price", price: 0 },
+      topLineColor: colors.up,
+      topFillColor1: translucent(colors.up, 0.24),
+      topFillColor2: translucent(colors.up, 0.03),
+      bottomLineColor: colors.down,
+      bottomFillColor1: translucent(colors.down, 0.03),
+      bottomFillColor2: translucent(colors.down, 0.24),
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      baseLineVisible: true,
+      baseLineColor: "#94A3B8",
+      baseLineStyle: LineStyle.Dashed,
+      priceFormat: {
+        type: "price",
+        precision: 8,
+        minMove: 0.00000001,
+      },
+    });
+    const sourcePoints = [...uniquePoints.entries()].map(([time, value]) => ({
+      at: new Date(time * 1_000).toISOString(),
+      value,
+    }));
+    const updateVisiblePoints = () => {
+      const pointBudget = Math.max(
+        48,
+        Math.min(180, Math.floor(container.clientWidth / 3)),
+      );
+      const visiblePoints = mergePlanPnlPoints(sourcePoints, pointBudget);
+      series.setData(visiblePoints.map((point) => ({
+        time: Math.floor(Date.parse(point.at) / 1_000) as UTCTimestamp,
+        value: point.value,
+      })));
+    };
+    updateVisiblePoints();
+    chart.timeScale().fitContent();
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(() => updateVisiblePoints());
+    resizeObserver?.observe(container);
+    return () => {
+      resizeObserver?.disconnect();
+      destroyChart(chart);
+    };
+  }, [marketColorScheme, points]);
+
+  return (
+    <Box
+      ref={containerRef}
+      role="group"
+      aria-label="费用后盈亏曲线；盈利和亏损按当前市场配色区分"
+      sx={{ height: { xs: 150, md: 116 }, width: "100%" }}
+    />
+  );
 }
