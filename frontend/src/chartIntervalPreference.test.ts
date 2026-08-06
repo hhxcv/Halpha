@@ -44,7 +44,7 @@ describe("chart interval preference", () => {
 
     expect(
       readChartIntervalPreference(
-        "binance-live-primary",
+        "binance-live-copy-primary",
         "BTCUSDT-PERP",
         "15m",
         storage,

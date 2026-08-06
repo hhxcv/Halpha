@@ -437,6 +437,17 @@ class PlanningApplicationService:
             raise ValueError("ORDER_SCHEDULE_SNAPSHOT_REQUIRED")
         if order_schedule_snapshot is not None:
             validate_order_schedule_snapshot(order_schedule_snapshot)
+            protection_estimate = (
+                order_schedule_snapshot.full_fill_protection_estimate
+            )
+            if (
+                protection_estimate is not None
+                and Decimal(protection_estimate.maximum_projected_loss)
+                > Decimal(version.requested_limits.max_allowed_loss)
+            ):
+                raise ValueError(
+                    "ORDER_SCHEDULE_LOSS_BUDGET_EXCEEDS_PLAN_LIMIT"
+                )
             if (
                 not order_schedule_snapshot.valid
                 or order_schedule_snapshot.schedule_ref != version.plan_version_id

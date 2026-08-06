@@ -223,6 +223,27 @@ def _continuity_resume_evidence(
         or activation.get("pause_reason") != "WRITER_CONTINUITY_LOST"
     ):
         denial_reasons.append("ACTIVATION_NOT_CONTINUITY_PAUSED")
+    if activation.get("entry_opportunity_consumed") is True:
+        denial_reasons.append("ENTRY_OPPORTUNITY_CONSUMED")
+    rule_state = activation.get("rule_state")
+    deadlines = rule_state.get("deadlines") if isinstance(rule_state, dict) else None
+    entry_deadline_raw = (
+        deadlines.get("entry_valid_until")
+        if isinstance(deadlines, dict)
+        else None
+    )
+    if entry_deadline_raw:
+        try:
+            entry_deadline = datetime.fromisoformat(
+                str(entry_deadline_raw).replace("Z", "+00:00")
+            )
+        except ValueError:
+            denial_reasons.append("ENTRY_DEADLINE_INVALID")
+        else:
+            if entry_deadline.utcoffset() is None:
+                denial_reasons.append("ENTRY_DEADLINE_INVALID")
+            elif entry_deadline <= observed_at:
+                denial_reasons.append("ENTRY_WINDOW_EXPIRED")
     if position.get("reconciliation_status") != "MATCH":
         denial_reasons.append("POSITION_ATTRIBUTION_NOT_RECONCILED")
     if position.get("fact_activation_id") != activation_id:
@@ -1949,7 +1970,10 @@ class PostgreSQLPlanningApi:
         current = self.activation_detail(activation_id)
         consequences = {
             ControlIntent.STOP_NEW_RISK: "立即阻止新风险；已有查询、保护、撤单和减险责任继续。",
-            ControlIntent.RESUME_ACTIVATION: "仅解除执行者连续性暂停；当前计划、事实和安全停止仍需通过。",
+            ControlIntent.RESUME_ACTIVATION: (
+                "核对通过后恢复本计划后续开仓、加仓与入场重挂；不会改变已有订单、持仓、保护、"
+                "退出规则或其他安全停止。"
+            ),
             ControlIntent.EXIT_STRATEGY: "进入 EXITING，停止增险并等待执行与闭合责任。",
             ControlIntent.USER_TAKEOVER: "先持久化责任转移，再停止自动发起交易所变更请求；不会自动撤单或平仓。",
         }

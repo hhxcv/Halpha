@@ -26,6 +26,10 @@ asgi-csrf==0.11 \
     --hash=sha256:03ac140115f39d4295288a9adf74fdc6ae607f6ef44abee8466520458207242b \
     --hash=sha256:e19a4f87d5af3feabde04c57921ee15510c3bfb0565627df9cb20bcb303282c2
     # via -r requirements/runtime.in
+async-lru==2.3.0 \
+    --hash=sha256:89bdb258a0140d7313cf8f4031d816a042202faa61d0ab310a0a538baa1c24b6 \
+    --hash=sha256:eea27b01841909316f2cc739807acea1c623df2be8c5cfad7583286397bb8315
+    # via -r requirements/runtime.in
 build==1.5.0 \
     --hash=sha256:13f3eecb844759ab66efec90ca17639bbf14dc06cb2fdf37a9010322d9c50a6f \
     --hash=sha256:302c22c3ba2a0fd5f3911918651341ebb3896176cbdec15bd421f80b1afc7647

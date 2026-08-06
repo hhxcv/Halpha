@@ -1506,6 +1506,38 @@ export interface components {
             /** Strategy Version */
             strategy_version: string;
         };
+        /**
+         * FullFillLossBudgetSpec
+         * @description Fee assumptions frozen with a new direct plan's maximum-loss preview.
+         */
+        FullFillLossBudgetSpec: {
+            /** Entry Fee Bps */
+            entry_fee_bps: string;
+            /** Exit Fee Bps */
+            exit_fee_bps: string;
+        };
+        /**
+         * FullFillProtectionEstimate
+         * @description Deterministic full-entry stop loss before slippage, gaps, or funding.
+         */
+        FullFillProtectionEstimate: {
+            /** Average Entry Price */
+            average_entry_price: string;
+            /** Entry Boundary Price */
+            entry_boundary_price: string;
+            /** Estimated Entry Fee */
+            estimated_entry_fee: string;
+            /** Estimated Exit Fee */
+            estimated_exit_fee: string;
+            /** Gross Price Loss */
+            gross_price_loss: string;
+            /** Maximum Projected Loss */
+            maximum_projected_loss: string;
+            /** Quantity */
+            quantity: string;
+            /** Stop Price */
+            stop_price: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1745,6 +1777,7 @@ export interface components {
             direction: components["schemas"]["Direction"];
             /** Effective Total Notional */
             effective_total_notional: string;
+            full_fill_protection_estimate: components["schemas"]["FullFillProtectionEstimate"] | null;
             /** Instrument Ref */
             instrument_ref: string;
             instrument_rules: components["schemas"]["InstrumentOrderRules"];
@@ -2481,6 +2514,7 @@ export interface components {
         };
         /** ProtectionPolicy */
         "ProtectionPolicy-Input": {
+            full_fill_loss_budget?: components["schemas"]["FullFillLossBudgetSpec"] | null;
             initial_stop: components["schemas"]["InitialStopSpec-Input"];
             take_profit_ladder?: components["schemas"]["TakeProfitLadderSpec"] | null;
             /** Time Exit Seconds */
@@ -2488,6 +2522,7 @@ export interface components {
         };
         /** ProtectionPolicy */
         "ProtectionPolicy-Output": {
+            full_fill_loss_budget: components["schemas"]["FullFillLossBudgetSpec"] | null;
             initial_stop: components["schemas"]["InitialStopSpec-Output"];
             take_profit_ladder: components["schemas"]["TakeProfitLadderSpec"] | null;
             /** Time Exit Seconds */

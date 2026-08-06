@@ -110,7 +110,11 @@ def test_empty_activation_is_reactivated_without_fake_reconciliation() -> None:
     ).pause_all_open_for_writer_continuity_loss(observed_at)
 
     assert count == 2
+    assert "entry_opportunity_consumed = FALSE" in statements[0]
+    assert "entry_valid_until" in statements[0]
     assert "has_entry_fill OR pending_action_digest IS NOT NULL OR EXISTS" in statements[0]
     assert "run_state = 'ACTIVE'" in statements[1]
+    assert "entry_opportunity_consumed = TRUE" in statements[1]
+    assert "entry_valid_until" in statements[1]
     assert "has_entry_fill = FALSE" in statements[1]
     assert "NOT EXISTS" in statements[1]

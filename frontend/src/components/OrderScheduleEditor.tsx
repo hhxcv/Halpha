@@ -6,6 +6,7 @@ import {
   Checkbox,
   Chip,
   FormControlLabel,
+  IconButton,
   LinearProgress,
   MenuItem,
   Stack,
@@ -19,8 +20,10 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -41,6 +44,7 @@ import {
   formatUserVisibleTime,
   quoteAmount,
   quoteCurrencyEstimate,
+  roundedTradingPriceEstimate,
   scaleDecimalByPowerOfTen,
   shortDigest,
   tradingPrice,
@@ -54,11 +58,6 @@ import type {
 } from "../marketStream";
 import { surfaceFrameSx } from "../theme";
 import OrderScheduleChart from "./OrderScheduleChart";
-import {
-  chartPriceInput,
-  projectOrderScheduleProtectionPrices,
-  type OrderScheduleProjectedPriceBand,
-} from "./orderScheduleChartModel";
 import { buildInitialStopRecommendations } from "./orderScheduleStopRecommendations";
 import {
   entrySignalQualityWarning,
@@ -131,6 +130,7 @@ export type OrderScheduleEditorProps = {
   planOptions?: ReactNode;
   footerControls?: ReactNode;
   onValidationChange?: (ready: boolean) => void;
+  onMaximumProjectedLossChange?: (value: string | null) => void;
   onMarketReadinessChange?: (ready: boolean) => void;
 };
 
@@ -181,6 +181,7 @@ const issueLabels: Record<string, string> = {
   ORDER_SCHEDULE_REFERENCE_PRICE_REQUIRED: "市价单或 priceMatch 需要当前参考价格。",
   ORDER_SCHEDULE_TOTAL_EXCEEDS_PLAN_LIMIT: "请求总额超过计划交易金额。",
   ORDER_SCHEDULE_PRICE_OUTSIDE_VENUE_LIMIT: "档位价格超出交易所允许范围。",
+  PROTECTION_INSIDE_ENTRY_RANGE: "止损必须位于全部计划入场档位之外。",
   ORDER_SCHEDULE_QUANTITY_BELOW_MINIMUM: "标准化数量低于交易所最小数量。",
   ORDER_SCHEDULE_QUANTITY_ABOVE_MAXIMUM: "标准化数量超过交易所最大数量。",
   ORDER_SCHEDULE_NOTIONAL_BELOW_MINIMUM: "标准化后名义金额低于交易所最小金额。",
@@ -198,21 +199,6 @@ function previewIssueText(
     return `${prefix}标准化后有效金额 ${quoteAmount(leg.effective_notional)} USDT，低于交易所最低 ${quoteAmount(preview.instrument_rules.min_notional)} USDT；请提高该档金额。`;
   }
   return `${prefix}${issueLabels[issue.code] ?? issue.code}`;
-}
-
-function projectedPriceBandText(
-  band: OrderScheduleProjectedPriceBand,
-  priceTickSize: string | null,
-): string {
-  const lower = tradingPrice(
-    chartPriceInput(band.lower, priceTickSize),
-    priceTickSize,
-  );
-  const upper = tradingPrice(
-    chartPriceInput(band.upper, priceTickSize),
-    priceTickSize,
-  );
-  return lower === upper ? lower : `${lower} – ${upper}`;
 }
 
 function EditorSection({
@@ -342,6 +328,7 @@ export default function OrderScheduleEditor({
   planOptions,
   footerControls,
   onValidationChange,
+  onMaximumProjectedLossChange,
   onMarketReadinessChange,
 }: OrderScheduleEditorProps) {
   const environmentScope = `${environmentKind}:${environmentId}`;
@@ -367,6 +354,26 @@ export default function OrderScheduleEditor({
   const repriceRule = dynamicRuleByKind(value.dynamic_rules, "REPRICE_ENTRY");
   const steppedRule = dynamicRuleByKind(value.dynamic_rules, "STEPPED_PROTECTION");
   const profitLockRule = dynamicRuleByKind(value.dynamic_rules, "PROFIT_LOCK");
+  const addProfitLock = (mode: "RATIO" | "FIXED_GIVEBACK") => {
+    onChange({
+      ...value,
+      dynamic_rules: withDynamicRule(
+        withoutDynamicRule(value.dynamic_rules, "STEPPED_PROTECTION"),
+        {
+          kind: "PROFIT_LOCK",
+          mode,
+          activation_r: "1",
+          lock_fraction: mode === "RATIO" ? "0.5" : null,
+          giveback_r: mode === "FIXED_GIVEBACK" ? "0.5" : null,
+          minimum_step_r: "0.25",
+          minimum_update_interval_seconds: 5,
+          max_adjustments: 8,
+        },
+      ),
+    });
+    setProtectionCatalogOpen(false);
+    setExitCatalogOpen(false);
+  };
   const takeProfitLevels = value.protection_policy.take_profit_ladder?.levels ?? [];
   const takeProfitTotalFraction = takeProfitLevels.reduce(
     (total, level) => total + (finiteNumber(level.quantity_fraction) ?? 0),
@@ -387,6 +394,30 @@ export default function OrderScheduleEditor({
     value.entry_conditions.operator,
     value.entry_conditions.items,
   );
+  const makerEntry = venue.order_type === "LIMIT" && venue.post_only;
+  const selectedEntryFeeBps = makerEntry
+    ? feeEvidence?.maker?.conservative_rate_bps
+    : feeEvidence?.taker?.conservative_rate_bps;
+  const selectedExitFeeBps = feeEvidence?.taker?.conservative_rate_bps;
+  const requiredFeeEvidenceMissing = !selectedEntryFeeBps || !selectedExitFeeBps;
+  useEffect(() => {
+    if (!selectedEntryFeeBps || !selectedExitFeeBps) return;
+    const current = value.protection_policy.full_fill_loss_budget;
+    if (
+      current?.entry_fee_bps === selectedEntryFeeBps
+      && current.exit_fee_bps === selectedExitFeeBps
+    ) return;
+    onChange({
+      ...value,
+      protection_policy: {
+        ...value.protection_policy,
+        full_fill_loss_budget: {
+          entry_fee_bps: selectedEntryFeeBps,
+          exit_fee_bps: selectedExitFeeBps,
+        },
+      },
+    });
+  }, [onChange, selectedEntryFeeBps, selectedExitFeeBps, value]);
   const takeProfitCostWarning = takeProfitSpreadCoverageWarning({
     initialStopDistanceBps:
       value.protection_policy.initial_stop.distance_bps,
@@ -413,6 +444,10 @@ export default function OrderScheduleEditor({
           trigger_source: "MARK_PRICE",
           coverage: "EACH_CONFIRMED_FILL",
         },
+        full_fill_loss_budget: {
+          entry_fee_bps: "0",
+          exit_fee_bps: "0",
+        },
         take_profit_ladder: {
           levels: [{ trigger_r: "2", quantity_fraction: "1" }],
         },
@@ -433,7 +468,10 @@ export default function OrderScheduleEditor({
   );
   const protectionLocalReady = stopDistance !== null
     && stopDistance > 0
-    && stopDistance <= 5_000;
+    && stopDistance <= 5_000
+    && !feeEvidenceLoading
+    && !feeEvidenceUnavailable
+    && !requiredFeeEvidenceMissing;
   const exitValidation = localOrderScheduleProblems(
     {
       entry_program: {
@@ -593,7 +631,9 @@ export default function OrderScheduleEditor({
     : activeMilestone === 1
       ? protectionLocalReady
         ? serverMilestoneBlockingReason(1)
-        : "初始止损距离必须大于 0 且不超过 5000 bps。"
+        : requiredFeeEvidenceMissing || feeEvidenceLoading || feeEvidenceUnavailable
+          ? "等待同环境手续费参考，以计算并冻结费用后最大预计亏损。"
+          : "初始止损距离必须大于 0 且不超过 5000 bps。"
       : activeMilestone === 2
         ? exitValidation[0]
           ?? (automaticProfitExitMissing ? null : serverMilestoneBlockingReason(2))
@@ -603,14 +643,21 @@ export default function OrderScheduleEditor({
   const quantityStep = venue.order_type === "MARKET"
     ? instrumentRules?.market_quantity_step ?? null
     : instrumentRules?.limit_quantity_step ?? null;
-  const protectionPriceProjection = previewReady
-    ? projectOrderScheduleProtectionPrices(
-      direction,
-      value,
-      preview.data?.normalized_legs ?? [],
-    )
-    : null;
   const previewNormalizedLegs = preview.data?.normalized_legs;
+  const fullFillEntryProjection = useMemo(() => (
+    previewNormalizedLegs ?? []
+  ).reduce(
+    (projection, leg) => {
+      const price = Number(leg.price ?? leg.sizing_price);
+      const quantity = Number(leg.quantity);
+      if (!Number.isFinite(price) || !Number.isFinite(quantity)) return projection;
+      return {
+        quantity: projection.quantity + quantity,
+        notional: projection.notional + price * quantity,
+      };
+    },
+    { quantity: 0, notional: 0 },
+  ), [previewNormalizedLegs]);
   const stopRecommendations = useMemo(
     () => previewReady
       ? buildInitialStopRecommendations({
@@ -621,29 +668,32 @@ export default function OrderScheduleEditor({
       : [],
     [direction, marketContext, previewNormalizedLegs, previewReady],
   );
+  const selectedStopRecommendation = useMemo(
+    () => stopRecommendations.find((recommendation) => approximatelyEqual(
+      value.protection_policy.initial_stop.distance_bps,
+      recommendation.distanceBpsInput,
+    )) ?? null,
+    [stopRecommendations, value.protection_policy.initial_stop.distance_bps],
+  );
   const stopRecommendationAnnotations = useMemo(
-    () => stopRecommendations.map((recommendation) => ({
-      id: `halpha-stop-reference-${recommendation.kind.toLowerCase()}`,
+    () => selectedStopRecommendation ? [{
+      id: `halpha-stop-reference-${selectedStopRecommendation.kind.toLowerCase()}`,
       role: "STOP_REFERENCE" as const,
-      label: recommendation.label,
-      detail: `${recommendation.evidence}；按预计加权入场价折算 ${recommendation.distanceBpsInput} bps；${stopReferenceInterval} K 线截止 ${formatUserVisibleTime(recommendation.evidenceCutoff)}`,
-      price: recommendation.price,
+      label: selectedStopRecommendation.label,
+      detail: `${selectedStopRecommendation.evidence}；按全档成交后的预计均价折算 ${selectedStopRecommendation.distanceBpsInput} bps；${stopReferenceInterval} K 线截止 ${formatUserVisibleTime(selectedStopRecommendation.evidenceCutoff)}`,
+      price: selectedStopRecommendation.price,
       authority: "MARKET" as const,
       lineStyle: "dotted" as const,
       draggable: false,
-    })),
-    [stopRecommendations, stopReferenceInterval],
+    }] : [],
+    [selectedStopRecommendation, stopReferenceInterval],
   );
   const visibleStopRecommendationAnnotations = useMemo(
     () => activeMilestone === 1 ? stopRecommendationAnnotations : [],
     [activeMilestone, stopRecommendationAnnotations],
   );
-  const projectedStopPriceRisk = previewReady
-    && Number.isFinite(Number(preview.data?.effective_total_notional))
-    && Number.isFinite(Number(value.protection_policy.initial_stop.distance_bps))
-    ? Number(preview.data?.effective_total_notional)
-      * Number(value.protection_policy.initial_stop.distance_bps)
-      / 10_000
+  const fullFillProtectionEstimate = previewReady
+    ? preview.data?.full_fill_protection_estimate ?? null
     : null;
   const takeProfitAfterCost = takeProfitAfterCostEstimate({
     initialStopDistanceBps:
@@ -659,9 +709,6 @@ export default function OrderScheduleEditor({
     makerFeeRateBps: feeEvidence?.maker?.conservative_rate_bps,
     takerFeeRateBps: feeEvidence?.taker?.conservative_rate_bps,
   });
-  const makerEntry = venue.order_type === "LIMIT" && venue.post_only;
-  const requiredFeeEvidenceMissing = !feeEvidence?.taker
-    || (makerEntry && !feeEvidence.maker);
   const takeProfitAfterCostPanel = takeProfitLevels.length === 0
     ? null
     : feeEvidenceLoading
@@ -773,6 +820,11 @@ export default function OrderScheduleEditor({
   useEffect(() => {
     onValidationChange?.(previewReady);
   }, [onValidationChange, previewReady]);
+  useEffect(() => {
+    onMaximumProjectedLossChange?.(
+      fullFillProtectionEstimate?.maximum_projected_loss ?? null,
+    );
+  }, [fullFillProtectionEstimate, onMaximumProjectedLossChange]);
 
   const changeOrderType = (orderType: "MARKET" | "LIMIT") => {
     if (orderType === "MARKET") {
@@ -1248,6 +1300,7 @@ export default function OrderScheduleEditor({
           referencePrice={displayReferencePrice}
           spec={value}
           previewLegs={previewReady ? (preview.data?.normalized_legs ?? []) : []}
+          fullFillProtectionEstimate={fullFillProtectionEstimate}
           previewState={previewReady
             ? "READY"
             : localValidation.length === 0
@@ -2472,7 +2525,7 @@ export default function OrderScheduleEditor({
         <EditorSection
         id="order-schedule-protection-title"
         title="成交后立即保护"
-        description="每笔确认成交都必须建立独立只减仓止损；事实未确认前不开放下一笔新增风险。"
+        description="每笔成交都有只减仓保护；分批成交后按本计划当前均价重算，且不突破创建时的最大预计亏损。"
       >
         <Typography variant="caption" sx={{ display: "block", mb: .75, fontWeight: 750 }}>
           初始止损
@@ -2548,10 +2601,23 @@ export default function OrderScheduleEditor({
                   value.protection_policy.initial_stop.distance_bps,
                   recommendation.distanceBpsInput,
                 );
-                const effectiveNotional = Number(preview.data?.effective_total_notional);
-                const estimatedLoss = Number.isFinite(effectiveNotional)
-                  ? effectiveNotional * recommendation.distanceBps / 10_000
+                const entryFeeBps = Number(selectedEntryFeeBps);
+                const exitFeeBps = Number(selectedExitFeeBps);
+                const exitNotional = (
+                  fullFillEntryProjection.quantity * recommendation.price
+                );
+                const estimatedLoss = fullFillEntryProjection.quantity > 0
+                  && fullFillEntryProjection.notional > 0
+                  && Number.isFinite(entryFeeBps)
+                  && Number.isFinite(exitFeeBps)
+                  ? Math.abs(fullFillEntryProjection.notional - exitNotional)
+                    + fullFillEntryProjection.notional * entryFeeBps / 10_000
+                    + exitNotional * exitFeeBps / 10_000
                   : null;
+                const displayedPrice = roundedTradingPriceEstimate(
+                  recommendation.price,
+                  priceTickSize,
+                );
                 return (
                   <Box
                     key={recommendation.id}
@@ -2577,8 +2643,33 @@ export default function OrderScheduleEditor({
                         <Typography variant="body2" sx={{ fontWeight: 800 }}>
                           {recommendation.label}
                         </Typography>
+                        <Tooltip
+                          arrow
+                          placement="top"
+                          title={(
+                            <Box sx={{ maxWidth: 320 }}>
+                              <Typography variant="caption" sx={{ display: "block", fontWeight: 800 }}>
+                                止损逻辑
+                              </Typography>
+                              <Typography variant="caption" sx={{ display: "block" }}>
+                                {recommendation.evidence}
+                              </Typography>
+                              <Typography variant="caption" sx={{ display: "block", mt: .5 }}>
+                                按全档成交后的预计均价换算。实际分批成交后按本计划当前均价与已入场数量重算，并受创建时最大预计亏损约束。
+                              </Typography>
+                            </Box>
+                          )}
+                        >
+                          <IconButton
+                            size="small"
+                            aria-label={`${recommendation.label}止损逻辑`}
+                            sx={{ p: .25, alignSelf: "center" }}
+                          >
+                            <InfoOutlined sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
                         <Typography variant="body2" sx={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                          {tradingPrice(recommendation.price, priceTickSize)} USDT
+                          {displayedPrice} USDT
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {recommendation.distanceBpsInput} bps
@@ -2587,16 +2678,13 @@ export default function OrderScheduleEditor({
                             : ` · 约 ${quoteCurrencyEstimate(estimatedLoss)} USDT`}
                         </Typography>
                       </Stack>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                        {recommendation.evidence}
-                      </Typography>
                     </Box>
                     <Button
                       type="button"
                       size="small"
                       variant={selected ? "contained" : "outlined"}
                       disabled={selected}
-                      aria-label={`采用${recommendation.label} ${tradingPrice(recommendation.price, priceTickSize)} USDT`}
+                      aria-label={`采用${recommendation.label} ${displayedPrice} USDT`}
                       onClick={() => onChange({
                         ...value,
                         protection_policy: {
@@ -2615,7 +2703,7 @@ export default function OrderScheduleEditor({
                 );
               })}
               <Typography variant="caption" color="text.secondary">
-                候选价按预计加权入场价换算；分批成交后仍按每笔实际成交价建立同一距离的止损。当前未接入可信清算分布，因此不参与推荐。
+                仅当前采用的止损会标在 K 线上。候选必须位于全部入场档位之外；当前未接入可信清算分布，因此不参与推荐。
               </Typography>
             </Stack>
           ) : (
@@ -2647,7 +2735,9 @@ export default function OrderScheduleEditor({
             })}
             helperText={protectionLocalReady
               ? "1% = 100 bps；最大 5000 bps"
-              : "必须大于 0 且不超过 5000 bps"}
+              : requiredFeeEvidenceMissing || feeEvidenceLoading || feeEvidenceUnavailable
+                ? "等待同环境手续费参考，以计算费用后最大预计亏损"
+                : "必须大于 0 且不超过 5000 bps"}
             slotProps={{ htmlInput: { min: 0, max: 5_000, step: "any" } }}
           />
           <Typography variant="caption" color="text.secondary">标记价格触发</Typography>
@@ -2659,7 +2749,7 @@ export default function OrderScheduleEditor({
           <Typography variant="body2" sx={{ fontWeight: 750, mb: .8 }}>
             止损价格与风险预览
           </Typography>
-          {protectionPriceProjection ? (
+          {fullFillProtectionEstimate ? (
             <Box
               component="dl"
               sx={{
@@ -2671,19 +2761,23 @@ export default function OrderScheduleEditor({
             >
               {[
                 [
-                  "预计入场基准",
-                  `${projectedPriceBandText(protectionPriceProjection.entry, priceTickSize)} USDT`,
+                  "全档成交预计均价",
+                  `${roundedTradingPriceEstimate(fullFillProtectionEstimate.average_entry_price, priceTickSize)} USDT`,
                 ],
                 [
-                  "预计止损触发价",
-                  `${projectedPriceBandText(protectionPriceProjection.stop, priceTickSize)} USDT`,
+                  "全档成交预计止损",
+                  `${roundedTradingPriceEstimate(fullFillProtectionEstimate.stop_price, priceTickSize)} USDT`,
                 ],
-                ["实际执行基准", "每笔确认成交价"],
                 [
-                  "预计价差亏损（全成交）",
-                  projectedStopPriceRisk === null
-                    ? "等待标准化金额"
-                    : `${quoteCurrencyEstimate(projectedStopPriceRisk)} USDT`,
+                  "预计进出手续费",
+                  `${quoteCurrencyEstimate(
+                    Number(fullFillProtectionEstimate.estimated_entry_fee)
+                    + Number(fullFillProtectionEstimate.estimated_exit_fee),
+                  )} USDT`,
+                ],
+                [
+                  "最大预计亏损",
+                  `${quoteCurrencyEstimate(fullFillProtectionEstimate.maximum_projected_loss)} USDT`,
                 ],
               ].map(([label, display]) => (
                 <Box key={label} sx={{ minWidth: 0 }}>
@@ -2702,17 +2796,17 @@ export default function OrderScheduleEditor({
             </Box>
           ) : (
             <Typography variant="caption" color="text.secondary" aria-live="polite">
-              完成当前入场配置的服务端预览后显示预计触发价和价差风险。
+              完成有效档位预览并取得同环境手续费参考后显示费用后最大预计亏损。
             </Typography>
           )}
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: .8 }}>
-            预计价差亏损按标准化名义金额和止损距离计算，不含手续费、滑点与跳空；实际保护价以每笔成交后交易所确认的只减仓止损为准。
+            最大预计亏损按全部标准化档位、全档成交均价、止损价及预计进出手续费计算；不含触发后滑点、跳空和未来资金费，因此不是成交结果保证。
           </Typography>
         </Box>
         <Box sx={{ mt: 1.25, p: 1.25, bgcolor: "action.hover", borderRadius: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 750 }}>覆盖：每笔确认成交</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 750 }}>运行时：按本计划当前仓位重算</Typography>
           <Typography variant="caption" color="text.secondary">
-            新保护先被交易所确认，再继续后续入场或撤销被替代保护；止损价格只能收紧。
+            新增成交后按当前归属数量与平均成本调整止损；价格可随策略放宽或收紧，但费用后预计亏损不得超过上述创建时上限。已有收益锁定不会被后续入场放松。
           </Typography>
         </Box>
         <Box sx={{ mt: 1.25 }}>
@@ -2790,25 +2884,7 @@ export default function OrderScheduleEditor({
                     type="button"
                     size="small"
                     fullWidth
-                    onClick={() => {
-                      onChange({
-                        ...value,
-                        dynamic_rules: withDynamicRule(
-                          withoutDynamicRule(value.dynamic_rules, "STEPPED_PROTECTION"),
-                          {
-                            kind: "PROFIT_LOCK",
-                            mode: "RATIO",
-                            activation_r: "1",
-                            lock_fraction: "0.5",
-                            giveback_r: null,
-                            minimum_step_r: "0.25",
-                            minimum_update_interval_seconds: 5,
-                            max_adjustments: 8,
-                          },
-                        ),
-                      });
-                      setProtectionCatalogOpen(false);
-                    }}
+                    onClick={() => addProfitLock("RATIO")}
                     sx={{ justifyContent: "flex-start", textTransform: "none" }}
                   >
                     峰值比例锁盈 · 达到 1R 后锁定峰值盈利的 50%
@@ -2817,25 +2893,7 @@ export default function OrderScheduleEditor({
                     type="button"
                     size="small"
                     fullWidth
-                    onClick={() => {
-                      onChange({
-                        ...value,
-                        dynamic_rules: withDynamicRule(
-                          withoutDynamicRule(value.dynamic_rules, "STEPPED_PROTECTION"),
-                          {
-                            kind: "PROFIT_LOCK",
-                            mode: "FIXED_GIVEBACK",
-                            activation_r: "1",
-                            lock_fraction: null,
-                            giveback_r: "0.5",
-                            minimum_step_r: "0.25",
-                            minimum_update_interval_seconds: 5,
-                            max_adjustments: 8,
-                          },
-                        ),
-                      });
-                      setProtectionCatalogOpen(false);
-                    }}
+                    onClick={() => addProfitLock("FIXED_GIVEBACK")}
                     sx={{ justifyContent: "flex-start", textTransform: "none" }}
                   >
                     固定回撤锁盈 · 达到 1R 后最多回吐 0.5R
@@ -2936,6 +2994,29 @@ export default function OrderScheduleEditor({
                 >
                   固定 / 分级止盈 · 1–4 个价格目标
                 </Button>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">收益锁定</Typography>
+                <Stack spacing={.25}>
+                  <Button
+                    type="button"
+                    size="small"
+                    fullWidth
+                    onClick={() => addProfitLock("RATIO")}
+                    sx={{ justifyContent: "flex-start", textTransform: "none" }}
+                  >
+                    峰值比例锁盈 · 达到 1R 后锁定峰值盈利的 50%
+                  </Button>
+                  <Button
+                    type="button"
+                    size="small"
+                    fullWidth
+                    onClick={() => addProfitLock("FIXED_GIVEBACK")}
+                    sx={{ justifyContent: "flex-start", textTransform: "none" }}
+                  >
+                    固定回撤锁盈 · 达到 1R 后最多回吐 0.5R
+                  </Button>
+                </Stack>
               </Box>
               <Box>
                 <Typography variant="caption" color="text.secondary">时间约束</Typography>

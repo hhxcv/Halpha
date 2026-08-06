@@ -157,7 +157,6 @@ def test_migration_history_is_one_unambiguous_fresh_root() -> None:
     ("database_name", "expected"),
     (
         ("halpha_demo", ("halpha_demo", "DEMO")),
-        ("halpha_live", ("halpha_live", "LIVE")),
         ("halpha_live_copy", ("halpha_live_copy", "LIVE")),
         ("halpha_live_personal", ("halpha_live_personal", "LIVE")),
         (
@@ -186,14 +185,16 @@ def test_baseline_binds_database_specific_roles_and_environment(
     assert revision._role_prefix() == expected
 
 
+@pytest.mark.parametrize("database_name", ("halpha_live", "halpha_restore_check"))
 def test_baseline_rejects_any_other_database_name(
+    database_name: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     revision = _revision_module()
 
     class _Result:
         def scalar_one(self) -> str:
-            return "halpha_restore_check"
+            return database_name
 
     class _Connection:
         def execute(self, _statement: object) -> _Result:
@@ -209,7 +210,6 @@ def test_baseline_rejects_any_other_database_name(
     ("role_prefix", "environment_kind"),
     (
         ("halpha_demo", "DEMO"),
-        ("halpha_live", "LIVE"),
         ("halpha_live_copy", "LIVE"),
         ("halpha_live_personal", "LIVE"),
     ),

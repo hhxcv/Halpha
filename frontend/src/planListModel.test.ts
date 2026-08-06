@@ -132,6 +132,7 @@ describe("plan workbench sections", () => {
       submission_order: "LOW_TO_HIGH",
       entry_conditions: { operator: "ALL", items: [] },
       protection_policy: {
+        full_fill_loss_budget: null,
         initial_stop: {
           distance_bps: "100",
           trigger_source: "MARK_PRICE",
@@ -172,6 +173,7 @@ describe("plan workbench sections", () => {
       submission_order: "LOW_TO_HIGH",
       entry_conditions: { operator: "ALL", items: [] },
       protection_policy: {
+        full_fill_loss_budget: null,
         initial_stop: {
           distance_bps: "100",
           trigger_source: "MARK_PRICE",
@@ -243,6 +245,7 @@ describe("plan workbench sections", () => {
       submission_order: "LOW_TO_HIGH",
       entry_conditions: { operator: "ALL", items: [] },
       protection_policy: {
+        full_fill_loss_budget: null,
         initial_stop: {
           distance_bps: "100",
           trigger_source: "MARK_PRICE",
@@ -309,6 +312,7 @@ describe("plan workbench sections", () => {
         ],
       },
       protection_policy: {
+        full_fill_loss_budget: null,
         initial_stop: {
           distance_bps: "15",
           trigger_source: "MARK_PRICE",

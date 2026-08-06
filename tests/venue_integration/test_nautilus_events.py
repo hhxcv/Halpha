@@ -321,7 +321,16 @@ def test_restart_reconciliation_fill_keeps_terminal_original_identity() -> None:
     assert result.facts[0].payload["client_order_id"] == terminal.client_order_id
 
 
-def test_restart_order_query_placeholder_does_not_fabricate_a_trade() -> None:
+@pytest.mark.parametrize(
+    "placeholder_trade_id",
+    (
+        "c3dbbc0b-8835-5ed6-a7bd-a93fc9be7912",
+        "S-18c897945fc371ff-d9fd8ca4",
+    ),
+)
+def test_restart_order_query_placeholder_does_not_fabricate_a_trade(
+    placeholder_trade_id: str,
+) -> None:
     submitting = begin_submission(
         _action(),
         capital_decision=_cap_decision(RiskClass.RISK_INCREASING),
@@ -332,7 +341,7 @@ def test_restart_order_query_placeholder_does_not_fabricate_a_trade() -> None:
         _event(
             "OrderFilled",
             reconciliation=True,
-            trade_id=_Identifier("c3dbbc0b-8835-5ed6-a7bd-a93fc9be7912"),
+            trade_id=_Identifier(placeholder_trade_id),
             last_px="50000",
             last_qty="0.001",
             commission="0 USDT",

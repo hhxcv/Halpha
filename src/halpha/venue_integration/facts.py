@@ -167,11 +167,12 @@ def collapse_synthetic_reconciliation_fills(
 ) -> tuple[VenueFact, ...]:
     """Prefer Binance trade-query fills over Nautilus query placeholders.
 
-    A Binance order-status reconciliation can synthesize a UUID trade identity
-    from cumulative order data.  Once the authenticated user-trade query
-    supplies the real numeric trade identity, retaining both observations would
-    double the same fill.  Collapse only exact action/order/time/price/quantity
-    matches and keep the placeholder when no stronger trade fact exists.
+    A Binance order-status reconciliation can synthesize a UUID or ``S-``
+    trade identity from cumulative order data.  Once the authenticated
+    user-trade query supplies the real numeric trade identity, retaining both
+    observations would double the same fill.  Collapse only exact
+    action/order/time/price/quantity matches and keep the placeholder when no
+    stronger trade fact exists.
     """
 
     materialized = tuple(facts)
@@ -199,8 +200,17 @@ def _synthetic_reconciliation_fill(fact: VenueFact) -> bool:
         or fact.payload.get("event_type") != "OrderFilled"
     ):
         return False
+    return synthetic_reconciliation_trade_id(fact.payload.get("trade_id"))
+
+
+def synthetic_reconciliation_trade_id(trade_id: object) -> bool:
+    """Recognize the placeholder identities emitted by qualified Nautilus builds."""
+
+    rendered = str(trade_id or "")
+    if rendered.startswith("S-") and len(rendered) > 2:
+        return True
     try:
-        UUID(str(fact.payload.get("trade_id", "")))
+        UUID(rendered)
     except (TypeError, ValueError):
         return False
     return True

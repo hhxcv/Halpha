@@ -32,7 +32,6 @@ def _revision_module():
     ("database_name", "expected"),
     (
         ("halpha_demo", ("halpha_demo", False)),
-        ("halpha_live", ("halpha_live", True)),
         ("halpha_live_copy", ("halpha_live_copy", True)),
         ("halpha_live_personal", ("halpha_live_personal", True)),
         ("halpha_workbench_fixture_1234", ("halpha_demo", False)),
@@ -58,14 +57,16 @@ def test_stage_review_binds_database_specific_roles(
     assert revision._role_prefix() == expected
 
 
+@pytest.mark.parametrize("database_name", ("halpha_live", "halpha_restore_check"))
 def test_stage_review_rejects_unrelated_database_name(
+    database_name: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     revision = _revision_module()
 
     class _Result:
         def scalar_one(self) -> str:
-            return "halpha_restore_check"
+            return database_name
 
     class _Connection:
         def execute(self, _statement: object) -> _Result:
@@ -81,7 +82,6 @@ def test_stage_review_rejects_unrelated_database_name(
     ("role_prefix", "is_live"),
     (
         ("halpha_demo", False),
-        ("halpha_live", True),
         ("halpha_live_copy", True),
         ("halpha_live_personal", True),
     ),

@@ -587,6 +587,11 @@ def validate_new_direct_execution_schedule(
         )
     ):
         raise ValueError("DIRECT_EXECUTION_AUTOMATIC_EXIT_REQUIRED")
+    if (
+        spec.protection_policy is None
+        or spec.protection_policy.full_fill_loss_budget is None
+    ):
+        raise ValueError("DIRECT_EXECUTION_FULL_FILL_LOSS_BUDGET_REQUIRED")
 
 
 def direct_allowed_action_profiles(
@@ -727,6 +732,19 @@ class CompiledOrderLeg(ScheduleModel):
     effective_notional: str
 
 
+class FullFillProtectionEstimate(ScheduleModel):
+    """Deterministic full-entry stop loss before slippage, gaps, or funding."""
+
+    average_entry_price: str
+    entry_boundary_price: str
+    stop_price: str
+    quantity: str
+    gross_price_loss: str
+    estimated_entry_fee: str
+    estimated_exit_fee: str
+    maximum_projected_loss: str
+
+
 class OrderSchedulePreview(ScheduleModel):
     valid: bool
     compiler_version: str
@@ -744,9 +762,79 @@ class OrderSchedulePreview(ScheduleModel):
     source_cutoff: str
     requested_total_notional: str
     effective_total_notional: str
+    full_fill_protection_estimate: FullFillProtectionEstimate | None = None
     normalized_legs: tuple[CompiledOrderLeg, ...]
     legs: tuple[CompiledOrderLeg, ...]
     issues: tuple[ScheduleIssue, ...]
+
+
+def _compile_full_fill_protection_estimate(
+    *,
+    policy: ProtectionPolicy,
+    direction: Direction,
+    legs: tuple[CompiledOrderLeg, ...],
+    price_tick_size: str,
+) -> FullFillProtectionEstimate | None:
+    budget = policy.full_fill_loss_budget
+    if budget is None or not legs:
+        return None
+    quantity = sum((Decimal(leg.quantity) for leg in legs), Decimal(0))
+    notional = sum((Decimal(leg.effective_notional) for leg in legs), Decimal(0))
+    if quantity <= 0 or notional <= 0:
+        return None
+    with localcontext() as context:
+        context.prec = 128
+        average_entry = notional / quantity
+        tick = Decimal(price_tick_size)
+        distance = (
+            average_entry
+            * Decimal(policy.initial_stop.distance_bps)
+            / Decimal(10_000)
+        )
+        raw_stop = (
+            average_entry - distance
+            if direction is Direction.LONG
+            else average_entry + distance
+        )
+        stop = (
+            raw_stop / tick
+        ).to_integral_value(
+            rounding=ROUND_UP if direction is Direction.LONG else ROUND_DOWN
+        ) * tick
+        if stop <= 0:
+            raise ValueError("PROTECTION_PRICE_INVALID")
+        prices = tuple(Decimal(leg.sizing_price) for leg in legs)
+        entry_boundary = (
+            min(prices) if direction is Direction.LONG else max(prices)
+        )
+        # The initial stop must sit beyond every planned entry. Otherwise a
+        # falling/rising market can stop the owned position while a later leg
+        # is still allowed to add risk in the opposite direction.
+        distinct_entry_prices = set(prices)
+        if len(distinct_entry_prices) > 1 and (
+            (direction is Direction.LONG and stop >= entry_boundary)
+            or (direction is Direction.SHORT and stop <= entry_boundary)
+        ):
+            raise ValueError("PROTECTION_INSIDE_ENTRY_RANGE")
+        gross_loss = quantity * abs(average_entry - stop)
+        entry_fee = notional * Decimal(budget.entry_fee_bps) / Decimal(10_000)
+        exit_fee = (
+            quantity
+            * stop
+            * Decimal(budget.exit_fee_bps)
+            / Decimal(10_000)
+        )
+        maximum_loss = gross_loss + entry_fee + exit_fee
+    return FullFillProtectionEstimate(
+        average_entry_price=canonical_decimal(average_entry),
+        entry_boundary_price=canonical_decimal(entry_boundary),
+        stop_price=canonical_decimal(stop),
+        quantity=canonical_decimal(quantity),
+        gross_price_loss=canonical_decimal(gross_loss),
+        estimated_entry_fee=canonical_decimal(entry_fee),
+        estimated_exit_fee=canonical_decimal(exit_fee),
+        maximum_projected_loss=canonical_decimal(maximum_loss),
+    )
 
 
 def _schedule_digest_payload(
@@ -1057,6 +1145,19 @@ def validate_order_schedule_snapshot(snapshot: OrderSchedulePreview) -> None:
         raise ValueError("ORDER_SCHEDULE_SNAPSHOT_CORRUPT")
     if snapshot.instrument_rules_digest != snapshot.instrument_rules.digest:
         raise ValueError("ORDER_SCHEDULE_SNAPSHOT_CORRUPT")
+    protection_policy = snapshot.schedule_spec.protection_policy
+    expected_protection_estimate = (
+        _compile_full_fill_protection_estimate(
+            policy=protection_policy,
+            direction=snapshot.direction,
+            legs=snapshot.legs,
+            price_tick_size=snapshot.instrument_rules.price_tick_size,
+        )
+        if protection_policy is not None
+        else None
+    )
+    if snapshot.full_fill_protection_estimate != expected_protection_estimate:
+        raise ValueError("ORDER_SCHEDULE_SNAPSHOT_CORRUPT")
     if snapshot.schedule_spec.submission_mode is ScheduleSubmissionMode.PREPROTECTED_PARALLEL:
         if not snapshot.preprotected_parallel_supported:
             raise ValueError("PREPROTECTED_PARALLEL_NOT_VERIFIED")
@@ -1234,17 +1335,20 @@ def _normalized_spec_payload(spec: OrderScheduleSpec) -> dict[str, object]:
         "submission_mode": spec.submission_mode.value,
         "submission_order": spec.submission_order.value,
         "entry_conditions": spec.entry_conditions.model_dump(mode="json"),
-        "protection_policy": (
-            spec.protection_policy.model_dump(mode="json")
-            if spec.protection_policy is not None
-            else None
-        ),
+        "protection_policy": None,
         "dynamic_rules": [
             rule.model_dump(mode="json") for rule in spec.dynamic_rules
         ],
     }
     if spec.entry_program is not None:
         payload["entry_program"] = spec.entry_program.model_dump(mode="json")
+    if spec.protection_policy is not None:
+        protection_payload = spec.protection_policy.model_dump(mode="json")
+        # Older frozen schedules predate the optional aggregate budget field.
+        # Omitting only that absent field preserves their exact digest.
+        if protection_payload.get("full_fill_loss_budget") is None:
+            protection_payload.pop("full_fill_loss_budget", None)
+        payload["protection_policy"] = protection_payload
     return payload
 
 
@@ -1473,6 +1577,26 @@ def compile_order_schedule(
             )
         )
 
+    normalized_legs = tuple(legs)
+    full_fill_protection_estimate = None
+    if spec.protection_policy is not None and normalized_legs:
+        try:
+            full_fill_protection_estimate = _compile_full_fill_protection_estimate(
+                policy=spec.protection_policy,
+                direction=direction,
+                legs=normalized_legs,
+                price_tick_size=rules.price_tick_size,
+            )
+        except ValueError as exc:
+            if str(exc) != "PROTECTION_INSIDE_ENTRY_RANGE":
+                raise
+            issues.append(
+                ScheduleIssue(
+                    code="PROTECTION_INSIDE_ENTRY_RANGE",
+                    field="protection_policy.initial_stop.distance_bps",
+                )
+            )
+
     normalized_maximum = canonical_decimal(maximum)
     normalized_reference = canonical_decimal(reference) if reference is not None else None
     requested_total_text = canonical_decimal(requested_total)
@@ -1492,7 +1616,6 @@ def compile_order_schedule(
         legs=tuple(legs),
     )
     schedule_digest = content_digest(digest_payload)
-    normalized_legs = tuple(legs)
     if issues:
         legs = []
         effective_total = Decimal(0)
@@ -1513,6 +1636,7 @@ def compile_order_schedule(
         source_cutoff=rules.source_cutoff,
         requested_total_notional=requested_total_text,
         effective_total_notional=effective_total_text,
+        full_fill_protection_estimate=full_fill_protection_estimate,
         normalized_legs=normalized_legs,
         legs=tuple(legs),
         issues=tuple(issues),

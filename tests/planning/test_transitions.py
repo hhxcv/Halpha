@@ -177,6 +177,45 @@ def test_resume_is_narrow_after_writer_continuity_pause() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("updates", "expected_reason"),
+    (
+        ({"entry_opportunity_consumed": True}, "ENTRY_OPPORTUNITY_CONSUMED"),
+        (
+            {
+                "rule_state": {
+                    "deadlines": {
+                        "entry_valid_until": (NOW - timedelta(seconds=1)).isoformat()
+                    }
+                }
+            },
+            "ENTRY_WINDOW_EXPIRED",
+        ),
+    ),
+)
+def test_continuity_resume_cannot_reopen_a_completed_entry_phase(
+    updates: dict[str, object],
+    expected_reason: str,
+) -> None:
+    paused = _activation(
+        run_state=RunState.PAUSED,
+        pause_reason="WRITER_CONTINUITY_LOST",
+        paused_at=NOW,
+        **updates,
+    )
+
+    with pytest.raises(ValueError, match=expected_reason):
+        resume_activation(
+            paused,
+            command_id="command-reopen",
+            reconciliation_digest="c" * 64,
+            observed_at=NOW,
+            active_stop_categories=(),
+            plan_current=True,
+            facts_known=True,
+        )
+
+
 def test_one_cycle_exit_takeover_and_completion_are_latched() -> None:
     consumed = consume_entry_opportunity(_activation(), observed_at=NOW)
     assert consumed.entry_opportunity_consumed is True

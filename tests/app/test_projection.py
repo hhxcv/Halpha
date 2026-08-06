@@ -57,10 +57,10 @@ def test_live_read_only_projection_connection_forces_transactions_read_only(
 
     monkeypatch.setattr(psycopg, "connect", capture_connect)
     projection = PostgreSQLWorkbenchProjection(
-        database_name="halpha_live",
-        database_role_name="halpha_live_app_reader",
+        database_name="halpha_live_copy",
+        database_role_name="halpha_live_copy_app_reader",
         password=SecretStr("test-secret"),
-        environment_id="binance-live-primary",
+        environment_id="binance-live-copy-primary",
         account_id="binance-usdm-copy-lead-primary",
         read_only=True,
     )
@@ -68,7 +68,7 @@ def test_live_read_only_projection_connection_forces_transactions_read_only(
     projection._connect()
 
     assert observed["options"] == "-c default_transaction_read_only=on"
-    assert observed["user"] == "halpha_live_app_reader"
+    assert observed["user"] == "halpha_live_copy_app_reader"
 
 
 def _account_payload() -> dict[str, object]:

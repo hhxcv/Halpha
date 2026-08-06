@@ -45,6 +45,7 @@ import {
   getMarketWindow,
   type MarketInterval,
   type OrderScheduleDirection,
+  type OrderScheduleFullFillProtectionEstimate,
   type OrderSchedulePreviewLeg,
   type OrderScheduleSpec,
 } from "../api/client";
@@ -290,6 +291,11 @@ export type OrderScheduleChartProps = {
   runtimePhase?: "RUNNING" | "REVIEW";
   showPlanEntryAnnotations?: boolean;
   additionalPriceAnnotations?: OrderChartPriceAnnotation[];
+  visibleAdditionalPriceAnnotationIds?: ReadonlySet<string>;
+  onAdditionalPriceAnnotationVisibilityChange?: (
+    annotationId: string,
+    visible: boolean,
+  ) => void;
   operationMarkers?: RuntimeChartOperationMarker[];
   timeWindowMode?: "LIVE" | "EXECUTION";
   timeWindowEndAt?: string | null;
@@ -312,6 +318,7 @@ export type OrderScheduleChartProps = {
   referencePrice: string | null;
   spec: OrderScheduleSpec;
   previewLegs: OrderSchedulePreviewLeg[];
+  fullFillProtectionEstimate?: OrderScheduleFullFillProtectionEstimate | null;
   previewState: "PENDING" | "READY" | "BLOCKED";
   onRangeChange: (lowerPrice: string, upperPrice: string) => void;
   onSingleLimitPriceChange: (price: string) => void;
@@ -421,6 +428,35 @@ function compactMarketCutoff(sourceCutoff: string | null): string | null {
   return ANALYSIS_TIME_FORMATTER.format(new Date(sourceCutoff));
 }
 
+const ANNOTATION_TAG_ABBREVIATIONS: Record<
+  OrderChartPriceAnnotation["role"],
+  string
+> = {
+  REFERENCE: "参",
+  SINGLE_LIMIT: "限",
+  RANGE_LOWER: "下",
+  RANGE_UPPER: "上",
+  NORMALIZED_LEG: "档",
+  MARK_CONDITION: "触",
+  ENTRY_INVALIDATION: "失",
+  RUNTIME_ENTRY: "单",
+  POSITION: "仓",
+  STOP_REFERENCE: "荐",
+  PROTECTION: "损",
+  TAKE_PROFIT: "盈",
+};
+
+function annotationTagAbbreviation(annotation: OrderChartPriceAnnotation): string {
+  if (annotation.id === "halpha-entry-opportunity-missed-price") return "错";
+  if (annotation.authority === "SERVER_PREVIEW" && annotation.role === "PROTECTION") {
+    return "预损";
+  }
+  if (annotation.authority === "SERVER_PREVIEW" && annotation.role === "TAKE_PROFIT") {
+    return "预盈";
+  }
+  return ANNOTATION_TAG_ABBREVIATIONS[annotation.role];
+}
+
 function annotationTagName(annotation: OrderChartPriceAnnotation): string {
   if (annotation.id === "halpha-entry-opportunity-missed-price") return "错失";
   if (
@@ -453,31 +489,8 @@ function annotationGroupTag(
 ): string {
   const primary = selectPriceAnnotationForTag(group);
   if (!primary) return "";
-  const compactNames: Record<OrderChartPriceAnnotation["role"], string> = {
-    REFERENCE: "参",
-    SINGLE_LIMIT: "限",
-    RANGE_LOWER: "下",
-    RANGE_UPPER: "上",
-    NORMALIZED_LEG: "档",
-    MARK_CONDITION: "触",
-    ENTRY_INVALIDATION: "失",
-    RUNTIME_ENTRY: "单",
-    POSITION: "仓",
-    STOP_REFERENCE: "荐",
-    PROTECTION: "损",
-    TAKE_PROFIT: "盈",
-  };
-  const compactProjectionName = primary.authority === "SERVER_PREVIEW"
-    && primary.role === "PROTECTION"
-      ? "预损"
-      : primary.authority === "SERVER_PREVIEW"
-        && primary.role === "TAKE_PROFIT"
-        ? "预盈"
-        : null;
   const name = compact
-    ? primary.id === "halpha-entry-opportunity-missed-price"
-      ? "错"
-      : compactProjectionName ?? compactNames[primary.role]
+    ? annotationTagAbbreviation(primary)
     : annotationTagName(primary);
   const displayPrice = compact
     ? chartPriceInput(Number(primary.price.toFixed(Math.min(precision, 4))))
@@ -647,25 +660,34 @@ function annotationColor(
   if (annotation.role === "POSITION") return "#475569";
   if (annotation.role === "STOP_REFERENCE") return "#9A6700";
   if (annotation.role === "PROTECTION") return "#DC2626";
-  if (annotation.role === "TAKE_PROFIT") return "#16A34A";
+  // White 11 px abbreviations require the darker success tone to preserve
+  // WCAG AA contrast; the brighter market green remains available to lines.
+  if (annotation.role === "TAKE_PROFIT") return "#15803D";
   return direction === "LONG" ? "#0F766E" : "#B45309";
 }
 
 function annotationAuthorityLabel(
   authority: OrderChartPriceAnnotation["authority"],
 ): string {
-  if (authority === "MARKET") return "行情事实";
-  if (authority === "SERVER_FACT") return "服务端事实";
-  if (authority === "SERVER_PREVIEW") return "服务端草稿";
-  return "输入草稿";
+  if (authority === "MARKET") return "行情";
+  if (authority === "SERVER_FACT") return "已生效";
+  if (authority === "SERVER_PREVIEW") return "预览";
+  return "草稿";
 }
 
-function annotationLineStyleLabel(
-  style: OrderChartPriceAnnotation["lineStyle"],
+function compactRuntimeRelativeRules(
+  rules: ReturnType<typeof buildOrderScheduleChartAnnotations>["relativeRules"],
 ): string {
-  if (style === "solid") return "实线";
-  if (style === "dotted") return "点线";
-  return "虚线";
+  const stop = rules.find((rule) => rule.id === "halpha-initial-stop");
+  const takeProfitCount = rules.filter(
+    (rule) => rule.id.startsWith("halpha-take-profit-"),
+  ).length;
+  const otherCount = rules.length - (stop ? 1 : 0) - takeProfitCount;
+  return [
+    stop ? stop.label.replace("每笔成交后止损 · ", "止损 ") : null,
+    takeProfitCount > 0 ? `${takeProfitCount} 档止盈` : null,
+    otherCount > 0 ? `${otherCount} 项动态规则` : null,
+  ].filter(Boolean).join(" · ") || "无固定价格规则";
 }
 
 export default function OrderScheduleChart({
@@ -675,6 +697,8 @@ export default function OrderScheduleChart({
   runtimePhase = "RUNNING",
   showPlanEntryAnnotations = true,
   additionalPriceAnnotations = [],
+  visibleAdditionalPriceAnnotationIds,
+  onAdditionalPriceAnnotationVisibilityChange,
   operationMarkers = [],
   timeWindowMode = "LIVE",
   timeWindowEndAt = null,
@@ -697,6 +721,7 @@ export default function OrderScheduleChart({
   referencePrice,
   spec,
   previewLegs,
+  fullFillProtectionEstimate = null,
   previewState,
   onRangeChange,
   onSingleLimitPriceChange,
@@ -746,6 +771,9 @@ export default function OrderScheduleChart({
   const [drawRange, setDrawRange] = useState<DrawRange | null>(null);
   const [activeTool, setActiveTool] = useState<"SUPPORT" | "TREND" | null>(null);
   const [analysisDrawings, setAnalysisDrawings] = useState<AnalysisDrawing[]>([]);
+  const [hiddenLocalPriceAnnotationIds, setHiddenLocalPriceAnnotationIds] = useState(
+    () => new Set<string>(),
+  );
   const [bars, setBars] = useState<KLineData[]>([]);
   const [marketWindowLoading, setMarketWindowLoading] = useState(false);
   const [marketWindowError, setMarketWindowError] = useState<unknown>(null);
@@ -760,8 +788,6 @@ export default function OrderScheduleChart({
   const [statusMessage, setStatusMessage] = useState(
     strategyInput
       ? "策略关键价格只读投影；修改右侧参数后，通道与追价边界会随当前策略输入更新。"
-      : displayMode === "RUNTIME"
-      ? "图表只读展示计划意图、持仓与服务端事实；不在图中修改运行中计划。"
       : "",
   );
   const liveBarOpenTimestamp = Date.parse(liveBar?.bar.open_at ?? "");
@@ -810,9 +836,10 @@ export default function OrderScheduleChart({
         previewLegs,
         previewState,
         priceTickSize,
+        fullFillProtectionEstimate,
       })
       : { priceAnnotations: [], relativeRules: [] };
-    const priceAnnotations = scheduleAnnotations.priceAnnotations
+    const schedulePriceAnnotations = scheduleAnnotations.priceAnnotations
       .filter((annotation) => {
         if (displayMode !== "RUNTIME") return true;
         if (["PROTECTION", "TAKE_PROFIT"].includes(annotation.role)) {
@@ -823,20 +850,37 @@ export default function OrderScheduleChart({
       })
       .map((annotation) => displayMode === "RUNTIME"
         ? { ...annotation, draggable: false }
-        : annotation)
-      .concat(additionalPriceAnnotations);
-    return { ...scheduleAnnotations, priceAnnotations };
+        : annotation);
+    const additionalIds = new Set(
+      additionalPriceAnnotations.map((annotation) => annotation.id),
+    );
+    const allPriceAnnotations = schedulePriceAnnotations.concat(additionalPriceAnnotations);
+    const priceAnnotations = allPriceAnnotations.filter((annotation) => (
+      additionalIds.has(annotation.id) && visibleAdditionalPriceAnnotationIds
+        ? visibleAdditionalPriceAnnotationIds.has(annotation.id)
+        : !hiddenLocalPriceAnnotationIds.has(annotation.id)
+    ));
+    return {
+      ...scheduleAnnotations,
+      allPriceAnnotations,
+      priceAnnotations,
+      visiblePriceAnnotationIds: new Set(priceAnnotations.map((annotation) => annotation.id)),
+      additionalIds,
+    };
   }, [
       additionalPriceAnnotations,
       displayMode,
       direction,
       previewLegs,
+      fullFillProtectionEstimate,
       previewState,
       priceProjectionReady,
       referencePrice,
       showPlanEntryAnnotations,
       spec,
       priceTickSize,
+      hiddenLocalPriceAnnotationIds,
+      visibleAdditionalPriceAnnotationIds,
     ]);
 
   const operationMarkerBars = useMemo(() => {
@@ -1802,6 +1846,38 @@ export default function OrderScheduleChart({
     entryProgramStatus,
     orderInstructionStatus,
   ].filter(Boolean).join(" · ");
+  const runtimeEntryStatus = [
+    entryProgramStatus || "入场",
+    previewState === "READY" ? `${previewLegs.length} 档` : previewStatus,
+    spec.venue_policy.order_type === "MARKET"
+      ? "市价"
+      : spec.venue_policy.price_match !== null
+        ? "PriceMatch"
+        : spec.venue_policy.post_only
+          ? "Maker only 限价"
+          : "限价",
+  ].filter(Boolean).join(" · ");
+  const runtimeProtectionStatus = compactRuntimeRelativeRules(
+    annotations.relativeRules,
+  );
+  const setPriceAnnotationVisibility = useCallback((
+    annotation: OrderChartPriceAnnotation,
+    visible: boolean,
+  ) => {
+    if (
+      annotations.additionalIds.has(annotation.id)
+      && onAdditionalPriceAnnotationVisibilityChange
+    ) {
+      onAdditionalPriceAnnotationVisibilityChange(annotation.id, visible);
+      return;
+    }
+    setHiddenLocalPriceAnnotationIds((current) => {
+      const next = new Set(current);
+      if (visible) next.delete(annotation.id);
+      else next.add(annotation.id);
+      return next;
+    });
+  }, [annotations.additionalIds, onAdditionalPriceAnnotationVisibilityChange]);
   const chartSourceCutoff = matchingLiveBar?.source_cutoff
     ?? marketWindowSourceCutoff;
   const compactChartSourceCutoff = compactMarketCutoff(chartSourceCutoff);
@@ -2404,47 +2480,65 @@ export default function OrderScheduleChart({
           overscrollBehavior: "contain",
         }}
       >
-        <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: "wrap", mb: .5 }}>
-          {executionWindowIntersectsBars ? (
-            <Chip
-              size="small"
-              variant="outlined"
-              icon={(
+        {displayMode === "RUNTIME" && !strategyInput ? (
+          <Box
+            aria-label="计划图摘要"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, auto))" },
+              columnGap: 1.5,
+              rowGap: .4,
+              alignItems: "center",
+              mb: .5,
+            }}
+          >
+            {executionWindowIntersectsBars ? (
+              <Stack direction="row" spacing={.6} sx={{ alignItems: "center", minWidth: 0 }}>
                 <Box
                   aria-hidden="true"
                   sx={{
+                    flex: "0 0 auto",
                     width: 12,
                     height: 12,
                     border: `1px solid ${EXECUTION_WINDOW_BORDER}`,
                     bgcolor: EXECUTION_WINDOW_FILL,
                   }}
                 />
-              )}
-              label={runtimePhase === "RUNNING"
-                ? "浅蓝底 · 计划执行中"
-                : "浅蓝底 · 计划执行区间"}
-            />
-          ) : null}
-          {strategyInput ? (
-            <Chip size="small" variant="outlined" label="当前策略关键价格" />
-          ) : (
-            <>
-              <Chip size="small" variant="outlined" label={pricePlanStatus} />
-              <Chip size="small" variant="outlined" label={previewStatus} />
-              <Chip
-                size="small"
-                variant="outlined"
-                label={summarizeRelativeRules(annotations.relativeRules)}
-              />
-            </>
-          )}
-        </Stack>
-        {strategyInput || displayMode === "RUNTIME" || drawRange || statusMessage ? (
+                <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                  {runtimePhase === "RUNNING" ? "执行区间进行中" : "计划执行区间"}
+                </Typography>
+              </Stack>
+            ) : <Box />}
+            <Typography variant="caption" sx={{ minWidth: 0 }}>
+              <Box component="span" color="text.secondary">入场　</Box>
+              <Box component="span" sx={{ fontWeight: 700 }}>{runtimeEntryStatus}</Box>
+            </Typography>
+            <Typography variant="caption" sx={{ minWidth: 0 }}>
+              <Box component="span" color="text.secondary">保护/退出　</Box>
+              <Box component="span" sx={{ fontWeight: 700 }}>{runtimeProtectionStatus}</Box>
+            </Typography>
+          </Box>
+        ) : (
+          <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: "wrap", mb: .5 }}>
+            {strategyInput ? (
+              <Chip size="small" variant="outlined" label="当前策略关键价格" />
+            ) : (
+              <>
+                <Chip size="small" variant="outlined" label={pricePlanStatus} />
+                <Chip size="small" variant="outlined" label={previewStatus} />
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={summarizeRelativeRules(annotations.relativeRules)}
+                />
+              </>
+            )}
+          </Stack>
+        )}
+        {strategyInput || drawRange || statusMessage ? (
           <Typography aria-live="polite" variant="caption" color="text.secondary">
             {strategyInput
               ? statusMessage
-              : displayMode === "RUNTIME"
-              ? "计划输入、服务端预览和实际动作使用不同线型与颜色；图表为只读，不参与执行控制。"
               : drawRange
               ? `选择中：${chartPriceInput(Math.min(drawRange.startPrice, drawRange.currentPrice), priceTickSize)} – ${chartPriceInput(Math.max(drawRange.startPrice, drawRange.currentPrice), priceTickSize)} USDT`
               : statusMessage}
@@ -2464,62 +2558,100 @@ export default function OrderScheduleChart({
           }}
         >
           <Box component="summary">
-            {strategyInput ? "策略关键价格与等价数值" : "图线、操作点与等价数值"} · {annotations.priceAnnotations.length + annotations.relativeRules.length + resolvedOperationMarkers.length} 项
+            {strategyInput ? "策略关键价格" : "图线与操作点"} · 价格线 {annotations.priceAnnotations.length}/{annotations.allPriceAnnotations.length}
           </Box>
         <Box sx={{ mt: 1 }}>
           <Typography variant="caption" sx={{ fontWeight: 750 }}>
-            图中价格线与等价数值
+            价格线显示
           </Typography>
-          {annotations.priceAnnotations.length > 0 ? (
+          {annotations.allPriceAnnotations.length > 0 ? (
             <Box
-              component="ol"
+              component="div"
               aria-label="图中价格标注及等价数值"
               tabIndex={0}
               sx={{
                 mt: 0.75,
                 mb: 0,
-                pl: 2.5,
                 display: "grid",
                 gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
-                gap: 0.65,
+                gap: 0.75,
                 maxHeight: { lg: 180 },
                 overflowY: { lg: "auto" },
               }}
             >
-              {annotations.priceAnnotations.map((annotation) => (
-                <Typography
-                  component="li"
-                  variant="caption"
-                  key={annotation.id}
-                  sx={{ minWidth: 0, overflowWrap: "anywhere" }}
-                >
+              {annotations.allPriceAnnotations.map((annotation) => {
+                const visible = annotations.visiblePriceAnnotationIds.has(annotation.id);
+                const abbreviation = annotationTagAbbreviation(annotation);
+                const detail = displayMode === "RUNTIME" && annotation.role === "REFERENCE"
+                  ? ""
+                  : annotation.detail;
+                return (
                   <Box
-                    component="span"
-                    aria-hidden="true"
+                    key={annotation.id}
                     sx={{
-                      display: "inline-block",
-                      width: 16,
-                      mr: .75,
-                      verticalAlign: "middle",
-                      borderTop: 2,
-                      borderColor: annotationColor(annotation, direction),
-                      borderStyle: annotation.lineStyle,
+                      minWidth: 0,
+                      display: "grid",
+                      gridTemplateColumns: "auto auto minmax(0, 1fr)",
+                      columnGap: .5,
+                      alignItems: "start",
+                      opacity: visible ? 1 : .6,
                     }}
-                  />
-                  <Box component="span" sx={{ fontWeight: 700 }}>{annotation.label}</Box>
-                  {" · "}
-                  <Box component="span" className="mono">{chartPriceInput(annotation.price, priceTickSize)} USDT</Box>
-                  {" · "}
-                  {annotationAuthorityLabel(annotation.authority)} / {annotationLineStyleLabel(annotation.lineStyle)}
-                  <Box
-                    component="span"
-                    color="text.secondary"
-                    sx={{ display: "block", ml: 3, minWidth: 0, overflowWrap: "anywhere" }}
                   >
-                    {annotation.detail}
+                    <Checkbox
+                      size="small"
+                      checked={visible}
+                      onChange={(event) => setPriceAnnotationVisibility(
+                        annotation,
+                        event.target.checked,
+                      )}
+                      slotProps={{
+                        input: {
+                          "aria-label": `显示图线 ${abbreviation} ${annotation.label}`,
+                        },
+                      }}
+                      sx={{ p: .25, mt: -.25 }}
+                    />
+                    <Box
+                      aria-hidden="true"
+                      sx={{
+                        minWidth: 24,
+                        height: 20,
+                        px: .45,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: .5,
+                        color: "common.white",
+                        bgcolor: annotationColor(annotation, direction),
+                        fontSize: 11,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {abbreviation}
+                    </Box>
+                    <Box sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
+                      <Stack
+                        direction="row"
+                        spacing={.75}
+                        useFlexGap
+                        sx={{ alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap" }}
+                      >
+                        <Box component="span" sx={{ fontSize: 12, fontWeight: 700 }}>
+                          {annotation.label}
+                        </Box>
+                        <Box component="span" className="mono" sx={{ fontSize: 12, fontWeight: 700 }}>
+                          {chartPriceInput(annotation.price, priceTickSize)} USDT
+                        </Box>
+                      </Stack>
+                      <Typography component="span" variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                        {annotationAuthorityLabel(annotation.authority)}
+                        {detail ? ` · ${detail}` : ""}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Typography>
-              ))}
+                );
+              })}
             </Box>
           ) : (
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: .75 }}>
@@ -2614,9 +2746,11 @@ export default function OrderScheduleChart({
           </Box>
         ) : null}
 
-        <Alert severity="info" variant="outlined" sx={{ mt: 1.25 }}>
-          水平线和趋势线目前只用于分析。沿趋势线自动移动入场、止盈或止损尚未开放；该能力需要服务端限次、价格步进、撤单确认、部分成交竞态和重启恢复，不能由浏览器绘图直接触发。
-        </Alert>
+        {analysisDrawings.length > 0 ? (
+          <Alert severity="info" variant="outlined" sx={{ mt: 1.25 }}>
+            分析线不会改变运行中计划；沿趋势线自动移动入场、止盈或止损尚未开放。
+          </Alert>
+        ) : null}
         </Box>
       </Box>
     </Box>

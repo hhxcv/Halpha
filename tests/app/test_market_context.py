@@ -23,8 +23,11 @@ class FakeMarketApi:
     def __init__(self, *, complete: bool = True) -> None:
         self.complete = complete
         self.server_time_ms = 1_800_000_100_000
+        self.ticker_query_count = 0
+        self.kline_query_count = 0
 
     async def query_ticker_book(self, symbol=None, symbols=None):
+        self.ticker_query_count += 1
         assert symbol == "BTCUSDT"
         assert symbols is None
         return [
@@ -44,6 +47,7 @@ class FakeMarketApi:
         start_time=None,
         end_time=None,
     ):
+        self.kline_query_count += 1
         assert symbol == "BTCUSDT"
         assert end_time is not None
         count = int(limit)
@@ -245,6 +249,76 @@ def test_public_market_window_returns_exact_contiguous_review_bars() -> None:
     assert window.bars[0].open_at == datetime(2027, 1, 15, 8, 0, tzinfo=UTC)
     assert window.bars[-1].close == "105"
     assert window.source_cutoff == datetime(2027, 1, 15, 8, 5, tzinfo=UTC)
+
+
+def test_public_market_context_coalesces_concurrent_same_key_reads() -> None:
+    class SlowMarketApi(FakeMarketApi):
+        async def query_ticker_book(self, *args, **kwargs):
+            await asyncio.sleep(0.01)
+            return await super().query_ticker_book(*args, **kwargs)
+
+        async def query_klines(self, *args, **kwargs):
+            await asyncio.sleep(0.01)
+            return await super().query_klines(*args, **kwargs)
+
+    api = SlowMarketApi()
+    provider = BinancePublicMarketContext(
+        "BINANCE_DEMO",
+        market_api=api,
+        observed_at_provider=lambda: _observed_after(api),
+    )
+
+    async def read_concurrently():
+        try:
+            return await asyncio.gather(
+                provider.fetch("BTCUSDT-PERP", 20),
+                provider.fetch("BTCUSDT-PERP", 20),
+                provider.fetch("BTCUSDT-PERP", 20),
+            )
+        finally:
+            await provider.close()
+
+    contexts = asyncio.run(read_concurrently())
+
+    assert len(contexts) == 3
+    assert contexts[0] == contexts[1] == contexts[2]
+    assert api.ticker_query_count == 1
+    assert api.kline_query_count == 2
+
+
+def test_public_market_window_normalizes_and_shares_historical_reads() -> None:
+    api = FakeMarketApi()
+    start = datetime(2027, 1, 15, 8, 0, 5, tzinfo=UTC)
+    provider = BinancePublicMarketContext(
+        "BINANCE_DEMO",
+        market_api=api,
+        observed_at_provider=lambda: datetime(2027, 2, 1, tzinfo=UTC),
+    )
+
+    async def read_concurrently():
+        try:
+            return await asyncio.gather(
+                provider.fetch_window(
+                    "BTCUSDT-PERP",
+                    "1m",
+                    start,
+                    start + timedelta(minutes=4),
+                ),
+                provider.fetch_window(
+                    "BTCUSDT-PERP",
+                    "1m",
+                    start + timedelta(seconds=20),
+                    start + timedelta(minutes=4, seconds=20),
+                ),
+            )
+        finally:
+            await provider.close()
+
+    first, second = asyncio.run(read_concurrently())
+
+    assert first == second
+    assert first.bars[0].open_at == datetime(2027, 1, 15, 8, 0, tzinfo=UTC)
+    assert api.kline_query_count == 1
 
 
 @pytest.mark.parametrize(

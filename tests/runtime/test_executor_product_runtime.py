@@ -1075,7 +1075,7 @@ def test_live_read_only_runtime_build_never_loads_database_or_exec_factory(
     settings = SimpleNamespace(
         release=SimpleNamespace(
             profile="BINANCE_LIVE_READ_ONLY",
-            database_name="halpha_live",
+            database_name="halpha_live_copy",
             environment_id="live-read-only",
             authority_class="NO_TRADING_AUTHORITY",
             account_id="binance-live",

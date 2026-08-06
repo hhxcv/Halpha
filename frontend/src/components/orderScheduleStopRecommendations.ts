@@ -101,12 +101,23 @@ export function buildInitialStopRecommendations(input: {
   const entryBasis = projectedEntryBasis(input.previewLegs);
   const market = input.market;
   if (entryBasis === null || !market) return [];
+  const entryPrices = input.previewLegs
+    .map((leg) => finitePositive(leg.price) ?? finitePositive(leg.sizing_price))
+    .filter((price): price is number => price !== null);
+  if (entryPrices.length === 0) return [];
+  const entryBoundary = input.direction === "LONG"
+    ? Math.min(...entryPrices)
+    : Math.max(...entryPrices);
+  const outsideAllEntries = (price: number) => input.direction === "LONG"
+    ? price < entryBoundary
+    : price > entryBoundary;
   const expectedSide = input.direction === "LONG" ? "LOWER" : "UPPER";
   const candidates: Array<InitialStopRecommendation & { priority: number }> =
     market.stop_references.flatMap((reference) => {
     if (reference.side !== expectedSide) return [];
     const price = finitePositive(reference.price);
     if (price === null) return [];
+    if (!outsideAllEntries(price)) return [];
     const adverse = input.direction === "LONG"
       ? price < entryBasis
       : price > entryBasis;
@@ -138,7 +149,11 @@ export function buildInitialStopRecommendations(input: {
       ? entryBasis - atr * ENTRY_ATR_MULTIPLE
       : entryBasis + atr * ENTRY_ATR_MULTIPLE;
     const distanceBps = Math.abs(price - entryBasis) / entryBasis * 10_000;
-    if (price > 0 && distanceBps <= MAX_INITIAL_STOP_BPS) {
+    if (
+      price > 0
+      && distanceBps <= MAX_INITIAL_STOP_BPS
+      && outsideAllEntries(price)
+    ) {
       candidates.push({
         id: "market-entry-atr",
         kind: "ENTRY_ATR",
@@ -163,5 +178,11 @@ export function buildInitialStopRecommendations(input: {
       ));
       if (!duplicatesExisting) distinct.push(candidate);
     });
-  return distinct.slice(0, MAX_RECOMMENDATIONS).map(({ priority: _priority, ...item }) => item);
+  return distinct
+    .slice(0, MAX_RECOMMENDATIONS)
+    .sort((left, right) => (
+      left.distanceBps - right.distanceBps
+      || left.priority - right.priority
+    ))
+    .map(({ priority: _priority, ...item }) => item);
 }

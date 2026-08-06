@@ -716,8 +716,8 @@ describe("runtime presentation", () => {
     expect(runtimeNoActionPresentation(
       "EXECUTOR_RUNTIME_REATTACHED",
     )).toEqual({
-      headline: "执行器已重新接管计划",
-      detail: "冻结计划已恢复；实时价格变动窗口从此时重新累计",
+      headline: "执行器连接已恢复",
+      detail: "实时价格变动窗口从此时重新累计；新增入场暂停不会因本事件自动解除",
     });
     expect(runtimeNoActionPresentation(
       "ENTRY_WINDOW_EXPIRED",

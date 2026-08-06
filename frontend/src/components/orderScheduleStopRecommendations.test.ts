@@ -36,7 +36,7 @@ const market = {
     {
       kind: "SWING_OBV",
       side: "LOWER",
-      price: "64900",
+      price: "64850",
       interval: "15m",
       lookback_bars: 20,
       atr_buffer_multiple: "0.2",
@@ -87,10 +87,13 @@ describe("initial stop recommendations", () => {
       "STRUCTURE_ATR",
       "TREND_ATR",
     ]);
+    expect(result.map((item) => item.distanceBps)).toEqual(
+      [...result.map((item) => item.distanceBps)].sort((left, right) => left - right),
+    );
     expect(result[0]).toMatchObject({
       label: "量价摆动位",
-      price: 64_900,
-      distanceBpsInput: "15.3846",
+      price: 64_850,
+      distanceBpsInput: "23.0769",
     });
     expect(result[0]?.evidence).toContain("OBV 偏正");
     expect(result[0]?.evidenceCutoff).toBe("2026-08-05T00:45:00Z");
@@ -104,11 +107,11 @@ describe("initial stop recommendations", () => {
     });
 
     expect(result.map((item) => item.kind)).toEqual([
-      "STRUCTURE_ATR",
       "ENTRY_ATR",
+      "STRUCTURE_ATR",
     ]);
-    expect(result[0]?.price).toBe(65_200);
-    expect(result[1]?.price).toBe(65_150);
+    expect(result[0]?.price).toBe(65_150);
+    expect(result[1]?.price).toBe(65_200);
   });
 
   it("uses the selected closed-bar interval and its ATR evidence", () => {
@@ -144,5 +147,25 @@ describe("initial stop recommendations", () => {
       market,
       previewLegs: [],
     })).toEqual([]);
+  });
+
+  it("does not recommend a stop inside the planned entry ladder", () => {
+    const insideRange = {
+      ...market,
+      stop_references: market.stop_references.map((reference) => (
+        reference.kind === "SWING_OBV"
+          ? { ...reference, price: "64950" }
+          : reference
+      )),
+    } as MarketContext;
+
+    const result = buildInitialStopRecommendations({
+      direction: "LONG",
+      market: insideRange,
+      previewLegs: legs,
+    });
+
+    expect(result.map((item) => item.kind)).not.toContain("SWING_OBV");
+    expect(result.every((item) => item.price < 64_900)).toBe(true);
   });
 });

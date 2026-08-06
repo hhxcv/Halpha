@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from uuid import UUID
 
 from halpha.domain_values import canonical_decimal
+from halpha.venue_integration.facts import synthetic_reconciliation_trade_id
 
 
 _EXTERNAL_CLOSURE = "EXTERNAL_ACCOUNT_CLOSURE"
@@ -346,11 +346,7 @@ def _synthetic_query_trade_id(
         or payload.get("event_type") != "OrderFilled"
     ):
         return False
-    try:
-        UUID(trade_id)
-    except (TypeError, ValueError):
-        return False
-    return True
+    return synthetic_reconciliation_trade_id(trade_id)
 
 
 def _fill_detail(

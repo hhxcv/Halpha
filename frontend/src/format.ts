@@ -170,6 +170,27 @@ export function tradingPrice(
   });
 }
 
+/**
+ * Rounds a calculated reference price to the venue's visible price precision.
+ * Use this only for derived estimates whose full floating-point tail is not an
+ * exchange fact; exact order and persisted values continue to use tradingPrice.
+ */
+export function roundedTradingPriceEstimate(
+  value: string | number,
+  tickSize?: string | null,
+): string {
+  const precision = fractionDigitsFromIncrement(tickSize);
+  const parsed = Number(value);
+  if (precision === null || !Number.isFinite(parsed)) {
+    return tradingPrice(value, tickSize);
+  }
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+    useGrouping: true,
+  }).format(parsed);
+}
+
 export function tradingQuantity(
   value: string | number,
   stepSize?: string | null,
@@ -220,6 +241,15 @@ const userVisibleTimeFormatter = new Intl.DateTimeFormat(USER_VISIBLE_TIME_LOCAL
   hourCycle: "h23",
 });
 
+const compactUserVisibleTimeFormatter = new Intl.DateTimeFormat(USER_VISIBLE_TIME_LOCALE, {
+  timeZone: USER_VISIBLE_TIME_ZONE,
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
 export function formatUserVisibleTime(value: string | null | undefined): string {
   if (!value?.trim()) return "未知";
   const parsed = new Date(value);
@@ -229,6 +259,17 @@ export function formatUserVisibleTime(value: string | null | undefined): string 
   const part = (type: Intl.DateTimeFormatPartTypes): string =>
     parts.find((item) => item.type === type)?.value ?? "";
   return `${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")}:${part("second")} ${USER_VISIBLE_TIME_ZONE_LABEL}`;
+}
+
+export function formatCompactUserVisibleTime(value: string | null | undefined): string {
+  if (!value?.trim()) return "未知";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "未知";
+
+  const parts = compactUserVisibleTimeFormatter.formatToParts(parsed);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("month")}/${part("day")} ${part("hour")}:${part("minute")}`;
 }
 
 export function latestUtc(values: Array<string | null | undefined>): string | null {

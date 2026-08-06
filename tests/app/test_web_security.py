@@ -808,6 +808,10 @@ def test_market_order_preview_uses_the_current_environment_server_quote(
                 "protection_policy": {
                     "initial_stop": {"distance_bps": "100"},
                     "time_exit_seconds": 3600,
+                    "full_fill_loss_budget": {
+                        "entry_fee_bps": "2",
+                        "exit_fee_bps": "5",
+                    },
                 },
             },
         },
@@ -907,6 +911,10 @@ def test_market_order_preview_rejects_a_cross_environment_quote(
                 "protection_policy": {
                     "initial_stop": {"distance_bps": "100"},
                     "time_exit_seconds": 3600,
+                    "full_fill_loss_budget": {
+                        "entry_fee_bps": "2",
+                        "exit_fee_bps": "5",
+                    },
                 },
             },
         },
@@ -955,6 +963,10 @@ def test_order_preview_rejects_cross_environment_instrument_rules(
                 "protection_policy": {
                     "initial_stop": {"distance_bps": "100"},
                     "time_exit_seconds": 3600,
+                    "full_fill_loss_budget": {
+                        "entry_fee_bps": "2",
+                        "exit_fee_bps": "5",
+                    },
                 },
             },
         },
@@ -987,8 +999,8 @@ def test_order_schedule_preview_uses_server_rules_and_returns_all_legs(
                 "entry_program": {"kind": "PRICE_LADDER"},
                 "price_distribution": {
                     "kind": "LADDER",
-                    "lower_price": "10",
-                    "upper_price": "30",
+                    "lower_price": "99",
+                    "upper_price": "100",
                     "level_count": 5,
                 },
                 "amount_distribution": {
@@ -1003,6 +1015,10 @@ def test_order_schedule_preview_uses_server_rules_and_returns_all_legs(
                 "protection_policy": {
                     "initial_stop": {"distance_bps": "100"},
                     "time_exit_seconds": 3600,
+                    "full_fill_loss_budget": {
+                        "entry_fee_bps": "2",
+                        "exit_fee_bps": "5",
+                    },
                 },
             },
         },
@@ -1012,11 +1028,11 @@ def test_order_schedule_preview_uses_server_rules_and_returns_all_legs(
     preview = response.json()
     assert preview["valid"] is True
     assert [leg["price"] for leg in preview["legs"]] == [
-        "10",
-        "15",
-        "20",
-        "25",
-        "30",
+        "99",
+        "99.2",
+        "99.5",
+        "99.7",
+        "100",
     ]
     assert preview["instrument_rules"]["source"] == "BINANCE_DEMO_EXCHANGE_INFO"
 
@@ -1057,6 +1073,10 @@ def test_order_schedule_preview_checks_gtd_against_request_time(
                 "protection_policy": {
                     "initial_stop": {"distance_bps": "100"},
                     "time_exit_seconds": 3600,
+                    "full_fill_loss_budget": {
+                        "entry_fee_bps": "2",
+                        "exit_fee_bps": "5",
+                    },
                 },
             },
         },

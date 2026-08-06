@@ -7,6 +7,7 @@ import {
   entryExtensionBoundary,
   estimateImmediateExit,
   estimateMarkedNetResult,
+  formatCompactUserVisibleTime,
   formatUserVisibleTime,
   fractionDigitsFromIncrement,
   gapPercent,
@@ -19,6 +20,7 @@ import {
   quoteAmount,
   quoteCurrencyAmount,
   quoteCurrencyEstimate,
+  roundedTradingPriceEstimate,
   shortDigest,
   subtractDecimal,
   scaleDecimalByPowerOfTen,
@@ -55,6 +57,12 @@ describe("deterministic workbench formatting", () => {
       .toBe("2026-07-17 11:34:56 UTC+8");
     expect(formatUserVisibleTime("2026-07-16T19:30:00-05:00"))
       .toBe("2026-07-17 08:30:00 UTC+8");
+  });
+
+  it("formats compact plan-card times without repeating the global zone label", () => {
+    expect(formatCompactUserVisibleTime("2026-07-17T00:30:00Z"))
+      .toBe("07/17 08:30");
+    expect(formatCompactUserVisibleTime("not-a-date")).toBe("未知");
   });
 
   it("keeps missing, unknown, and invalid timestamps explicit", () => {
@@ -155,6 +163,12 @@ describe("deterministic workbench formatting", () => {
     expect(tradingPrice("12", "0.01")).toBe("12.00");
     expect(tradingQuantity("0.123456789", "0.001")).toBe("0.123…");
     expect(quoteAmount("96.1842000000000001")).toBe("96.18420000…");
+  });
+
+  it("rounds calculated reference prices to venue precision without an ellipsis", () => {
+    expect(roundedTradingPriceEstimate("63251.807431", "0.1")).toBe("63,251.8");
+    expect(roundedTradingPriceEstimate("63251.85", "0.1")).toBe("63,251.9");
+    expect(roundedTradingPriceEstimate("12.345", "0.01")).toBe("12.35");
   });
 
   it("keeps user-facing quote-currency budgets at monetary precision", () => {
